@@ -156,18 +156,19 @@
       treefmtExcludes = map (dir: "${dir}**") repoToolExcludedDirs;
       preCommitExcludes = map (dir: "^${lib.escapeRegex dir}") repoToolExcludedDirs;
 
+      markdownOptions = [
+        "--disable"
+        "MD013,MD057"
+        "--extend-enable"
+        "MD060"
+        "--config"
+        "MD060.style = \"aligned\""
+      ];
+
       treefmtFor =
         system:
         let
           pkgs = pkgsFor system;
-          markdownOptions = [
-            "--disable"
-            "MD013,MD057"
-            "--extend-enable"
-            "MD060"
-            "--config"
-            "MD060.style = \"aligned\""
-          ];
           typosConfig = pkgs.writeText "typos.toml" ''
             [default.extend-words]
             hass = "hass"
@@ -806,6 +807,27 @@
             text = builtins.readFile ./scripts/system-update.sh;
           };
 
+          systemDiff = pkgs.writeShellApplication {
+            name = "system-diff";
+            runtimeInputs = [
+              pkgs.coreutils
+              pkgs.fzf
+              pkgs.git
+              pkgs.glow
+              pkgs.jq
+              pkgs.rumdl
+            ];
+            text = ''
+              format_markdown() {
+                if ! rumdl fmt --quiet --stderr ${lib.escapeShellArgs markdownOptions} - 2>"$tmpdir/formatter.log"; then
+                  cat "$tmpdir/formatter.log" >&2
+                  return 1
+                fi
+              }
+            ''
+            + builtins.readFile ./scripts/system-diff.sh;
+          };
+
           updatePlasma =
             if plasmaRc2nix == null then
               null
@@ -936,6 +958,11 @@
             type = "app";
             program = lib.getExe systemUpdate;
             meta.description = "Update inputs, packages, schemas and containers, then check the flake";
+          };
+          system-diff = {
+            type = "app";
+            program = lib.getExe systemDiff;
+            meta.description = "Compare evaluated system and Home Manager packages";
           };
           update-git-attributes = {
             type = "app";

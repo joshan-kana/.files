@@ -1,0 +1,391 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage: system-diff [--base REF] [--head REF] [--mode changes|states] [--json]
+
+Compare selected NixOS, nix-darwin and Home Manager packages across all
+flake hosts without building system closures.
+
+Options:
+  --base REF   Reference Git revision (default: origin/HEAD, or HEAD)
+  --head REF   Target Git revision (default: working tree)
+  --mode MODE  changes: merge-base → target (default)
+               states:  reference → target
+  --json       Emit JSON instead of formatted Markdown
+  -h, --help   Show this help
+
+Without options, choose a branch or tag with fzf. Ctrl-T switches modes,
+Ctrl-O toggles commits, and Ctrl-B changes the reference. Flags or piped
+output run without a menu.
+
+Examples:
+  system-diff
+  system-diff --base HEAD~1 --head HEAD
+  system-diff --base origin/HEAD --head feature --mode states
+  system-diff --json | jq '.hosts[].summary'
+
+Results go to stdout; diagnostics go to stderr. Output can be piped,
+redirected to a file, or processed with jq when --json is selected.
+EOF
+}
+
+fail() {
+  printf 'system-diff: %s\n' "$*" >&2
+  exit 2
+}
+
+base=
+head=
+mode=changes
+json=false
+interactive=false
+if (($# == 0)) && [[ -t 0 && -t 1 ]]; then
+  interactive=true
+fi
+while (($#)); do
+  case "$1" in
+  --base | --head | --mode)
+    (($# >= 2)) || fail "missing value after $1"
+    [[ -n $2 && $2 != --* ]] || fail "missing value after $1"
+    case "$1" in
+    --base) base=$2 ;;
+    --head) head=$2 ;;
+    --mode) mode=$2 ;;
+    esac
+    shift 2
+    ;;
+  --base=*)
+    base=${1#*=}
+    [[ -n $base ]] || fail "missing revision after --base"
+    shift
+    ;;
+  --head=*)
+    head=${1#*=}
+    [[ -n $head ]] || fail "missing revision after --head"
+    shift
+    ;;
+  --mode=*)
+    mode=${1#*=}
+    shift
+    ;;
+  --json)
+    json=true
+    shift
+    ;;
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  *)
+    fail "unknown argument: $1 (see --help)"
+    ;;
+  esac
+done
+
+case "$mode" in
+changes | states) ;;
+*) fail "unknown mode: $mode (expected changes or states)" ;;
+esac
+
+repo=$(git rev-parse --show-toplevel 2>/dev/null) || fail "run inside a Git repository"
+
+# Use Git's remote default ref when available; explicit --base accepts any revision.
+if [[ -z $base ]]; then
+  base=HEAD
+  if git -C "$repo" rev-parse --verify --quiet refs/remotes/origin/HEAD >/dev/null; then
+    base=origin/HEAD
+  fi
+fi
+
+if [[ $interactive == true ]]; then
+  export SYSTEM_DIFF_REPO="$repo"
+
+  # shellcheck disable=SC2016 # fzf replaces {1}; the preview shell expands variables.
+  preview='if [ {1} = working-tree ]; then
+    git -C "$SYSTEM_DIFF_REPO" status --short
+  else
+    git -C "$SYSTEM_DIFF_REPO" log -1 --format="%h  %s%nCommitted %ar by %an" {1} 2>/dev/null
+    printf "\n%s relative to %s:\n" "$SYSTEM_DIFF_MODE" "$SYSTEM_DIFF_BASE"
+    if [ "$SYSTEM_DIFF_MODE" = changes ]; then
+      git -C "$SYSTEM_DIFF_REPO" diff --stat "$SYSTEM_DIFF_BASE...{1}" -- 2>/dev/null | head -40
+    else
+      git -C "$SYSTEM_DIFF_REPO" diff --stat "$SYSTEM_DIFF_BASE" {1} -- 2>/dev/null | head -40
+    fi
+  fi'
+
+  show_commits=false
+  query=
+  while true; do
+    export SYSTEM_DIFF_BASE="$base" SYSTEM_DIFF_MODE="$mode"
+    base_label=$base
+    base_label=${base_label#refs/remotes/}
+    base_label=${base_label#refs/heads/}
+    base_label=${base_label#refs/tags/}
+
+    if [[ $show_commits == true ]]; then
+      commit_hint='Ctrl-O: hide commits'
+    else
+      commit_hint='Ctrl-O: show commits'
+    fi
+
+    selection=$(
+      {
+        printf 'working-tree\tCurrent\tWorking tree\n'
+        printf 'HEAD\tCurrent\tHEAD\n'
+        git -C "$repo" for-each-ref --sort=refname \
+          --format='%(refname)%09%(refname:short)' refs/heads refs/remotes refs/tags |
+          while IFS=$'\t' read -r full ref; do
+            case "$full" in
+            refs/heads/*) kind=Local ;;
+            refs/remotes/*/HEAD) continue ;;
+            refs/remotes/*) kind=Remote ;;
+            refs/tags/*) kind=Tag ;;
+            esac
+            printf '%s\t%s\t%s\n' "$full" "$kind" "$ref"
+          done
+        if [[ $show_commits == true ]]; then
+          git -C "$repo" log --all -60 --format='%H%x09Commit%x09%h  %s'
+        fi
+      } | fzf --layout=reverse --border --height=85% \
+        --delimiter=$'\t' --with-nth=2,3 --nth=2 \
+        --prompt='> ' \
+        --query="$query" --print-query --expect=ctrl-b,ctrl-o,ctrl-t \
+        --header="Mode: $mode  |  Reference: $base_label  |  Enter: compare  ·  Ctrl-T: mode  ·  Ctrl-B: reference  ·  $commit_hint  ·  Esc: cancel" \
+        --preview="$preview" \
+        --preview-window=right:50%:wrap,border-left
+    ) || exit 0
+
+    mapfile -t choice <<<"$selection"
+    query=${choice[0]-}
+    key=${choice[1]-}
+    selected=${choice[2]-}
+    candidate=${selected%%$'\t'*}
+    case "$key" in
+    ctrl-t)
+      if [[ $mode == changes ]]; then mode=states; else mode=changes; fi
+      ;;
+    ctrl-o)
+      if [[ $show_commits == true ]]; then
+        show_commits=false
+      else
+        show_commits=true
+      fi
+      ;;
+    ctrl-b)
+      [[ -n $candidate ]] || continue
+      if [[ $candidate == working-tree ]]; then
+        printf 'system-diff: baseline must be a Git revision, not the working tree\n' >&2
+        continue
+      fi
+      base=$candidate
+      query=
+      ;;
+    *)
+      [[ -n $candidate ]] || continue
+      head=$candidate
+      [[ $head != working-tree ]] || head=
+      break
+      ;;
+    esac
+  done
+fi
+
+base_sha=$(git -C "$repo" rev-parse --verify --end-of-options "${base}^{commit}" 2>/dev/null) ||
+  fail "unknown base revision: $base (use --base REF to override)"
+if [[ -n $head ]]; then
+  head_sha=$(git -C "$repo" rev-parse --verify --end-of-options "${head}^{commit}" 2>/dev/null) ||
+    fail "unknown head revision: $head"
+else
+  head_sha=
+fi
+
+# Compare the target with either the reference or their common ancestor.
+comparison_sha=$base_sha
+if [[ $mode == changes ]]; then
+  target_sha=${head_sha:-$(git -C "$repo" rev-parse HEAD)}
+  comparison_sha=$(git -C "$repo" merge-base "$base_sha" "$target_sha") ||
+    fail "no common ancestor between $base and ${head:-HEAD}"
+fi
+
+# Preserve path separators while encoding the repository path as a flake URL.
+repo_uri=$(jq -nr --arg path "$repo" '$path | split("/") | map(@uri) | join("/")')
+reference="git+file://$repo_uri"
+tmpdir=$(mktemp -d)
+trap 'rm -rf -- "$tmpdir"' EXIT
+
+expression=$(
+  cat <<'NIX'
+let
+  flake = builtins.getFlake (builtins.getEnv "SYSTEM_DIFF_FLAKE");
+  describe = package:
+    let
+      parsed = builtins.parseDrvName package.name;
+      pname = package.pname or null;
+      version = package.version or null;
+    in {
+      name = if pname == null || pname == "" then parsed.name else pname;
+      version = if version == null || version == "" then parsed.version else version;
+      derivation = package.drvPath;
+    };
+  describeHost = host:
+    let
+      config = host.config;
+      homeUsers = builtins.attrValues (config.home-manager.users or {});
+      homePackages = builtins.concatLists (map (user: user.home.packages or []) homeUsers);
+    in {
+      system = host.pkgs.stdenv.hostPlatform.system;
+      packages = map describe ((config.environment.systemPackages or []) ++ homePackages);
+    };
+in {
+  nixos = builtins.mapAttrs (_: describeHost) flake.nixosConfigurations;
+  darwin = builtins.mapAttrs (_: describeHost) flake.darwinConfigurations;
+}
+NIX
+)
+
+SYSTEM_DIFF_FLAKE="$reference?rev=$comparison_sha" nix eval --impure --json --expr "$expression" >"$tmpdir/base.json"
+if [[ -n $head_sha && $head_sha == "$comparison_sha" ]]; then
+  cp "$tmpdir/base.json" "$tmpdir/head.json"
+else
+  if [[ -n $head_sha ]]; then
+    target="$reference?rev=$head_sha"
+  else
+    target=$reference
+  fi
+  SYSTEM_DIFF_FLAKE="$target" nix eval --impure --json --expr "$expression" >"$tmpdir/head.json"
+fi
+
+report() {
+  jq -n \
+    --slurpfile before "$tmpdir/base.json" \
+    --slurpfile after "$tmpdir/head.json" \
+    --arg base "${comparison_sha:0:12}" \
+    --arg reference "${base_sha:0:12}" \
+    --arg mode "$mode" \
+    --arg head "${head_sha:0:12}" '
+      def inventory($host):
+        reduce (($host.packages // [])[] | select((.name // "") != "")) as $p
+          ({};
+            .[$p.name][(if ($p.version // "") == "" then "unknown" else $p.version end)] += [$p.derivation]
+          )
+        | with_entries(.value |= with_entries(.value |= unique));
+
+      def changes($old; $new):
+        [
+          (($old | keys) + ($new | keys) | unique[]) as $name
+          | ($old[$name] // {}) as $previous
+          | ($new[$name] // {}) as $current
+          | ($previous | keys) as $before
+          | ($current | keys) as $after
+          | (if ($old | has($name) | not) then "added"
+             elif ($new | has($name) | not) then "removed"
+             elif $before != $after then "updated"
+             elif $previous != $current then "modified"
+             else empty end) as $status
+          | {status: $status, name: $name, before: $before, after: $after}
+        ];
+
+      {
+        mode: $mode,
+        reference: $reference,
+        base: $base,
+        head: (if $head == "" then "working tree" else $head end),
+        hosts: [
+          ("nixos", "darwin") as $kind
+          | (($before[0][$kind] + $after[0][$kind]) | keys[]) as $name
+          | ($before[0][$kind][$name] // {}) as $old_host
+          | ($after[0][$kind][$name] // {}) as $new_host
+          | (changes(inventory($old_host); inventory($new_host))) as $changes
+          | {
+              name: $name,
+              kind: $kind,
+              system: ($new_host.system // $old_host.system),
+              status: (if ($before[0][$kind] | has($name) | not) then "added"
+                       elif ($after[0][$kind] | has($name) | not) then "removed"
+                       else "present" end),
+              summary: (reduce $changes[] as $change
+                ({added: 0, removed: 0, updated: 0, modified: 0};
+                 .[$change.status] += 1)),
+              changes: $changes
+            }
+        ]
+      }
+    '
+}
+
+if [[ $json == true ]]; then
+  report
+  exit 0
+fi
+
+render() {
+  report |
+    jq -r '
+    def row($cells): "| " + ($cells | join(" | ")) + " |";
+    def code: "\u0060" + tostring + "\u0060";
+
+    . as $report
+    | ([
+        $report.hosts | to_entries[] as $host
+        | $host.value.changes[]
+        | . + {host: $host.value.name, position: $host.key}
+      ]
+      | group_by([.status, .name, .before, .after])
+      | map({change: .[0], hosts: (sort_by(.position) | map(.host))})
+      | sort_by([
+          {updated: 0, added: 1, removed: 2, modified: 3}[.change.status],
+          .change.name, .change.before, .change.after
+        ])) as $groups
+    | (
+        [
+          "## Package changes", "",
+          "**Comparison:** " + $report.mode + " · " + ($report.base | code) + " → " + ($report.head | code)
+            + (if $report.mode == "changes" then " (reference: " + ($report.reference | code) + ")" else "" end),
+          "",
+          row(["Configuration", "Added", "Removed", "Updated", "Modified"]),
+          row(["---", "---:", "---:", "---:", "---:"])
+        ]
+        + [
+          $report.hosts[]
+          | row([(.name | code), (.summary.added | tostring),
+                 (.summary.removed | tostring), (.summary.updated | tostring),
+                 (.summary.modified | tostring)])
+        ]
+        + (if ($groups | length) == 0 then
+             ["", "No package changes."]
+           else
+             [
+               "", row(["Change", "Package", "Version", "Configurations"]),
+               row(["---", "---", "---", "---"])
+             ]
+             + [
+               $groups[] as $group
+               | $group.change as $change
+               | ($change.before | join(", ")) as $before
+               | ($change.after | join(", ")) as $after
+               | row([
+                   ($change.status | ascii_upcase[:1] + .[1:]),
+                   ($change.name | code),
+                   (if $change.status == "updated" then
+                      ($before | code) + " → " + ($after | code)
+                    else
+                      (if $change.status == "added" then $after else $before end | code)
+                    end),
+                   ($group.hosts | map(code) | join(", "))
+                 ])
+             ]
+           end)
+      )
+    | .[]
+    ' |
+    format_markdown
+}
+
+if [[ $interactive == true ]]; then
+  render >"$tmpdir/report.md"
+  glow --pager "$tmpdir/report.md"
+else
+  render
+fi
