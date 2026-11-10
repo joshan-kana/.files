@@ -167,18 +167,19 @@
       treefmtExcludes = map (dir: "${dir}**") repoToolExcludedDirs;
       preCommitExcludes = map (dir: "^${lib.escapeRegex dir}") repoToolExcludedDirs;
 
+      markdownOptions = [
+        "--disable"
+        "MD013,MD057"
+        "--extend-enable"
+        "MD060"
+        "--config"
+        "MD060.style = \"aligned\""
+      ];
+
       treefmtModuleFor =
         system:
         let
           pkgs = pkgsFor system;
-          markdownOptions = [
-            "--disable"
-            "MD013,MD057"
-            "--extend-enable"
-            "MD060"
-            "--config"
-            "MD060.style = \"aligned\""
-          ];
           typosConfig = pkgs.writeText "typos.toml" ''
             [default.extend-words]
             hass = "hass"
