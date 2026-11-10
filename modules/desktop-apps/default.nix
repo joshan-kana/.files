@@ -125,6 +125,7 @@ in
           cursor_trail = 1;
           cursor_trail_decay = "0.16 0.16";
           cursor_trail_start_threshold = "0 0";
+          remember_window_size = false;
         };
       };
     };
