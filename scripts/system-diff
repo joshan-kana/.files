@@ -3,24 +3,27 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Usage: system-diff [--base REF] [--head REF] [--json]
+Usage: system-diff [--base REF] [--head REF] [--mode changes|states] [--json]
 
 Compare selected NixOS, nix-darwin and Home Manager packages across all
 flake hosts without building system closures.
 
 Options:
-  --base REF   Baseline Git revision (default: origin/HEAD, or HEAD)
+  --base REF   Reference Git revision (default: origin/HEAD, or HEAD)
   --head REF   Target Git revision (default: working tree)
+  --mode MODE  changes: merge-base → target (default)
+               states:  reference → target
   --json       Emit JSON instead of formatted Markdown
   -h, --help   Show this help
 
-Without options, choose a branch or tag with fzf. Ctrl-O shows or hides
-commits, and Ctrl-B changes the baseline. Explicit flags or piped output
-run without a menu.
+Without options, choose a branch or tag with fzf. Ctrl-T switches modes,
+Ctrl-O toggles commits, and Ctrl-B changes the reference. Flags or piped
+output run without a menu.
 
 Examples:
   system-diff
   system-diff --base HEAD~1 --head HEAD
+  system-diff --base origin/HEAD --head feature --mode states
   system-diff --json | jq '.hosts[].summary'
 
 Results go to stdout; diagnostics go to stderr. Output can be piped,
@@ -35,6 +38,7 @@ fail() {
 
 base=
 head=
+mode=changes
 json=false
 interactive=false
 if (($# == 0)) && [[ -t 0 && -t 1 ]]; then
@@ -42,10 +46,14 @@ if (($# == 0)) && [[ -t 0 && -t 1 ]]; then
 fi
 while (($#)); do
   case "$1" in
-    --base | --head)
-      (($# >= 2)) || fail "missing revision after $1"
-      [[ -n "$2" && "$2" != --* ]] || fail "missing revision after $1"
-      if [[ "$1" == --base ]]; then base=$2; else head=$2; fi
+    --base | --head | --mode)
+      (($# >= 2)) || fail "missing value after $1"
+      [[ -n "$2" && "$2" != --* ]] || fail "missing value after $1"
+      case "$1" in
+        --base) base=$2 ;;
+        --head) head=$2 ;;
+        --mode) mode=$2 ;;
+      esac
       shift 2
       ;;
     --base=*)
@@ -56,6 +64,10 @@ while (($#)); do
     --head=*)
       head=${1#*=}
       [[ -n "$head" ]] || fail "missing revision after --head"
+      shift
+      ;;
+    --mode=*)
+      mode=${1#*=}
       shift
       ;;
     --json)
@@ -71,6 +83,11 @@ while (($#)); do
       ;;
   esac
 done
+
+case "$mode" in
+  changes | states) ;;
+  *) fail "unknown mode: $mode (expected changes or states)" ;;
+esac
 
 repo=$(git rev-parse --show-toplevel 2>/dev/null) || fail "run inside a Git repository"
 
@@ -90,14 +107,18 @@ if [[ "$interactive" == true ]]; then
     git -C "$SYSTEM_DIFF_REPO" status --short
   else
     git -C "$SYSTEM_DIFF_REPO" log -1 --format="%h  %s%nCommitted %ar by %an" {1} 2>/dev/null
-    printf "\nChanged files since %s:\n" "$SYSTEM_DIFF_BASE"
-    git -C "$SYSTEM_DIFF_REPO" diff --stat "$SYSTEM_DIFF_BASE" {1} -- 2>/dev/null | head -40
+    printf "\n%s relative to %s:\n" "$SYSTEM_DIFF_MODE" "$SYSTEM_DIFF_BASE"
+    if [ "$SYSTEM_DIFF_MODE" = changes ]; then
+      git -C "$SYSTEM_DIFF_REPO" diff --stat "$SYSTEM_DIFF_BASE...{1}" -- 2>/dev/null | head -40
+    else
+      git -C "$SYSTEM_DIFF_REPO" diff --stat "$SYSTEM_DIFF_BASE" {1} -- 2>/dev/null | head -40
+    fi
   fi'
 
   show_commits=false
   query=
   while true; do
-    export SYSTEM_DIFF_BASE="$base"
+    export SYSTEM_DIFF_BASE="$base" SYSTEM_DIFF_MODE="$mode"
     base_label=$base
     base_label=${base_label#refs/remotes/}
     base_label=${base_label#refs/heads/}
@@ -130,8 +151,8 @@ if [[ "$interactive" == true ]]; then
       } | fzf --layout=reverse --border --height=85% \
         --delimiter=$'\t' --with-nth=2,3 --nth=2 \
         --prompt='> ' \
-        --query="$query" --print-query --expect=ctrl-b,ctrl-o \
-        --header="Baseline: $base_label  |  Enter: compare  ·  Ctrl-B: baseline  ·  $commit_hint  ·  Esc: cancel" \
+        --query="$query" --print-query --expect=ctrl-b,ctrl-o,ctrl-t \
+        --header="Mode: $mode  |  Reference: $base_label  |  Enter: compare  ·  Ctrl-T: mode  ·  Ctrl-B: reference  ·  $commit_hint  ·  Esc: cancel" \
         --preview="$preview" \
         --preview-window=right:50%:wrap,border-left
     ) || exit 0
@@ -142,6 +163,9 @@ if [[ "$interactive" == true ]]; then
     selected=${choice[2]-}
     candidate=${selected%%$'\t'*}
     case "$key" in
+      ctrl-t)
+        if [[ "$mode" == changes ]]; then mode=states; else mode=changes; fi
+        ;;
       ctrl-o)
         if [[ "$show_commits" == true ]]; then
           show_commits=false
@@ -175,6 +199,14 @@ if [[ -n "$head" ]]; then
     fail "unknown head revision: $head"
 else
   head_sha=
+fi
+
+# Compare the target with either the reference or their common ancestor.
+comparison_sha=$base_sha
+if [[ "$mode" == changes ]]; then
+  target_sha=${head_sha:-$(git -C "$repo" rev-parse HEAD)}
+  comparison_sha=$(git -C "$repo" merge-base "$base_sha" "$target_sha") ||
+    fail "no common ancestor between $base and ${head:-HEAD}"
 fi
 
 # Preserve path separators while encoding the repository path as a flake URL.
@@ -212,8 +244,8 @@ in {
 NIX
 )
 
-SYSTEM_DIFF_FLAKE="$reference?rev=$base_sha" nix eval --impure --json --expr "$expression" > "$tmpdir/base.json"
-if [[ -n "$head_sha" && "$head_sha" == "$base_sha" ]]; then
+SYSTEM_DIFF_FLAKE="$reference?rev=$comparison_sha" nix eval --impure --json --expr "$expression" > "$tmpdir/base.json"
+if [[ -n "$head_sha" && "$head_sha" == "$comparison_sha" ]]; then
   cp "$tmpdir/base.json" "$tmpdir/head.json"
 else
   if [[ -n "$head_sha" ]]; then
@@ -228,7 +260,9 @@ report() {
   jq -n \
     --slurpfile before "$tmpdir/base.json" \
     --slurpfile after "$tmpdir/head.json" \
-    --arg base "${base_sha:0:12}" \
+    --arg base "${comparison_sha:0:12}" \
+    --arg reference "${base_sha:0:12}" \
+    --arg mode "$mode" \
     --arg head "${head_sha:0:12}" '
       def inventory($host):
         reduce (($host.packages // [])[] | select((.name // "") != "")) as $p
@@ -253,6 +287,8 @@ report() {
         ];
 
       {
+        mode: $mode,
+        reference: $reference,
         base: $base,
         head: (if $head == "" then "working tree" else $head end),
         hosts: [
@@ -304,6 +340,9 @@ render() {
     | (
         [
           "## Package changes", "",
+          "**Comparison:** " + $report.mode + " · " + ($report.base | code) + " → " + ($report.head | code)
+            + (if $report.mode == "changes" then " (reference: " + ($report.reference | code) + ")" else "" end),
+          "",
           row(["Configuration", "Added", "Removed", "Updated", "Modified"]),
           row(["---", "---:", "---:", "---:", "---:"])
         ]
