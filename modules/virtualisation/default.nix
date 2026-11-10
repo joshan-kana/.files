@@ -64,12 +64,20 @@ in
   vm = if isLinux then import ./vm.nix else _: { };
 
   /**
-    OrbStack macOS virtualisation app; host-specific shell integration stays local.
+    OrbStack macOS virtualisation and shell integration.
   */
   orbStack =
     { pkgs, ... }:
     lib.optionalAttrs isDarwin {
-      home = _: { home.packages = [ pkgs.orbstack ]; };
+      home = _: {
+        home.packages = [ pkgs.orbstack ];
+        home.shellAliases.o = "orb";
+        programs.zsh.profileExtra = ''
+          if [[ -f "$HOME/.orbstack/shell/init.zsh" ]]; then
+            source "$HOME/.orbstack/shell/init.zsh"
+          fi
+        '';
+      };
     };
 
   /**
