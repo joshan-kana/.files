@@ -30,10 +30,7 @@ test("window and glass opacity persist independently from 20% to 100%", () => {
       prefs,
       new RegExp('saved\\.setValue\\("' + setting + '", next\\)'),
     );
-    assert.match(
-      prefs,
-      new RegExp("Math\\.max\\(0\\.20, Math\\.min\\(1, value\\)\\)"),
-    );
+    assert.match(prefs, /Math\.max\(0\.20, Math\.min\(1, value\)\)/);
   }
   assert.match(prefs, /saved\.sync\(\)/);
   assert.match(

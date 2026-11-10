@@ -83,7 +83,7 @@ test("notification viewport remains stable as the number of toasts changes", () 
   );
   assert.match(source, /updatesEnabled: surfaceLifecycle\.needsRendering/);
   const maskItem = source.match(
-    /Item \{\s*id: toastInputArea([\s\S]*?)\n    \}/,
+    /Item \{\s*id: toastInputArea([\s\S]*?)\n {4}\}/,
   )?.[1];
   assert.ok(maskItem);
   assert.doesNotMatch(maskItem, /visible: false/);
