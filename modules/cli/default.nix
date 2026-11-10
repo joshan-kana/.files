@@ -1009,17 +1009,6 @@ in
       };
     };
 
-  peekaboo =
-    _:
-    lib.optionalAttrs isDarwin {
-      homebrew = {
-        brews = [ "steipete/tap/peekaboo" ];
-        taps = [
-          "steipete/tap"
-        ];
-      };
-    };
-
   piCodingAgent =
     _:
     lib.optionalAttrs isDarwin {
