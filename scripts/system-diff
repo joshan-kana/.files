@@ -1,0 +1,277 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage: system-diff [--base REF] [--head REF] [--json]
+
+Compare selected NixOS, nix-darwin and Home Manager packages across all
+flake hosts without building system closures.
+
+Options:
+  --base REF   Baseline Git revision (default: origin/HEAD)
+  --head REF   Target Git revision (default: working tree)
+  --json       Emit JSON instead of formatted Markdown
+  -h, --help   Show this help
+
+Without options, choose a target with fzf and view the report in less.
+Providing any option, or piping output, runs non-interactively.
+
+Examples:
+  system-diff
+  system-diff --base origin/HEAD --head origin/system-update
+  system-diff --base HEAD~1 --head HEAD --json
+
+Results go to stdout; diagnostics go to stderr. Output can be piped,
+redirected to a file, or processed with jq when --json is selected.
+EOF
+}
+
+fail() {
+  printf 'system-diff: %s\n' "$*" >&2
+  exit 2
+}
+
+base=origin/HEAD
+head=
+json=false
+interactive=false
+if (($# == 0)) && [[ -t 0 && -t 1 ]]; then
+  interactive=true
+fi
+while (($#)); do
+  case "$1" in
+    --base | --head)
+      (($# >= 2)) || fail "missing revision after $1"
+      [[ -n "$2" && "$2" != --* ]] || fail "missing revision after $1"
+      if [[ "$1" == --base ]]; then base=$2; else head=$2; fi
+      shift 2
+      ;;
+    --base=*)
+      base=${1#*=}
+      [[ -n "$base" ]] || fail "missing revision after --base"
+      shift
+      ;;
+    --head=*)
+      head=${1#*=}
+      [[ -n "$head" ]] || fail "missing revision after --head"
+      shift
+      ;;
+    --json)
+      json=true
+      shift
+      ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    *)
+      fail "unknown argument: $1 (see --help)"
+      ;;
+  esac
+done
+
+repo=$(git rev-parse --show-toplevel 2>/dev/null) || fail "run inside a Git repository"
+
+if [[ "$interactive" == true ]]; then
+  target=$(
+    {
+      printf 'working-tree\tWorking tree (including uncommitted changes)\n'
+      printf 'HEAD\tCurrent commit (HEAD)\n'
+      if git -C "$repo" show-ref --verify --quiet refs/remotes/origin/system-update; then
+        printf 'origin/system-update\tSystem update branch\n'
+      fi
+      git -C "$repo" for-each-ref --sort=-committerdate \
+        --format='%(refname:short)%09%(subject)' refs/heads refs/remotes/origin |
+        while IFS=$'\t' read -r ref subject; do
+          case "$ref" in
+            origin/HEAD | origin/system-update) continue ;;
+          esac
+          printf '%s\t%s · %s\n' "$ref" "$ref" "$subject"
+        done
+    } | fzf --no-sort --layout=reverse --border --height=70% \
+      --delimiter=$'\t' --with-nth=2 \
+      --prompt='Compare> ' \
+      --header="Against $base · Enter: compare · Esc: cancel"
+  ) || exit 0
+  head=${target%%$'\t'*}
+  [[ "$head" != working-tree ]] || head=
+fi
+
+base_sha=$(git -C "$repo" rev-parse --verify --end-of-options "${base}^{commit}" 2>/dev/null) ||
+  fail "unknown base revision: $base (use --base REF to override)"
+if [[ -n "$head" ]]; then
+  head_sha=$(git -C "$repo" rev-parse --verify --end-of-options "${head}^{commit}" 2>/dev/null) ||
+    fail "unknown head revision: $head"
+else
+  head_sha=
+fi
+
+# Preserve path separators while encoding the repository path as a flake URL.
+repo_uri=$(jq -nr --arg path "$repo" '$path | split("/") | map(@uri) | join("/")')
+reference="git+file://$repo_uri"
+tmpdir=$(mktemp -d)
+trap 'rm -rf -- "$tmpdir"' EXIT
+
+expression=$(cat <<'NIX'
+let
+  flake = builtins.getFlake (builtins.getEnv "SYSTEM_DIFF_FLAKE");
+  describe = package:
+    let
+      parsed = builtins.parseDrvName package.name;
+      pname = package.pname or null;
+      version = package.version or null;
+    in {
+      name = if pname == null || pname == "" then parsed.name else pname;
+      version = if version == null || version == "" then parsed.version else version;
+      derivation = package.drvPath;
+    };
+  describeHost = host:
+    let
+      config = host.config;
+      homeUsers = builtins.attrValues (config.home-manager.users or {});
+      homePackages = builtins.concatLists (map (user: user.home.packages or []) homeUsers);
+    in {
+      system = host.pkgs.stdenv.hostPlatform.system;
+      packages = map describe ((config.environment.systemPackages or []) ++ homePackages);
+    };
+in {
+  nixos = builtins.mapAttrs (_: describeHost) flake.nixosConfigurations;
+  darwin = builtins.mapAttrs (_: describeHost) flake.darwinConfigurations;
+}
+NIX
+)
+
+SYSTEM_DIFF_FLAKE="$reference?rev=$base_sha" nix eval --impure --json --expr "$expression" > "$tmpdir/base.json"
+if [[ -n "$head_sha" ]]; then
+  target="$reference?rev=$head_sha"
+else
+  target=$reference
+fi
+SYSTEM_DIFF_FLAKE="$target" nix eval --impure --json --expr "$expression" > "$tmpdir/head.json"
+
+report() {
+  jq -n \
+    --slurpfile before "$tmpdir/base.json" \
+    --slurpfile after "$tmpdir/head.json" \
+    --arg base "${base_sha:0:12}" \
+    --arg head "${head_sha:0:12}" '
+      def inventory($host):
+        reduce (($host.packages // [])[] | select((.name // "") != "")) as $p
+          ({};
+            .[$p.name][(if ($p.version // "") == "" then "unknown" else $p.version end)] += [$p.derivation]
+          )
+        | with_entries(.value |= with_entries(.value |= unique));
+
+      def changes($old; $new):
+        [
+          (($old | keys) + ($new | keys) | unique[]) as $name
+          | ($old[$name] // {}) as $previous
+          | ($new[$name] // {}) as $current
+          | ($previous | keys) as $before
+          | ($current | keys) as $after
+          | (if ($old | has($name) | not) then "added"
+             elif ($new | has($name) | not) then "removed"
+             elif $before != $after then "updated"
+             elif $previous != $current then "modified"
+             else empty end) as $status
+          | {status: $status, name: $name, before: $before, after: $after}
+        ];
+
+      {
+        base: $base,
+        head: (if $head == "" then "working tree" else $head end),
+        hosts: [
+          ("nixos", "darwin") as $kind
+          | (($before[0][$kind] + $after[0][$kind]) | keys[]) as $name
+          | ($before[0][$kind][$name] // {}) as $old_host
+          | ($after[0][$kind][$name] // {}) as $new_host
+          | (changes(inventory($old_host); inventory($new_host))) as $changes
+          | {
+              name: $name,
+              kind: $kind,
+              system: ($new_host.system // $old_host.system),
+              status: (if ($before[0][$kind] | has($name) | not) then "added"
+                       elif ($after[0][$kind] | has($name) | not) then "removed"
+                       else "present" end),
+              summary: (reduce $changes[] as $change
+                ({added: 0, removed: 0, updated: 0, modified: 0};
+                 .[$change.status] += 1)),
+              changes: $changes
+            }
+        ]
+      }
+    '
+}
+
+if [[ "$json" == true ]]; then
+  report
+  exit 0
+fi
+
+render() {
+  report |
+    jq -r '
+    def row($cells): "| " + ($cells | join(" | ")) + " |";
+    def code: "\u0060" + tostring + "\u0060";
+
+    . as $report
+    | ([
+        $report.hosts | to_entries[] as $host
+        | $host.value.changes[]
+        | . + {host: $host.value.name, position: $host.key}
+      ]
+      | group_by([.status, .name, .before, .after])
+      | map({change: .[0], hosts: (sort_by(.position) | map(.host))})
+      | sort_by([
+          {updated: 0, added: 1, removed: 2, modified: 3}[.change.status],
+          .change.name, .change.before, .change.after
+        ])) as $groups
+    | (
+        [
+          "## Package changes", "",
+          row(["Configuration", "Added", "Removed", "Updated", "Modified"]),
+          row(["---", "---:", "---:", "---:", "---:"])
+        ]
+        + [
+          $report.hosts[]
+          | row([(.name | code), (.summary.added | tostring),
+                 (.summary.removed | tostring), (.summary.updated | tostring),
+                 (.summary.modified | tostring)])
+        ]
+        + (if ($groups | length) == 0 then
+             ["", "No package changes."]
+           else
+             [
+               "", row(["Change", "Package", "Version", "Configurations"]),
+               row(["---", "---", "---", "---"])
+             ]
+             + [
+               $groups[] as $group
+               | $group.change as $change
+               | ($change.before | join(", ")) as $before
+               | ($change.after | join(", ")) as $after
+               | row([
+                   ($change.status | ascii_upcase[:1] + .[1:]),
+                   ($change.name | code),
+                   (if $change.status == "updated" then
+                      ($before | code) + " → " + ($after | code)
+                    else
+                      (if $change.status == "added" then $after else $before end | code)
+                    end),
+                   ($group.hosts | map(code) | join(", "))
+                 ])
+             ]
+           end)
+      )
+    | .[]
+    ' |
+    treefmt --quiet --stdin --formatters rumdl-format system-diff.md
+}
+
+if [[ "$interactive" == true ]]; then
+  render > "$tmpdir/report.md"
+  less -FRSX "$tmpdir/report.md"
+else
+  render
+fi

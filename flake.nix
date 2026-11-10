@@ -809,24 +809,14 @@
           systemDiff = pkgs.writeShellApplication {
             name = "system-diff";
             runtimeInputs = [
+              pkgs.coreutils
+              pkgs.fzf
               pkgs.git
-              pkgs.python3
+              pkgs.jq
+              pkgs.less
               treefmt.config.build.wrapper
             ];
-            text = ''
-              json=false
-              for arg in "$@"; do
-                if [[ "$arg" == "--json" || "$arg" == "--help" || "$arg" == "-h" ]]; then
-                  json=true
-                fi
-              done
-              if [[ "$json" == true ]]; then
-                exec python3 ${./scripts/system-diff.py} "$@"
-              fi
-              python3 ${./scripts/system-diff.py} "$@" \
-                | python3 ${./scripts/system-diff-format.py} \
-                | treefmt --quiet --stdin --formatters rumdl-format system-diff.md
-            '';
+            text = builtins.readFile ./scripts/system-diff;
           };
 
           updatePlasma =
