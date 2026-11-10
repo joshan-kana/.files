@@ -55,12 +55,16 @@ lib.optionalAttrs isLinux {
   */
   vm = import ./vm.nix;
 }
-// lib.optionalAttrs isDarwin {
-  orbStack = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.orbstack ]; };
-  };
+// {
+  orbStack =
+    { pkgs, ... }:
+    lib.optionalAttrs isDarwin {
+      home = _: { home.packages = [ pkgs.orbstack ]; };
+    };
 
-  utm = _: {
-    homebrew.casks = [ "utm@beta" ];
-  };
+  utm =
+    _:
+    lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "utm@beta" ];
+    };
 }

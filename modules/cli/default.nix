@@ -985,34 +985,44 @@ in
     home = _: { home.packages = [ pkgs.tio ]; };
   };
 }
-// lib.optionalAttrs isDarwin {
-  mas = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.mas ]; };
-  };
-
-  blockGooseCli = _: {
-    homebrew.brews = [ "block-goose-cli" ];
-  };
-
-  crush = _: {
-    homebrew = {
-      brews = [ "charmbracelet/tap/crush" ];
-      taps = [
-        "charmbracelet/tap"
-      ];
+// {
+  mas =
+    { pkgs, ... }:
+    lib.optionalAttrs isDarwin {
+      home = _: { home.packages = [ pkgs.mas ]; };
     };
-  };
 
-  peekaboo = _: {
-    homebrew = {
-      brews = [ "steipete/tap/peekaboo" ];
-      taps = [
-        "steipete/tap"
-      ];
+  blockGooseCli =
+    _:
+    lib.optionalAttrs isDarwin {
+      homebrew.brews = [ "block-goose-cli" ];
     };
-  };
 
-  piCodingAgent = _: {
-    homebrew.brews = [ "pi-coding-agent" ];
-  };
+  crush =
+    _:
+    lib.optionalAttrs isDarwin {
+      homebrew = {
+        brews = [ "charmbracelet/tap/crush" ];
+        taps = [
+          "charmbracelet/tap"
+        ];
+      };
+    };
+
+  peekaboo =
+    _:
+    lib.optionalAttrs isDarwin {
+      homebrew = {
+        brews = [ "steipete/tap/peekaboo" ];
+        taps = [
+          "steipete/tap"
+        ];
+      };
+    };
+
+  piCodingAgent =
+    _:
+    lib.optionalAttrs isDarwin {
+      homebrew.brews = [ "pi-coding-agent" ];
+    };
 }

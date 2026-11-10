@@ -52,6 +52,9 @@ _: {
     ./seerr
     ./vial
     ./determinate-nix
+    ./steam
+    ./vlc
+    ./dropbox
     ./hermes-agent
     ./matrix-bridges
     ./neodisk

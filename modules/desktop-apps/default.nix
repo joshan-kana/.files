@@ -255,16 +255,9 @@ in
       };
     };
 
-  vlc =
-    _:
-    (
-      lib.optionalAttrs isLinux {
-        home = _: { home.packages = [ pkgs.vlc ]; };
-      }
-      // lib.optionalAttrs isDarwin {
-        homebrew.casks = [ "vlc" ];
-      }
-    );
+  vlc = _: {
+    home = _: { home.packages = [ pkgs.vlc ]; };
+  };
 
   mopidy = _: {
     home = _: {
@@ -325,18 +318,9 @@ in
     };
   };
 
-  dropbox =
-    _:
-    {
-      home =
-        _:
-        lib.optionalAttrs isLinux {
-          home.packages = [ pkgs.dropbox ];
-        };
-    }
-    // lib.optionalAttrs isDarwin {
-      homebrew.casks = [ "dropbox" ];
-    };
+  dropbox = _: {
+    home = _: { home.packages = [ pkgs.dropbox ]; };
+  };
 
   onlyoffice = _: {
     home =
@@ -416,100 +400,153 @@ in
     home = _: { home.packages = [ pkgs.waypipe ]; };
   };
 }
-// lib.optionalAttrs isDarwin {
-  arc = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.arc-mac ]; };
-  };
+// {
+  arc =
+    { pkgs, ... }:
+    lib.optionalAttrs isDarwin {
+      home = _: { home.packages = [ pkgs.arc-mac ]; };
+    };
 
-  arduinoIde = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.arduino-ide-mac ]; };
-  };
+  arduinoIde =
+    { pkgs, ... }:
+    lib.optionalAttrs isDarwin {
+      home = _: { home.packages = [ pkgs.arduino-ide-mac ]; };
+    };
 
-  cryptomator = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.cryptomator-mac ]; };
-  };
+  cryptomator =
+    { pkgs, ... }:
+    lib.optionalAttrs isDarwin {
+      home = _: { home.packages = [ pkgs.cryptomator-mac ]; };
+    };
 
-  ghostty = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.ghostty-bin ]; };
-  };
+  ghostty =
+    { pkgs, ... }:
+    lib.optionalAttrs isDarwin {
+      home = _: { home.packages = [ pkgs.ghostty-bin ]; };
+    };
 
-  heroic = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.heroic-mac ]; };
-  };
+  heroic =
+    { pkgs, ... }:
+    lib.optionalAttrs isDarwin {
+      home = _: { home.packages = [ pkgs.heroic-mac ]; };
+    };
 
-  linear = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.linear-mac ]; };
-  };
+  linear =
+    { pkgs, ... }:
+    lib.optionalAttrs isDarwin {
+      home = _: { home.packages = [ pkgs.linear-mac ]; };
+    };
 
-  cardinal = _: {
-    homebrew.casks = [ "cardinal" ];
-  };
+  cardinal =
+    _:
+    lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "cardinal" ];
+    };
 
-  ilokLicenseManager = _: {
-    homebrew.casks = [ "ilok-license-manager" ];
-  };
+  ilokLicenseManager =
+    _:
+    lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "ilok-license-manager" ];
+    };
 
-  iterm2 = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.iterm2-mac ]; };
-  };
+  iterm2 =
+    { pkgs, ... }:
+    lib.optionalAttrs isDarwin {
+      home = _: { home.packages = [ pkgs.iterm2-mac ]; };
+    };
 
-  izotopeProductPortal = _: {
-    homebrew.casks = [ "izotope-product-portal" ];
-  };
+  izotopeProductPortal =
+    _:
+    lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "izotope-product-portal" ];
+    };
 
-  microsoftOfficeSuite = _: {
-    homebrew.casks = [
-      "microsoft-auto-update"
-      "microsoft-office"
-      "microsoft-teams"
-    ];
-  };
+  microsoftOfficeSuite =
+    _:
+    lib.optionalAttrs isDarwin {
+      homebrew.casks = [
+        "microsoft-auto-update"
+        "microsoft-office"
+        "microsoft-teams"
+      ];
+    };
 
-  nativeAccess = _: {
-    homebrew.casks = [ "native-access" ];
-  };
+  nativeAccess =
+    _:
+    lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "native-access" ];
+    };
 
-  nvidiaGeforceNow = _: {
-    homebrew.casks = [ "nvidia-geforce-now" ];
-  };
+  nvidiaGeforceNow =
+    _:
+    lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "nvidia-geforce-now" ];
+    };
 
-  openWebui = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.open-webui-mac ]; };
-  };
+  openWebui =
+    { pkgs, ... }:
+    lib.optionalAttrs isDarwin {
+      home = _: { home.packages = [ pkgs.open-webui-mac ]; };
+    };
 
-  openclaw = _: {
-    homebrew.casks = [ "openclaw" ];
-  };
+  openclaw =
+    _:
+    lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "openclaw" ];
+    };
 
-  orcaSlicerNightly = _: {
-    homebrew.casks = [ "orcaslicer@nightly" ];
-  };
+  orcaSlicerNightly =
+    _:
+    lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "orcaslicer@nightly" ];
+    };
 
-  parsec = _: {
-    homebrew.casks = [ "parsec" ];
-  };
+  parsec =
+    _:
+    lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "parsec" ];
+    };
 
-  softubeCentral = _: {
-    homebrew.casks = [ "softube-central" ];
-  };
+  softubeCentral =
+    _:
+    lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "softube-central" ];
+    };
 
-  steam = _: {
-    homebrew.casks = [ "steam" ];
-  };
+  steam =
+    _:
+    {
+      home =
+        _:
+        lib.optionalAttrs isDarwin {
+          home.packages = [ pkgs.steam ];
+        };
+    }
+    // lib.optionalAttrs (system == "x86_64-linux") {
+      programs.steam.enable = true;
+    };
 
-  notion = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.notion-mac ]; };
-  };
+  notion =
+    { pkgs, ... }:
+    lib.optionalAttrs isDarwin {
+      home = _: { home.packages = [ pkgs.notion-mac ]; };
+    };
 
-  qmkToolbox = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.qmk-toolbox-mac ]; };
-  };
+  qmkToolbox =
+    { pkgs, ... }:
+    lib.optionalAttrs isDarwin {
+      home = _: { home.packages = [ pkgs.qmk-toolbox-mac ]; };
+    };
 
-  reaper = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.reaper-mac ]; };
-  };
+  reaper =
+    { pkgs, ... }:
+    lib.optionalAttrs isDarwin {
+      home = _: { home.packages = [ pkgs.reaper-mac ]; };
+    };
 
-  vial = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.vial-mac ]; };
-  };
+  vial =
+    { pkgs, ... }:
+    lib.optionalAttrs isDarwin {
+      home = _: { home.packages = [ pkgs.vial-mac ]; };
+    };
 }

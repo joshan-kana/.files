@@ -32,38 +32,47 @@ lib.optionalAttrs isLinux {
   */
   gnome = import ./gnome;
 }
-// lib.optionalAttrs isDarwin {
-  /**
-    Karabiner-Elements keyboard remapping on macOS.
-  */
-  karabinerElements = import ./karabiner;
+// {
+  karabinerElements = _: lib.optionalAttrs isDarwin ((import ./karabiner) { });
 
-  hammerspoon = import ./hammerspoon;
+  hammerspoon =
+    { lib, pkgs, ... }: lib.optionalAttrs isDarwin ((import ./hammerspoon) { inherit lib pkgs; });
 
-  raycast = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.raycast ]; };
-  };
+  raycast =
+    { pkgs, ... }:
+    lib.optionalAttrs isDarwin {
+      home = _: { home.packages = [ pkgs.raycast ]; };
+    };
 
-  yabai = import ./yabai;
+  yabai = { lib, system, ... }: lib.optionalAttrs isDarwin ((import ./yabai) { inherit lib system; });
 
-  aldente = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.aldente ]; };
-  };
+  aldente =
+    { pkgs, ... }:
+    lib.optionalAttrs isDarwin {
+      home = _: { home.packages = [ pkgs.aldente ]; };
+    };
 
-  homerow = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.homerow ]; };
-  };
+  homerow =
+    { pkgs, ... }:
+    lib.optionalAttrs isDarwin {
+      home = _: { home.packages = [ pkgs.homerow ]; };
+    };
 
-  jordanbairdIce = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.ice-bar ]; };
-  };
+  jordanbairdIce =
+    { pkgs, ... }:
+    lib.optionalAttrs isDarwin {
+      home = _: { home.packages = [ pkgs.ice-bar ]; };
+    };
 
-  linearmouse = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.linearmouse ]; };
-  };
+  linearmouse =
+    { pkgs, ... }:
+    lib.optionalAttrs isDarwin {
+      home = _: { home.packages = [ pkgs.linearmouse ]; };
+    };
 
-  logiOptions = _: {
-    homebrew.casks = [ "logi-options+" ];
-  };
-
+  logiOptions =
+    _:
+    lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "logi-options+" ];
+    };
 }
