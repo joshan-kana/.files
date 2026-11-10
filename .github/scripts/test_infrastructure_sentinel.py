@@ -17,11 +17,15 @@ SPEC.loader.exec_module(bridge)
 
 
 class FakeClient:
+    """Record scripted REST requests for bridge tests."""
+
     def __init__(self) -> None:
+        """Initialize an empty request log."""
         self.parents: dict[int, int] = {}
         self.calls: list[tuple[str, str, object]] = []
 
     def request(self, method: str, path: str, payload=None, **kwargs):
+        """Return fixture data for a recorded REST request."""
         self.calls.append((method, path, payload))
         if path.endswith("/parent"):
             child = int(path.split("/")[-2])
@@ -42,12 +46,16 @@ class FakeClient:
 
 
 class MetadataClient:
+    """Supply issue and pull-request fixtures for metadata tests."""
+
     def __init__(self, pull_request=None, issue=None) -> None:
+        """Store the metadata fixtures and request history."""
         self.pull_request = pull_request
         self.issue = issue
         self.calls: list[tuple[str, str, object]] = []
 
     def request(self, method: str, path: str, payload=None, **kwargs):
+        """Return the relevant fixture for the requested endpoint."""
         self.calls.append((method, path, payload))
         if "/pulls/" in path:
             return self.pull_request
@@ -57,16 +65,23 @@ class MetadataClient:
 
 
 class PermissionFailureClient:
+    """Simulate a failed pull-request metadata lookup."""
+
     def __init__(self) -> None:
+        """Initialize an empty record of attempted requests."""
         self.calls: list[str] = []
 
     def request(self, method: str, path: str, payload=None, **kwargs):
+        """Raise a permission failure for a recorded request."""
         self.calls.append(path)
         raise bridge.BridgeError("GitHub REST GET /pulls/87 failed (403): forbidden")
 
 
 class PullRequestProjectTests(unittest.TestCase):
+    """Verify pull-request project behavior and validation boundaries."""
+
     def test_pull_request_metadata_uses_pull_request_endpoint(self) -> None:
+        """Read pull-request metadata from its dedicated endpoint."""
         client = MetadataClient(pull_request={"number": 87, "node_id": "pr-node", "html_url": "example"})
 
         metadata = bridge.issue_metadata(client, 87, {})
@@ -76,6 +91,7 @@ class PullRequestProjectTests(unittest.TestCase):
         self.assertEqual([call[1] for call in client.calls], ["/repos/joshan-kana/.files/pulls/87"])
 
     def test_issue_metadata_falls_back_to_issue_endpoint(self) -> None:
+        """Use issue metadata when no pull-request record exists."""
         client = MetadataClient(pull_request=None, issue={"number": 12, "node_id": "issue-node"})
 
         metadata = bridge.issue_metadata(client, 12, {})
@@ -90,6 +106,7 @@ class PullRequestProjectTests(unittest.TestCase):
         )
 
     def test_pull_request_permission_failure_does_not_fall_back_to_issue_endpoint(self) -> None:
+        """Preserve permission failures instead of silently falling back."""
         client = PermissionFailureClient()
 
         with self.assertRaisesRegex(bridge.BridgeError, r"failed \(403\)"):
@@ -98,6 +115,7 @@ class PullRequestProjectTests(unittest.TestCase):
         self.assertEqual(client.calls, ["/repos/joshan-kana/.files/pulls/87"])
 
     def test_explicit_unsupported_payload_version_is_rejected(self) -> None:
+        """Reject incompatible command payload versions."""
         command = {
             "version": 2,
             "request_id": "unsupported-version",
@@ -108,6 +126,7 @@ class PullRequestProjectTests(unittest.TestCase):
             bridge.normalize_command(command, FakeClient())
 
     def test_command_without_payload_version_defaults_to_v1(self) -> None:
+        """Accept the established default command payload version."""
         project = {
             "fields": {
                 "Status": {
@@ -136,6 +155,7 @@ class PullRequestProjectTests(unittest.TestCase):
         self.assertEqual(normalized[0]["fields"], {"Status": "Review"})
 
     def test_pull_request_can_target_project_membership_and_fields(self) -> None:
+        """Allow pull requests to receive project membership and fields."""
         project = {
             "fields": {
                 "Status": {
@@ -165,6 +185,7 @@ class PullRequestProjectTests(unittest.TestCase):
         self.assertEqual(normalized[0]["fields"], {"Status": "Review"})
 
     def test_pull_request_relationship_operations_are_rejected(self) -> None:
+        """Prevent invalid native relationship operations on pull requests."""
         command = {
             "version": 1,
             "request_id": "pr-relationship",
@@ -183,6 +204,7 @@ class PullRequestProjectTests(unittest.TestCase):
             bridge.normalize_command(command, FakeClient())
 
     def test_snapshot_exposes_pull_request_project_fields(self) -> None:
+        """Expose pull-request fields in the reconciled project snapshot."""
         project = {"title": "infrastructure", "fields": {}}
         project_items = {80: {"id": "project-item-80", "fields": {"Status": "Review"}, "content_type": "PullRequest"}}
         open_items = [
@@ -203,7 +225,10 @@ class PullRequestProjectTests(unittest.TestCase):
 
 
 class RelationshipTests(unittest.TestCase):
+    """Verify native issue relationship operations and state safety."""
+
     def test_parent_and_sub_issue_reads_use_first_party_endpoints(self) -> None:
+        """Read parent and child links through supported GitHub endpoints."""
         client = FakeClient()
         client.parents[12] = 7
 
@@ -218,6 +243,7 @@ class RelationshipTests(unittest.TestCase):
         )
 
     def test_parent_apply_is_idempotent_and_read_back_verified(self) -> None:
+        """Verify parent changes by reading back authoritative state."""
         client = FakeClient()
         operation = {
             "issue": 12,
@@ -243,6 +269,7 @@ class RelationshipTests(unittest.TestCase):
         self.assertEqual(sum(path.endswith("/sub_issues") for _, path, _ in client.calls), 1)
 
     def test_parent_cycle_is_rejected_before_mutation(self) -> None:
+        """Reject cyclic parent relationships before applying changes."""
         issues = [{"number": 1}, {"number": 2}]
 
         def metadata(_client, number, _cache):
@@ -264,6 +291,7 @@ class RelationshipTests(unittest.TestCase):
             bridge.normalize_command(command, FakeClient())
 
     def test_relates_to_fails_closed_without_becoming_blocked_by(self) -> None:
+        """Never substitute blocking links for unsupported related links."""
         command = {"version": 1, "request_id": "related", "operations": [{"issue": 12, "relates_to": [7]}]}
 
         def metadata(_client, number, _cache):
@@ -280,6 +308,7 @@ class RelationshipTests(unittest.TestCase):
             bridge.normalize_command(command, FakeClient())
 
     def test_state_marker_is_upgraded_without_losing_command(self) -> None:
+        """Upgrade serialized state without discarding pending commands."""
         old = (
             'before\n\n<!-- infrastructure-sentinel-state:v1\n{}\n-->\n\n<!-- infrastructure-sentinel-command:v1\n{"request_id": "x"}\n-->'
         )

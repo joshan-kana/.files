@@ -1,3 +1,5 @@
+"""Provide bounded shell execution on explicitly configured hosts."""
+
 import asyncio
 import json
 import os
@@ -24,10 +26,12 @@ CANCEL_GRACE_SECONDS = 2.0
 
 @dataclass(frozen=True)
 class RemoteTarget:
+    """Connection and agent-forwarding settings for a remote host."""
+
     ssh_target: str
     credential: str
     shell: str
-    forwardAgent: bool
+    forwardAgent: bool  # noqa: N815 - matches the serialized remote target schema
 
 
 CREDENTIALS = os.environ["CREDENTIALS_DIRECTORY"]
@@ -76,10 +80,13 @@ mcp = MCPServer("chatgpt-shell")
 
 @dataclass
 class OutputBuffer:
+    """Retain bounded command output for later retrieval."""
+
     data: bytearray = field(default_factory=bytearray)
     omitted: int = 0
 
     def append(self, chunk: bytes) -> None:
+        """Append output without exceeding the retained byte limit."""
         combined = self.data + chunk
         if self.omitted or len(combined) > MAX_OUTPUT_BYTES:
             self.omitted += max(0, len(combined) - MAX_OUTPUT_BYTES)
@@ -88,6 +95,7 @@ class OutputBuffer:
             self.data[:] = combined
 
     def drain(self) -> tuple[str, bool, int]:
+        """Return buffered output and clear the stored chunks."""
         raw = bytes(self.data)
         omitted = self.omitted
         self.data.clear()
@@ -101,6 +109,8 @@ class OutputBuffer:
 
 @dataclass
 class Job:
+    """Track the lifecycle and result of a shell command."""
+
     request_id: str
     host: Host
     output: OutputBuffer = field(default_factory=OutputBuffer)

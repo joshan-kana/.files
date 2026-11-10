@@ -31,6 +31,7 @@ if not isinstance(version, str) or not isinstance(digest, str) or not re.fullmat
 
 
 def sri(value):
+    """Convert a hexadecimal digest to a Nix SRI hash."""
     if not re.fullmatch(r"[0-9a-f]{64}", value):
         raise ValueError(f"Invalid SHA-256 digest for {args.cask}")
     return "sha256-" + base64.b64encode(bytes.fromhex(value)).decode()

@@ -232,7 +232,11 @@
               ruff-check.options = [
                 "--isolated"
                 "--select"
-                "E4,E7,E9,F,I,B,UP,SIM,RUF,C4,RET,PERF,PLE,PIE,RSE,FURB"
+                "E,F,I,B,C4,D,N,RET,RUF,SIM,UP,W,PERF,PLE,PIE,RSE,FURB"
+                "--ignore"
+                "E501"
+                "--config"
+                ''lint.pydocstyle.convention = "pep257"''
               ];
               ruff-format.priority = 1;
 
