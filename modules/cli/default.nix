@@ -965,4 +965,33 @@ in
     };
   };
 
+  bitwardenCli = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.bitwarden-cli ]; };
+  };
+
+  esptool = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.esptool ]; };
+  };
+
+  mediainfo = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.mediainfo ]; };
+  };
+
+  sevenzip = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs._7zz ]; };
+  };
+
+  tio = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.tio ]; };
+  };
+
+  mas =
+    { pkgs, ... }:
+    lib.optionalAttrs isDarwin {
+      home = _: { home.packages = [ pkgs.mas ]; };
+    };
+
+  crush = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.crush ]; };
+  };
 }

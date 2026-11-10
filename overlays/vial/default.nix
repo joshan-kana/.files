@@ -3,7 +3,7 @@ _: {
     (
       _final: prev:
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
-        vial-mac =
+        vial =
           import ../../lib/mac-app.nix
             {
               inherit prev;
@@ -13,7 +13,7 @@ _: {
                 version = "0.7.5";
                 hash = "sha256-tijbEfjfAS+q/M7vfes2tUghtQfUyXAzb4WlbIAOiHY=";
               };
-              pname = "vial-mac";
+              pname = "vial";
               appName = "Vial.app";
               homepage = "https://get.vial.today";
               license = prev.lib.licenses.gpl2Only;

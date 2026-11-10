@@ -3,7 +3,7 @@ _: {
     (
       _final: prev:
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
-        arduino-ide-mac =
+        arduino-ide =
           import ../../lib/mac-app.nix
             {
               inherit prev;
@@ -13,7 +13,7 @@ _: {
                 version = "2.3.10";
                 hash = "sha256-iBGGDch4K2zWuwB26SFSVYSfQEsbnm84Bp/cT1xDZI4=";
               };
-              pname = "arduino-ide-mac";
+              pname = "arduino-ide";
               appName = "Arduino IDE.app";
               homepage = "https://www.arduino.cc/en/software";
               license = prev.lib.licenses.agpl3Only;

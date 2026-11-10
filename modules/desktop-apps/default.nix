@@ -255,16 +255,9 @@ in
       };
     };
 
-  vlc =
-    _:
-    (
-      lib.optionalAttrs isLinux {
-        home = _: { home.packages = [ pkgs.vlc ]; };
-      }
-      // lib.optionalAttrs isDarwin {
-        homebrew.casks = [ "vlc" ];
-      }
-    );
+  vlc = _: {
+    home = _: { home.packages = [ pkgs.vlc ]; };
+  };
 
   mopidy = _: {
     home = _: {
@@ -325,18 +318,9 @@ in
     };
   };
 
-  dropbox =
-    _:
-    {
-      home =
-        _:
-        lib.optionalAttrs isLinux {
-          home.packages = [ pkgs.dropbox ];
-        };
-    }
-    // lib.optionalAttrs isDarwin {
-      homebrew.casks = [ "dropbox" ];
-    };
+  dropbox = _: {
+    home = _: { home.packages = [ pkgs.dropbox ]; };
+  };
 
   onlyoffice = _: {
     home =
@@ -362,18 +346,122 @@ in
     home = _: { home.packages = [ pkgs.chatgpt ]; };
   };
 
-}
-// lib.optionalAttrs isLinux {
-  filelight = _: {
-    home = _: { home.packages = [ pkgs.kdePackages.filelight ]; };
+  bambuStudio = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.bambu-studio ]; };
   };
-  gparted = _: {
-    home = _: { home.packages = [ pkgs.gparted ]; };
+
+  coolRetroTerm = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.cool-retro-term ]; };
   };
-  nautilus = _: {
-    home = _: { home.packages = [ pkgs.nautilus ]; };
+
+  googleChrome = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.google-chrome ]; };
   };
-  waypipe = _: {
-    home = _: { home.packages = [ pkgs.waypipe ]; };
+
+  inkscape = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.inkscape ]; };
   };
+
+  krita = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.krita ]; };
+  };
+
+  prusaSlicer = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.prusa-slicer ]; };
+  };
+
+  qbittorrent = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.qbittorrent ]; };
+  };
+
+  zed = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.zed-editor ]; };
+  };
+
+  filelight =
+    _:
+    lib.optionalAttrs isLinux {
+      home = _: { home.packages = [ pkgs.kdePackages.filelight ]; };
+    };
+  gparted =
+    _:
+    lib.optionalAttrs isLinux {
+      home = _: { home.packages = [ pkgs.gparted ]; };
+    };
+  nautilus =
+    _:
+    lib.optionalAttrs isLinux {
+      home = _: { home.packages = [ pkgs.nautilus ]; };
+    };
+  waypipe =
+    _:
+    lib.optionalAttrs isLinux {
+      home = _: { home.packages = [ pkgs.waypipe ]; };
+    };
+
+  arc =
+    { pkgs, ... }:
+    lib.optionalAttrs isDarwin {
+      home = _: { home.packages = [ pkgs.arc ]; };
+    };
+
+  cryptomator = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.cryptomator ]; };
+  };
+
+  ghostty = { pkgs, ... }: {
+    home = _: {
+      home.packages = [ (if isDarwin then pkgs.ghostty-bin else pkgs.ghostty) ];
+    };
+  };
+
+  linear =
+    { pkgs, ... }:
+    lib.optionalAttrs isDarwin {
+      home = _: { home.packages = [ pkgs.linear ]; };
+    };
+
+  iterm2 =
+    { pkgs, ... }:
+    lib.optionalAttrs isDarwin {
+      home = _: { home.packages = [ pkgs.iterm2 ]; };
+    };
+
+  microsoftOfficeSuite =
+    _:
+    lib.optionalAttrs isDarwin {
+      homebrew.casks = [
+        "microsoft-auto-update"
+        "microsoft-office"
+        "microsoft-teams"
+      ];
+    };
+
+  nvidiaGeforceNow =
+    _:
+    lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "nvidia-geforce-now" ];
+    };
+
+  openWebui = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.open-webui-desktop ]; };
+  };
+
+  openclaw =
+    _:
+    lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "openclaw" ];
+    };
+
+  orcaSlicerNightly =
+    _:
+    lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "orcaslicer@nightly" ];
+    };
+
+  vial =
+    { pkgs, ... }:
+    lib.optionalAttrs isDarwin {
+      home = _: { home.packages = [ pkgs.vial ]; };
+    };
 }

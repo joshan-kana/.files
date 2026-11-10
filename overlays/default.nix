@@ -42,7 +42,7 @@ _: {
     ./libreoffice
     ./notion
     ./open-webui
-    ./open-webui-mac
+    ./open-webui-desktop
     ./open-webui-computer
     ./python-matter-server
     ./prusaslicer
@@ -52,6 +52,9 @@ _: {
     ./seerr
     ./vial
     ./determinate-nix
+    ./steam
+    ./vlc
+    ./dropbox
     ./hermes-agent
     ./matrix-bridges
     ./neodisk

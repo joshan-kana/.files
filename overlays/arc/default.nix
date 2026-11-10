@@ -3,7 +3,7 @@ _: {
     (
       _final: prev:
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
-        arc-mac =
+        arc =
           import ../../lib/mac-app.nix
             {
               inherit prev;
@@ -14,7 +14,7 @@ _: {
                 build = "89666";
                 hash = "sha256-73GOq7IH5dQrwJdaCxcMgclN4PpoTCwznx9rOEY+Y0s=";
               };
-              pname = "arc-mac";
+              pname = "arc";
               appName = "Arc.app";
               homepage = "https://arc.net";
               license = prev.lib.licenses.unfree;

@@ -3,7 +3,7 @@ _: {
     (
       _final: prev:
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
-        iterm2-mac =
+        iterm2 =
           import ../../lib/mac-app.nix
             {
               inherit prev;
@@ -13,7 +13,7 @@ _: {
                 version = "3.7.6";
                 hash = "sha256-u2EC6fV7vkGXm6fHscJdQRLppcIUJgbuzL4Y3H7gcG8=";
               };
-              pname = "iterm2-mac";
+              pname = "iterm2";
               appName = "iTerm.app";
               homepage = "https://iterm2.com";
               license = prev.lib.licenses.gpl2Only;
