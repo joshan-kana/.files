@@ -985,9 +985,6 @@ in
     home = _: { home.packages = [ pkgs.tio ]; };
   };
 
-  /**
-    macOS App Store command-line management.
-  */
   mas =
     { pkgs, ... }:
     lib.optionalAttrs isDarwin {

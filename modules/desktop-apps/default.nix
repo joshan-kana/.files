@@ -7,7 +7,7 @@
 }:
 
 let
-  inherit (lib.systems.elaborate system) isDarwin isLinux;
+  inherit (lib.systems.elaborate system) isDarwin isLinux isx86_64;
 in
 {
   home =
@@ -47,9 +47,6 @@ in
     home = _: { home.packages = [ pkgs.warp-terminal ]; };
   };
 
-  /**
-    Mullvad VPN desktop installation and Linux service integration.
-  */
   mullvad =
     _:
     lib.optionalAttrs isLinux {
@@ -258,9 +255,6 @@ in
       };
     };
 
-  /**
-    VLC media player packaged for both macOS and Linux.
-  */
   vlc = _: {
     home = _: { home.packages = [ pkgs.vlc ]; };
   };
@@ -306,9 +300,6 @@ in
       }
     );
 
-  /**
-    Spotify desktop integration with platform-specific configuration.
-  */
   spotify =
     { lib, options, ... }:
     (lib.optionalAttrs isLinux (
@@ -327,9 +318,6 @@ in
     };
   };
 
-  /**
-    Dropbox desktop synchronisation client packaged on each supported platform.
-  */
   dropbox = _: {
     home = _: { home.packages = [ pkgs.dropbox ]; };
   };
@@ -479,9 +467,6 @@ in
       homebrew.casks = [ "izotope-product-portal" ];
     };
 
-  /**
-    Microsoft Office applications and their update service on macOS.
-  */
   microsoftOfficeSuite =
     _:
     lib.optionalAttrs isDarwin {
@@ -516,9 +501,6 @@ in
       homebrew.casks = [ "openclaw" ];
     };
 
-  /**
-    OrcaSlicer nightly build distributed through Homebrew on macOS.
-  */
   orcaSlicerNightly =
     _:
     lib.optionalAttrs isDarwin {
@@ -537,17 +519,16 @@ in
       homebrew.casks = [ "softube-central" ];
     };
 
-  /**
-    Steam client on macOS and native NixOS integration on x86_64 Linux.
-  */
-  steam =
-    _:
-    if system == "x86_64-linux" then
-      { programs.steam.enable = true; }
-    else
+  steam = _: {
+    home =
+      _:
       lib.optionalAttrs isDarwin {
-        home = _: { home.packages = [ pkgs.steam ]; };
+        home.packages = [ pkgs.steam ];
       };
+    programs = lib.optionalAttrs (isLinux && isx86_64) {
+      steam.enable = true;
+    };
+  };
 
   notion =
     { pkgs, ... }:
