@@ -100,7 +100,7 @@ ShellSurface {
                     right: parent.right
                     verticalCenter: parent.verticalCenter
                 }
-                shortcut: setting.toggleShortcut
+                shortcut: setting.keyboardSelected ? "H/L" : setting.toggleShortcut
                 compact: true
                 runtime: setting.runtime
                 theme: setting.theme
@@ -133,42 +133,22 @@ ShellSurface {
             }
         }
 
-        Row {
+        ShellSlider {
             width: parent.width
             height: 19
-            spacing: setting.theme.spacing1
-
-            ShellSlider {
-                width: Math.max(1, parent.width - (adjustHint.visible ? adjustHint.implicitWidth + parent.spacing : 0))
-                height: parent.height
-                theme: setting.theme
-                motion: setting.motion
-                from: setting.from
-                to: setting.to
-                value: setting.value
-                enabled: setting.canAdjust
-                trackHeight: 6
-                handleSize: 16
-                accentColor: setting.roleAccent
-                Accessible.role: Accessible.Slider
-                Accessible.name: setting.label + " " + setting.valueText
-                onInteractionStarted: setting.sliderActivated()
-                onValueRequested: next => setting.valueRequested(next)
-            }
-
-            // Adjustment appears next to the parameter, never in place of
-            // the primary action's persistent shortcut in the tile header.
-            KeyHint {
-                id: adjustHint
-                visible: setting.keyboardSelected
-                anchors.verticalCenter: parent.verticalCenter
-                shortcut: "H/L"
-                compact: true
-                runtime: setting.runtime
-                theme: setting.theme
-                emphasized: true
-                emphasisColor: setting.roleAccent
-            }
+            theme: setting.theme
+            motion: setting.motion
+            from: setting.from
+            to: setting.to
+            value: setting.value
+            enabled: setting.canAdjust
+            trackHeight: 6
+            handleSize: 16
+            accentColor: setting.roleAccent
+            Accessible.role: Accessible.Slider
+            Accessible.name: setting.label + " " + setting.valueText
+            onInteractionStarted: setting.sliderActivated()
+            onValueRequested: next => setting.valueRequested(next)
         }
     }
 }

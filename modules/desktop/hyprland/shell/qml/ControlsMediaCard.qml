@@ -144,7 +144,8 @@ ShellSurface {
 
         Row {
             width: parent.width
-            height: 46
+            height: visible ? 46 : 0
+            visible: card.media.available
             spacing: card.theme.spacing2
 
             ShellAction {

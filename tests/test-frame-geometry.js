@@ -1325,7 +1325,13 @@ test("island occlusion fades through the shared contour while hit regions close 
   assert.match(media, /duration: island.motion.effectsNormal/);
   assert.match(shell, /hubBounds: expansionHost.frameBounds/);
   assert.match(shell, /hubScreen: expansionHost.screen/);
-  assert.match(host, /recordingStatusInHub/);
+  assert.match(
+    host,
+    /enabled: host.expansionState.hasCurrent && host.recordingState.capturing/,
+  );
   assert.match(host, /onActivated: host.recordingStopRequested\(\)/);
-  assert.match(host, /onActivated: host.navigate\("activity"\)/);
+  assert.doesNotMatch(
+    host,
+    /recordingStatusInHub|notificationStatusInHub|id: footerStatus/,
+  );
 });

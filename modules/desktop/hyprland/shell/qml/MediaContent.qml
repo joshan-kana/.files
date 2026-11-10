@@ -471,6 +471,7 @@ FocusScope {
                     activeColor: content.theme.roleColor("media")
                     icon: "󰒝"
                     title: content.media.shuffled ? "SHUFFLE ON" : "SHUFFLE OFF"
+                    visible: content.media.available
                     shortcut: "S"
                     active: content.media.shuffled
                     enabled: content.media.shuffleAvailable
@@ -489,6 +490,7 @@ FocusScope {
                     activeColor: content.theme.roleColor("media")
                     icon: content.media.repeatState === 1 ? "󰑘" : "󰑖"
                     title: "REPEAT " + content.media.repeatLabel
+                    visible: content.media.available
                     shortcut: "R"
                     active: content.media.repeatState !== 0
                     enabled: content.media.repeatAvailable

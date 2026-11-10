@@ -48,9 +48,8 @@ test("connected hub borrows a single glass material from the shared contour", ()
   );
 });
 
-test("all connected popups keep glass available in both frame modes", () => {
+test("connected popups borrow the frame material, while overlapping toasts use their own backing", () => {
   for (const [file, owner, base] of [
-    ["NotificationPopup.qml", "popup", "paneBase"],
     ["OsdPopup.qml", "popup", "groupBase"],
     ["ResizeOverlay.qml", "overlay", "panelBase"],
   ]) {
@@ -59,6 +58,14 @@ test("all connected popups keep glass available in both frame modes", () => {
     assert.ok(src.includes(`fillColor: ${owner}.theme.${base}`));
     assert.doesNotMatch(src, /glassAllowed: !.*frameConnected/);
   }
+  const toasts = qml("NotificationPopup.qml");
+  assert.match(toasts, /frameConnected: popup\.frameAttached/);
+  assert.match(
+    toasts,
+    /readonly property bool frameAttached: frameConnected && !hubVisible/,
+  );
+  assert.match(toasts, /glassAllowed: !popup\.hubVisible/);
+  assert.match(toasts, /fillColor: popup\.theme\.paneBase/);
   const prefs = qml("AppearancePreferences.qml");
   const shell = qml("shell.qml");
   assert.match(
