@@ -1008,10 +1008,4 @@ in
         ];
       };
     };
-
-  piCodingAgent =
-    _:
-    lib.optionalAttrs isDarwin {
-      homebrew.brews = [ "pi-coding-agent" ];
-    };
 }
