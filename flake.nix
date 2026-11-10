@@ -172,6 +172,7 @@
           typosConfig = pkgs.writeText "typos.toml" ''
             [default.extend-words]
             hass = "hass"
+            zink = "zink"
           '';
         in
         treefmt-nix.lib.evalModule pkgs {
