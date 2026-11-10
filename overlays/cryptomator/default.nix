@@ -23,27 +23,22 @@ in
           updateFilename = "overlays/cryptomator/default.nix";
         };
       in
-      prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
-        cryptomator-mac = import ../../lib/mac-app.nix { inherit prev; } {
-          inherit release;
-          pname = "cryptomator-mac";
-          appName = "Cryptomator.app";
-          homepage = "https://cryptomator.org";
-          license = prev.lib.licenses.gpl3Only;
-          passthru = update;
-          url =
-            r:
-            "https://github.com/cryptomator/cryptomator/releases/download/${r.version}/Cryptomator-${r.version}-arm64.dmg";
-        };
-      }
-      //
-        prev.lib.optionalAttrs
-          (builtins.elem system [
-            "x86_64-linux"
-            "aarch64-linux"
-          ])
-          {
-            cryptomator = prev.appimageTools.wrapType2 {
+      prev.lib.optionalAttrs (prev.stdenv.hostPlatform.isDarwin || builtins.hasAttr system linuxHashes) {
+        cryptomator =
+          if prev.stdenv.hostPlatform.isDarwin then
+            import ../../lib/mac-app.nix { inherit prev; } {
+              inherit release;
+              pname = "cryptomator";
+              appName = "Cryptomator.app";
+              homepage = "https://cryptomator.org";
+              license = prev.lib.licenses.gpl3Only;
+              passthru = update;
+              url =
+                r:
+                "https://github.com/cryptomator/cryptomator/releases/download/${r.version}/Cryptomator-${r.version}-arm64.dmg";
+            }
+          else
+            prev.appimageTools.wrapType2 {
               pname = "cryptomator";
               inherit (release) version;
               src = prev.fetchurl {
@@ -64,7 +59,7 @@ in
                 sourceProvenance = [ prev.lib.sourceTypes.binaryNativeCode ];
               };
             };
-          }
+      }
     )
   ];
 }

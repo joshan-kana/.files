@@ -42,7 +42,7 @@ _: {
     ./libreoffice
     ./notion
     ./open-webui
-    ./open-webui-mac
+    ./open-webui-desktop
     ./open-webui-computer
     ./python-matter-server
     ./prusaslicer

@@ -11,7 +11,6 @@
     networking
     backups
     desktop
-    desktopApps
     virtualisation
     ;
 
@@ -101,6 +100,64 @@
           }
         '';
       };
+    };
+  };
+
+  desktopApps = extendScope moduleRegistry.desktopApps {
+    notion = { pkgs, ... }: {
+      home = _: { home.packages = [ pkgs.notion-app ]; };
+    };
+
+    steam = { pkgs, ... }: {
+      home = _: { home.packages = [ pkgs.steam ]; };
+    };
+
+    qmkToolbox = { pkgs, ... }: {
+      home = _: { home.packages = [ pkgs.qmk-toolbox ]; };
+    };
+
+    softubeCentral = _: {
+      homebrew.casks = [ "softube-central" ];
+    };
+
+    cardinal = _: {
+      homebrew.casks = [ "cardinal" ];
+    };
+
+    reaper = { pkgs, ... }: {
+      home = _: { home.packages = [ pkgs.reaper ]; };
+    };
+
+    arduinoIde = { pkgs, ... }: {
+      home = _: { home.packages = [ pkgs.arduino-ide ]; };
+    };
+
+    kicad = { pkgs, ... }: {
+      home = _: { home.packages = [ pkgs.kicad ]; };
+    };
+
+    dolphinEmulator = { pkgs, ... }: {
+      home = _: { home.packages = [ pkgs.dolphin-emu ]; };
+    };
+
+    heroic = { pkgs, ... }: {
+      home = _: { home.packages = [ pkgs.heroic ]; };
+    };
+
+    ilokLicenseManager = _: {
+      homebrew.casks = [ "ilok-license-manager" ];
+    };
+
+    izotopeProductPortal = _: {
+      homebrew.casks = [ "izotope-product-portal" ];
+    };
+
+    nativeAccess = _: {
+      homebrew.casks = [ "native-access" ];
+    };
+
+    parsec = _: {
+      homebrew.casks = [ "parsec" ];
     };
   };
 

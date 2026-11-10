@@ -3,7 +3,7 @@ _: {
     (
       _final: prev:
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
-        heroic-mac =
+        heroic =
           import ../../lib/mac-app.nix
             {
               inherit prev;
@@ -13,7 +13,7 @@ _: {
                 version = "2.22.4";
                 hash = "sha256-KdVHakvxrqTdPJByU6SboyciI7QgxbrIxymVs2tXzYk=";
               };
-              pname = "heroic-mac";
+              pname = "heroic";
               appName = "Heroic.app";
               homepage = "https://heroicgameslauncher.com";
               license = prev.lib.licenses.gpl3Only;

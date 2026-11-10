@@ -7,7 +7,7 @@
 }:
 
 let
-  inherit (lib.systems.elaborate system) isDarwin isLinux isx86_64;
+  inherit (lib.systems.elaborate system) isDarwin isLinux;
 in
 {
   home =
@@ -354,20 +354,12 @@ in
     home = _: { home.packages = [ pkgs.cool-retro-term ]; };
   };
 
-  dolphinEmulator = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.dolphin-emu ]; };
-  };
-
   googleChrome = { pkgs, ... }: {
     home = _: { home.packages = [ pkgs.google-chrome ]; };
   };
 
   inkscape = { pkgs, ... }: {
     home = _: { home.packages = [ pkgs.inkscape ]; };
-  };
-
-  kicad = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.kicad ]; };
   };
 
   krita = { pkgs, ... }: {
@@ -410,61 +402,29 @@ in
   arc =
     { pkgs, ... }:
     lib.optionalAttrs isDarwin {
-      home = _: { home.packages = [ pkgs.arc-mac ]; };
+      home = _: { home.packages = [ pkgs.arc ]; };
     };
 
-  arduinoIde =
-    { pkgs, ... }:
-    lib.optionalAttrs isDarwin {
-      home = _: { home.packages = [ pkgs.arduino-ide-mac ]; };
-    };
+  cryptomator = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.cryptomator ]; };
+  };
 
-  cryptomator =
-    { pkgs, ... }:
-    lib.optionalAttrs isDarwin {
-      home = _: { home.packages = [ pkgs.cryptomator-mac ]; };
+  ghostty = { pkgs, ... }: {
+    home = _: {
+      home.packages = [ (if isDarwin then pkgs.ghostty-bin else pkgs.ghostty) ];
     };
-
-  ghostty =
-    { pkgs, ... }:
-    lib.optionalAttrs isDarwin {
-      home = _: { home.packages = [ pkgs.ghostty-bin ]; };
-    };
-
-  heroic =
-    { pkgs, ... }:
-    lib.optionalAttrs isDarwin {
-      home = _: { home.packages = [ pkgs.heroic-mac ]; };
-    };
+  };
 
   linear =
     { pkgs, ... }:
     lib.optionalAttrs isDarwin {
-      home = _: { home.packages = [ pkgs.linear-mac ]; };
-    };
-
-  cardinal =
-    _:
-    lib.optionalAttrs isDarwin {
-      homebrew.casks = [ "cardinal" ];
-    };
-
-  ilokLicenseManager =
-    _:
-    lib.optionalAttrs isDarwin {
-      homebrew.casks = [ "ilok-license-manager" ];
+      home = _: { home.packages = [ pkgs.linear ]; };
     };
 
   iterm2 =
     { pkgs, ... }:
     lib.optionalAttrs isDarwin {
-      home = _: { home.packages = [ pkgs.iterm2-mac ]; };
-    };
-
-  izotopeProductPortal =
-    _:
-    lib.optionalAttrs isDarwin {
-      homebrew.casks = [ "izotope-product-portal" ];
+      home = _: { home.packages = [ pkgs.iterm2 ]; };
     };
 
   microsoftOfficeSuite =
@@ -477,23 +437,15 @@ in
       ];
     };
 
-  nativeAccess =
-    _:
-    lib.optionalAttrs isDarwin {
-      homebrew.casks = [ "native-access" ];
-    };
-
   nvidiaGeforceNow =
     _:
     lib.optionalAttrs isDarwin {
       homebrew.casks = [ "nvidia-geforce-now" ];
     };
 
-  openWebui =
-    { pkgs, ... }:
-    lib.optionalAttrs isDarwin {
-      home = _: { home.packages = [ pkgs.open-webui-mac ]; };
-    };
+  openWebui = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.open-webui-desktop ]; };
+  };
 
   openclaw =
     _:
@@ -507,50 +459,9 @@ in
       homebrew.casks = [ "orcaslicer@nightly" ];
     };
 
-  parsec =
-    _:
-    lib.optionalAttrs isDarwin {
-      homebrew.casks = [ "parsec" ];
-    };
-
-  softubeCentral =
-    _:
-    lib.optionalAttrs isDarwin {
-      homebrew.casks = [ "softube-central" ];
-    };
-
-  steam = _: {
-    home =
-      _:
-      lib.optionalAttrs isDarwin {
-        home.packages = [ pkgs.steam ];
-      };
-    programs = lib.optionalAttrs (isLinux && isx86_64) {
-      steam.enable = true;
-    };
-  };
-
-  notion =
-    { pkgs, ... }:
-    lib.optionalAttrs isDarwin {
-      home = _: { home.packages = [ pkgs.notion-mac ]; };
-    };
-
-  qmkToolbox =
-    { pkgs, ... }:
-    lib.optionalAttrs isDarwin {
-      home = _: { home.packages = [ pkgs.qmk-toolbox-mac ]; };
-    };
-
-  reaper =
-    { pkgs, ... }:
-    lib.optionalAttrs isDarwin {
-      home = _: { home.packages = [ pkgs.reaper-mac ]; };
-    };
-
   vial =
     { pkgs, ... }:
     lib.optionalAttrs isDarwin {
-      home = _: { home.packages = [ pkgs.vial-mac ]; };
+      home = _: { home.packages = [ pkgs.vial ]; };
     };
 }
