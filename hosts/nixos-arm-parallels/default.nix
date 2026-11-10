@@ -31,7 +31,10 @@
   desktopApps = editScope moduleRegistry.desktopApps {
     kitty = _: {
       home = _: {
-        programs.kitty.package = pkgs.kitty-virgl;
+        programs.kitty = {
+          package = pkgs.kitty-virgl;
+          settings.remember_window_size = false;
+        };
       };
     };
   };
