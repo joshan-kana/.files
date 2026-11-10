@@ -1224,11 +1224,13 @@ FocusScope {
                                 runtime: root.runtime
                                 theme: root.theme
                                 motion: root.motion
-                                icon: "󰍛"
-                                title: "Resources"
-                                shortcut: "R"
-                                activeColor: root.theme.roleColor("resources")
-                                onActivated: root.openResources()
+                                icon: root.system.batteryAvailable ? root.system.batteryLevelIcon : "󰐥"
+                                title: (root.powerProfile.available ? root.powerProfile.label(root.powerProfile.current) : "Power") + (root.system.batteryAvailable ? " " + root.system.batteryPercent + "%" : "")
+                                shortcut: "V"
+                                enabled: root.powerProfile.available && !root.powerProfile.applying
+                                active: root.powerProfile.current === "power-saver"
+                                activeColor: root.theme.powerProfileColor(root.powerProfile.current)
+                                onActivated: root.powerProfile.cycle()
                             }
 
                             QuickSettingChip {
@@ -1237,13 +1239,11 @@ FocusScope {
                                 runtime: root.runtime
                                 theme: root.theme
                                 motion: root.motion
-                                icon: root.system.batteryAvailable ? root.system.batteryLevelIcon : "󰐥"
-                                title: (root.powerProfile.available ? root.powerProfile.label(root.powerProfile.current) : "Power") + (root.system.batteryAvailable ? " " + root.system.batteryPercent + "%" : "")
-                                shortcut: "V"
-                                enabled: root.powerProfile.available && !root.powerProfile.applying
-                                active: root.powerProfile.current === "power-saver"
-                                activeColor: root.theme.powerProfileColor(root.powerProfile.current)
-                                onActivated: root.powerProfile.cycle()
+                                icon: "󰍛"
+                                title: "Resources"
+                                shortcut: "R"
+                                activeColor: root.theme.roleColor("resources")
+                                onActivated: root.openResources()
                             }
 
                             QuickSettingChip {
