@@ -46,60 +46,60 @@ if (($# == 0)) && [[ -t 0 && -t 1 ]]; then
 fi
 while (($#)); do
   case "$1" in
-    --base | --head | --mode)
-      (($# >= 2)) || fail "missing value after $1"
-      [[ -n "$2" && "$2" != --* ]] || fail "missing value after $1"
-      case "$1" in
-        --base) base=$2 ;;
-        --head) head=$2 ;;
-        --mode) mode=$2 ;;
-      esac
-      shift 2
-      ;;
-    --base=*)
-      base=${1#*=}
-      [[ -n "$base" ]] || fail "missing revision after --base"
-      shift
-      ;;
-    --head=*)
-      head=${1#*=}
-      [[ -n "$head" ]] || fail "missing revision after --head"
-      shift
-      ;;
-    --mode=*)
-      mode=${1#*=}
-      shift
-      ;;
-    --json)
-      json=true
-      shift
-      ;;
-    -h | --help)
-      usage
-      exit 0
-      ;;
-    *)
-      fail "unknown argument: $1 (see --help)"
-      ;;
+  --base | --head | --mode)
+    (($# >= 2)) || fail "missing value after $1"
+    [[ -n $2 && $2 != --* ]] || fail "missing value after $1"
+    case "$1" in
+    --base) base=$2 ;;
+    --head) head=$2 ;;
+    --mode) mode=$2 ;;
+    esac
+    shift 2
+    ;;
+  --base=*)
+    base=${1#*=}
+    [[ -n $base ]] || fail "missing revision after --base"
+    shift
+    ;;
+  --head=*)
+    head=${1#*=}
+    [[ -n $head ]] || fail "missing revision after --head"
+    shift
+    ;;
+  --mode=*)
+    mode=${1#*=}
+    shift
+    ;;
+  --json)
+    json=true
+    shift
+    ;;
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  *)
+    fail "unknown argument: $1 (see --help)"
+    ;;
   esac
 done
 
 case "$mode" in
-  changes | states) ;;
-  *) fail "unknown mode: $mode (expected changes or states)" ;;
+changes | states) ;;
+*) fail "unknown mode: $mode (expected changes or states)" ;;
 esac
 
 repo=$(git rev-parse --show-toplevel 2>/dev/null) || fail "run inside a Git repository"
 
 # Use Git's remote default ref when available; explicit --base accepts any revision.
-if [[ -z "$base" ]]; then
+if [[ -z $base ]]; then
   base=HEAD
   if git -C "$repo" rev-parse --verify --quiet refs/remotes/origin/HEAD >/dev/null; then
     base=origin/HEAD
   fi
 fi
 
-if [[ "$interactive" == true ]]; then
+if [[ $interactive == true ]]; then
   export SYSTEM_DIFF_REPO="$repo"
 
   # shellcheck disable=SC2016 # fzf replaces {1}; the preview shell expands variables.
@@ -124,7 +124,7 @@ if [[ "$interactive" == true ]]; then
     base_label=${base_label#refs/heads/}
     base_label=${base_label#refs/tags/}
 
-    if [[ "$show_commits" == true ]]; then
+    if [[ $show_commits == true ]]; then
       commit_hint='Ctrl-O: hide commits'
     else
       commit_hint='Ctrl-O: show commits'
@@ -138,14 +138,14 @@ if [[ "$interactive" == true ]]; then
           --format='%(refname)%09%(refname:short)' refs/heads refs/remotes refs/tags |
           while IFS=$'\t' read -r full ref; do
             case "$full" in
-              refs/heads/*) kind=Local ;;
-              refs/remotes/*/HEAD) continue ;;
-              refs/remotes/*) kind=Remote ;;
-              refs/tags/*) kind=Tag ;;
+            refs/heads/*) kind=Local ;;
+            refs/remotes/*/HEAD) continue ;;
+            refs/remotes/*) kind=Remote ;;
+            refs/tags/*) kind=Tag ;;
             esac
             printf '%s\t%s\t%s\n' "$full" "$kind" "$ref"
           done
-        if [[ "$show_commits" == true ]]; then
+        if [[ $show_commits == true ]]; then
           git -C "$repo" log --all -60 --format='%H%x09Commit%x09%h  %s'
         fi
       } | fzf --layout=reverse --border --height=85% \
@@ -157,44 +157,44 @@ if [[ "$interactive" == true ]]; then
         --preview-window=right:50%:wrap,border-left
     ) || exit 0
 
-    mapfile -t choice <<< "$selection"
+    mapfile -t choice <<<"$selection"
     query=${choice[0]-}
     key=${choice[1]-}
     selected=${choice[2]-}
     candidate=${selected%%$'\t'*}
     case "$key" in
-      ctrl-t)
-        if [[ "$mode" == changes ]]; then mode=states; else mode=changes; fi
-        ;;
-      ctrl-o)
-        if [[ "$show_commits" == true ]]; then
-          show_commits=false
-        else
-          show_commits=true
-        fi
-        ;;
-      ctrl-b)
-        [[ -n "$candidate" ]] || continue
-        if [[ "$candidate" == working-tree ]]; then
-          printf 'system-diff: baseline must be a Git revision, not the working tree\n' >&2
-          continue
-        fi
-        base=$candidate
-        query=
-        ;;
-      *)
-        [[ -n "$candidate" ]] || continue
-        head=$candidate
-        [[ "$head" != working-tree ]] || head=
-        break
-        ;;
+    ctrl-t)
+      if [[ $mode == changes ]]; then mode=states; else mode=changes; fi
+      ;;
+    ctrl-o)
+      if [[ $show_commits == true ]]; then
+        show_commits=false
+      else
+        show_commits=true
+      fi
+      ;;
+    ctrl-b)
+      [[ -n $candidate ]] || continue
+      if [[ $candidate == working-tree ]]; then
+        printf 'system-diff: baseline must be a Git revision, not the working tree\n' >&2
+        continue
+      fi
+      base=$candidate
+      query=
+      ;;
+    *)
+      [[ -n $candidate ]] || continue
+      head=$candidate
+      [[ $head != working-tree ]] || head=
+      break
+      ;;
     esac
   done
 fi
 
 base_sha=$(git -C "$repo" rev-parse --verify --end-of-options "${base}^{commit}" 2>/dev/null) ||
   fail "unknown base revision: $base (use --base REF to override)"
-if [[ -n "$head" ]]; then
+if [[ -n $head ]]; then
   head_sha=$(git -C "$repo" rev-parse --verify --end-of-options "${head}^{commit}" 2>/dev/null) ||
     fail "unknown head revision: $head"
 else
@@ -203,7 +203,7 @@ fi
 
 # Compare the target with either the reference or their common ancestor.
 comparison_sha=$base_sha
-if [[ "$mode" == changes ]]; then
+if [[ $mode == changes ]]; then
   target_sha=${head_sha:-$(git -C "$repo" rev-parse HEAD)}
   comparison_sha=$(git -C "$repo" merge-base "$base_sha" "$target_sha") ||
     fail "no common ancestor between $base and ${head:-HEAD}"
@@ -215,7 +215,8 @@ reference="git+file://$repo_uri"
 tmpdir=$(mktemp -d)
 trap 'rm -rf -- "$tmpdir"' EXIT
 
-expression=$(cat <<'NIX'
+expression=$(
+  cat <<'NIX'
 let
   flake = builtins.getFlake (builtins.getEnv "SYSTEM_DIFF_FLAKE");
   describe = package:
@@ -244,16 +245,16 @@ in {
 NIX
 )
 
-SYSTEM_DIFF_FLAKE="$reference?rev=$comparison_sha" nix eval --impure --json --expr "$expression" > "$tmpdir/base.json"
-if [[ -n "$head_sha" && "$head_sha" == "$comparison_sha" ]]; then
+SYSTEM_DIFF_FLAKE="$reference?rev=$comparison_sha" nix eval --impure --json --expr "$expression" >"$tmpdir/base.json"
+if [[ -n $head_sha && $head_sha == "$comparison_sha" ]]; then
   cp "$tmpdir/base.json" "$tmpdir/head.json"
 else
-  if [[ -n "$head_sha" ]]; then
+  if [[ -n $head_sha ]]; then
     target="$reference?rev=$head_sha"
   else
     target=$reference
   fi
-  SYSTEM_DIFF_FLAKE="$target" nix eval --impure --json --expr "$expression" > "$tmpdir/head.json"
+  SYSTEM_DIFF_FLAKE="$target" nix eval --impure --json --expr "$expression" >"$tmpdir/head.json"
 fi
 
 report() {
@@ -314,7 +315,7 @@ report() {
     '
 }
 
-if [[ "$json" == true ]]; then
+if [[ $json == true ]]; then
   report
   exit 0
 fi
@@ -382,8 +383,8 @@ render() {
     format_markdown
 }
 
-if [[ "$interactive" == true ]]; then
-  render > "$tmpdir/report.md"
+if [[ $interactive == true ]]; then
+  render >"$tmpdir/report.md"
   glow --pager "$tmpdir/report.md"
 else
   render

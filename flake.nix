@@ -825,7 +825,7 @@
                 fi
               }
             ''
-            + builtins.readFile ./scripts/system-diff;
+            + builtins.readFile ./scripts/system-diff.sh;
           };
 
           updatePlasma =
