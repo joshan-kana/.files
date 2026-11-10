@@ -768,9 +768,8 @@ PanelWindow {
                 topMargin: host.theme.spacing3
                 leftMargin: host.theme.spacing4
                 rightMargin: host.theme.spacing4
-                // Controls and Activity have local actions along their bottom edge.
-                // Keep those hints clear of the separate global navigation pill.
-                bottomMargin: host.theme.spacing3 + (host.expansionState.currentName === "activity" || (host.expansionState.currentName === "system" && !host.detailVisible) ? host.theme.spacing4 : 0)
+                // Every view clears the shared navigation footer by the same amount.
+                bottomMargin: host.theme.spacing3 + host.theme.spacing4
             }
             clip: true
             // Retain the last two views while the hub is open, so returning to
