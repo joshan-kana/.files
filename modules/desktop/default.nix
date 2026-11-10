@@ -37,4 +37,33 @@ lib.optionalAttrs isLinux {
     Karabiner-Elements keyboard remapping on macOS.
   */
   karabinerElements = import ./karabiner;
+
+  hammerspoon = import ./hammerspoon;
+
+  raycast = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.raycast ]; };
+  };
+
+  yabai = import ./yabai;
+
+  aldente = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.aldente ]; };
+  };
+
+  homerow = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.homerow ]; };
+  };
+
+  jordanbairdIce = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.ice-bar ]; };
+  };
+
+  linearmouse = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.linearmouse ]; };
+  };
+
+  logiOptions = _: {
+    homebrew.casks = [ "logi-options+" ];
+  };
+
 }

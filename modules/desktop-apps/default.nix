@@ -362,6 +362,45 @@ in
     home = _: { home.packages = [ pkgs.chatgpt ]; };
   };
 
+  bambuStudio = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.bambu-studio ]; };
+  };
+
+  coolRetroTerm = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.cool-retro-term ]; };
+  };
+
+  dolphinEmulator = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.dolphin-emu ]; };
+  };
+
+  googleChrome = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.google-chrome ]; };
+  };
+
+  inkscape = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.inkscape ]; };
+  };
+
+  kicad = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.kicad ]; };
+  };
+
+  krita = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.krita ]; };
+  };
+
+  prusaSlicer = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.prusa-slicer ]; };
+  };
+
+  qbittorrent = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.qbittorrent ]; };
+  };
+
+  zed = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.zed-editor ]; };
+  };
 }
 // lib.optionalAttrs isLinux {
   filelight = _: {
@@ -375,5 +414,102 @@ in
   };
   waypipe = _: {
     home = _: { home.packages = [ pkgs.waypipe ]; };
+  };
+}
+// lib.optionalAttrs isDarwin {
+  arc = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.arc-mac ]; };
+  };
+
+  arduinoIde = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.arduino-ide-mac ]; };
+  };
+
+  cryptomator = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.cryptomator-mac ]; };
+  };
+
+  ghostty = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.ghostty-bin ]; };
+  };
+
+  heroic = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.heroic-mac ]; };
+  };
+
+  linear = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.linear-mac ]; };
+  };
+
+  cardinal = _: {
+    homebrew.casks = [ "cardinal" ];
+  };
+
+  ilokLicenseManager = _: {
+    homebrew.casks = [ "ilok-license-manager" ];
+  };
+
+  iterm2 = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.iterm2-mac ]; };
+  };
+
+  izotopeProductPortal = _: {
+    homebrew.casks = [ "izotope-product-portal" ];
+  };
+
+  microsoftOfficeSuite = _: {
+    homebrew.casks = [
+      "microsoft-auto-update"
+      "microsoft-office"
+      "microsoft-teams"
+    ];
+  };
+
+  nativeAccess = _: {
+    homebrew.casks = [ "native-access" ];
+  };
+
+  nvidiaGeforceNow = _: {
+    homebrew.casks = [ "nvidia-geforce-now" ];
+  };
+
+  openWebui = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.open-webui-mac ]; };
+  };
+
+  openclaw = _: {
+    homebrew.casks = [ "openclaw" ];
+  };
+
+  orcaSlicerNightly = _: {
+    homebrew.casks = [ "orcaslicer@nightly" ];
+  };
+
+  parsec = _: {
+    homebrew.casks = [ "parsec" ];
+  };
+
+  softubeCentral = _: {
+    homebrew.casks = [ "softube-central" ];
+  };
+
+  steam = _: {
+    homebrew.casks = [ "steam" ];
+  };
+
+  notion = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.notion-mac ]; };
+  };
+
+  qmkToolbox = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.qmk-toolbox-mac ]; };
+  };
+
+  reaper = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.reaper-mac ]; };
+  };
+
+  vial = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.vial-mac ]; };
   };
 }

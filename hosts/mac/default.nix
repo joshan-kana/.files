@@ -68,14 +68,6 @@
       };
 
   cli = extendScope moduleRegistry.cli {
-    bitwardenCli = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.bitwarden-cli ]; };
-    };
-
-    esptool = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.esptool ]; };
-    };
-
     macShell = _: {
       home = { lib, ... }: {
         home = {
@@ -107,231 +99,16 @@
         '';
       };
     };
-
-    mas = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.mas ]; };
-    };
-
-    mediainfo = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.mediainfo ]; };
-    };
-
-    nixd = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.nixd ]; };
-    };
-
-    sevenzip = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs._7zz ]; };
-    };
-
-    spicetify = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.spicetify-cli ]; };
-    };
-
-    tio = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.tio ]; };
-    };
-
-    blockGooseCli = _: {
-      homebrew.brews = [ "block-goose-cli" ];
-    };
-
-    crush = _: {
-      homebrew = {
-        brews = [ "charmbracelet/tap/crush" ];
-        taps = [
-          "charmbracelet/tap"
-        ];
-      };
-    };
-
-    peekaboo = _: {
-      homebrew = {
-        brews = [ "steipete/tap/peekaboo" ];
-        taps = [
-          "steipete/tap"
-        ];
-      };
-    };
-
-    piCodingAgent = _: {
-      homebrew.brews = [ "pi-coding-agent" ];
-    };
   };
 
-  desktop = extendScope moduleRegistry.desktop {
-    hammerspoon = import ../../modules/desktop/hammerspoon;
+  inherit (moduleRegistry)
+    desktop
+    desktopApps
+    ;
 
-    raycast = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.raycast ]; };
-    };
-
-    yabai = import ../../modules/desktop/yabai;
-
-    aldente = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.aldente ]; };
-    };
-
-    homerow = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.homerow ]; };
-    };
-
-    jordanbairdIce = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.ice-bar ]; };
-    };
-
-    linearmouse = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.linearmouse ]; };
-    };
-
-    logiOptions = _: {
-      homebrew.casks = [ "logi-options+" ];
-    };
-
-  };
-
-  desktopApps = extendScope moduleRegistry.desktopApps {
-    arc = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.arc-mac ]; };
-    };
-
-    arduinoIde = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.arduino-ide-mac ]; };
-    };
-
-    bambuStudio = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.bambu-studio ]; };
-    };
-
-    coolRetroTerm = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.cool-retro-term ]; };
-    };
-
-    cryptomator = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.cryptomator-mac ]; };
-    };
-
-    dolphinEmulator = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.dolphin-emu ]; };
-    };
-
-    ghostty = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.ghostty-bin ]; };
-    };
-
-    heroic = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.heroic-mac ]; };
-    };
-
-    inkscape = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.inkscape ]; };
-    };
-
-    linear = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.linear-mac ]; };
-    };
-
-    cardinal = _: {
-      homebrew.casks = [ "cardinal" ];
-    };
-
-    googleChrome = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.google-chrome ]; };
-    };
-
-    ilokLicenseManager = _: {
-      homebrew.casks = [ "ilok-license-manager" ];
-    };
-
-    iterm2 = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.iterm2-mac ]; };
-    };
-
-    izotopeProductPortal = _: {
-      homebrew.casks = [ "izotope-product-portal" ];
-    };
-
-    kicad = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.kicad ]; };
-    };
-
-    krita = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.krita ]; };
-    };
-
-    microsoftOfficeSuite = _: {
-      homebrew.casks = [
-        "microsoft-auto-update"
-        "microsoft-office"
-        "microsoft-teams"
-      ];
-    };
-
-    nativeAccess = _: {
-      homebrew.casks = [ "native-access" ];
-    };
-
-    nvidiaGeforceNow = _: {
-      homebrew.casks = [ "nvidia-geforce-now" ];
-    };
-
-    openWebui = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.open-webui-mac ]; };
-    };
-
-    openclaw = _: {
-      homebrew.casks = [ "openclaw" ];
-    };
-
-    orcaSlicerNightly = _: {
-      homebrew.casks = [ "orcaslicer@nightly" ];
-    };
-
-    parsec = _: {
-      homebrew.casks = [ "parsec" ];
-    };
-
-    softubeCentral = _: {
-      homebrew.casks = [ "softube-central" ];
-    };
-
-    steam = _: {
-      homebrew.casks = [ "steam" ];
-    };
-
-    notion = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.notion-mac ]; };
-    };
-
-    prusaSlicer = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.prusa-slicer ]; };
-    };
-
-    qbittorrent = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.qbittorrent ]; };
-    };
-
-    qmkToolbox = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.qmk-toolbox-mac ]; };
-    };
-
-    reaper = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.reaper-mac ]; };
-    };
-
-    vial = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.vial-mac ]; };
-    };
-
-    zed = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.zed-editor ]; };
-    };
-  };
-
-  virtualisation = extendScope moduleRegistry.virtualisation {
-    orbStack = { pkgs, ... }: {
+  virtualisation = editScope moduleRegistry.virtualisation {
+    orbStack = _: {
       home = _: {
-        home.packages = [ pkgs.orbstack ];
         home.shellAliases.o = "orb";
         programs.zsh.profileExtra = ''
           if [[ -f "$HOME/.orbstack/shell/init.zsh" ]]; then
@@ -339,10 +116,6 @@
           fi
         '';
       };
-    };
-
-    utm = _: {
-      homebrew.casks = [ "utm@beta" ];
     };
   };
 }

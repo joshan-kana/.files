@@ -7,7 +7,7 @@
 }:
 
 let
-  inherit (lib.systems.elaborate system) isLinux;
+  inherit (lib.systems.elaborate system) isDarwin isLinux;
 in
 lib.optionalAttrs isLinux {
   /**
@@ -54,4 +54,13 @@ lib.optionalAttrs isLinux {
     Shared NixOS VM-variant sizing, aliases, and safety defaults.
   */
   vm = import ./vm.nix;
+}
+// lib.optionalAttrs isDarwin {
+  orbStack = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.orbstack ]; };
+  };
+
+  utm = _: {
+    homebrew.casks = [ "utm@beta" ];
+  };
 }

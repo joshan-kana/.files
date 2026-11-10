@@ -965,4 +965,62 @@ in
     };
   };
 
+  bitwardenCli = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.bitwarden-cli ]; };
+  };
+
+  esptool = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.esptool ]; };
+  };
+
+  mediainfo = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.mediainfo ]; };
+  };
+
+  nixd = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.nixd ]; };
+  };
+
+  sevenzip = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs._7zz ]; };
+  };
+
+  spicetify = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.spicetify-cli ]; };
+  };
+
+  tio = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.tio ]; };
+  };
+}
+// lib.optionalAttrs isDarwin {
+  mas = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.mas ]; };
+  };
+
+  blockGooseCli = _: {
+    homebrew.brews = [ "block-goose-cli" ];
+  };
+
+  crush = _: {
+    homebrew = {
+      brews = [ "charmbracelet/tap/crush" ];
+      taps = [
+        "charmbracelet/tap"
+      ];
+    };
+  };
+
+  peekaboo = _: {
+    homebrew = {
+      brews = [ "steipete/tap/peekaboo" ];
+      taps = [
+        "steipete/tap"
+      ];
+    };
+  };
+
+  piCodingAgent = _: {
+    homebrew.brews = [ "pi-coding-agent" ];
+  };
 }
