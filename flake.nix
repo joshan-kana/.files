@@ -156,24 +156,6 @@
       treefmtExcludes = map (dir: "${dir}**") repoToolExcludedDirs;
       preCommitExcludes = map (dir: "^${lib.escapeRegex dir}") repoToolExcludedDirs;
 
-      shellScriptPaths = [
-        ".envrc"
-        "modules/desktop/yabai/files/yabairc"
-        "scripts/app_launch"
-        "scripts/audio_fx"
-        "scripts/bindings_and_notifs/volume_up"
-        "scripts/build-systems"
-        "scripts/docs-serve"
-        "scripts/find_iommu_groups/io"
-        "scripts/hyprland_intel"
-        "scripts/hyprland_nvidia"
-        "scripts/nix-options-fzf"
-        "scripts/system-update"
-        "scripts/update-container-lock"
-        "scripts/update-schemas"
-        "scripts/volume_mixer"
-      ];
-
       treefmtFor =
         system:
         let
@@ -213,14 +195,7 @@
             };
             rumdl-check.enable = true;
             rumdl-format.enable = true;
-            shellcheck = {
-              enable = true;
-              includes = [
-                "*.sh"
-                "*.bash"
-              ]
-              ++ shellScriptPaths;
-            };
+            shellcheck.enable = true;
             statix = {
               enable = true;
               disabled-lints = [ "repeated_keys" ];
@@ -254,7 +229,9 @@
               statix.priority = 1;
               nixfmt.priority = 2;
 
-              shfmt.includes = lib.mkAfter shellScriptPaths;
+              # yabairc has a fixed name, so its language cannot be inferred from an extension.
+              shfmt.includes = lib.mkAfter [ "modules/desktop/yabai/files/yabairc" ];
+              shellcheck.includes = lib.mkAfter [ "modules/desktop/yabai/files/yabairc" ];
 
               ruff-check.options = [
                 "--isolated"
@@ -297,16 +274,6 @@
                 command = lib.getExe pkgs.taplo;
                 options = [ "lint" ];
                 includes = [ "*.toml" ];
-              };
-              scss-check = {
-                command = toString (
-                  pkgs.writeShellScript "check-scss" ''
-                    for file in "$@"; do
-                      ${lib.getExe pkgs.dart-sass} --no-source-map "$file" >/dev/null
-                    done
-                  ''
-                );
-                includes = [ "*.scss" ];
               };
               nix-query-lint = {
                 command = toString (
@@ -566,7 +533,7 @@
               pkgs.rsync
               pkgs.watchexec
             ];
-            text = builtins.readFile ./scripts/docs-serve;
+            text = builtins.readFile ./scripts/docs-serve.sh;
           };
         };
     in
@@ -624,7 +591,7 @@
             ];
             text = ''
               repo="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-              NIX_OPTIONS_FZF_CMD_NAME="''${0##*/}" exec "$repo/scripts/nix-options-fzf" "$@"
+              NIX_OPTIONS_FZF_CMD_NAME="''${0##*/}" exec "$repo/scripts/nix-options-fzf.sh" "$@"
             '';
           };
 
@@ -767,7 +734,7 @@
               jq
               skopeo
             ];
-            text = builtins.readFile ./scripts/update-container-lock;
+            text = builtins.readFile ./scripts/update-container-lock.sh;
           };
 
           updateSchemas = pkgs.writeShellApplication {
@@ -776,7 +743,7 @@
               git
               jq
             ];
-            text = builtins.readFile ./scripts/update-schemas;
+            text = builtins.readFile ./scripts/update-schemas.sh;
           };
 
           buildSystems = pkgs.writeShellApplication {
@@ -786,7 +753,7 @@
               pkgs.jq
               pkgs.rom
             ];
-            text = builtins.readFile ./scripts/build-systems;
+            text = builtins.readFile ./scripts/build-systems.sh;
           };
 
           systemUpdate = pkgs.writeShellApplication {
@@ -800,7 +767,7 @@
               pkgs.nix-update
               pkgs.python3
             ];
-            text = builtins.readFile ./scripts/system-update;
+            text = builtins.readFile ./scripts/system-update.sh;
           };
 
           updatePlasma =

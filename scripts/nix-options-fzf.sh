@@ -683,7 +683,7 @@ fi
 print_declared_default() {
   echo
   label "declared default"
-  if declared_default="$("$DOTFILES_OPTIONS_REPO/scripts/nix-options-fzf" "$host" --scope "$scope" --default "$name" 2>/dev/null)"; then
+  if declared_default="$("$DOTFILES_OPTIONS_REPO/scripts/nix-options-fzf.sh" "$host" --scope "$scope" --default "$name" 2>/dev/null)"; then
     printf '  %b%s%b\n' "$GREEN" "$declared_default" "$RESET"
   else
     printf '  %b<unavailable>%b\n' "$DIM" "$RESET"
@@ -693,7 +693,7 @@ print_declared_default() {
 print_defined_by() {
   echo
   label "defined by"
-  if definitions="$("$DOTFILES_OPTIONS_REPO/scripts/nix-options-fzf" "$host" --scope "$scope" --definitions "$name" 2>/dev/null)"; then
+  if definitions="$("$DOTFILES_OPTIONS_REPO/scripts/nix-options-fzf.sh" "$host" --scope "$scope" --definitions "$name" 2>/dev/null)"; then
     if [ -n "$definitions" ]; then
       printf '%s\n' "$definitions" | sed 's/^/  /'
     else
@@ -749,7 +749,7 @@ case "$mode" in
 
     start="$(date +%s 2>/dev/null || printf 0)"
 
-    if output="$("$DOTFILES_OPTIONS_REPO/scripts/nix-options-fzf" "$host" --scope "$scope" "$flag" "$name" 2>&1)"; then
+    if output="$("$DOTFILES_OPTIONS_REPO/scripts/nix-options-fzf.sh" "$host" --scope "$scope" "$flag" "$name" 2>&1)"; then
       end="$(date +%s 2>/dev/null || printf "$start")"
       elapsed=$((end - start))
       printf '%belapsed%b: %ss\n\n' "$DIM" "$RESET" "$elapsed"
@@ -1817,7 +1817,7 @@ search_value_items() {
 
   print_value_items "$scope" "$option" >/dev/null
   item_cache_file="$(value_cache_file "items" "$scope" "$option" "items-v3")"
-  item_origin_preview="'$repo/scripts/nix-options-fzf' '$host' --scope '$scope' --definition-item '$option' {1}"
+  item_origin_preview="'$repo/scripts/nix-options-fzf.sh' '$host' --scope '$scope' --definition-item '$option' {1}"
 
   selected="$(
     jq -r '.items[] | [.id, (.display | gsub("\\n"; "\\\\n")), .kind] | @tsv' "$item_cache_file" |
@@ -2042,8 +2042,8 @@ while true; do
   preview_docs="'$preview_script' docs '$host' {3} {1}"
   preview_value="'$preview_script' value '$host' {3} {1}"
   preview_full="'$preview_script' full '$host' {3} {1}"
-  value_search="'$repo/scripts/nix-options-fzf' '$host' --scope {3} --value-search {1}"
-  definition_items="'$repo/scripts/nix-options-fzf' '$host' --scope {3} --definition-items {1}"
+  value_search="'$repo/scripts/nix-options-fzf.sh' '$host' --scope {3} --value-search {1}"
+  definition_items="'$repo/scripts/nix-options-fzf.sh' '$host' --scope {3} --definition-items {1}"
 
   case "${NIX_OPTIONS_FZF_DEFAULT_PREVIEW:-full}" in
   docs)
