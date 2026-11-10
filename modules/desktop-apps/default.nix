@@ -218,23 +218,15 @@ in
           pkgs,
           ...
         }:
-        lib.mkMerge [
-          {
-            home.packages = [ pkgs.jellyfin-mpv-shim ];
-            home.shellAliases.jm = "jellyfin-mpv-shim";
+        {
+          home = {
+            packages = [ pkgs.jellyfin-mpv-shim ];
+            shellAliases.jm = "jellyfin-mpv-shim";
           }
-          (lib.optionalAttrs isLinux {
-            services.jellyfin-mpv-shim = {
-              enable = true;
-              inherit settings;
-            };
-            systemd.user.services.jellyfin-mpv-shim.Install.WantedBy = lib.mkForce [ ];
-            xdg.configFile."jellyfin-mpv-shim/mpv.conf".source = config.xdg.configFile."mpv/mpv.conf".source;
-          })
-          (lib.optionalAttrs isDarwin {
-            home.file."Library/Application Support/jellyfin-mpv-shim/mpv.conf".source =
+          // lib.optionalAttrs isDarwin {
+            file."Library/Application Support/jellyfin-mpv-shim/mpv.conf".source =
               config.xdg.configFile."mpv/mpv.conf".source;
-            home.activation.jellyfinMpvShimSettings = lib.hm.dag.entryAfter [ "linkGeneration" ] (
+            activation.jellyfinMpvShimSettings = lib.hm.dag.entryAfter [ "linkGeneration" ] (
               lib.hm.generators.mkImpureConfigMerger {
                 inherit pkgs;
                 format = "json";
@@ -244,8 +236,16 @@ in
                 staticSettings = (pkgs.formats.json { }).generate "jellyfin-mpv-shim-settings" settings;
               }
             );
-          })
-        ];
+          };
+        }
+        // lib.optionalAttrs isLinux {
+          services.jellyfin-mpv-shim = {
+            enable = true;
+            inherit settings;
+          };
+          systemd.user.services.jellyfin-mpv-shim.Install.WantedBy = lib.mkForce [ ];
+          xdg.configFile."jellyfin-mpv-shim/mpv.conf".source = config.xdg.configFile."mpv/mpv.conf".source;
+        };
     }
     // lib.optionalAttrs isDarwin {
       launchd.user.agents.jellyfin-mpv-shim.serviceConfig = {

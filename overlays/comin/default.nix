@@ -23,36 +23,31 @@ in
     '';
   };
 
-  config = lib.mkMerge [
-    {
-      nixpkgs.overlays = [
-        (final: _prev: {
-          comin = upstream.packages.${final.stdenv.hostPlatform.system}.comin.overrideAttrs (old: {
-            version = "${old.version}-patched";
-            __intentionallyOverridingVersion = true;
+  config = {
+    nixpkgs.overlays = [
+      (final: _prev: {
+        comin = upstream.packages.${final.stdenv.hostPlatform.system}.comin.overrideAttrs (old: {
+          version = "${old.version}-patched";
+          __intentionallyOverridingVersion = true;
 
-            patches = (old.patches or [ ]) ++ [
-              ../../patches/comin/allow-force-push.patch
-            ];
-          });
-        })
-      ];
-    }
-
-    (lib.optionalAttrs isLinux (
-      lib.mkIf config.services.comin.allowForcePush {
-        systemd.services.comin.environment.COMIN_ALLOW_FORCE_PUSH = "true";
-      }
-    ))
-    (lib.optionalAttrs isDarwin {
-      # The upstream Comin module reads this option for its executable PATH.
-      # With `nix.enable = false`, Determinate still owns the daemon.
-      nix.package = lib.mkDefault pkgs.nix;
-    })
-    (lib.optionalAttrs isDarwin (
-      lib.mkIf config.services.comin.allowForcePush {
-        launchd.daemons.comin.serviceConfig.EnvironmentVariables.COMIN_ALLOW_FORCE_PUSH = "true";
-      }
-    ))
-  ];
+          patches = (old.patches or [ ]) ++ [
+            ../../patches/comin/allow-force-push.patch
+          ];
+        });
+      })
+    ];
+  }
+  // lib.optionalAttrs isLinux {
+    systemd.services.comin = lib.mkIf config.services.comin.allowForcePush {
+      environment.COMIN_ALLOW_FORCE_PUSH = "true";
+    };
+  }
+  // lib.optionalAttrs isDarwin {
+    # The upstream Comin module reads this option for its executable PATH.
+    # With `nix.enable = false`, Determinate still owns the daemon.
+    nix.package = lib.mkDefault pkgs.nix;
+    launchd.daemons.comin = lib.mkIf config.services.comin.allowForcePush {
+      serviceConfig.EnvironmentVariables.COMIN_ALLOW_FORCE_PUSH = "true";
+    };
+  };
 }
