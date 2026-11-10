@@ -8,12 +8,14 @@
 
 let
   inherit (lib.systems.elaborate system) isDarwin isLinux;
+  linuxScope =
+    scope: lib.setFunctionArgs (args: lib.optionalAttrs isLinux (scope args)) (lib.functionArgs scope);
 in
 {
   /**
     Shared OCI/Docker container runtime and image-locking support.
   */
-  containers = if isLinux then import ./containers else _: { };
+  containers = linuxScope (import ./containers);
 
   /**
     libvirt/QEMU virtual-machine support and virt-manager integration.
@@ -61,7 +63,7 @@ in
   /**
     Shared NixOS VM-variant sizing, aliases, and safety defaults.
   */
-  vm = if isLinux then import ./vm.nix else _: { };
+  vm = linuxScope (import ./vm.nix);
 
   /**
     OrbStack macOS virtualisation and shell integration.
