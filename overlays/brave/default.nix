@@ -1,7 +1,7 @@
 _:
 let
   release = {
-    version = "1.99.55";
+    version = "1.101.40";
     hash = "sha256-Bd0wDZP2zHtWybW5XPutX6y9WmrowffQ1r4NFi+HCx0=";
   };
   linuxHashes = {
