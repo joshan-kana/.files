@@ -15,6 +15,7 @@ PanelWindow {
     signal centerRequested
 
     property bool frameEnabled: false
+    property bool hubVisible: false
     readonly property real dockTop: frameConnected ? theme.barHeight + theme.spacing3 : theme.panelTopOffset
     readonly property int cardHeight: Math.max(92, Math.min(170, Math.floor((screen ? screen.height : 1440) - dockTop - (frameConnected ? theme.frameThickness : theme.spacing3))))
     readonly property int cardGap: theme.spacing2 + theme.spacing1
@@ -43,19 +44,22 @@ PanelWindow {
                         height: bottom - y,
                         hovered: toast.hovered,
                         pressed: toast.pointerPressed,
-                        visible: frameConnected && toast.attachmentProgress > 0.001
+                        visible: frameAttached && toast.attachmentProgress > 0.001
                     });
             }
         }
         return result;
     }
     readonly property bool frameConnected: frameEnabled && !(Hyprland.monitorFor(screen)?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false)
+    // The shared frame is below the Overlay hub. While they overlap, draw
+    // self-contained toast surfaces instead of transparent frame attachments.
+    readonly property bool frameAttached: frameConnected && !hubVisible
     readonly property var frameBounds: ({
             x: screen ? screen.width - width - margins.right : 0,
             y: margins.top,
             width: width,
             height: height,
-            visible: frameConnected && toastCount > 0
+            visible: frameAttached && toastCount > 0
         })
 
     visible: true
@@ -89,6 +93,8 @@ PanelWindow {
     }
 
     WlrLayershell.namespace: "linux-desktop-notification-popup"
+    // The hub is an Overlay layer surface; toast cards must paint above it.
+    WlrLayershell.layer: WlrLayer.Overlay
 
     function concealForActivity(): void {
         notificationState.hidePopup();
@@ -109,7 +115,7 @@ PanelWindow {
             property bool attachmentReady: false
             property real attachmentProgress: 0
             function updateAttachment(): void {
-                attachmentProgress = popup.frameConnected && phase !== "visible" && !evicted ? 0 : 1;
+                attachmentProgress = popup.frameAttached && phase !== "visible" && !evicted ? 0 : 1;
             }
             Component.onCompleted: {
                 attachmentReady = true;
@@ -132,7 +138,7 @@ PanelWindow {
             onAttachmentProgressChanged: popup.contourEpoch++
             Behavior on attachmentProgress {
                 NumberAnimation {
-                    duration: popup.frameConnected && popup.motion.enabled ? Math.min(190, popup.motion.morph) : 0
+                    duration: popup.frameAttached && popup.motion.enabled ? Math.min(190, popup.motion.morph) : 0
                     easing.type: popup.motion.morphType
                     easing.bezierCurve: popup.motion.morphCurve
                 }
@@ -152,9 +158,9 @@ PanelWindow {
             onYChanged: popup.contourEpoch++
             onWidthChanged: popup.contourEpoch++
             onHeightChanged: popup.contourEpoch++
-            width: popup.frameConnected ? popup.width * attachmentProgress : popup.width
+            width: popup.frameAttached ? popup.width * attachmentProgress : popup.width
             height: popup.cardHeight
-            clip: popup.frameConnected
+            clip: popup.frameAttached
             visible: slot < popup.maxToastSlots || evicted
 
             Behavior on y {
@@ -168,21 +174,24 @@ PanelWindow {
             motion: popup.motion
             surfaceLayer: ShellSurface.Pane
             cornerRadius: theme.radiusPanel
-            frameConnected: popup.frameConnected
+            frameConnected: popup.frameAttached
+            // Preserve readable toast backing above the hub, even when
+            // the user's general shell-glass preference is translucent.
+            glassAllowed: !popup.hubVisible
             fillColor: popup.theme.paneBase
             borderColor: toast.notification && toast.notification.urgency === NotificationUrgency.Critical ? Qt.rgba(popup.theme.critical.r, popup.theme.critical.g, popup.theme.critical.b, 0.58) : popup.theme.subtleBorder
-            borderWidth: popup.frameConnected ? 0 : popup.theme.borderFocus
+            borderWidth: popup.frameAttached ? 0 : popup.theme.borderFocus
 
             // Only a forced-out toast slides below the three-card window.
             // All ordinary entry, expiry and dismiss animations are unchanged.
             // In framed mode the entire card exits through the clipped
             // three-slot viewport, with its contour. Fading its content first
             // leaves an empty dark frame silhouette during overflow.
-            opacity: popup.frameConnected ? 1 : (toast.phase === "visible" && !toast.evicted ? 1 : 0)
-            scale: popup.frameConnected ? 1 : (toast.phase === "visible" ? 1 : 0.965)
+            opacity: popup.frameAttached ? 1 : (toast.phase === "visible" && !toast.evicted ? 1 : 0)
+            scale: popup.frameAttached ? 1 : (toast.phase === "visible" ? 1 : 0.965)
 
             Behavior on opacity {
-                enabled: !popup.frameConnected
+                enabled: !popup.frameAttached
                 NumberAnimation {
                     duration: !popup.motion.enabled ? 0 : toast.evicted ? popup.motion.spatialNormal : popup.motion.fast
                     easing.type: toast.phase === "visible" ? popup.motion.enterType : popup.motion.exitType
@@ -191,7 +200,7 @@ PanelWindow {
             }
 
             Behavior on scale {
-                enabled: !popup.frameConnected
+                enabled: !popup.frameAttached
                 NumberAnimation {
                     duration: popup.motion.normal
                     easing.type: popup.motion.enterType
@@ -207,7 +216,7 @@ PanelWindow {
                 stateColor: popup.theme.roleColor("notifications")
                 // The shared frame draws this exact attached contour. A
                 // second rectangular/pill overlay would double-highlight it.
-                showHover: !popup.frameConnected
+                showHover: !popup.frameAttached
                 disabled: toast.phase !== "visible"
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
 
