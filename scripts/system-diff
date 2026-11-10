@@ -113,25 +113,21 @@ if [[ "$interactive" == true ]]; then
       {
         printf 'working-tree\tCurrent\tWorking tree\n'
         printf 'HEAD\tCurrent\tHEAD\n'
-        for namespace in refs/heads refs/remotes refs/tags; do
-          case "$namespace" in
-            refs/heads) kind=Local ;;
-            refs/remotes) kind=Remote ;;
-            refs/tags) kind=Tag ;;
-          esac
-          git -C "$repo" for-each-ref --sort=-committerdate \
-            --format='%(refname)%09%(refname:short)' "$namespace" |
-            while IFS=$'\t' read -r full ref; do
-              case "$full" in
-                refs/remotes/*/HEAD) continue ;;
-              esac
-              printf '%s\t%s\t%s\n' "$full" "$kind" "$ref"
-            done
-        done
+        git -C "$repo" for-each-ref --sort=refname \
+          --format='%(refname)%09%(refname:short)' refs/heads refs/remotes refs/tags |
+          while IFS=$'\t' read -r full ref; do
+            case "$full" in
+              refs/heads/*) kind=Local ;;
+              refs/remotes/*/HEAD) continue ;;
+              refs/remotes/*) kind=Remote ;;
+              refs/tags/*) kind=Tag ;;
+            esac
+            printf '%s\t%s\t%s\n' "$full" "$kind" "$ref"
+          done
         if [[ "$show_commits" == true ]]; then
           git -C "$repo" log --all -60 --format='%H%x09Commit%x09%h  %s'
         fi
-      } | fzf --no-sort --layout=reverse --border --height=85% \
+      } | fzf --layout=reverse --border --height=85% \
         --delimiter=$'\t' --with-nth=2,3 --nth=2 \
         --prompt='> ' \
         --query="$query" --print-query --expect=ctrl-b,ctrl-o \
@@ -217,12 +213,16 @@ NIX
 )
 
 SYSTEM_DIFF_FLAKE="$reference?rev=$base_sha" nix eval --impure --json --expr "$expression" > "$tmpdir/base.json"
-if [[ -n "$head_sha" ]]; then
-  target="$reference?rev=$head_sha"
+if [[ -n "$head_sha" && "$head_sha" == "$base_sha" ]]; then
+  cp "$tmpdir/base.json" "$tmpdir/head.json"
 else
-  target=$reference
+  if [[ -n "$head_sha" ]]; then
+    target="$reference?rev=$head_sha"
+  else
+    target=$reference
+  fi
+  SYSTEM_DIFF_FLAKE="$target" nix eval --impure --json --expr "$expression" > "$tmpdir/head.json"
 fi
-SYSTEM_DIFF_FLAKE="$target" nix eval --impure --json --expr "$expression" > "$tmpdir/head.json"
 
 report() {
   jq -n \
@@ -340,7 +340,7 @@ render() {
       )
     | .[]
     ' |
-    treefmt --quiet --stdin --formatters rumdl-format system-diff.md
+    format_markdown
 }
 
 if [[ "$interactive" == true ]]; then

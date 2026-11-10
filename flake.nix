@@ -156,18 +156,19 @@
       treefmtExcludes = map (dir: "${dir}**") repoToolExcludedDirs;
       preCommitExcludes = map (dir: "^${lib.escapeRegex dir}") repoToolExcludedDirs;
 
+      markdownOptions = [
+        "--disable"
+        "MD013,MD057"
+        "--extend-enable"
+        "MD060"
+        "--config"
+        "MD060.style = \"aligned\""
+      ];
+
       treefmtFor =
         system:
         let
           pkgs = pkgsFor system;
-          markdownOptions = [
-            "--disable"
-            "MD013,MD057"
-            "--extend-enable"
-            "MD060"
-            "--config"
-            "MD060.style = \"aligned\""
-          ];
           typosConfig = pkgs.writeText "typos.toml" ''
             [default.extend-words]
             hass = "hass"
@@ -814,9 +815,17 @@
               pkgs.git
               pkgs.glow
               pkgs.jq
-              treefmt.config.build.wrapper
+              pkgs.rumdl
             ];
-            text = builtins.readFile ./scripts/system-diff;
+            text = ''
+              format_markdown() {
+                if ! rumdl fmt --quiet --stderr ${lib.escapeShellArgs markdownOptions} - 2>"$tmpdir/formatter.log"; then
+                  cat "$tmpdir/formatter.log" >&2
+                  return 1
+                fi
+              }
+            ''
+            + builtins.readFile ./scripts/system-diff;
           };
 
           updatePlasma =
