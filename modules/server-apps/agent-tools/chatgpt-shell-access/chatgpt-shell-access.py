@@ -49,7 +49,7 @@ if not LOCAL_HOST or LOCAL_HOST in REMOTE_TARGETS:
     raise RuntimeError("local host must be nonempty and distinct from remote targets")
 
 # The runtime Literal is also the MCP tool schema: only Nix-configured hosts are accepted.
-Host = Literal[tuple([LOCAL_HOST, *REMOTE_TARGETS])]
+Host = Literal[LOCAL_HOST, *REMOTE_TARGETS]
 
 _ALLOWED_ENV = {
     "GH_TOKEN",

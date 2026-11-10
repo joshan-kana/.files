@@ -39,7 +39,7 @@ def sri(value):
 source = target.read_text()
 if args.arch_hashes:
     block_pattern = r"(hashes = \{)([^{}]*)(\};)"
-    blocks = list(re.finditer(block_pattern, source, re.S))
+    blocks = list(re.finditer(block_pattern, source, re.DOTALL))
     if len(blocks) != 1:
         sys.exit("Expected one platform hash map")
     block = blocks[0]

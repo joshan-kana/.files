@@ -11,7 +11,7 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
-from typing import Any
+from typing import Any, Never
 
 OWNER = "joshan-kana"
 REPOSITORY = ".files"
@@ -38,7 +38,7 @@ def now() -> str:
     return dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
-def fail(message: str) -> None:
+def fail(message: str) -> Never:
     raise BridgeError(message)
 
 

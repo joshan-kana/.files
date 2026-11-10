@@ -232,7 +232,7 @@
               ruff-check.options = [
                 "--isolated"
                 "--select"
-                "E4,E7,E9,F,I,B,UP,SIM,RUF"
+                "E4,E7,E9,F,I,B,UP,SIM,RUF,C4,RET,PERF,PLE,PIE,RSE,FURB"
               ];
               ruff-format.priority = 1;
 
@@ -249,8 +249,28 @@
                 includes = lib.mkAfter [ "*.inc" ];
               };
               rumdl-check = {
-                options = lib.mkForce ([ "check" ] ++ markdownOptions);
+                options = lib.mkForce (
+                  [
+                    "check"
+                    "--fix"
+                  ]
+                  ++ markdownOptions
+                );
                 priority = 2;
+              };
+              rumdl-fragment-check = {
+                command = lib.getExe pkgs.rumdl;
+                options = [
+                  "check"
+                  "--fix"
+                  "--disable"
+                  "MD013,MD057,MD041"
+                  "--extend-enable"
+                  "MD060"
+                  "--config"
+                  ''MD060.style = "aligned"''
+                ];
+                includes = [ "*.inc" ];
               };
               typos.priority = 1;
               lua-lint = {
@@ -266,6 +286,17 @@
                 ];
               };
               yamllint.options = lib.mkAfter [ "--strict" ];
+              editorconfig-check = {
+                command = lib.getExe pkgs.editorconfig-checker;
+                options = [ "-disable-indent-size" ];
+                includes = [ "*" ];
+                excludes = [
+                  "*.lock"
+                  "*.patch"
+                  "*.png"
+                  "*.yuck"
+                ];
+              };
               toml-lint = {
                 command = lib.getExe pkgs.taplo;
                 options = [ "lint" ];
