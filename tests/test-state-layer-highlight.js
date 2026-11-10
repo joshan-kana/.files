@@ -34,7 +34,7 @@ test("audio, network, Bluetooth, and notification feedback all use the common St
   const frame = qml("FrameGeometry.js");
   assert.match(popup, /hovered: toast\.hovered/);
   assert.match(popup, /pressed: toast\.pointerPressed/);
-  assert.match(popup, /showHover: !popup\.frameConnected/);
+  assert.match(popup, /showHover: !popup\.frameAttached/);
   assert.match(frame, /dock\.hovered \|\| dock\.pressed/);
   assert.match(frame, /dock\.pressed \? pressedPaths : hoverPaths/);
 });
