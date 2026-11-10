@@ -47,6 +47,9 @@ in
     home = _: { home.packages = [ pkgs.warp-terminal ]; };
   };
 
+  /**
+    Mullvad VPN desktop installation and Linux service integration.
+  */
   mullvad =
     _:
     lib.optionalAttrs isLinux {
@@ -255,6 +258,9 @@ in
       };
     };
 
+  /**
+    VLC media player packaged for both macOS and Linux.
+  */
   vlc = _: {
     home = _: { home.packages = [ pkgs.vlc ]; };
   };
@@ -300,6 +306,9 @@ in
       }
     );
 
+  /**
+    Spotify desktop integration with platform-specific configuration.
+  */
   spotify =
     { lib, options, ... }:
     (lib.optionalAttrs isLinux (
@@ -318,6 +327,9 @@ in
     };
   };
 
+  /**
+    Dropbox desktop synchronisation client packaged on each supported platform.
+  */
   dropbox = _: {
     home = _: { home.packages = [ pkgs.dropbox ]; };
   };
@@ -385,22 +397,28 @@ in
   zed = { pkgs, ... }: {
     home = _: { home.packages = [ pkgs.zed-editor ]; };
   };
-}
-// lib.optionalAttrs isLinux {
-  filelight = _: {
-    home = _: { home.packages = [ pkgs.kdePackages.filelight ]; };
-  };
-  gparted = _: {
-    home = _: { home.packages = [ pkgs.gparted ]; };
-  };
-  nautilus = _: {
-    home = _: { home.packages = [ pkgs.nautilus ]; };
-  };
-  waypipe = _: {
-    home = _: { home.packages = [ pkgs.waypipe ]; };
-  };
-}
-// {
+
+  filelight =
+    _:
+    lib.optionalAttrs isLinux {
+      home = _: { home.packages = [ pkgs.kdePackages.filelight ]; };
+    };
+  gparted =
+    _:
+    lib.optionalAttrs isLinux {
+      home = _: { home.packages = [ pkgs.gparted ]; };
+    };
+  nautilus =
+    _:
+    lib.optionalAttrs isLinux {
+      home = _: { home.packages = [ pkgs.nautilus ]; };
+    };
+  waypipe =
+    _:
+    lib.optionalAttrs isLinux {
+      home = _: { home.packages = [ pkgs.waypipe ]; };
+    };
+
   arc =
     { pkgs, ... }:
     lib.optionalAttrs isDarwin {
@@ -461,6 +479,9 @@ in
       homebrew.casks = [ "izotope-product-portal" ];
     };
 
+  /**
+    Microsoft Office applications and their update service on macOS.
+  */
   microsoftOfficeSuite =
     _:
     lib.optionalAttrs isDarwin {
@@ -495,6 +516,9 @@ in
       homebrew.casks = [ "openclaw" ];
     };
 
+  /**
+    OrcaSlicer nightly build distributed through Homebrew on macOS.
+  */
   orcaSlicerNightly =
     _:
     lib.optionalAttrs isDarwin {
@@ -513,18 +537,17 @@ in
       homebrew.casks = [ "softube-central" ];
     };
 
+  /**
+    Steam client on macOS and native NixOS integration on x86_64 Linux.
+  */
   steam =
     _:
-    {
-      home =
-        _:
-        lib.optionalAttrs isDarwin {
-          home.packages = [ pkgs.steam ];
-        };
-    }
-    // lib.optionalAttrs (system == "x86_64-linux") {
-      programs.steam.enable = true;
-    };
+    if system == "x86_64-linux" then
+      { programs.steam.enable = true; }
+    else
+      lib.optionalAttrs isDarwin {
+        home = _: { home.packages = [ pkgs.steam ]; };
+      };
 
   notion =
     { pkgs, ... }:
