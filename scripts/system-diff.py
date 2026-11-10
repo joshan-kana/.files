@@ -111,58 +111,40 @@ def compare(before, after, base, head):
     return result
 
 
-def markdown(report, limit):
+def markdown(report):
     lines = [
-        "## Evaluated package changes",
+        "## Package changes",
         "",
-        f"Base: `{report['base']}` · Head: `{report['head']}`",
-        "",
-        "| Configuration | Added | Removed | Version changes | Modified |",
+        "| Configuration | Added | Removed | Updated | Modified |",
         "| --- | ---: | ---: | ---: | ---: |",
     ]
+    changes = defaultdict(list)
     for host in report["hosts"]:
         counts = host["summary"]
-        lines.append(
-            f"| `{host['name']}` ({host['system']}) | {counts['added']} | "
-            f"{counts['removed']} | {counts['updated']} | {counts['modified']} |"
-        )
-    if not report["hosts"]:
-        lines.append("| No configurations found | 0 | 0 | 0 | 0 |")
-    for host in report["hosts"]:
-        if not host["changes"] and host["status"] == "present":
-            continue
-        lines.extend(["", f"### {host['name']}"])
-        if host["status"] != "present":
-            lines.append(f"Configuration {host['status']}.")
-        if not host["changes"]:
-            continue
-        lines.extend(["", "| Change | Package | Before | After |", "| --- | --- | --- | --- |"])
-        changes = sorted(
-            host["changes"],
-            key=lambda item: (
-                {"updated": 0, "added": 1, "removed": 2, "modified": 3}[item["status"]],
-                item["name"],
-            ),
-        )
-        for item in changes[:limit]:
-            before = ", ".join(item["before"]) or "—"
-            after = ", ".join(item["after"]) or "—"
-            lines.append(f"| {item['status'].capitalize()} | `{item['name']}` | `{before}` | `{after}` |")
-        if len(changes) > limit:
-            lines.extend(
-                [
-                    "",
-                    f"*{len(changes) - limit} further changes omitted; use `--json` for all entries.*",
-                ]
-            )
+        lines.append(f"| `{host['name']}` | {counts['added']} | {counts['removed']} | {counts['updated']} | {counts['modified']} |")
+        for item in host["changes"]:
+            key = (item["status"], item["name"], tuple(item["before"]), tuple(item["after"]))
+            changes[key].append(host["name"])
+
+    if not changes:
+        return "\n".join(lines + ["", "No package changes."])
+
     lines.extend(
         [
             "",
-            "> Evaluation only. Includes directly selected NixOS, nix-darwin and Home Manager packages. "
-            "Does not include every service or transitive dependency, and does not verify built closures. "
-            "“Modified” means a derivation changed without a version change.",
+            "| Change | Package | Version | Configurations |",
+            "| --- | --- | --- | --- |",
         ]
     )
+    order = {"updated": 0, "added": 1, "removed": 2, "modified": 3}
+    for (status, name, before, after), hosts in sorted(
+        changes.items(), key=lambda item: (order[item[0][0]], item[0][1], item[0][2], item[0][3])
+    ):
+        old = ", ".join(before)
+        new = ", ".join(after)
+        version = f"`{old}` → `{new}`" if status == "updated" else f"`{new if status == 'added' else old}`"
+        configurations = ", ".join(f"`{host}`" for host in hosts)
+        lines.append(f"| {status.capitalize()} | `{name}` | {version} | {configurations} |")
     return "\n".join(lines)
 
 
@@ -185,7 +167,7 @@ def main():
     before = evaluate(f"{prefix}?rev={base}")
     after = evaluate(f"{prefix}?rev={head}" if args.head else prefix)
     report = compare(before, after, base[:12], head[:12] if args.head else head)
-    print(json.dumps(report, indent=2, sort_keys=True) if args.json else markdown(report, 45))
+    print(json.dumps(report, indent=2, sort_keys=True) if args.json else markdown(report))
 
 
 if __name__ == "__main__":
