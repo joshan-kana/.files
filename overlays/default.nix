@@ -5,6 +5,7 @@ _: {
     ./bottles
     ./brave
     ./comin
+    ./codex
     ./kitty
     ./configarr
     ./cosmic-noir-icons
