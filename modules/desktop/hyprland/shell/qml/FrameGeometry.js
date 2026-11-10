@@ -222,7 +222,7 @@ function contour(
     // Match the diagonal of the superellipse and the exact tangent direction
     // at both ends, including reversed concave shoulders.
     const direction = Math.sign(end - start);
-    const handle = (r * (Math.pow(2, -1 / shapeExponent) - 0.5)) / 0.375;
+    const handle = (r * (2 ** (-1 / shapeExponent) - 0.5)) / 0.375;
     const first = squircle.cornerPoint(cx, cy, r, start, shapeExponent);
     const last = points[points.length - 1];
     const control1 = {

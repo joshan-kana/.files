@@ -191,7 +191,7 @@ test("reactive audio returns to exact zero on silence and connection loss", () =
     assert.match(reactive, new RegExp(`${field} = presence \\*`));
   assert.match(
     reactive,
-    /onConnectedChanged\(\): void \{\s*if \(\!reactive\.spectrum\.connected\)\s*reactive\.reset\(\)/,
+    /onConnectedChanged\(\): void \{\s*if \(!reactive\.spectrum\.connected\)\s*reactive\.reset\(\)/,
   );
 });
 
