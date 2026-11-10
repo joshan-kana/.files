@@ -977,16 +977,8 @@ in
     home = _: { home.packages = [ pkgs.mediainfo ]; };
   };
 
-  nixd = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.nixd ]; };
-  };
-
   sevenzip = { pkgs, ... }: {
     home = _: { home.packages = [ pkgs._7zz ]; };
-  };
-
-  spicetify = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.spicetify-cli ]; };
   };
 
   tio = { pkgs, ... }: {
