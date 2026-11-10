@@ -94,19 +94,6 @@ ShellSurface {
                 font.family: "Symbols Nerd Font"
                 font.pixelSize: setting.theme.fontSize(19)
             }
-            KeyHint {
-                visible: setting.shortcut.length > 0
-                anchors {
-                    right: parent.right
-                    verticalCenter: parent.verticalCenter
-                }
-                shortcut: setting.keyboardSelected ? "H/L" : setting.shortcut
-                compact: true
-                runtime: setting.runtime
-                theme: setting.theme
-                emphasized: setting.active || setting.keyboardSelected
-                emphasisColor: setting.roleAccent
-            }
         }
 
         Row {
@@ -148,5 +135,22 @@ ShellSurface {
             onInteractionStarted: setting.sliderActivated()
             onValueRequested: next => setting.opacityRequested(next)
         }
+    }
+
+    // Keep the keycap aligned to the tile, independently of icon and slider layout.
+    KeyHint {
+        visible: setting.shortcut.length > 0
+        anchors {
+            top: parent.top
+            right: parent.right
+            topMargin: setting.theme.spacing2
+            rightMargin: setting.theme.spacing2
+        }
+        shortcut: setting.keyboardSelected ? "H/L" : setting.shortcut
+        compact: true
+        runtime: setting.runtime
+        theme: setting.theme
+        emphasized: setting.active || setting.keyboardSelected
+        emphasisColor: setting.roleAccent
     }
 }

@@ -669,3 +669,25 @@ test("slider mode retains Tab, J/K selection and H/L edits without duplicate leg
     /hints: \[/,
   );
 });
+
+test("Visual Modes keycaps share one tile-relative top-right baseline", () => {
+  for (const [file, owner, tail] of [
+    ["QuickSettingChip.qml", "chip", "MarqueeText {"],
+    ["OpacitySetting.qml", "setting", "ShellSlider {"],
+    ["AdjustableSetting.qml", "setting", "ShellSlider {"],
+  ]) {
+    const source = read(file);
+    const hintStart = source.indexOf("KeyHint {");
+    assert.ok(
+      hintStart > source.indexOf(tail),
+      `${file}: keycap must not be nested in the content row`,
+    );
+    assert.equal((source.match(/KeyHint \{/g) || []).length, 1);
+    const hint = source.slice(hintStart);
+    assert.match(hint, /anchors \{\s*top: parent\.top\s*right: parent\.right/);
+    assert.ok(hint.includes(`topMargin: ${owner}.theme.spacing2`));
+    assert.ok(hint.includes(`rightMargin: ${owner}.theme.spacing2`));
+    assert.match(hint, /compact: true/);
+    assert.doesNotMatch(hint, /verticalCenter: parent\.verticalCenter/);
+  }
+});
