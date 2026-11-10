@@ -991,12 +991,6 @@ in
       home = _: { home.packages = [ pkgs.mas ]; };
     };
 
-  blockGooseCli =
-    _:
-    lib.optionalAttrs isDarwin {
-      homebrew.brews = [ "block-goose-cli" ];
-    };
-
   crush =
     _:
     lib.optionalAttrs isDarwin {
