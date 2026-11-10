@@ -238,7 +238,13 @@
                 "--config"
                 ''lint.pydocstyle.convention = "pep257"''
               ];
-              ruff-format.priority = 1;
+              ruff-format = {
+                priority = 1;
+                options = lib.mkAfter [
+                  "--config"
+                  "format.docstring-code-format = true"
+                ];
+              };
 
               prettier = {
                 includes = lib.mkAfter [
