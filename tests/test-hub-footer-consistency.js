@@ -241,3 +241,19 @@ test("shared key hints collapse empty keycaps without leaving layout gaps", () =
   const action = source("ShellAction.qml");
   assert.match(action, /shortcut: root\.shortcut/);
 });
+
+test("footer only contains shared navigation and keyboard controls", () => {
+  const host = source("ShellExpansionHost.qml");
+  assert.doesNotMatch(
+    host,
+    /id: footerStatus|Critical alerts|notifications"|Recording saved|Saving recording/,
+  );
+  assert.match(host, /id: footerHints/);
+  assert.match(host, /shortcut: "ESC"/);
+  assert.match(host, /shortcut: "SHIFT\+ESC"/);
+  // The universal recording stop shortcut still works when the hub is open.
+  assert.match(
+    host,
+    /enabled: host.expansionState.hasCurrent && host.recordingState.capturing/,
+  );
+});
