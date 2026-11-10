@@ -991,14 +991,7 @@ in
       home = _: { home.packages = [ pkgs.mas ]; };
     };
 
-  crush =
-    _:
-    lib.optionalAttrs isDarwin {
-      homebrew = {
-        brews = [ "charmbracelet/tap/crush" ];
-        taps = [
-          "charmbracelet/tap"
-        ];
-      };
-    };
+  crush = { pkgs, ... }: {
+    home = _: { home.packages = [ pkgs.crush ]; };
+  };
 }
