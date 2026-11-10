@@ -6,6 +6,8 @@ Validate the behavioral effect of a change, not only the source syntax. Choose c
 
 Run the repository's formatter/linter check, whitespace check, and configured flake checks. Review unsupported or skipped systems rather than treating one platform's result as fleet-wide verification.
 
+After applying automatic fixes, run the complete formatter/linter pipeline again in check mode and verify that it produces no changes. Audit file-to-formatter assignments when changing tooling: each supported source type needs coverage, and no file should have competing formatters. Confirm deliberate exclusions remain excluded.
+
 For manual changes, build the assembled documentation source and rendered book, check links/navigation, and inspect representative output.
 
 ## Evidence by change type
