@@ -23,10 +23,6 @@
     (moduleRegistry.profiles { }).desktop
   ];
 
-  dotfiles = {
-    defaults.terminal = "alacritty";
-  };
-
   hardware = import ./hardware.nix;
 
   desktop = editScope moduleRegistry.desktop {
