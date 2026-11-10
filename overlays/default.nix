@@ -5,6 +5,7 @@ _: {
     ./bottles
     ./brave
     ./comin
+    ./cargo-bundle
     ./codex
     ./kitty
     ./configarr
@@ -46,6 +47,7 @@ _: {
     ./open-webui-desktop
     ./open-webui-computer
     ./python-matter-server
+    ./primp
     ./prusaslicer
     ./qmk-toolbox
     ./reaper
