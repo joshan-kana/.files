@@ -314,11 +314,6 @@
                   "*.yuck"
                 ];
               };
-              toml-lint = {
-                command = lib.getExe pkgs.taplo;
-                options = [ "lint" ];
-                includes = [ "*.toml" ];
-              };
               nix-query-lint = {
                 command = toString (
                   pkgs.writeShellScript "lint-nix-queries" ''
