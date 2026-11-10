@@ -10,12 +10,16 @@
             tag = "v0.49.2";
             hash = "sha256-FstfBzwdh1z7Qy9zWDY7L7mpd5bxnypgqEzqeLe16fY=";
           };
-          goModules =
-            (prev.buildGo126Module {
-              pname = "kitty-go-modules";
-              inherit (finalAttrs) src version;
-              vendorHash = "sha256-iSPPwwu9jllnIxkQeOlJFdDL4xLUGRP2RMW9DPRY6FQ=";
-            }).goModules;
+          inherit
+            (
+              (prev.buildGo126Module {
+                pname = "kitty-go-modules";
+                inherit (finalAttrs) src version;
+                vendorHash = "sha256-iSPPwwu9jllnIxkQeOlJFdDL4xLUGRP2RMW9DPRY6FQ=";
+              })
+            )
+            goModules
+            ;
           patches = (old.patches or [ ]) ++ [ ../../patches/kitty/smooth-cursor.patch ];
           passthru = (old.passthru or { }) // {
             autoUpdate = false;
