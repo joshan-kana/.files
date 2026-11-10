@@ -16,12 +16,18 @@ in
       let
         system = prev.stdenv.hostPlatform.system;
         inherit (release) version;
-        passthru = {
+        passthru = rec {
           autoUpdate = true;
           updateGroup = "brave";
-          updateUrl = "https://github.com/brave/brave-browser";
-          updateGithubReleases = true;
+          updateUrl = "https://brave-browser-apt-release.s3.brave.com/dists/stable/main/binary-amd64/Packages";
+          updateRegex = ''(?ms)^Package: brave-browser\n(?:(?!^Package: ).)*?^Version: ([0-9]+(?:\.[0-9]+)+)$'';
           updateFilename = "overlays/brave/default.nix";
+          updateScript = [
+            "${prev.python3}/bin/python3"
+            "${../../scripts/update-version.py}"
+            updateFilename
+            system
+          ];
         };
       in
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
