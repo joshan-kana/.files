@@ -9,18 +9,19 @@ Compare selected NixOS, nix-darwin and Home Manager packages across all
 flake hosts without building system closures.
 
 Options:
-  --base REF   Baseline Git revision (default: origin/HEAD)
+  --base REF   Baseline Git revision (default: origin/HEAD, or HEAD)
   --head REF   Target Git revision (default: working tree)
   --json       Emit JSON instead of formatted Markdown
   -h, --help   Show this help
 
-Without options, choose a target with fzf and view the report in less.
-Providing any option, or piping output, runs non-interactively.
+Without options, choose a target with fzf. Ctrl-B changes the baseline.
+The report opens in a Markdown pager. Explicit flags or piped output
+run without a menu.
 
 Examples:
   system-diff
-  system-diff --base origin/HEAD --head origin/system-update
-  system-diff --base HEAD~1 --head HEAD --json
+  system-diff --base HEAD~1 --head HEAD
+  system-diff --json | jq '.hosts[].summary'
 
 Results go to stdout; diagnostics go to stderr. Output can be piped,
 redirected to a file, or processed with jq when --json is selected.
@@ -32,7 +33,7 @@ fail() {
   exit 2
 }
 
-base=origin/HEAD
+base=
 head=
 json=false
 interactive=false
@@ -73,29 +74,73 @@ done
 
 repo=$(git rev-parse --show-toplevel 2>/dev/null) || fail "run inside a Git repository"
 
+# Use Git's remote default ref when available; explicit --base accepts any revision.
+if [[ -z "$base" ]]; then
+  base=HEAD
+  if git -C "$repo" rev-parse --verify --quiet refs/remotes/origin/HEAD >/dev/null; then
+    base=origin/HEAD
+  fi
+fi
+
 if [[ "$interactive" == true ]]; then
-  target=$(
-    {
-      printf 'working-tree\tWorking tree (including uncommitted changes)\n'
-      printf 'HEAD\tCurrent commit (HEAD)\n'
-      if git -C "$repo" show-ref --verify --quiet refs/remotes/origin/system-update; then
-        printf 'origin/system-update\tSystem update branch\n'
+  export SYSTEM_DIFF_REPO="$repo"
+
+  # shellcheck disable=SC2016 # fzf replaces {1}; the preview shell expands variables.
+  preview='if [ {1} = working-tree ]; then
+    git -C "$SYSTEM_DIFF_REPO" status --short
+  else
+    git -C "$SYSTEM_DIFF_REPO" log -1 --format="%h  %s%nCommitted %ar by %an" {1} 2>/dev/null
+    printf "\nChanged files since %s:\n" "$SYSTEM_DIFF_BASE"
+    git -C "$SYSTEM_DIFF_REPO" diff --stat "$SYSTEM_DIFF_BASE" {1} -- 2>/dev/null | head -40
+  fi'
+
+  while true; do
+    export SYSTEM_DIFF_BASE="$base"
+    base_label=$base
+    base_label=${base_label#refs/remotes/}
+    base_label=${base_label#refs/heads/}
+    base_label=${base_label#refs/tags/}
+    selection=$(
+      {
+        printf 'working-tree\tWorking tree  ·  includes uncommitted changes\n'
+        printf 'HEAD\tHEAD  ·  current commit\n'
+        git -C "$repo" for-each-ref --sort=-committerdate \
+          --format='%(refname)%09%(refname:short)%09%(subject)' \
+          refs/heads refs/remotes refs/tags |
+          while IFS=$'\t' read -r full ref subject; do
+            case "$full" in
+              refs/remotes/*/HEAD) continue ;;
+              refs/remotes/*) kind=Remote ;;
+              refs/heads/*) kind=Local ;;
+              refs/tags/*) kind=Tag ;;
+              *) continue ;;
+            esac
+            printf '%s\t%s  ·  %s  ·  %s\n' "$full" "$kind" "$ref" "$subject"
+          done
+        git -C "$repo" log --all -60 --format='%H%x09Commit  ·  %h  ·  %s'
+      } | fzf --no-sort --layout=reverse --border --height=85% \
+        --delimiter=$'\t' --with-nth=2 \
+        --prompt='Compare to> ' \
+        --expect=ctrl-b \
+        --header="Baseline: $base_label  |  Enter: compare  ·  Ctrl-B: set baseline  ·  Esc: cancel" \
+        --preview="$preview" \
+        --preview-window=right:50%:wrap,border-left
+    ) || exit 0
+    key=${selection%%$'\n'*}
+    selected=${selection#*$'\n'}
+    candidate=${selected%%$'\t'*}
+    if [[ "$key" == ctrl-b ]]; then
+      if [[ "$candidate" == working-tree ]]; then
+        printf 'system-diff: baseline must be a Git revision, not the working tree\n' >&2
+        continue
       fi
-      git -C "$repo" for-each-ref --sort=-committerdate \
-        --format='%(refname:short)%09%(subject)' refs/heads refs/remotes/origin |
-        while IFS=$'\t' read -r ref subject; do
-          case "$ref" in
-            origin/HEAD | origin/system-update) continue ;;
-          esac
-          printf '%s\t%s · %s\n' "$ref" "$ref" "$subject"
-        done
-    } | fzf --no-sort --layout=reverse --border --height=70% \
-      --delimiter=$'\t' --with-nth=2 \
-      --prompt='Compare> ' \
-      --header="Against $base · Enter: compare · Esc: cancel"
-  ) || exit 0
-  head=${target%%$'\t'*}
-  [[ "$head" != working-tree ]] || head=
+      base=$candidate
+      continue
+    fi
+    head=$candidate
+    [[ "$head" != working-tree ]] || head=
+    break
+  done
 fi
 
 base_sha=$(git -C "$repo" rev-parse --verify --end-of-options "${base}^{commit}" 2>/dev/null) ||
@@ -271,7 +316,7 @@ render() {
 
 if [[ "$interactive" == true ]]; then
   render > "$tmpdir/report.md"
-  less -FRSX "$tmpdir/report.md"
+  glow --pager "$tmpdir/report.md"
 else
   render
 fi

@@ -812,8 +812,8 @@
               pkgs.coreutils
               pkgs.fzf
               pkgs.git
+              pkgs.glow
               pkgs.jq
-              pkgs.less
               treefmt.config.build.wrapper
             ];
             text = builtins.readFile ./scripts/system-diff;
