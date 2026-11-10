@@ -355,6 +355,13 @@ in
     inherit (activeAssets) cursor;
   };
 
+  config = lib.optionalAttrs isDarwin {
+    system.defaults.NSGlobalDomain = {
+      AppleInterfaceStyle = if activeTheme.polarity == "dark" then "Dark" else null;
+      AppleInterfaceStyleSwitchesAutomatically = false;
+    };
+  };
+
   fonts =
     { lib, pkgs, ... }:
     let
@@ -390,6 +397,12 @@ in
           find "$cacheDir" -maxdepth 1 -type l -delete
           rm -f -- "$cacheDir/.revision"
         fi
+      '';
+    }
+    // lib.optionalAttrs (isDarwin && activeTheme.polarity == "light") {
+      # nix-darwin leaves the existing Dark preference in place when set to null.
+      home.activation.macosLightAppearance = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        /usr/bin/defaults delete -g AppleInterfaceStyle 2>/dev/null || true
       '';
     }
     // lib.optionalAttrs isLinux {
