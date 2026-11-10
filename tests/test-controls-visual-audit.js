@@ -541,6 +541,35 @@ test("Compact Audio keeps Output/Input without app rows and shows correct header
   assert.match(read("ShellSection.qml"), /id: headerHints/);
 });
 
+test("Resources and Captures occupy the second Quick Actions row", () => {
+  const controls = read("SystemContent.qml");
+  const actions = controls.slice(
+    controls.indexOf("id: actionStrip"),
+    controls.indexOf("ShellSection {", controls.indexOf("id: actionStrip")),
+  );
+  assert.match(
+    actions,
+    /id: actionStrip[\s\S]*?columns: width < 440 \|\| root.theme.textScale >= 1\.5 \? 2 : 3/,
+  );
+  const tiles = [
+    ...actions.matchAll(
+      /QuickSettingChip \{\s*width: actionStrip\.cellWidth\((\d)\)/g,
+    ),
+  ];
+  assert.deepEqual(
+    tiles.map((tile) => Number(tile[1])),
+    [0, 1, 2, 3, 4],
+  );
+  assert.match(
+    actions,
+    /cellWidth\(1\)[\s\S]*?title: root\.system\.idleInhibited[\s\S]*?cellWidth\(2\)[\s\S]*?title: \(root\.powerProfile\.available/,
+  );
+  assert.match(
+    actions,
+    /cellWidth\(3\)[\s\S]*?title: "Resources"[\s\S]*?cellWidth\(4\)[\s\S]*?title: "Captures"/,
+  );
+});
+
 test("Quick Actions fill both rows without changing tile height", () => {
   const controls = read("SystemContent.qml");
   const start = controls.indexOf("id: actionStrip");
