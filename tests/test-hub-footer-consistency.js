@@ -159,7 +159,7 @@ test("Audio and Media keyboard legends live in their section and detail headers"
   assert.match(host, /bottomMargin: host.theme.spacing3/);
 });
 
-test("Controls and Activity local actions clear the shared footer without moving other panels", () => {
+test("all hub views reserve identical content clearance above global navigation", () => {
   const host = source("ShellExpansionHost.qml");
   assert.match(host, /footerBottomClearance: theme\.spacing5\s*\n/);
   assert.match(
@@ -168,8 +168,9 @@ test("Controls and Activity local actions clear the shared footer without moving
   );
   assert.match(
     host,
-    /bottomMargin: host\.theme\.spacing3 \+ \(host\.expansionState\.currentName === "activity" \|\| \(host\.expansionState\.currentName === "system" && !host\.detailVisible\) \? host\.theme\.spacing4 : 0\)/,
+    /bottomMargin: host\.theme\.spacing3 \+ host\.theme\.spacing4/,
   );
+  assert.doesNotMatch(host, /bottomMargin:.*host\.expansionState\.currentName/);
   const activity = source("NotificationContent.qml");
   assert.match(activity, /id: footer\s+anchors\.bottom: parent\.bottom/);
   assert.match(host, /id: contentViewport[\s\S]*?bottom: hubFooter\.top/);
