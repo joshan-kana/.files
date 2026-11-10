@@ -197,8 +197,6 @@ ShellRoot {
         frameEnabled: appearance.frameVisible
         barVisible: appearance.barVisible
         recordingState: recording
-        notificationState: notifications
-        occludedIslands: ambientBar.occludedIslands
         onRecordingStopRequested: actions.toggleRecording()
         dockOrigin: ambientBar.originFor(expansionState.screen || Quickshell.screens[0], "system")
         expansionState: expansionState
@@ -450,6 +448,7 @@ ShellRoot {
         theme: theme
         motion: motion
         frameEnabled: appearance.frameVisible
+        hubVisible: (expansionState.hasCurrent || expansionHost.closing) && expansionHost.screen === screen
         onCenterRequested: actions.showNotifications()
     }
 
