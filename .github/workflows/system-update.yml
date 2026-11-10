@@ -70,7 +70,8 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin main
+          default_branch="$(gh repo view "$GITHUB_REPOSITORY" --json defaultBranchRef --jq '.defaultBranchRef.name')"
+          git fetch origin "$default_branch"
 
           branch_exists=false
           if git ls-remote --exit-code --heads origin "$UPDATE_BRANCH" >/dev/null 2>&1; then
@@ -81,7 +82,7 @@ jobs:
           pr_number="$(
             gh pr list \
               --repo "$GITHUB_REPOSITORY" \
-              --base main \
+              --base "$default_branch" \
               --head "$UPDATE_BRANCH" \
               --state open \
               --json number \
@@ -94,7 +95,7 @@ jobs:
           fi
 
           if [[ "$branch_exists" == true ]]; then
-            if [[ -z "$pr_number" ]] && ! git merge-base --is-ancestor "origin/$UPDATE_BRANCH" origin/main; then
+            if [[ -z "$pr_number" ]] && ! git merge-base --is-ancestor "origin/$UPDATE_BRANCH" "origin/$default_branch"; then
               if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
                 echo "Remote $UPDATE_BRANCH contains unmerged work without an open PR; leaving it untouched."
                 exit 0
@@ -106,12 +107,12 @@ jobs:
 
             if [[ -n "$pr_number" ]]; then
               git switch -C "$UPDATE_BRANCH" "origin/$UPDATE_BRANCH"
-              git merge --no-edit origin/main
+              git merge --no-edit "origin/$default_branch"
             else
-              git switch -C "$UPDATE_BRANCH" origin/main
+              git switch -C "$UPDATE_BRANCH" "origin/$default_branch"
             fi
           else
-            git switch -c "$UPDATE_BRANCH" origin/main
+            git switch -c "$UPDATE_BRANCH" "origin/$default_branch"
           fi
 
           update_failed=false
@@ -121,7 +122,7 @@ jobs:
             git commit -m "update system"
           fi
 
-          if git diff --quiet origin/main...HEAD && [[ -z "$pr_number" ]]; then
+          if git diff --quiet "origin/$default_branch"...HEAD && [[ -z "$pr_number" ]]; then
             if [[ "$update_failed" == true ]]; then
               echo "::error::System update failed without producing changes." >&2
               exit 1
@@ -135,7 +136,7 @@ jobs:
           if [[ -z "$pr_number" ]]; then
             gh pr create \
               --repo "$GITHUB_REPOSITORY" \
-              --base main \
+              --base "$default_branch" \
               --head "$UPDATE_BRANCH" \
               --title "chore: update system" \
               --body ""
@@ -152,15 +153,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git fetch origin main
-          pr_number="$(gh pr list --repo "$GITHUB_REPOSITORY" --base main --head "$UPDATE_BRANCH" --state open --json number --jq '.[0].number // empty')"
+          default_branch="$(gh repo view "$GITHUB_REPOSITORY" --json defaultBranchRef --jq '.defaultBranchRef.name')"
+          git fetch origin "$default_branch"
+          pr_number="$(gh pr list --repo "$GITHUB_REPOSITORY" --base "$default_branch" --head "$UPDATE_BRANCH" --state open --json number --jq '.[0].number // empty')"
           [[ -n "$pr_number" ]] || exit 0
 
           report="$(mktemp)"
           trap 'rm -f "$report"' EXIT
-          if ! nix run .#system-diff -- --base origin/main > "$report"; then
-            printf 'Package comparison could not be evaluated. Inspect the workflow validation logs.\n' > "$report"
-          fi
+          nix run .#system-diff -- --base "origin/$default_branch" > "$report"
           gh pr edit "$pr_number" --repo "$GITHUB_REPOSITORY" --body-file "$report"
 
       - name: Check flake and start native builds

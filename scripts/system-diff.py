@@ -13,10 +13,13 @@ EXPRESSION = """
 let
   flake = builtins.getFlake (builtins.getEnv "SYSTEM_DIFF_FLAKE");
   describe = package:
-    let parsed = builtins.parseDrvName package.name;
+    let
+      parsed = builtins.parseDrvName package.name;
+      pname = package.pname or null;
+      version = package.version or null;
     in {
-      name = package.pname or parsed.name;
-      version = package.version or parsed.version;
+      name = if pname == null || pname == "" then parsed.name else pname;
+      version = if version == null || version == "" then parsed.version else version;
       derivation = package.drvPath;
     };
   describeHost = host:
@@ -150,18 +153,16 @@ def markdown(report):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--base", help="Git revision to compare against (default: origin/main)")
+    parser.add_argument("--base", help="Git revision to compare against (default: origin/HEAD)")
     parser.add_argument("--head", help="Git revision to compare (default: current working tree)")
     parser.add_argument("--json", action="store_true", help="Print all changes as JSON")
     args = parser.parse_args()
 
     repo = Path(command("git", "rev-parse", "--show-toplevel")).resolve()
     try:
-        base = revision(repo, args.base or "origin/main")
+        base = revision(repo, args.base or "origin/HEAD")
     except subprocess.CalledProcessError:
-        if args.base:
-            parser.error(f"unknown base revision: {args.base}")
-        base = revision(repo, "main")
+        parser.error(f"unknown base revision: {args.base or 'origin/HEAD'}")
     head = revision(repo, args.head) if args.head else "working tree"
     prefix = "git+" + repo.as_uri()
     before = evaluate(f"{prefix}?rev={base}")
