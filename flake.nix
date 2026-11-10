@@ -811,9 +811,21 @@
             runtimeInputs = [
               pkgs.git
               pkgs.python3
+              treefmt.config.build.wrapper
             ];
             text = ''
-              exec python3 ${./scripts/system-diff.py} "$@"
+              json=false
+              for arg in "$@"; do
+                if [[ "$arg" == "--json" || "$arg" == "--help" || "$arg" == "-h" ]]; then
+                  json=true
+                fi
+              done
+              if [[ "$json" == true ]]; then
+                exec python3 ${./scripts/system-diff.py} "$@"
+              fi
+              python3 ${./scripts/system-diff.py} "$@" \
+                | python3 ${./scripts/system-diff-format.py} \
+                | treefmt --quiet --stdin --formatters rumdl-format system-diff.md
             '';
           };
 

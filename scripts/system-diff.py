@@ -114,48 +114,11 @@ def compare(before, after, base, head):
     return result
 
 
-def markdown(report):
-    lines = [
-        "## Package changes",
-        "",
-        "| Configuration | Added | Removed | Updated | Modified |",
-        "| --- | ---: | ---: | ---: | ---: |",
-    ]
-    changes = defaultdict(list)
-    for host in report["hosts"]:
-        counts = host["summary"]
-        lines.append(f"| `{host['name']}` | {counts['added']} | {counts['removed']} | {counts['updated']} | {counts['modified']} |")
-        for item in host["changes"]:
-            key = (item["status"], item["name"], tuple(item["before"]), tuple(item["after"]))
-            changes[key].append(host["name"])
-
-    if not changes:
-        return "\n".join(lines + ["", "No package changes."])
-
-    lines.extend(
-        [
-            "",
-            "| Change | Package | Version | Configurations |",
-            "| --- | --- | --- | --- |",
-        ]
-    )
-    order = {"updated": 0, "added": 1, "removed": 2, "modified": 3}
-    for (status, name, before, after), hosts in sorted(
-        changes.items(), key=lambda item: (order[item[0][0]], item[0][1], item[0][2], item[0][3])
-    ):
-        old = ", ".join(before)
-        new = ", ".join(after)
-        version = f"`{old}` → `{new}`" if status == "updated" else f"`{new if status == 'added' else old}`"
-        configurations = ", ".join(f"`{host}`" for host in hosts)
-        lines.append(f"| {status.capitalize()} | `{name}` | {version} | {configurations} |")
-    return "\n".join(lines)
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base", help="Git revision to compare against (default: origin/HEAD)")
     parser.add_argument("--head", help="Git revision to compare (default: current working tree)")
-    parser.add_argument("--json", action="store_true", help="Print all changes as JSON")
+    parser.add_argument("--json", action="store_true", help="Emit JSON instead of Markdown")
     args = parser.parse_args()
 
     repo = Path(command("git", "rev-parse", "--show-toplevel")).resolve()
@@ -168,7 +131,7 @@ def main():
     before = evaluate(f"{prefix}?rev={base}")
     after = evaluate(f"{prefix}?rev={head}" if args.head else prefix)
     report = compare(before, after, base[:12], head[:12] if args.head else head)
-    print(json.dumps(report, indent=2, sort_keys=True) if args.json else markdown(report))
+    print(json.dumps(report, indent=2, sort_keys=True))
 
 
 if __name__ == "__main__":
