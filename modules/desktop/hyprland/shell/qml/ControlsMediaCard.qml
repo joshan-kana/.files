@@ -143,9 +143,10 @@ ShellSurface {
         }
 
         Row {
-            width: parent.width
+            width: implicitWidth
             height: visible ? 46 : 0
             visible: card.media.available
+            anchors.horizontalCenter: parent.horizontalCenter
             spacing: card.theme.spacing2
 
             ShellAction {
@@ -167,11 +168,6 @@ ShellSurface {
                 onActivated: card.media.toggleShuffle()
             }
 
-            Item {
-                width: Math.max(0, (parent.width - shuffleButton.width - repeatButton.width - compactTransport.width - parent.spacing * 4) / 2)
-                height: 1
-            }
-
             MediaTransport {
                 id: compactTransport
                 width: implicitWidth
@@ -184,11 +180,6 @@ ShellSurface {
                 compact: true
                 minimal: true
                 simple: card.width < 490
-            }
-
-            Item {
-                width: Math.max(0, (parent.width - shuffleButton.width - repeatButton.width - compactTransport.width - parent.spacing * 4) / 2)
-                height: 1
             }
 
             ShellAction {
