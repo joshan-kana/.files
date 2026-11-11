@@ -25,6 +25,12 @@ test("notification toasts render above the Controls hub without changing popup g
   assert.match(popup, /mask: surfaceLifecycle\.inputRegion/);
   assert.match(popup, /interactiveItem: toastInputArea/);
   assert.match(popup, /readonly property int maxToastSlots:/);
+  // A logically retained eviction must never paint behind a moving live card:
+  // that previously made text from two different notifications slide through
+  // each other when a fourth notification arrived.
+  assert.match(popup, /visible: !evicted && slot < popup\.maxToastSlots/);
+  assert.match(popup, /onVisibleChanged: popup\.contourEpoch\+\+/);
+  assert.match(popup, /if \(toast && toast\.visible\)/);
   assert.match(
     root,
     /hubVisible: \(expansionState\.hasCurrent \|\| expansionHost\.closing\) && expansionHost\.screen === screen/,

@@ -33,8 +33,8 @@ PanelWindow {
         for (let i = 0; i < notificationState.popups.count; ++i) {
             const toast = toastRepeater.itemAt(i);
             if (toast && toast.visible) {
-                // Clip an evicted toast's frame outline to the same bounded
-                // three-slot Wayland viewport as its content.
+                // Frame geometry follows only painted cards. Evicted entries
+                // remain in the model for cleanup, not on the visible frame.
                 const y = Math.max(0, toast.y);
                 const bottom = Math.min(popup.height, toast.y + toast.height);
                 if (bottom > y + 0.05)
@@ -159,9 +159,10 @@ PanelWindow {
             onPointerPressedChanged: popup.contourEpoch++
             x: popup.width - width
             y: slot * (popup.cardHeight + popup.cardGap)
-            // Outgoing cards remain beneath the live stack. When another
-            // notification takes their slot, it covers the exit naturally
-            // instead of rendering two crooked cards side by side.
+            // Expiring cards may finish their ordinary exit under live cards.
+            // Evicted cards, however, are not painted: the replacement's
+            // animated arrival would otherwise reveal their old text beneath
+            // it, even when both use the same bounded slot.
             z: phase === "closing" ? 0 : 1
             onXChanged: popup.contourEpoch++
             onYChanged: popup.contourEpoch++
@@ -170,7 +171,8 @@ PanelWindow {
             width: popup.frameAttached ? popup.width * attachmentProgress : popup.width
             height: popup.cardHeight
             clip: popup.frameAttached
-            visible: slot < popup.maxToastSlots || evicted
+            visible: !evicted && slot < popup.maxToastSlots
+            onVisibleChanged: popup.contourEpoch++
 
             Behavior on y {
                 NumberAnimation {
@@ -191,9 +193,9 @@ PanelWindow {
             borderColor: toast.notification && toast.notification.urgency === NotificationUrgency.Critical ? Qt.rgba(popup.theme.critical.r, popup.theme.critical.g, popup.theme.critical.b, 0.58) : popup.theme.subtleBorder
             borderWidth: popup.frameAttached ? 0 : popup.theme.borderFocus
 
-            // Overflow is obscured by the replacement in the last visible
-            // slot. Ordinary expiry/dismissal still retracts its connected
-            // contour, while detached cards use the normal opacity fade.
+            // Ordinary expiry/dismissal still retracts its connected contour,
+            // while detached cards use the normal opacity fade. Evicted cards
+            // do not participate in the rendered stack.
             opacity: popup.frameAttached ? 1 : (toast.phase === "visible" && !toast.evicted ? 1 : 0)
             scale: popup.frameAttached ? 1 : (toast.phase === "visible" ? 1 : 0.965)
 
