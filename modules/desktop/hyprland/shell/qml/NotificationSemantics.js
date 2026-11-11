@@ -16,11 +16,13 @@ function defaultAction(actions) {
   );
 }
 
-// Quickshell exposes the freedesktop timeout in seconds. Zero means no expiry.
-function timeoutMs(seconds, urgency, critical, low) {
-  if (seconds === 0) return 0;
-  if (Number.isFinite(seconds) && seconds > 0)
-    return Math.max(250, Math.round(seconds * 1000));
+// The Quickshell 0.3.2 service exposes the freedesktop timeout in
+// milliseconds, despite older API documentation referring to seconds.
+// Zero means no expiry; negative uses the urgency-specific fallback.
+function timeoutMs(milliseconds, urgency, critical, low) {
+  if (milliseconds === 0) return 0;
+  if (Number.isFinite(milliseconds) && milliseconds > 0)
+    return Math.max(250, Math.round(milliseconds));
   if (urgency === critical) return 0;
   return urgency === low ? 3500 : 6000;
 }

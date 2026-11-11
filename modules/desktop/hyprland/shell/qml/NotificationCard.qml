@@ -270,6 +270,7 @@ SquircleSurface {
             maximumLineCount: card.expanded ? 20 : 2
             text: card.notificationState.bodyMarkup(card.notification)
             textFormat: Text.StyledText
+            textInteractionFlags: Qt.LinksAccessibleByMouse | Qt.LinksAccessibleByKeyboard
             onLinkActivated: link => card.notificationState.openBodyLink(link)
             color: card.theme.text
             opacity: 0.78

@@ -26,7 +26,8 @@ QtObject {
     readonly property bool locked: ["requested", "locked"].includes(lockState.text().trim())
     property var journal: []
     property var liveById: ({})
-    property var objectKeys: new Map()
+    // Weak references avoid retaining sender QObjects after they close.
+    property var objectKeys: new WeakMap()
     property int nextRecord: 0
     readonly property var history: journal.map(record => liveById[record.recordId] || record)
     readonly property int count: history.length
@@ -161,6 +162,17 @@ QtObject {
         settings.sync();
     }
 
+    // A normal systemd/Quickshell restart should not lose the final 300 ms
+    // of coalesced updates. One blocking atomic write on teardown is bounded
+    // by Journal.maxBytes and happens after the UI stops accepting input.
+    Component.onDestruction: {
+        if (saveTimer.running) {
+            saveTimer.stop();
+            archiveFile.blockWrites = true;
+            archiveFile.setText(Journal.serialize(journal));
+        }
+    }
+
     function resetToDeclared(): void {
         settings.preferenceSource = "default";
         settings.presentationSource = "default";
@@ -225,9 +237,13 @@ QtObject {
         const key = recordKey(notification);
         if (!key)
             return;
-        const next = Object.assign({}, liveById);
-        delete next[key];
-        liveById = next;
+        // A replaced sender may close its old QObject after the new handle
+        // has reused this record. Never invalidate the replacement's actions.
+        if (liveById[key] === notification) {
+            const next = Object.assign({}, liveById);
+            delete next[key];
+            liveById = next;
+        }
         objectKeys.delete(notification);
         // Retain only inert record metadata. Close reasons are not callbacks.
         journal = journal.map(record => record.recordId === key ? Object.assign({}, record, {
@@ -456,10 +472,11 @@ QtObject {
     function concealOrdinaryPopups(): void {
         for (let i = popups.count - 1; i >= 0; --i) {
             const item = popups.get(i);
-            if (item.notification && item.notification.urgency !== NotificationUrgency.Critical) {
+            const notification = item.notification;
+            if (notification && notification.urgency !== NotificationUrgency.Critical) {
                 popups.remove(i);
-                if (item.notification.transient)
-                    item.notification.expire();
+                if (notification.transient)
+                    notification.expire();
             }
         }
         rebalancePopups(Date.now());
