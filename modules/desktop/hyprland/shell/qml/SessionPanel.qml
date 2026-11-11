@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "DesktopIcons.js" as DesktopIcons
 import Quickshell
 import QtCore
 
@@ -277,7 +278,8 @@ Item {
         runtime: panel.runtime
         theme: panel.theme
         motion: panel.motion
-        glyph: panel.armedAction.length > 0 ? "!" : "⏻"
+        glyph: panel.armedAction.length > 0 ? "!" : DesktopIcons.glyphFor("session")
+        glyphFont: "Symbols Nerd Font"
         glyphColor: panel.armedAction.length > 0 ? panel.theme.warning : panel.theme.roleColor("resources")
         eyebrow: "Device / secure session"
         title: "Power & session"

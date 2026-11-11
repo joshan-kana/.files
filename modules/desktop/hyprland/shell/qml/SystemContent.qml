@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "DesktopIcons.js" as DesktopIcons
 import Quickshell
 import Quickshell.Io
 
@@ -758,7 +759,7 @@ FocusScope {
                     motion: root.motion
                     compact: true
                     horizontalCompact: true
-                    icon: "󰏘"
+                    icon: DesktopIcons.glyphFor("theme")
                     title: "Themes"
                     shortcut: "Q"
                     onActivated: root.openTheme()
@@ -774,7 +775,7 @@ FocusScope {
                     motion: root.motion
                     compact: true
                     horizontalCompact: true
-                    icon: "󰸉"
+                    icon: DesktopIcons.glyphFor("wallpaper")
                     title: "Wallpaper"
                     shortcut: "W"
                     onActivated: root.openWallpaper()
@@ -790,7 +791,7 @@ FocusScope {
                     motion: root.motion
                     compact: true
                     horizontalCompact: true
-                    icon: "󰐥"
+                    icon: DesktopIcons.glyphFor("session")
                     title: "Session"
                     shortcut: "E"
                     onActivated: root.openSession()
@@ -934,7 +935,7 @@ FocusScope {
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
-                            icon: "♫"
+                            icon: DesktopIcons.glyphFor("audioMixer")
                             title: root.musicReactiveEnabled ? "Audio reactive" : "Reactive off"
                             shortcut: "SHIFT+G"
                             active: root.musicReactiveEnabled
@@ -1230,7 +1231,7 @@ FocusScope {
                                 runtime: root.runtime
                                 theme: root.theme
                                 motion: root.motion
-                                icon: "󰍛"
+                                icon: DesktopIcons.glyphFor("resources")
                                 title: "Resources"
                                 shortcut: "R"
                                 activeColor: root.theme.roleColor("resources")
@@ -1243,7 +1244,7 @@ FocusScope {
                                 runtime: root.runtime
                                 theme: root.theme
                                 motion: root.motion
-                                icon: "󰕧"
+                                icon: DesktopIcons.glyphFor("captures")
                                 title: "Captures"
                                 shortcut: "C"
                                 activeColor: root.theme.roleColor("capture")

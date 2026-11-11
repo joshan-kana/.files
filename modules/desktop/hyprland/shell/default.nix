@@ -2307,6 +2307,7 @@ in
 
           Service = {
             ExecStart = lib.getExe lockServiceLauncher;
+            UMask = "0077";
             Restart = "no";
           };
         };
@@ -2332,6 +2333,7 @@ in
           Service = {
             ExecStartPre = "${lib.getExe' pkgs.coreutils "touch"} %t/linux-desktop-recording.state";
             ExecStart = "${lib.getExe launcher} --no-duplicate";
+            UMask = "0077";
             Restart = "on-failure";
             RestartSec = 1;
           };
