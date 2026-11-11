@@ -6,10 +6,12 @@ _: {
     ./brave
     ./comin
     ./cargo-bundle
+    ./chromadb
     ./codex
     ./kitty
     ./configarr
     ./cosmic-noir-icons
+    ./crush
     ./gh-dash
     ./hypr-persist
     ./gimp
