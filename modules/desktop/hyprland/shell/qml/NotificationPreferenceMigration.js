@@ -15,7 +15,10 @@ function migrate(current, previous) {
   if (current.legacyMigrated) return;
   for (const name of names) {
     const value = previous.value(name, null);
-    if (value !== null && current.value(name, null) === null) {
+    // QtCore.Settings persists declared defaults as the QML object loads.
+    // Before the migration marker exists, those newly materialized values
+    // are *not* user overrides. The original store is authoritative once.
+    if (value !== null) {
       current[name] = value;
       current.setValue(name, value);
     }
