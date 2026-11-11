@@ -287,10 +287,10 @@ SquircleSurface {
             id: actionButtons
             width: parent.width
             spacing: card.theme.spacing2
-            visible: card.expanded && card.safeActions.length > 0
+            visible: card.safeActions.length > 0
 
             Repeater {
-                model: card.safeActions
+                model: card.expanded ? card.safeActions : card.safeActions.slice(0, 2)
 
                 delegate: ShellAction {
                     required property int index

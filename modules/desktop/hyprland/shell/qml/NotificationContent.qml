@@ -519,7 +519,11 @@ FocusScope {
                     center.focusReply();
                     event.accepted = true;
                 } else if (event.key >= Qt.Key_1 && event.key <= Qt.Key_9) {
-                    center.notificationState.invokeAction(center.selectedNotification(), event.key - Qt.Key_1);
+                    const group = center.selectedGroup();
+                    const index = event.key - Qt.Key_1;
+                    const actions = center.notificationState.explicitActions(center.selectedNotification());
+                    if (group && index < (center.expandedGroupKey === group.key ? actions.length : Math.min(2, actions.length)))
+                        center.notificationState.invokeAction(center.selectedNotification(), index);
                     event.accepted = true;
                 } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                     if (!center.notificationState.invokeDefault(center.selectedNotification()))

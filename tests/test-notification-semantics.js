@@ -109,6 +109,12 @@ test("notification direct actions own their canonical on-control keyhints", () =
     /shortcut: card\.selected && index < 9 \? String\(index \+ 1\) : ""/,
   );
   assert.match(card, /onActivated: card\.replyFocusRequested\(\)/);
+  assert.match(card, /visible: card\.safeActions\.length > 0/);
+  assert.match(
+    card,
+    /model: card\.expanded \? card\.safeActions : card\.safeActions\.slice\(0, 2\)/,
+  );
+  assert.match(content, /Math\.min\(2, actions\.length\)/);
   assert.match(content, /onReplyFocusRequested:/);
   const footer = content.slice(
     content.indexOf("id: footer"),
