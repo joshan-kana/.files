@@ -145,8 +145,12 @@ PanelWindow {
             }
             readonly property color urgencyColor: notification && notification.urgency === NotificationUrgency.Critical ? popup.theme.critical : notification && notification.urgency === NotificationUrgency.Low ? popup.theme.textMuted : popup.theme.roleColor("notifications")
             readonly property bool pointerPressed: toastPress.visualPressed
+            readonly property var explicitActions: popup.notificationState.explicitActions(notification)
             hovered: toastPress.pointerHovered && phase === "visible"
-            onHoveredChanged: popup.contourEpoch++
+            onHoveredChanged: {
+                popup.contourEpoch++;
+                popup.notificationState.pausePopup(toast.notification, hovered);
+            }
             onPointerPressedChanged: popup.contourEpoch++
             x: popup.width - width
             y: slot * (popup.cardHeight + popup.cardGap)
@@ -225,9 +229,7 @@ PanelWindow {
                         popup.notificationState.dismiss(toast.notification);
                     } else {
                         popup.notificationState.hidePopup(toast.notification);
-                        if (popup.notificationState.captureKind(toast.notification))
-                            popup.notificationState.invokeDefault(toast.notification);
-                        else
+                        if (!popup.notificationState.invokeDefault(toast.notification))
                             popup.centerRequested();
                     }
                 }
@@ -276,12 +278,10 @@ PanelWindow {
                             cornerRadius: popup.theme.radiusSmall
                             fillColor: popup.theme.blend(popup.theme.controlBase, toast.urgencyColor, 0.15)
 
-                            Text {
-                                anchors.centerIn: parent
-                                text: popup.notificationState.captureKind(toast.notification) === "screenshot" ? "󰹑" : popup.notificationState.captureKind(toast.notification) === "recording" ? "󰕧" : toast.notification && toast.notification.urgency === NotificationUrgency.Critical ? "󰀪" : "󰂚"
-                                color: toast.urgencyColor
-                                font.family: "Symbols Nerd Font"
-                                font.pixelSize: popup.theme.fontSize(14)
+                            NotificationArtwork {
+                                anchors.fill: parent
+                                anchors.margins: 3
+                                notification: toast.notification
                             }
                         }
 
@@ -294,17 +294,19 @@ PanelWindow {
                             font.pixelSize: popup.theme.fontSize(10)
                             font.weight: Font.DemiBold
                             font.letterSpacing: 1.4
+                            width: Math.min(implicitWidth, Math.max(90, parent.width * 0.42))
+                            elide: Text.ElideRight
                         }
 
                         Item {
-                            width: Math.max(0, parent.width - appMark.width - appName.implicitWidth - actionHint.implicitWidth - parent.spacing * 3)
+                            width: Math.max(0, parent.width - appMark.width - appName.width - actionHint.implicitWidth - parent.spacing * 3)
                             height: 1
                         }
 
                         Text {
                             id: actionHint
                             anchors.verticalCenter: parent.verticalCenter
-                            text: !toast.notification ? "" : toast.notification.urgency === NotificationUrgency.Critical ? "CRITICAL" : toast.notification.actions.length > 0 ? toast.notification.actions.length + " ACTION" + (toast.notification.actions.length === 1 ? "" : "S") : popup.notificationState.captureKind(toast.notification) ? "OPEN" : ""
+                            text: !toast.notification ? "" : toast.notification.urgency === NotificationUrgency.Critical ? "CRITICAL" : toast.explicitActions.length > 0 ? toast.explicitActions.length + " ACTION" + (toast.explicitActions.length === 1 ? "" : "S") : toast.notification.hasInlineReply ? "REPLY" : ""
                             color: popup.theme.textMuted
                             font.family: popup.runtime.fontMono
                             font.pixelSize: popup.theme.fontSize(9)
@@ -313,7 +315,7 @@ PanelWindow {
                     }
 
                     MarqueeText {
-                        width: parent.width
+                        width: Math.max(1, parent.width - (preview.visible ? preview.width + popup.theme.spacing2 : 0))
                         text: toast.notification ? toast.notification.summary : ""
                         textFormat: Text.PlainText
                         color: popup.theme.textStrong
@@ -323,8 +325,8 @@ PanelWindow {
                     }
 
                     Text {
-                        width: parent.width
-                        maximumLineCount: 3
+                        width: Math.max(1, parent.width - (preview.visible ? preview.width + popup.theme.spacing2 : 0))
+                        maximumLineCount: toast.explicitActions.length > 0 ? 2 : 3
                         text: toast.notification ? toast.notification.body : ""
                         textFormat: Text.PlainText
                         visible: text.length > 0
@@ -337,22 +339,60 @@ PanelWindow {
                     }
                 }
 
-                ShellAction {
+                NotificationArtwork {
+                    id: preview
+                    notification: toast.notification
+                    preview: true
+                    visible: !!toast.notification && !!toast.notification.image
+                    width: 96
+                    height: 70
+                    anchors {
+                        top: parent.top
+                        right: parent.right
+                        topMargin: 38
+                    }
+                }
+
+                Row {
+                    id: quickActions
                     anchors {
                         right: parent.right
                         bottom: parent.bottom
                     }
-                    visible: popup.notificationState.captureKind(toast.notification).length > 0
-                    width: 132
-                    height: 31
-                    runtime: popup.runtime
-                    theme: popup.theme
-                    motion: popup.motion
-                    compact: true
-                    horizontalCompact: true
-                    icon: "󰏫"
-                    title: popup.notificationState.captureKind(toast.notification) === "screenshot" ? "Markup" : "Trim"
-                    onActivated: popup.notificationState.invokeCaptureEdit(toast.notification)
+                    spacing: popup.theme.spacing1
+                    visible: toast.explicitActions.length > 0 || (toast.notification && toast.notification.hasInlineReply)
+
+                    Repeater {
+                        model: toast.explicitActions.slice(0, 2)
+                        delegate: ShellAction {
+                            required property int index
+                            required property var modelData
+                            runtime: popup.runtime
+                            theme: popup.theme
+                            motion: popup.motion
+                            compact: true
+                            horizontalCompact: true
+                            width: Math.min(135, Math.max(78, implicitWidth))
+                            height: 31
+                            title: modelData.text || "Action"
+                            onActivated: popup.notificationState.invokeAction(toast.notification, index)
+                        }
+                    }
+                    ShellAction {
+                        visible: toast.explicitActions.length > 2 || (toast.notification && toast.notification.hasInlineReply)
+                        runtime: popup.runtime
+                        theme: popup.theme
+                        motion: popup.motion
+                        compact: true
+                        horizontalCompact: true
+                        width: 78
+                        height: 31
+                        title: toast.notification && toast.notification.hasInlineReply ? "Reply…" : "More…"
+                        onActivated: {
+                            popup.notificationState.hidePopup(toast.notification);
+                            popup.centerRequested();
+                        }
+                    }
                 }
 
                 Text {
@@ -361,7 +401,8 @@ PanelWindow {
                         bottom: parent.bottom
                         leftMargin: popup.theme.spacing4
                     }
-                    text: popup.notificationState.captureKind(toast.notification) ? "CLICK TO OPEN" : "CLICK · HISTORY  /  RMB · DISMISS"
+                    visible: !quickActions.visible
+                    text: popup.notificationState.hasDefaultAction(toast.notification) ? "CLICK · OPEN  /  RMB · DISMISS" : "CLICK · HISTORY  /  RMB · DISMISS"
                     color: popup.theme.textMuted
                     opacity: 0.62
                     font.family: popup.runtime.fontMono

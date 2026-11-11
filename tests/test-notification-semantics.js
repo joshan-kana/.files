@@ -1,0 +1,78 @@
+const { test } = require("node:test");
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const vm = require("node:vm");
+
+const qmlRoot = path.join(__dirname, "../modules/desktop/hyprland/shell/qml");
+const script = fs.readFileSync(
+  path.join(qmlRoot, "NotificationSemantics.js"),
+  "utf8",
+);
+const ctx = vm.createContext({ Array, Math, Number });
+vm.runInContext(script, ctx);
+const qml = (name) => fs.readFileSync(path.join(qmlRoot, name), "utf8");
+
+test("the default action is identified by protocol ID, not position", () => {
+  const choices = [
+    { identifier: "dismiss", text: "Dismiss" },
+    { identifier: "default", text: "Open" },
+    { identifier: "reply", text: "Reply" },
+  ];
+  assert.equal(ctx.defaultAction(choices), choices[1]);
+  assert.deepEqual(
+    Array.from(ctx.explicitActions(choices)).map((action) => action.identifier),
+    ["dismiss", "reply"],
+  );
+  assert.equal(ctx.defaultAction([choices[0]]), null);
+  assert.deepEqual(Array.from(ctx.explicitActions(null)), []);
+});
+
+test("inline replies are not misrepresented as ordinary action buttons", () => {
+  const choices = [
+    { identifier: "inline-reply", text: "Reply" },
+    { identifier: "archive", text: "Archive" },
+  ];
+  assert.deepEqual(
+    Array.from(ctx.explicitActions(choices)).map((a) => a.identifier),
+    ["archive"],
+  );
+});
+
+test("timeout policy honors never-expire and explicit seconds before urgency defaults", () => {
+  assert.equal(ctx.timeoutMs(0, 1, 2, 0), 0);
+  assert.equal(ctx.timeoutMs(8.25, 2, 2, 0), 8250);
+  assert.equal(ctx.timeoutMs(0.01, 1, 2, 0), 250);
+  assert.equal(ctx.timeoutMs(-1, 2, 2, 0), 0);
+  assert.equal(ctx.timeoutMs(-1, 0, 2, 0), 3500);
+  assert.equal(ctx.timeoutMs(-1, 1, 2, 0), 6000);
+});
+
+test("server advertises only rendered notification capabilities", () => {
+  const state = qml("NotificationState.qml");
+  const card = qml("NotificationCard.qml");
+  const popup = qml("NotificationPopup.qml");
+  assert.match(state, /imageSupported: true/);
+  assert.match(state, /inlineReplySupported: true/);
+  assert.match(state, /persistenceSupported: true/);
+  assert.match(state, /bodyMarkupSupported: false/);
+  assert.match(card, /NotificationArtwork/);
+  assert.match(card, /sendReply\(\)/);
+  assert.match(popup, /NotificationArtwork/);
+  assert.match(popup, /explicitActions/);
+  assert.doesNotMatch(
+    state,
+    /captureKind|notification\.summary === "Screenshot saved"/,
+  );
+});
+
+test("global notification action uses compositor global shortcut", () => {
+  const root = qml("shell.qml");
+  const keybind = fs.readFileSync(
+    path.join(__dirname, "../modules/desktop/hyprland/keybindings.nix"),
+    "utf8",
+  );
+  assert.match(root, /name: "notifications-act"/);
+  assert.match(root, /notifications\.invokeLatest\(\)/);
+  assert.match(keybind, /id = "notifications\.act";/);
+});

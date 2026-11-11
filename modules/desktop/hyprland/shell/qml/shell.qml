@@ -1159,6 +1159,16 @@ ShellRoot {
         onPressed: actions.toggleNotifications()
     }
 
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "notifications-act"
+        description: "Activate latest notification"
+        onPressed: {
+            if (!notifications.invokeLatest())
+                actions.showNotifications();
+        }
+    }
+
     IpcHandler {
         target: "desktop"
 
