@@ -588,6 +588,13 @@ in
     description = "Open Activity tab";
   })
   (mk {
+    keys = "SHIFT + D";
+    id = "notifications.act";
+    action = global "linux-desktop:notifications-act";
+    section = "SYSTEM";
+    description = "Activate latest notification, or open Activity";
+  })
+  (mk {
     keys = "SHIFT + C";
     id = "session.lock";
     action = global "linux-desktop:lock";

@@ -92,6 +92,7 @@ PanelWindow {
     readonly property Loader activeLoader: activeSlot === 0 ? contentLoaderA : activeSlot === 1 ? contentLoaderB : activeSlot === 2 ? contentLoaderC : activeSlot === 3 ? contentLoaderD : activeSlot === 4 ? contentLoaderE : null
     readonly property Item loadedContent: activeLoader ? activeLoader.item as Item : null
     readonly property SystemContent systemContent: expansionState.currentName === "system" ? loadedContent as SystemContent : null
+    readonly property NotificationContent activityContent: expansionState.currentName === "activity" ? loadedContent as NotificationContent : null
     readonly property bool themeOperationVisible: !!systemContent && systemContent.themeOperationRunning && expansionState.hasCurrent
     readonly property bool wallpaperOperationVisible: !!systemContent && systemContent.wallpaperOperationRunning && expansionState.hasCurrent
     readonly property bool captureEditorRequestVisible: !!systemContent && systemContent.captureEditorRequestRunning && expansionState.hasCurrent
@@ -100,8 +101,8 @@ PanelWindow {
     readonly property MediaContent mediaContent: expansionState.currentName === "media" ? loadedContent as MediaContent : null
     property bool otherHelpOpen: false
     readonly property bool helpVisible: systemContent ? systemContent.helpOpen : (mediaContent ? mediaContent.helpOpen : otherHelpOpen)
-    readonly property bool tabShortcutsEnabled: expansionState.hasCurrent && !detailVisible && !helpVisible && !(systemContent && (systemContent.resetConfirmPending || systemContent.audioChooserOpen))
-    readonly property string escapeHintLabel: systemContent && (systemContent.resetConfirmPending || systemContent.sessionConfirmationPending) ? "Cancel" : helpVisible || detailVisible || (systemContent && (systemContent.audioChooserOpen || systemContent.selectedSlider.length > 0)) ? "Back" : "Close"
+    readonly property bool tabShortcutsEnabled: expansionState.hasCurrent && !detailVisible && !helpVisible && !(systemContent && (systemContent.resetConfirmPending || systemContent.audioChooserOpen)) && !(activityContent && activityContent.replyEditing)
+    readonly property string escapeHintLabel: systemContent && (systemContent.resetConfirmPending || systemContent.sessionConfirmationPending) ? "Cancel" : helpVisible || detailVisible || (systemContent && (systemContent.audioChooserOpen || systemContent.selectedSlider.length > 0)) || (activityContent && activityContent.replyEditing) ? "Back" : "Close"
     // Hub scrolling is a fallback only for views without their own paging
     // owner. Calendar, Activity, and open details consume PageUp/Down locally.
     readonly property bool hostPageShortcutsEnabled: expansionState.hasCurrent && !helpVisible && (expansionState.currentName === "weather" || expansionState.currentName === "media" || (expansionState.currentName === "system" && !detailVisible))
@@ -134,7 +135,7 @@ PanelWindow {
         },
         {
             key: "ESC",
-            action: "Close Activity"
+            action: activityContent && activityContent.replyEditing ? "Return to Activity" : "Close Activity"
         }
     ] : expansionState.currentName === "weather" ? [
         {
@@ -455,7 +456,7 @@ PanelWindow {
     Shortcut {
         sequence: "?"
         context: Qt.ApplicationShortcut
-        enabled: host.expansionState.hasCurrent && !host.systemContent && !host.mediaContent
+        enabled: host.expansionState.hasCurrent && !host.systemContent && !host.mediaContent && !(host.activityContent && host.activityContent.replyEditing)
         onActivated: host.toggleHelp()
     }
 
