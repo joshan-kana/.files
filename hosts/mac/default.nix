@@ -5,6 +5,13 @@
   ...
 }:
 
+let
+  desktopAppsWithFloorpProfile = editScope moduleRegistry.desktopApps {
+    floorp = _: {
+      home = _: { programs.floorp.profiles.themed.path = "f5moon4n.default-release"; };
+    };
+  };
+in
 {
   inherit (moduleRegistry)
     theme
@@ -103,7 +110,7 @@
     };
   };
 
-  desktopApps = extendScope moduleRegistry.desktopApps {
+  desktopApps = extendScope desktopAppsWithFloorpProfile {
     notion = { pkgs, ... }: {
       home = _: { home.packages = [ pkgs.notion-app ]; };
     };
