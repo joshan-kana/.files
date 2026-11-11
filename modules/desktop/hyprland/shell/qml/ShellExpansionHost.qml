@@ -101,7 +101,7 @@ PanelWindow {
     readonly property MediaContent mediaContent: expansionState.currentName === "media" ? loadedContent as MediaContent : null
     property bool otherHelpOpen: false
     readonly property bool helpVisible: systemContent ? systemContent.helpOpen : (mediaContent ? mediaContent.helpOpen : otherHelpOpen)
-    readonly property bool tabShortcutsEnabled: expansionState.hasCurrent && !detailVisible && !helpVisible && !(systemContent && (systemContent.resetConfirmPending || systemContent.audioChooserOpen))
+    readonly property bool tabShortcutsEnabled: expansionState.hasCurrent && !detailVisible && !helpVisible && !(systemContent && (systemContent.resetConfirmPending || systemContent.audioChooserOpen)) && !(activityContent && activityContent.replyEditing)
     readonly property string escapeHintLabel: systemContent && (systemContent.resetConfirmPending || systemContent.sessionConfirmationPending) ? "Cancel" : helpVisible || detailVisible || (systemContent && (systemContent.audioChooserOpen || systemContent.selectedSlider.length > 0)) || (activityContent && activityContent.replyEditing) ? "Back" : "Close"
     // Hub scrolling is a fallback only for views without their own paging
     // owner. Calendar, Activity, and open details consume PageUp/Down locally.
@@ -456,7 +456,7 @@ PanelWindow {
     Shortcut {
         sequence: "?"
         context: Qt.ApplicationShortcut
-        enabled: host.expansionState.hasCurrent && !host.systemContent && !host.mediaContent
+        enabled: host.expansionState.hasCurrent && !host.systemContent && !host.mediaContent && !(host.activityContent && host.activityContent.replyEditing)
         onActivated: host.toggleHelp()
     }
 

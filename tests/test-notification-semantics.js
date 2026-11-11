@@ -135,6 +135,14 @@ test("Escape has one shared owner and describes reply editing accurately", () =>
   assert.doesNotMatch(footer, /shortcut: "ESC"/);
   assert.match(host, /shortcut: "ESC",\s+label: host\.escapeHintLabel/);
   assert.match(host, /activityContent && activityContent\.replyEditing/);
+  assert.match(
+    host,
+    /tabShortcutsEnabled:.*!\(activityContent && activityContent\.replyEditing\)/,
+  );
+  assert.match(
+    host,
+    /enabled: host\.expansionState\.hasCurrent && !host\.systemContent && !host\.mediaContent && !\(host\.activityContent && host\.activityContent\.replyEditing\)/,
+  );
   assert.match(center, /onReplyFocusChanged: focused =>/);
   assert.match(
     card,
