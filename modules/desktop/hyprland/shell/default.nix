@@ -94,12 +94,6 @@ let
     '';
   };
 
-  shellVisual = {
-    panelOpacity = 1.0;
-    focusOpacity = 0.96;
-    scrimOpacity = 0.50;
-    squircleExponent = 4.5;
-  };
 in
 {
   scopeOptions.quicklinks = lib.mkOption {
@@ -1482,7 +1476,6 @@ in
         capture.freezeEnabled = scopeConfig.captureFreezeEnabled;
         notifications.silent = scopeConfig.notificationsSilent;
         weather.location = scopeConfig.weatherLocation;
-        visual = shellVisual;
         keybindings = cheatsheetBindings;
         shortcutHints.launcherSlots = launcherSlotsHint;
         inherit shortcuts;
@@ -1735,7 +1728,7 @@ in
           output="$dest/Screenshot-$(date +%Y%m%d-%H%M%S)-$$.png"
           exec satty --filename "$1" --output-filename "$output" \
             --copy-command wl-copy --initial-tool arrow --no-window-decoration \
-            --font-family ${lib.escapeShellArg config.stylix.fonts.monospace.name} \
+            --font-family monospace \
             --save-after-copy --actions-on-enter save-to-clipboard \
             --actions-on-escape exit --early-exit all
         '';

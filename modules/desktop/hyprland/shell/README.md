@@ -51,6 +51,14 @@ Non-sensitive default snippets belong in `desktop.hyprland.shell.snippets`; opti
 
 Selecting a snippet copies its contents to the clipboard. Keep private values out of the world-readable Nix store. The user-owned file is explicit content; the palette does not harvest passwords, other documents or clipboard history to populate snippets.
 
+## Configuration and preference ownership
+
+Reproducible shell defaults are declared under `desktop.hyprland.shell` in `modules/desktop/hyprland/shell/default.nix` and materialized as the generated, read-only `~/.config/linux-desktop/runtime.json`. Presentation tokens such as panel opacity, focus opacity, scrim opacity, and squircle shape are theme-owned: `modules/theme/default.nix` supplies them to `~/.config/linux-desktop/theme.json` through `scopeEdits.desktop.hyprland.shell`. The shell consumes those values; it does not establish a second palette or typography owner.
+
+The `Appearance` section of `~/.config/linux-desktop/preferences.ini` records explicit overrides for wallpaper spectrum, wallpaper fit/crop mode and display target, music-reactive shell, bar and frame visibility, window transparency and opacity, shell glass and opacity, media visualizer mode, lyrics visibility, and the media seek interval. The `Motion`, `Session`, and `Capture` sections cover animations, window restoration, and frozen capture. Notification silence is stored in `~/.config/linux-desktop/notifications.ini`. In all these cases, **explicit user choices take precedence** over their declared defaults. Restore defaults returns the affected preferences to Nix inheritance without deleting unrelated personal content.
+
+Palette favourites, recent-usage identities, and recent-history consent are user-owned in `~/.config/linux-desktop/palette.ini`; these are deliberately not written by the Nix generator. Personal snippets can override the declared snippet list through the optional `snippets.json` file. Website Quicklinks and the index's root list are declarative-only, while browser bookmarks and other indexed files remain owned by their original applications and users. A generated `runtime.json` is not itself a personal-state override file.
+
 ## Privacy and command safety
 
 The local palette preferences file stores favourite identities and, when enabled, a bounded list of recently used application/command identities, not search terms. Search for **Disable Palette Recent Usage** to stop collecting these and clear the saved list, or **Clear Recent Palette Items** to delete it. Quicklinks open through the configured URL opener; the palette does not evaluate arbitrary shell input.

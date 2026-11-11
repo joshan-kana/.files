@@ -413,7 +413,18 @@ in
     desktop =
       lib.optionalAttrs isLinux {
         hyprland = {
-          home = _: {
+          home = { config, ... }: {
+            # This compositor uses awww for wallpaper rendering rather than
+            # the Stylix-managed hyprpaper service.
+            stylix.targets.hyprland.hyprpaper.enable = false;
+
+            # Hyprland shadows use theme palette colours; the compositor
+            # module owns the shadow geometry and runtime behavior.
+            wayland.windowManager.hyprland.settings.decoration.shadow = {
+              color = lib.mkForce "rgba(${config.lib.stylix.colors.base0D}14)";
+              color_inactive = lib.mkForce "rgba(${config.lib.stylix.colors.base00}0e)";
+            };
+
             # Preserve GTK client headerbars while hiding toolkit window buttons.
             gtk.gtk3.extraConfig.gtk-decoration-layout = ":";
             gtk.gtk4.extraConfig.gtk-decoration-layout = ":";
@@ -603,6 +614,14 @@ in
                         accentUtility = colors.base0F;
                         accentEnergy = colors.base0A;
                         accentNature = colors.base0B;
+                      };
+                      # Theme-owned presentation values are injected into
+                      # the shell's theme data through its semantic app scope.
+                      visual = {
+                        panelOpacity = 1.0;
+                        focusOpacity = 0.96;
+                        scrimOpacity = 0.50;
+                        squircleExponent = 4.5;
                       };
                       fonts.mono = config.stylix.fonts.monospace.name;
                       wallpaper = toString osConfig.stylix.image;
