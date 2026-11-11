@@ -13,7 +13,7 @@ test("compact media actions disappear with no player without hiding paused media
   const card = qml("ControlsMediaCard.qml");
   assert.match(
     card,
-    /Row \{\s*width: parent.width\s*height: visible \? 46 : 0\s*visible: card.media.available/,
+    /Row \{\s*width: implicitWidth\s*height: visible \? 46 : 0\s*visible: card.media.available\s*anchors.horizontalCenter: parent.horizontalCenter/,
   );
   assert.match(
     card,
