@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "NotificationSemantics.js" as NotificationSemantics
 
 FocusScope {
     id: center
@@ -23,7 +24,7 @@ FocusScope {
             if (!notification)
                 continue;
             const app = notification.appName || "SYSTEM";
-            const key = app.toLowerCase();
+            const key = NotificationSemantics.groupKey(notification);
             if (!byApp.has(key)) {
                 const group = {
                     key: key,

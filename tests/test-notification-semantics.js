@@ -76,3 +76,15 @@ test("global notification action uses compositor global shortcut", () => {
   assert.match(root, /notifications\.invokeLatest\(\)/);
   assert.match(keybind, /id = "notifications\.act";/);
 });
+
+test("grouping prefers desktop identity over a mutable display name", () => {
+  const a = { desktopEntry: "org.example.Client", appName: "Example" };
+  const renamed = {
+    desktopEntry: "org.example.Client",
+    appName: "Example (Work)",
+  };
+  const other = { desktopEntry: "org.example.Other", appName: "Example" };
+  assert.equal(ctx.groupKey(a), ctx.groupKey(renamed));
+  assert.notEqual(ctx.groupKey(a), ctx.groupKey(other));
+  assert.equal(ctx.groupKey({ appName: "Example" }), "name:example");
+});

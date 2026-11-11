@@ -24,3 +24,12 @@ function timeoutMs(seconds, urgency, critical, low) {
   if (urgency === critical) return 0;
   return urgency === low ? 3500 : 6000;
 }
+
+// A desktop entry identifies an application more reliably than display text.
+function groupKey(notification) {
+  const desktopEntry = (notification && notification.desktopEntry) || "";
+  const appName = (notification && notification.appName) || "SYSTEM";
+  return desktopEntry
+    ? "desktop:" + desktopEntry.toLowerCase()
+    : "name:" + appName.toLowerCase();
+}
