@@ -86,3 +86,19 @@ test("one notification server routes output-specific toast masks and frame docks
   assert.match(qml("NotificationPopups.qml"), /model: Quickshell.screens/);
   assert.doesNotMatch(root, /NotificationPopup \{\s*id: notificationPopup/);
 });
+
+test("notifications announce sender, body, actions, and editable reply semantics", () => {
+  const card = qml("NotificationCard.qml");
+  const content = qml("NotificationContent.qml");
+  const popup = qml("NotificationPopup.qml");
+  const actions = qml("ShellAction.qml");
+  assert.match(card, /Accessible\.role: Accessible\.ListItem/);
+  assert.match(card, /Accessible\.name: \(notification/);
+  assert.match(card, /Accessible\.description: \(notification/);
+  assert.match(card, /Accessible\.role: Accessible\.EditableText/);
+  assert.match(card, /Accessible\.name: "Reply to "/);
+  assert.match(content, /Accessible\.description: groupItem\.expanded/);
+  assert.match(popup, /Accessible\.role: Accessible\.AlertMessage/);
+  assert.match(actions, /Accessible\.role: Accessible\.Button/);
+  assert.match(actions, /Accessible\.name: title/);
+});

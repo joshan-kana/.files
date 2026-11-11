@@ -19,6 +19,10 @@ SquircleSurface {
     property string replyDraft: ""
     readonly property var safeActions: notificationState.explicitActions(notification)
 
+    Accessible.role: Accessible.ListItem
+    Accessible.name: (notification ? (notification.appName || "SYSTEM") + ": " + (notification.summary || "") : "Notification") + (read ? ", read" : ", unread")
+    Accessible.description: (notification ? (notification.body || "") : "") + (safeActions.length > 0 ? ", " + safeActions.length + " actions available" : "") + (notification && notification.hasInlineReply ? ", reply available" : "")
+
     signal activated
     signal defaultRequested
     signal actionRequested(int index)
@@ -370,6 +374,9 @@ SquircleSurface {
 
                 TextInput {
                     id: reply
+                    Accessible.role: Accessible.EditableText
+                    Accessible.name: "Reply to " + (card.notification ? (card.notification.appName || "notification") : "notification")
+                    Accessible.description: card.notification ? card.notification.summary || "" : ""
                     anchors.fill: parent
                     anchors.leftMargin: card.theme.spacing3
                     anchors.rightMargin: card.theme.spacing3
