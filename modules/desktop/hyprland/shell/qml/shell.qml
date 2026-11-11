@@ -753,7 +753,7 @@ ShellRoot {
                 icon: "utilities-terminal",
                 keywords: ["shell", "console"]
             }
-        ].concat(system.audioAvailable ? [
+        ].filter(command => system.audioAvailable || !["audio.volumeUp", "audio.volumeDown", "audio.toggleMute"].includes(command.id)).concat(system.audioAvailable ? [
             {
                 id: "audio.setVolume",
                 name: "Set Volume…",

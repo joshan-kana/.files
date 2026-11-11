@@ -13,8 +13,9 @@ QtObject {
         location: "file://" + Quickshell.env("HOME") + "/.config/linux-desktop/preferences.ini"
         category: "Motion"
         property bool animationsEnabled: root.runtime.animationsEnabled
+        property string preferenceSource: ""
     }
-    readonly property bool enabled: preferences.animationsEnabled
+    readonly property bool enabled: preferences.preferenceSource === "default" ? runtime.animationsEnabled : preferences.animationsEnabled
 
     readonly property int instant: 0
     readonly property int fast: enabled ? 100 : 0
@@ -48,13 +49,8 @@ QtObject {
     readonly property int morphType: Easing.BezierSpline
     readonly property int effectsType: Easing.BezierSpline
 
-    Component.onCompleted: {
-        syncCompositorMotion();
-        syncWallpaperMotion();
-    }
-
     function syncCompositorMotion(): void {
-        Quickshell.execDetached(["hyprctl", "eval", "hl.config({ animations = { enabled = " + (enabled ? "true" : "false") + " } })"]);
+        Quickshell.execDetached([runtime.hyprctl, "eval", "hl.config({ animations = { enabled = " + (enabled ? "true" : "false") + " } })"]);
     }
 
     function syncWallpaperMotion(): void {
@@ -62,17 +58,30 @@ QtObject {
             Quickshell.execDetached([runtime.wallpaperLibrary, "motion", enabled ? "on" : "off"]);
     }
 
+    Component.onCompleted: {
+        if (preferences.preferenceSource === "") {
+            // Preserve explicitly stored values from older settings files.
+            preferences.preferenceSource = preferences.value("animationsEnabled", null) === null ? "default" : "user";
+            preferences.setValue("preferenceSource", preferences.preferenceSource);
+            preferences.sync();
+        }
+        syncCompositorMotion();
+        syncWallpaperMotion();
+    }
+
     function resetToDeclared(): void {
-        preferences.animationsEnabled = runtime.animationsEnabled;
-        preferences.setValue("animationsEnabled", preferences.animationsEnabled);
+        preferences.preferenceSource = "default";
+        preferences.setValue("preferenceSource", "default");
         preferences.sync();
         syncCompositorMotion();
         syncWallpaperMotion();
     }
 
     function toggle(): void {
-        preferences.animationsEnabled = !preferences.animationsEnabled;
+        preferences.animationsEnabled = !enabled;
         preferences.setValue("animationsEnabled", preferences.animationsEnabled);
+        preferences.preferenceSource = "user";
+        preferences.setValue("preferenceSource", "user");
         preferences.sync();
         syncCompositorMotion();
         syncWallpaperMotion();

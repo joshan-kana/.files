@@ -27,18 +27,30 @@ Item {
         location: "file://" + Quickshell.env("HOME") + "/.config/linux-desktop/preferences.ini"
         category: "Session"
         property bool restoreWindowsOnExit: panel.runtime.restoreWindowsOnExit
+        property string preferenceSource: ""
     }
-    readonly property bool restoreWindowsOnExit: preferences.restoreWindowsOnExit
+    readonly property bool restoreWindowsOnExit: preferences.preferenceSource === "default" ? runtime.restoreWindowsOnExit : preferences.restoreWindowsOnExit
+
+    Component.onCompleted: {
+        if (preferences.preferenceSource !== "")
+            return;
+        // Preserve explicitly stored values from older settings files.
+        preferences.preferenceSource = preferences.value("restoreWindowsOnExit", null) === null ? "default" : "user";
+        preferences.setValue("preferenceSource", preferences.preferenceSource);
+        preferences.sync();
+    }
 
     function resetToDeclared(): void {
-        preferences.restoreWindowsOnExit = runtime.restoreWindowsOnExit;
-        preferences.setValue("restoreWindowsOnExit", preferences.restoreWindowsOnExit);
+        preferences.preferenceSource = "default";
+        preferences.setValue("preferenceSource", "default");
         preferences.sync();
     }
 
     function toggleRestore(): void {
-        preferences.restoreWindowsOnExit = !preferences.restoreWindowsOnExit;
+        preferences.restoreWindowsOnExit = !restoreWindowsOnExit;
         preferences.setValue("restoreWindowsOnExit", preferences.restoreWindowsOnExit);
+        preferences.preferenceSource = "user";
+        preferences.setValue("preferenceSource", "user");
         preferences.sync();
         statusText = restoreWindowsOnExit ? "WINDOW RESTORATION ENABLED" : "FRESH SESSION ENABLED";
         statusError = false;

@@ -1,40 +1,14 @@
 // Pure search helpers for the native command palette. No commands or code evaluation.
-const DEFAULT_QUICKLINKS = [
-  {
-    name: "Search GitHub",
-    alias: "gh",
-    url: "https://github.com/search?q={query}",
-    keywords: ["code", "repositories"],
-  },
-  {
-    name: "Search Nix Packages",
-    alias: "np",
-    url: "https://search.nixos.org/packages?query={query}",
-    keywords: ["nixpkgs", "packages"],
-  },
-  {
-    name: "Search Wikipedia",
-    alias: "wiki",
-    url: "https://en.wikipedia.org/w/index.php?search={query}",
-    keywords: ["encyclopedia"],
-  },
-  {
-    name: "Search YouTube",
-    alias: "yt",
-    url: "https://www.youtube.com/results?search_query={query}",
-    keywords: ["videos"],
-  },
-];
 
 function parseQuicklinks(text) {
-  let entries = DEFAULT_QUICKLINKS;
+  let entries = [];
   if (text && text.trim().length > 0) {
     try {
       const parsed = JSON.parse(text);
-      if (!Array.isArray(parsed)) return DEFAULT_QUICKLINKS;
+      if (!Array.isArray(parsed)) return [];
       entries = parsed;
     } catch (error) {
-      return DEFAULT_QUICKLINKS;
+      return [];
     }
   }
   const aliases = new Set();
@@ -60,6 +34,7 @@ function parseQuicklinks(text) {
         return false;
       if (
         item.browser !== undefined &&
+        item.browser !== "" &&
         (typeof item.browser !== "string" ||
           !/^[a-zA-Z0-9._-]{1,240}$/.test(item.browser))
       )

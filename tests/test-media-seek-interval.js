@@ -11,18 +11,21 @@ const read = (file) =>
 
 test("seek interval has one validated persistent preference and a declarative default", () => {
   const appearance = read("AppearancePreferences.qml");
-  assert.match(appearance, /property int mediaSeekSeconds: 10/);
+  assert.match(
+    appearance,
+    /property int mediaSeekSeconds: appearance\.runtime\.appearanceDefaults\.mediaSeekSeconds/,
+  );
   assert.match(
     appearance,
     /readonly property var seekIntervals: \[5, 10, 15, 30, 60\]/,
   );
   assert.match(
     appearance,
-    /readonly property int mediaSeekSeconds: seekIntervals\.includes\(saved\.mediaSeekSeconds\) \? saved\.mediaSeekSeconds : 10/,
+    /readonly property int mediaSeekSeconds: seekIntervals\.includes\(effective\("mediaSeekSeconds"\)\)/,
   );
   assert.match(
     appearance,
-    /saved\.setValue\("mediaSeekSeconds", saved\.mediaSeekSeconds\)/,
+    /storeOverride\("mediaSeekSeconds", saved\.mediaSeekSeconds\)/,
   );
   assert.match(appearance, /saved\.sync\(\)/);
   const steps = [5, 10, 15, 30, 60];

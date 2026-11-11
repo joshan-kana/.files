@@ -33,8 +33,9 @@ Item {
     property var parameterTarget: null
     property string priorQuery: ""
     property string selectionIdentity: ""
-    property var quicklinks: PaletteUtilities.parseQuicklinks("")
-    property var snippets: []
+    readonly property var quicklinks: PaletteUtilities.parseQuicklinks(JSON.stringify(runtime.paletteQuicklinks || []))
+    property var userSnippets: null
+    readonly property var snippets: userSnippets === null ? PaletteUtilities.parseSnippets(JSON.stringify(runtime.paletteSnippets || [])) : userSnippets
     readonly property var indexedSnippets: snippets.map(item => indexSearchEntry(Object.assign({}, item)))
 
     Settings {
@@ -181,24 +182,10 @@ Item {
         blockLoading: false
         printErrors: false
         watchChanges: true
-        onLoaded: palette.snippets = PaletteUtilities.parseSnippets(text())
+        onLoaded: palette.userSnippets = PaletteUtilities.parseSnippets(text())
         onLoadedChanged: {
             if (!loaded)
-                palette.snippets = [];
-        }
-        onFileChanged: reload()
-    }
-
-    FileView {
-        id: quicklinkFile
-        path: (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/linux-desktop/quicklinks.json"
-        blockLoading: false
-        printErrors: false
-        watchChanges: true
-        onLoaded: palette.quicklinks = PaletteUtilities.parseQuicklinks(text())
-        onLoadedChanged: {
-            if (!loaded)
-                palette.quicklinks = PaletteUtilities.parseQuicklinks("");
+                palette.userSnippets = null;
         }
         onFileChanged: reload()
     }
@@ -394,7 +381,7 @@ Item {
         id: quicklinkBrowserProcess
         onExited: (exitCode, exitStatus) => {
             if (exitCode === 0) {
-                palette.copyFeedback = "OPENED";
+                palette.copyFeedback = "LAUNCH REQUEST SENT";
                 if (!palette.pendingQuicklinkKeepOpen)
                     palette.hide();
             } else
@@ -406,7 +393,7 @@ Item {
         id: fileOpenWithProcess
         onExited: (exitCode, exitStatus) => {
             palette.pendingFileOpenWith = false;
-            palette.copyFeedback = exitCode === 0 ? "OPENED" : "OPEN FAILED";
+            palette.copyFeedback = exitCode === 0 ? "LAUNCH REQUEST SENT" : "OPEN FAILED";
             if (exitCode === 0)
                 palette.hide();
         }
@@ -769,7 +756,15 @@ Item {
         if (entry.kind === "workspace")
             options[0].name = "Switch Workspace";
         if (entry.kind === "application") {
-            const current = indexedWindows.find(win => win.toplevel && win.toplevel.lastIpcObject && String(win.toplevel.lastIpcObject.class || "").toLowerCase() === entry.name.toLowerCase());
+            const desktopId = String((entry.desktopEntry || {}).id || "").toLowerCase().replace(/\.desktop$/, "");
+            const appName = entry.name.toLowerCase();
+            const candidates = [desktopId, desktopId.split(".").pop(), appName].filter(Boolean);
+            const current = indexedWindows.find(win => {
+                if (!win.toplevel || !win.toplevel.lastIpcObject)
+                    return false;
+                const klass = String(win.toplevel.lastIpcObject.class || "").toLowerCase();
+                return candidates.some(name => klass === name || klass.endsWith("." + name));
+            });
             if (current)
                 options.push({
                     kind: "paletteAction",
@@ -827,7 +822,7 @@ Item {
             options.push({
                 kind: "paletteAction",
                 action: "reveal",
-                name: "Reveal in File Manager",
+                name: "Open Containing Folder",
                 genericName: entry.path,
                 icon: "folder-open",
                 key: ""
@@ -916,7 +911,7 @@ Item {
         }
         copyFeedback = "COPYING";
         copyOnSuccessClose = !keepOpen;
-        calculationCopy.exec(["wl-copy", "--type", "text/plain", value]);
+        calculationCopy.exec([runtime.clipboardCopy, "--type", "text/plain", value]);
     }
 
     function beginParameter(entry: var, mode: string): void {
@@ -945,6 +940,7 @@ Item {
         }
         if (!keepOpen)
             hide();
+        copyFeedback = "LAUNCH REQUEST SENT";
         Quickshell.execDetached([runtime.urlOpen, url]);
     }
 
@@ -1487,7 +1483,7 @@ Item {
 
                             Text {
                                 anchors.centerIn: parent
-                                text: result.index + 1
+                                text: result.index < 9 && !palette.actionMode && !palette.parameterTarget ? result.index + 1 : ""
                                 color: result.ListView.isCurrentItem ? palette.scopeAccent : theme.textMuted
                                 font.family: runtime.fontMono
                                 font.pixelSize: theme.fontSize(11)

@@ -74,6 +74,12 @@ QtObject {
     readonly property var keybindings: root.configData.keybindings
     readonly property var shortcuts: root.configData.shortcuts
     readonly property var shortcutHints: root.configData.shortcutHints
+    readonly property var paletteQuicklinks: root.configData.palette.quicklinks
+    readonly property var paletteSnippets: root.configData.palette.snippets
+    readonly property var appearanceDefaults: root.configData.appearance
+    readonly property bool captureFreezeEnabled: root.configData.capture.freezeEnabled
+    readonly property bool notificationSilent: root.configData.notifications.silent
+    readonly property string weatherLocation: root.configData.weather.location
 
     function shortcut(id) {
         const value = shortcuts ? shortcuts[id] : undefined;
@@ -155,6 +161,40 @@ QtObject {
 
             property JsonObject session: JsonObject {
                 property bool restoreWindowsOnExit: false
+            }
+
+            property JsonObject palette: JsonObject {
+                property var quicklinks: []
+                property var snippets: []
+                property var fileRoots: []
+            }
+
+            property JsonObject appearance: JsonObject {
+                property bool wallpaperSpectrumEnabled: false
+                property string wallpaperResizeMode: "fit"
+                property string wallpaperTargetOutput: ""
+                property bool musicReactiveEnabled: false
+                property bool barVisible: true
+                property bool frameVisible: true
+                property bool windowTransparencyEnabled: false
+                property bool shellGlassEnabled: false
+                property real windowOpacity: 0.82
+                property real glassOpacity: 0.70
+                property string mediaVisualizerMode: "bars"
+                property bool mediaLyricsVisible: false
+                property int mediaSeekSeconds: 10
+            }
+
+            property JsonObject capture: JsonObject {
+                property bool freezeEnabled: true
+            }
+
+            property JsonObject notifications: JsonObject {
+                property bool silent: false
+            }
+
+            property JsonObject weather: JsonObject {
+                property string location: ""
             }
 
             property JsonObject visual: JsonObject {
