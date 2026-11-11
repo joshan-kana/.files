@@ -609,11 +609,11 @@ FocusScope {
                 } else if (event.key === Qt.Key_Down || event.key === Qt.Key_J) {
                     center.navigate(1);
                     event.accepted = true;
-                } else if (event.key === Qt.Key_Left || event.key === Qt.Key_H || event.key === Qt.Key_Right || event.key === Qt.Key_L) {
-                    center.selectGroup((event.key === Qt.Key_Left || event.key === Qt.Key_H) ? -1 : 1);
-                    event.accepted = true;
                 } else if (event.key === Qt.Key_H && (event.modifiers & Qt.ShiftModifier)) {
                     center.notificationState.toggleHistory();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_Left || event.key === Qt.Key_H || event.key === Qt.Key_Right || event.key === Qt.Key_L) {
+                    center.selectGroup((event.key === Qt.Key_Left || event.key === Qt.Key_H) ? -1 : 1);
                     event.accepted = true;
                 } else if (event.key === Qt.Key_P) {
                     center.notificationState.togglePresentation();

@@ -42,6 +42,7 @@ QtObject {
         path: Quickshell.env("XDG_RUNTIME_DIR") + "/linux-desktop-session-lock.state"
         watchChanges: true
         blockLoading: true
+        printErrors: false
         onFileChanged: reload()
     }
 
@@ -63,6 +64,7 @@ QtObject {
         path: Quickshell.stateDir + "/notifications.json"
         blockLoading: true
         atomicWrites: true
+        printErrors: false
         onSaveFailed: error => root.persistenceError = String(error)
         onSaved: root.persistenceError = ""
     }
@@ -135,11 +137,10 @@ QtObject {
         all[key] = updated;
         settings.appsJson = JSON.stringify(all);
         settings.sync();
-        if (field === "popups" && !value)
-            hidePopup();
+        if ((field === "popups" || field === "silent") && (field === "popups" ? !value : value))
+            hideApplicationPopups(key);
         if (field === "history" && !value) {
-            journal = journal.filter(record => NotificationSemantics.groupKey(record) !== key);
-            scheduleSave();
+            applyJournal(journal.filter(record => NotificationSemantics.groupKey(record) !== key));
         }
     }
 
@@ -241,13 +242,16 @@ QtObject {
         const keep = new Set(next.map(item => item.recordId));
         // Releasing pruned live handles is essential when a sender produces
         // thousands of persistent notifications with no expiry.
+        const nextLive = Object.assign({}, liveById);
         for (const record of previous) {
             if (keep.has(record.recordId))
                 continue;
-            const live = liveById[record.recordId];
+            const live = nextLive[record.recordId];
+            delete nextLive[record.recordId];
             if (live && live.tracked)
                 live.tracked = false;
         }
+        liveById = nextLive;
         journal = next;
         scheduleSave();
     }
@@ -275,7 +279,8 @@ QtObject {
         notification.closed.connect(reason => closeRecord(notification, reason));
 
         const critical = notification.urgency === NotificationUrgency.Critical;
-        if (!notification.lastGeneration && policy.popups !== false && policy.silent !== true && Policy.mayShowToast(locked, presentation, outputFullscreen, silent, critical))
+        const show = !notification.lastGeneration && policy.popups !== false && policy.silent !== true && Policy.mayShowToast(locked, presentation, outputFullscreen, silent, critical);
+        if (show)
             showPopup(notification);
         else if (isTransient || !historyEnabled || policy.history === false)
             notification.expire();
@@ -398,9 +403,13 @@ QtObject {
             for (let i = root.popups.count - 1; i >= 0; --i) {
                 const item = root.popups.get(i);
                 if (item.phase === "closing" && item.removeAt <= now) {
+                    // A ListModel.get() wrapper becomes invalid once its row
+                    // is removed; capture every value before removal.
+                    const notification = item.notification;
+                    const expire = notification && (item.closeWhenDone || notification.transient || !root.recordKey(notification));
                     root.popups.remove(i);
-                    if (item.notification && (item.closeWhenDone || item.notification.transient || !root.recordKey(item.notification)))
-                        item.notification.expire();
+                    if (expire)
+                        notification.expire();
                 } else if (item.phase === "visible" && !item.paused && item.expires > 0 && item.expires <= now) {
                     root.popups.setProperty(i, "closeWhenDone", true);
                     root.popups.setProperty(i, "phase", "closing");
@@ -426,6 +435,21 @@ QtObject {
                 popups.setProperty(i, "paused", false);
             }
         }
+        schedulePopups();
+    }
+
+    function hideApplicationPopups(groupKey: string): void {
+        for (let i = popups.count - 1; i >= 0; --i) {
+            const item = popups.get(i);
+            const notification = item.notification;
+            if (notification && NotificationSemantics.groupKey(notification) === groupKey) {
+                popups.remove(i);
+                if (notification.transient || !recordKey(notification))
+                    notification.expire();
+            }
+        }
+        rebalancePopups(Date.now());
+        popupRevision++;
         schedulePopups();
     }
 
@@ -471,8 +495,8 @@ QtObject {
             return;
         hidePopup(notification);
         const key = recordKey(notification);
-        journal = journal.filter(record => record.recordId !== key);
-        scheduleSave();
+        if (key)
+            applyJournal(journal.filter(record => record.recordId !== key));
         if (!notification.historical)
             notification.dismiss();
     }
@@ -521,8 +545,7 @@ QtObject {
     function clearAll(): void {
         const items = [...history];
         hidePopup();
-        journal = [];
-        scheduleSave();
+        applyJournal([]);
         for (const notification of items)
             if (!notification.historical)
                 notification.dismiss();

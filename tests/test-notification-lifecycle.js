@@ -95,3 +95,53 @@ test("durable history is bounded by age, count and bytes", () => {
     0,
   );
 });
+
+test("closing a toast preserves notification before invalidating the model row", () => {
+  const popup = fs.readFileSync(
+    path.join(root, "NotificationState.qml"),
+    "utf8",
+  );
+  assert.match(
+    popup,
+    /const notification = item\.notification;\s*const expire = notification/,
+  );
+  assert.match(
+    popup,
+    /root\.popups\.remove\(i\);\s*if \(expire\)\s*notification\.expire\(\);/,
+  );
+});
+
+test("history shortcut is handled before ordinary H navigation", () => {
+  const content = fs.readFileSync(
+    path.join(root, "NotificationContent.qml"),
+    "utf8",
+  );
+  const history = content.indexOf(
+    "event.key === Qt.Key_H && (event.modifiers & Qt.ShiftModifier)",
+  );
+  const nav = content.indexOf(
+    "event.key === Qt.Key_Left || event.key === Qt.Key_H",
+  );
+  assert.ok(history > 0 && nav > history);
+});
+
+test("muting one application does not silence the whole desktop", () => {
+  const state = fs.readFileSync(
+    path.join(root, "NotificationState.qml"),
+    "utf8",
+  );
+  assert.match(state, /hideApplicationPopups\(key\)/);
+  assert.match(
+    state,
+    /NotificationSemantics\.groupKey\(notification\) === groupKey/,
+  );
+  assert.match(state, /if \(show\)\s*showPopup\(notification\);/);
+});
+
+test("locking hides the entire notification status island", () => {
+  const bar = fs.readFileSync(path.join(root, "AmbientBar.qml"), "utf8");
+  assert.match(
+    bar,
+    /visible: !bar\.notificationState\.locked && barContent\.width/,
+  );
+});
