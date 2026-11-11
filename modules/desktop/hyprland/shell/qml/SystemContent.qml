@@ -313,6 +313,10 @@ FocusScope {
                         action: "Navigate actions"
                     },
                     {
+                        key: "1-6",
+                        action: "Activate the matching session action (confirm power actions twice)"
+                    },
+                    {
                         key: "ENTER",
                         action: "Activate / confirm"
                     },
@@ -740,7 +744,7 @@ FocusScope {
                 height: 40
                 spacing: root.theme.spacing2
 
-                readonly property real entryWidth: Math.max(1, (width - helpButton.width - spacing * 3) / 3)
+                readonly property real entryWidth: Math.max(1, (width - spacing * 2) / 3)
 
                 ShellAction {
                     id: appearanceButton
@@ -789,20 +793,6 @@ FocusScope {
                     title: "Session"
                     shortcut: "E"
                     onActivated: root.openSession()
-                }
-
-                ShellAction {
-                    id: helpButton
-                    width: 33
-                    height: 36
-                    anchors.verticalCenter: parent.verticalCenter
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    iconOnly: true
-                    icon: "󰋗"
-                    title: "Help (?)"
-                    onActivated: root.helpOpen = true
                 }
             }
 
@@ -1775,7 +1765,10 @@ FocusScope {
                 }
 
                 if (sessionPanel.open) {
-                    if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
+                    if (event.key >= Qt.Key_1 && event.key <= Qt.Key_6) {
+                        sessionPanel.invoke("activateIndex", event.key - Qt.Key_1);
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
                         root.backFromDetail();
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Up || event.key === Qt.Key_K) {
