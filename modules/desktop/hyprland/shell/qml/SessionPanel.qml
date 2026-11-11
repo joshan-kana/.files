@@ -326,24 +326,40 @@ Item {
             font.weight: Font.DemiBold
         }
 
-        KeyHintStrip {
-            width: parent.width
-            runtime: panel.runtime
-            theme: panel.theme
-            hints: [
-                {
-                    shortcut: "H/J/K/L",
-                    label: "Navigate"
-                },
-                {
-                    shortcut: "1-6",
-                    label: "Direct action"
-                },
-                {
-                    shortcut: "ENTER",
-                    label: "Activate / confirm"
+        // Direct action keycaps already live on their tiles. Centre only the
+        // navigation and selected-action hints; wrap at narrow panel widths.
+        Item {
+            id: hintRegion
+            width: buttonGrid.width
+            height: hintFlow.height
+            anchors.horizontalCenter: parent.horizontalCenter
+            readonly property real naturalWidth: moveHint.implicitWidth + actionHint.implicitWidth + panel.theme.spacing3
+
+            Flow {
+                id: hintFlow
+                width: Math.min(parent.width, hintRegion.naturalWidth)
+                height: childrenRect.height
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: panel.theme.spacing3
+
+                KeyHint {
+                    id: moveHint
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    shortcut: "HJKL"
+                    label: "Move"
+                    compact: true
                 }
-            ]
+
+                KeyHint {
+                    id: actionHint
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    shortcut: "ENTER"
+                    label: panel.armedAction.length > 0 ? "Confirm" : "Activate"
+                    compact: true
+                }
+            }
         }
     }
 }
