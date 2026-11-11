@@ -98,15 +98,101 @@ PanelWindow {
     readonly property bool maintenanceOperationVisible: !!systemContent && systemContent.maintenanceOperationRunning && expansionState.hasCurrent
     readonly property bool loadingOperationVisible: themeOperationVisible || wallpaperOperationVisible || captureEditorRequestVisible || maintenanceOperationVisible
     readonly property MediaContent mediaContent: expansionState.currentName === "media" ? loadedContent as MediaContent : null
-    readonly property bool helpVisible: systemContent ? systemContent.helpOpen : (mediaContent ? mediaContent.helpOpen : false)
+    property bool otherHelpOpen: false
+    readonly property bool helpVisible: systemContent ? systemContent.helpOpen : (mediaContent ? mediaContent.helpOpen : otherHelpOpen)
     readonly property bool tabShortcutsEnabled: expansionState.hasCurrent && !detailVisible && !helpVisible && !(systemContent && (systemContent.resetConfirmPending || systemContent.audioChooserOpen))
     readonly property string escapeHintLabel: systemContent && systemContent.resetConfirmPending ? "Cancel" : helpVisible || detailVisible || (systemContent && (systemContent.audioChooserOpen || systemContent.selectedSlider.length > 0)) ? "Back" : "Close"
     // Hub scrolling is a fallback only for views without their own paging
     // owner. Calendar, Activity, and open details consume PageUp/Down locally.
     readonly property bool hostPageShortcutsEnabled: expansionState.hasCurrent && !helpVisible && (expansionState.currentName === "weather" || expansionState.currentName === "media" || (expansionState.currentName === "system" && !detailVisible))
     readonly property bool detailVisible: !!systemContent && (systemContent.trayMenuOpen || systemContent.networkOpen || systemContent.bluetoothOpen || systemContent.themeOpen || systemContent.wallpaperOpen || systemContent.sessionOpen || systemContent.resourcesOpen || systemContent.recordingsOpen || systemContent.mixerOpen)
-    readonly property string helpCaption: systemContent ? systemContent.helpTitle : "Now Playing controls"
-    readonly property var helpKeys: systemContent ? systemContent.helpBindings : (mediaContent ? mediaContent.helpBindings : [])
+    readonly property string helpCaption: systemContent ? systemContent.helpTitle : mediaContent ? "Now Playing controls" : expansionState.currentName === "activity" ? "Activity controls" : expansionState.currentName === "weather" ? "Weather controls" : "Home controls"
+    readonly property var otherHelpKeys: expansionState.currentName === "activity" ? [
+        {
+            key: "J/K · ↑/↓",
+            action: "Navigate notifications"
+        },
+        {
+            key: "H/L · ←/→",
+            action: "Select a notification group"
+        },
+        {
+            key: "E / ENTER",
+            action: "Expand group or open selected notification"
+        },
+        {
+            key: "M / SHIFT+M",
+            action: "Toggle read / mark all read"
+        },
+        {
+            key: "DEL / BACKSPACE",
+            action: "Dismiss selected notification"
+        },
+        {
+            key: "S / C",
+            action: "Toggle silence / clear history"
+        },
+        {
+            key: "ESC",
+            action: "Close Activity"
+        }
+    ] : expansionState.currentName === "weather" ? [
+        {
+            key: "H/L · J/K · ARROWS",
+            action: "Browse forecast days"
+        },
+        {
+            key: "R",
+            action: "Refresh forecast"
+        },
+        {
+            key: "C / BACKSPACE",
+            action: "Return to calendar"
+        },
+        {
+            key: "ESC",
+            action: "Close weather"
+        }
+    ] : [
+        {
+            key: "J/K · ↑/↓ · PGUP/PGDN",
+            action: "Previous / next month"
+        },
+        {
+            key: "H/L · ←/→",
+            action: "Previous / next day"
+        },
+        {
+            key: "T",
+            action: "Go to today"
+        },
+        {
+            key: "F / ENTER",
+            action: "Open forecast"
+        },
+        {
+            key: "C",
+            action: "Choose visible calendars"
+        },
+        {
+            key: "R",
+            action: "Refresh agenda"
+        },
+        {
+            key: "ESC",
+            action: "Close Home"
+        }
+    ]
+    readonly property var helpKeys: systemContent ? systemContent.helpBindings : mediaContent ? mediaContent.helpBindings : otherHelpKeys
+
+    function toggleHelp(): void {
+        if (systemContent)
+            systemContent.helpOpen = !systemContent.helpOpen;
+        else if (mediaContent)
+            mediaContent.helpOpen = !mediaContent.helpOpen;
+        else
+            otherHelpOpen = !otherHelpOpen;
+    }
 
     function presentComponent(next: Component): void {
         if (!next) {
@@ -168,7 +254,10 @@ PanelWindow {
         });
     }
 
-    onCurrentComponentChanged: presentComponent(currentComponent)
+    onCurrentComponentChanged: {
+        otherHelpOpen = false;
+        presentComponent(currentComponent);
+    }
     Component.onCompleted: {
         presentComponent(currentComponent);
         // Prepare every hub destination during shell startup; their instances
@@ -361,6 +450,36 @@ PanelWindow {
         contentViewport.contentY = Math.max(0, Math.min(limit, nextY));
     }
 
+    // Controls and Now Playing already consume '?' in their own focus scopes.
+    // Give Home, Weather and Activity the same key and contextual overlay.
+    Shortcut {
+        sequence: "?"
+        context: Qt.ApplicationShortcut
+        enabled: host.expansionState.hasCurrent && !host.systemContent && !host.mediaContent
+        onActivated: host.toggleHelp()
+    }
+
+    Shortcut {
+        sequence: "Esc"
+        context: Qt.ApplicationShortcut
+        enabled: host.otherHelpOpen && !host.systemContent && !host.mediaContent
+        onActivated: host.otherHelpOpen = false
+    }
+
+    Shortcut {
+        sequence: "J"
+        context: Qt.ApplicationShortcut
+        enabled: host.otherHelpOpen
+        onActivated: scopedHelp.scrollHints(1)
+    }
+
+    Shortcut {
+        sequence: "K"
+        context: Qt.ApplicationShortcut
+        enabled: host.otherHelpOpen
+        onActivated: scopedHelp.scrollHints(-1)
+    }
+
     Shortcut {
         sequence: "Shift+Esc"
         context: Qt.ApplicationShortcut
@@ -526,6 +645,7 @@ PanelWindow {
             const epoch = ++host.transitionEpoch;
             host.keyboardFocusReady = false;
             if (!host.expansionState.hasCurrent) {
+                host.otherHelpOpen = false;
                 workspaceFocusRestart.stop();
                 focusGrabLost.stop();
                 host.restoringWorkspaceFocus = false;
@@ -654,7 +774,9 @@ PanelWindow {
             theme: host.theme
             motion: host.motion
             currentTab: host.currentTab
+            helpOpen: host.helpVisible
             onTabRequested: destination => host.navigate(destination)
+            onHelpRequested: host.toggleHelp()
         }
 
         // The same raised material as Controls groups keeps footer key hints
@@ -760,6 +882,7 @@ PanelWindow {
         Flickable {
             id: contentViewport
             opacity: shellSurface.contentReveal
+            enabled: !host.otherHelpOpen
             anchors {
                 top: tabs.bottom
                 left: parent.left
@@ -938,6 +1061,8 @@ PanelWindow {
                         host.systemContent.helpOpen = false;
                     else if (host.mediaContent)
                         host.mediaContent.helpOpen = false;
+                    else
+                        host.otherHelpOpen = false;
                 }
             }
         }

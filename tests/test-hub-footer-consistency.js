@@ -133,7 +133,7 @@ test("footer background retains physical clearance even when content is taller t
   }
 });
 
-test("Audio and Media keyboard legends live in their section and detail headers", () => {
+test("Audio legends stay local while shared hub help is never duplicated inside Media", () => {
   const host = source("ShellExpansionHost.qml");
   const controls = source("SystemContent.qml");
   const section = source("ShellSection.qml");
@@ -155,7 +155,11 @@ test("Audio and Media keyboard legends live in their section and detail headers"
     /hints: \[/,
   );
   assert.match(mixer, /id: mixerHints/);
-  assert.match(media, /shortcut: "\?",\s*label: "Help"/);
+  assert.doesNotMatch(
+    media,
+    /shortcut: "\?",\s*label: "Help"|title: "Help \(\?\)"/,
+  );
+  assert.match(source("HubTabs.qml"), /shortcut: "\?"/);
   assert.match(host, /bottomMargin: host.theme.spacing3/);
 });
 
@@ -248,8 +252,12 @@ test("shared key hints collapse empty keycaps without leaving layout gaps", () =
 
 test("footer only contains shared navigation and keyboard controls", () => {
   const host = source("ShellExpansionHost.qml");
+  const footer = host.slice(
+    host.indexOf("id: hubFooter"),
+    host.indexOf("id: contentViewport"),
+  );
   assert.doesNotMatch(
-    host,
+    footer,
     /id: footerStatus|Critical alerts|notifications"|Recording saved|Saving recording/,
   );
   assert.match(host, /id: footerHints/);

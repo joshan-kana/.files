@@ -24,14 +24,16 @@ Item {
     }
 
     signal tabRequested(string destination)
+    signal helpRequested
+    property bool helpOpen: false
 
     implicitHeight: 46
 
     ShellSurface {
         id: track
-        width: parent.width
+        width: parent.width - helpButton.width - root.theme.spacing2
         height: 42
-        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.left: parent.left
         theme: root.theme
         motion: root.motion
         surfaceLayer: ShellSurface.Control
@@ -112,6 +114,39 @@ Item {
                     }
                 }
             }
+        }
+    }
+
+    // One discoverable contextual-help action for every hub page and detail.
+    ShellSurface {
+        id: helpButton
+        width: 42
+        height: 42
+        anchors.right: parent.right
+        theme: root.theme
+        motion: root.motion
+        surfaceLayer: ShellSurface.Control
+        cornerRadius: root.theme.radiusLarge
+        selected: root.helpOpen
+        fillColor: root.helpOpen ? root.theme.selectedTabFill : root.theme.expressiveSurface
+        Accessible.role: Accessible.Button
+        Accessible.name: "Keyboard help"
+
+        KeyHint {
+            anchors.centerIn: parent
+            runtime: root.runtime
+            theme: root.theme
+            shortcut: "?"
+            compact: true
+            emphasized: root.helpOpen
+        }
+
+        StateLayer {
+            theme: root.theme
+            motion: root.motion
+            cornerRadius: root.theme.radiusLarge
+            selected: root.helpOpen
+            onActivated: root.helpRequested()
         }
     }
 }

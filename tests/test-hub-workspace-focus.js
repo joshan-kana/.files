@@ -32,7 +32,7 @@ test("genuine focus losses still close, but workspace focus round-trip cannot", 
   );
   assert.match(
     host,
-    /if \(!host\.expansionState\.hasCurrent\) \{\s*workspaceFocusRestart\.stop\(\);\s*focusGrabLost\.stop\(\);/,
+    /if \(!host\.expansionState\.hasCurrent\) \{\s*host\.otherHelpOpen = false;\s*workspaceFocusRestart\.stop\(\);\s*focusGrabLost\.stop\(\);/,
   );
   assert.match(
     host,
