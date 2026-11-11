@@ -11,20 +11,27 @@ const read = (name) =>
 
 test("wallpaper apply target uses the shared persisted appearance owner", () => {
   const appearance = read("AppearancePreferences.qml");
-  assert.match(appearance, /property string wallpaperTargetOutput: ""/);
   assert.match(
     appearance,
-    /readonly property string wallpaperTargetOutput: saved\.wallpaperTargetOutput/,
+    /property string wallpaperTargetOutput: appearance\.runtime\.appearanceDefaults\.wallpaperTargetOutput/,
   );
-  assert.match(appearance, /wallpaperTargetOutput: "",/);
+  assert.match(
+    appearance,
+    /readonly property string wallpaperTargetOutput: effective\("wallpaperTargetOutput"\)/,
+  );
+  const nix = fs.readFileSync(
+    path.join(__dirname, "../modules/desktop/hyprland/shell/default.nix"),
+    "utf8",
+  );
+  assert.match(
+    nix,
+    /wallpaperTargetOutput = lib\.mkOption \{[\s\S]*?default = ""/,
+  );
   assert.match(
     appearance,
     /function setWallpaperTargetOutput\(output: string\): void/,
   );
-  assert.match(
-    appearance,
-    /saved\.setValue\("wallpaperTargetOutput", output\)/,
-  );
+  assert.match(appearance, /storeOverride\("wallpaperTargetOutput", output\)/);
   assert.match(appearance, /saved\.sync\(\)/);
 });
 

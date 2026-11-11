@@ -37,20 +37,34 @@ EXCLUDED = {
 }
 
 
-def search_roots():
-    """Return configured, safe search roots for local file discovery."""
+def declared_roots():
+    """Resolve user-selected roots from the generated Nix runtime config."""
     home = Path.home()
-    defaults = [home / name for name in ("Documents", "Downloads", "Desktop", "Projects", "repos", "src", "Uni")]
-    config = Path(os.environ.get("XDG_CONFIG_HOME", str(home / ".config"))) / "linux-desktop/files.json"
+    config = Path(
+        os.environ.get(
+            "LINUX_DESKTOP_RUNTIME", str(Path(os.environ.get("XDG_CONFIG_HOME", str(home / ".config"))) / "linux-desktop/runtime.json")
+        )
+    )
     try:
-        value = json.loads(config.read_text())
-        if isinstance(value.get("roots"), list):
-            defaults = [Path(os.path.expanduser(x)) for x in value["roots"] if isinstance(x, str)]
-    except (OSError, ValueError, TypeError):
-        pass
+        roots = json.loads(config.read_text())["palette"]["fileRoots"]
+        if not isinstance(roots, list):
+            return []
+        defaults = [
+            Path(os.path.expanduser(root)) if root.startswith(("/", "~")) else home / root
+            for root in roots
+            if isinstance(root, str) and root
+        ]
+    except (OSError, ValueError, KeyError, TypeError):
+        return []
+    return defaults
+
+
+def search_roots():
+    """Return existing safe search roots for local file discovery."""
+    home = Path.home()
     result = [
         root
-        for root in defaults
+        for root in declared_roots()
         if root.is_absolute() and root.is_dir() and not root.is_symlink() and root != home and not str(root).startswith("/nix/")
     ]
     return list(dict.fromkeys(result))
@@ -148,8 +162,17 @@ def query(text):
     try:
         db = sqlite3.connect(f"file:{DB}?mode=ro", uri=True, timeout=0.25)
         rows = db.execute(
-            "SELECT path, name, kind, browser FROM items WHERE name LIKE ? ESCAPE '\\' OR path LIKE ? ESCAPE '\\' LIMIT 256",
-            (f"%{escaped}%", f"%{escaped}%"),
+            """SELECT path, name, kind, browser
+               FROM items
+               WHERE name LIKE ? ESCAPE '\\' OR path LIKE ? ESCAPE '\\'
+               ORDER BY CASE
+                 WHEN LOWER(name) = ? THEN 0
+                 WHEN LOWER(name) LIKE ? ESCAPE '\\' THEN 1
+                 WHEN LOWER(name) LIKE ? ESCAPE '\\' THEN 2
+                 ELSE 3 END,
+                 LENGTH(name), name COLLATE NOCASE
+               LIMIT 32""",
+            (f"%{escaped}%", f"%{escaped}%", phrase, f"{escaped}%", f"%{escaped}%"),
         ).fetchall()
     except (OSError, sqlite3.Error):
         return []
@@ -389,7 +412,11 @@ def watch():
     signal.signal(signal.SIGTERM, lambda _signal, _frame: sys.exit(0))
 
     home = Path.home()
-    config = Path(os.environ.get("XDG_CONFIG_HOME", str(home / ".config"))) / "linux-desktop/files.json"
+    config = Path(
+        os.environ.get(
+            "LINUX_DESKTOP_RUNTIME", str(Path(os.environ.get("XDG_CONFIG_HOME", str(home / ".config"))) / "linux-desktop/runtime.json")
+        )
+    )
     search_server, search_endpoint = start_search_socket()
     try:
         watch_changes(search_server, home, config)
@@ -497,7 +524,7 @@ def is_watch_layout_change(path, roots):
     """Detect filesystem changes that require rebuilding the watcher layout."""
     if path in roots:
         return True
-    if path.parent == Path.home() and path.name in {"Documents", "Downloads", "Desktop", "Projects", "repos", "src", "Uni"}:
+    if path.parent == Path.home() and path in declared_roots():
         return True
     return path.parent.name in {"chromium", "google-chrome", "Brave-Browser", "firefox"}
 

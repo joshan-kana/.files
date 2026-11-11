@@ -24,7 +24,7 @@ Item {
     readonly property string audioLabel: audioMode === "system" ? "SYSTEM AUDIO" : audioMode === "microphone" ? "MICROPHONE" : "NO AUDIO"
     property string snapshotPath: ""
     property string statusText: ""
-    readonly property bool freezeEnabled: capturePreferences.freezeEnabled
+    readonly property bool freezeEnabled: capturePreferences.preferenceSource === "default" ? runtime.captureFreezeEnabled : capturePreferences.freezeEnabled
     property bool frozenForCapture: true
     property bool modeSnapshotPending: false
     property bool liveExportPending: false
@@ -32,7 +32,8 @@ Item {
         id: capturePreferences
         location: "file://" + Quickshell.env("HOME") + "/.config/linux-desktop/preferences.ini"
         category: "Capture"
-        property bool freezeEnabled: true
+        property bool freezeEnabled: picker.runtime.captureFreezeEnabled
+        property string preferenceSource: ""
     }
     property real startX: 0
     property real startY: 0
@@ -106,17 +107,28 @@ Item {
         }
     }
 
+    Component.onCompleted: {
+        if (capturePreferences.preferenceSource !== "")
+            return;
+        // Preserve explicitly stored values from older settings files.
+        capturePreferences.preferenceSource = capturePreferences.value("freezeEnabled", null) === null ? "default" : "user";
+        capturePreferences.setValue("preferenceSource", capturePreferences.preferenceSource);
+        capturePreferences.sync();
+    }
+
     function resetToDeclared(): void {
-        capturePreferences.freezeEnabled = true;
-        capturePreferences.setValue("freezeEnabled", true);
+        capturePreferences.preferenceSource = "default";
+        capturePreferences.setValue("preferenceSource", "default");
         capturePreferences.sync();
     }
 
     function toggleFreeze(): void {
         if (selectionMode === "record" || exporting)
             return;
-        capturePreferences.freezeEnabled = !capturePreferences.freezeEnabled;
+        capturePreferences.freezeEnabled = !freezeEnabled;
         capturePreferences.setValue("freezeEnabled", capturePreferences.freezeEnabled);
+        capturePreferences.preferenceSource = "user";
+        capturePreferences.setValue("preferenceSource", "user");
         capturePreferences.sync();
         initialiseSelection = false;
         if (!capturePreferences.freezeEnabled) {
