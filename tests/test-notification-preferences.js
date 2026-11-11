@@ -37,10 +37,7 @@ test("legacy preferences override newly materialized defaults exactly once", () 
   assert.match(helper, /if \(current\.legacyMigrated\)\s*return/);
   assert.match(helper, /"appsJson"/);
   assert.match(helper, /previous\.value\(name, null\)/);
-  assert.match(
-    helper,
-    /value !== null && current\.value\(name, null\) === null/,
-  );
+  assert.match(helper, /if \(value !== null\)/);
   assert.match(helper, /current\.legacyMigrated = true/);
 });
 
