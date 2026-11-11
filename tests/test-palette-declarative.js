@@ -202,3 +202,104 @@ test("Theme-owned shell presentation is applied through the theme app scope", ()
     1,
   );
 });
+
+test("QML runtime defaults match the native Nix shell option declarations", () => {
+  const nix = read("default.nix");
+  const qml = read("qml/RuntimeConfig.qml");
+  const appearanceNix = nix
+    .split("  scopeOptions.appearance = lib.mkOption {")[1]
+    .split("  scopeOptions.captureFreezeEnabled")[0];
+  const appearanceQml = qml
+    .split("            property JsonObject appearance: JsonObject {")[1]
+    .split("            property JsonObject capture: JsonObject {")[0];
+
+  const declared = [
+    ...appearanceNix.matchAll(
+      /^ {8}(\w+) = lib\.mkOption \{\n([\s\S]*?)^ {8}\};/gm,
+    ),
+  ];
+  const adapted = new Map(
+    [
+      ...appearanceQml.matchAll(
+        /^ {16}property (bool|string|real|int) (\w+): ([^\n]+)$/gm,
+      ),
+    ].map((match) => [match[2], { type: match[1], value: match[3].trim() }]),
+  );
+
+  assert.equal(declared.length, 13);
+  assert.deepEqual(
+    [...adapted.keys()].sort(),
+    declared.map((match) => match[1]).sort(),
+    "Every appearance field must have exactly one matching QML adapter property",
+  );
+
+  for (const [, name, definition] of declared) {
+    const type = definition.match(/type = lib\.types\.(bool|str|enum|numbers)/);
+    const defaultValue = definition.match(
+      /default = (true|false|"[^"]*"|[0-9.]+);/,
+    );
+    assert.ok(type, name + " must use a recognized native Nix type");
+    assert.ok(defaultValue, name + " must declare a Nix default");
+    assert.match(
+      definition,
+      /description = "[^"]+/,
+      name + " needs a nixd description",
+    );
+
+    const expectedType = {
+      bool: "bool",
+      str: "string",
+      enum: typeof JSON.parse(defaultValue[1]) === "string" ? "string" : "int",
+      numbers: "real",
+    }[type[1]];
+    assert.equal(adapted.get(name).type, expectedType, name + " QML type");
+    assert.deepEqual(
+      JSON.parse(adapted.get(name).value),
+      JSON.parse(defaultValue[1]),
+      name + " QML fallback must match the Nix default",
+    );
+    if (name === "windowOpacity" || name === "glassOpacity") {
+      assert.match(
+        definition,
+        /type = lib\.types\.numbers\.between 0\.2 1\.0;/,
+        name + " must use the same inclusive limits as the UI slider",
+      );
+    }
+  }
+
+  // The non-appearance defaults are also repeated in the runtime adapter.
+  for (const [option, object, key, qmlType] of [
+    ["textScale", "accessibility", "textScale", "real"],
+    ["animationsEnabled", "motion", "animationsEnabled", "bool"],
+    ["restoreWindowsOnExit", "session", "restoreWindowsOnExit", "bool"],
+    ["captureFreezeEnabled", "capture", "freezeEnabled", "bool"],
+    ["notificationsSilent", "notifications", "silent", "bool"],
+    ["weatherLocation", "weather", "location", "string"],
+  ]) {
+    const native = nix.match(
+      new RegExp(
+        "scopeOptions\\." +
+          option +
+          ' = lib\\.mkOption \\{[\\s\\S]*?default = (true|false|"[^"]*"|[0-9.]+);',
+      ),
+    );
+    const runtime = qml.match(
+      new RegExp(
+        "property JsonObject " +
+          object +
+          ": JsonObject \\{\\s*property " +
+          qmlType +
+          " " +
+          key +
+          ": ([^\\n]+)",
+      ),
+    );
+    assert.ok(native, option + " Nix declaration");
+    assert.ok(runtime, object + "." + key + " QML declaration");
+    assert.deepEqual(
+      JSON.parse(runtime[1].trim()),
+      JSON.parse(native[1]),
+      object + "." + key + " default must match native Nix",
+    );
+  }
+});
