@@ -39,10 +39,11 @@ test("inline replies are not misrepresented as ordinary action buttons", () => {
   );
 });
 
-test("timeout policy honors never-expire and explicit seconds before urgency defaults", () => {
+test("timeout policy honors native millisecond intervals and urgency fallbacks", () => {
   assert.equal(ctx.timeoutMs(0, 1, 2, 0), 0);
-  assert.equal(ctx.timeoutMs(8.25, 2, 2, 0), 8250);
-  assert.equal(ctx.timeoutMs(0.01, 1, 2, 0), 250);
+  assert.equal(ctx.timeoutMs(8250, 2, 2, 0), 8250);
+  assert.equal(ctx.timeoutMs(350, 1, 2, 0), 350);
+  assert.equal(ctx.timeoutMs(10, 1, 2, 0), 250);
   assert.equal(ctx.timeoutMs(-1, 2, 2, 0), 0);
   assert.equal(ctx.timeoutMs(-1, 0, 2, 0), 3500);
   assert.equal(ctx.timeoutMs(-1, 1, 2, 0), 6000);
