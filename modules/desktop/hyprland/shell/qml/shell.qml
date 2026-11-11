@@ -2,6 +2,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import "DesktopIcons.js" as DesktopIcons
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Io
@@ -509,6 +510,7 @@ ShellRoot {
                 name: "Clipboard History",
                 description: "Search and restore clipboard entries",
                 icon: "edit-paste",
+                glyph: DesktopIcons.glyphFor("clipboard"),
                 keywords: ["copy", "paste", "cliphist"]
             },
             {
@@ -586,6 +588,7 @@ ShellRoot {
                 name: "Application Mixer",
                 description: "Control live PipeWire playback streams",
                 icon: "multimedia-volume-control",
+                glyph: DesktopIcons.glyphFor("audioMixer"),
                 keywords: ["audio", "volume", "apps", "pavucontrol", "pipewire"]
             },
             {
@@ -600,6 +603,7 @@ ShellRoot {
                 name: "Power & Session",
                 description: "Suspend, log out, reboot, or power off",
                 icon: "system-shutdown",
+                glyph: DesktopIcons.glyphFor("session"),
                 keywords: ["power", "session", "logout", "suspend", "reboot", "shutdown"]
             },
             {
@@ -663,6 +667,7 @@ ShellRoot {
                 name: "Resource Monitor",
                 description: "Live CPU and memory dashboard",
                 icon: "utilities-system-monitor",
+                glyph: DesktopIcons.glyphFor("resources"),
                 keywords: ["cpu", "ram", "memory", "resources", "performance", "usage"]
             },
             {
@@ -677,7 +682,24 @@ ShellRoot {
                 name: "Theme Picker",
                 description: "Switch the active Stylix palette",
                 icon: "preferences-desktop-theme",
+                glyph: DesktopIcons.glyphFor("theme"),
                 keywords: ["theme", "stylix", "palette", "colour", "color"]
+            },
+            {
+                id: "wallpaper.toggle",
+                name: "Wallpaper Gallery",
+                description: "Browse and apply desktop images and videos",
+                icon: "preferences-desktop-wallpaper",
+                glyph: DesktopIcons.glyphFor("wallpaper"),
+                keywords: ["wallpaper", "gallery", "background", "photos", "images", "video"]
+            },
+            {
+                id: "captures.library",
+                name: "Capture Library",
+                description: "Browse screenshots and screen recordings",
+                icon: "folder-pictures",
+                glyph: DesktopIcons.glyphFor("captures"),
+                keywords: ["screenshots", "captures", "recordings", "video", "images"]
             },
             {
                 id: "weather.toggle",
@@ -747,6 +769,7 @@ ShellRoot {
                 name: "Keyboard Shortcuts",
                 description: "Show the Hyprland key map",
                 icon: "preferences-desktop-keyboard-shortcuts",
+                glyph: DesktopIcons.glyphFor("shortcuts"),
                 keywords: ["keybinds", "cheatsheet"]
             },
             {
