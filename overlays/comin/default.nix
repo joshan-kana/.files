@@ -33,6 +33,9 @@ in
           patches = (old.patches or [ ]) ++ [
             ../../patches/comin/allow-force-push.patch
           ];
+          passthru = (old.passthru or { }) // {
+            autoUpdate = false;
+          };
         });
       })
     ];
