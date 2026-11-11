@@ -7,7 +7,7 @@
 }:
 
 let
-  inherit (lib.systems.elaborate system) isDarwin isLinux;
+  inherit (lib.systems.elaborate system) isDarwin isLinux isx86_64;
 in
 {
   home =
@@ -463,5 +463,13 @@ in
     { pkgs, ... }:
     lib.optionalAttrs isDarwin {
       home = _: { home.packages = [ pkgs.vial ]; };
+    };
+
+  keymapp =
+    { pkgs, ... }:
+    lib.optionalAttrs (isDarwin || (isLinux && isx86_64)) {
+      home = _: {
+        home.packages = [ pkgs.keymapp ];
+      };
     };
 }
