@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 
 Item {
     id: root
@@ -10,6 +11,7 @@ Item {
     property string title: ""
     property string subtitle: ""
     property string icon: ""
+    property string iconName: ""
     property string shortcut: ""
     property bool active: false
     property color activeColor: theme.accent
@@ -95,8 +97,20 @@ Item {
         }
         spacing: root.theme.spacing2
 
+        Image {
+            id: inlineThemeIcon
+            visible: root.iconName.length > 0
+            anchors.verticalCenter: parent.verticalCenter
+            width: visible ? root.theme.fontSize(17) : 0
+            height: width
+            source: visible ? Quickshell.iconPath(root.iconName) : ""
+            fillMode: Image.PreserveAspectFit
+            asynchronous: true
+        }
+
         Text {
             id: inlineIcon
+            visible: root.iconName.length === 0
             anchors.verticalCenter: parent.verticalCenter
             text: root.icon
             color: root.active ? root.activeColor : root.theme.textStrong
@@ -106,7 +120,7 @@ Item {
 
         ShellText {
             anchors.verticalCenter: parent.verticalCenter
-            width: Math.max(1, inlineContent.width - inlineIcon.implicitWidth - inlineHint.implicitWidth - inlineContent.spacing * 2)
+            width: Math.max(1, inlineContent.width - (inlineThemeIcon.visible ? inlineThemeIcon.width : inlineIcon.implicitWidth) - inlineHint.implicitWidth - inlineContent.spacing * 2)
             text: root.title
             elide: Text.ElideRight
             runtime: root.runtime
