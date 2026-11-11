@@ -1,7 +1,6 @@
 {
   config,
   editScope,
-  lib,
   moduleRegistry,
   pkgs,
   ...
@@ -22,8 +21,7 @@
     ;
 
   imports = [
-    (moduleRegistry.profiles { inherit lib; }).desktop.default
-    (moduleRegistry.profiles { inherit lib; }).desktop.arm
+    (moduleRegistry.profiles { }).desktop
   ];
 
   hardware = import ./hardware.nix;

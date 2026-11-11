@@ -301,34 +301,32 @@ in
     );
 
   spotify =
-    { lib, options, ... }:
-    (lib.optionalAttrs isLinux (
-      lib.optionalAttrs (lib.hasAttrByPath [ "programs" "spicetify" ] options) {
-        programs.spicetify.enable = true;
-      }
-    ))
+    _:
+    lib.optionalAttrs (isLinux && isx86_64) {
+      programs.spicetify.enable = true;
+    }
     // lib.optionalAttrs isDarwin {
       # The pinned Darwin Nixpkgs source depends on a stalled Wayback download.
       homebrew.casks = [ "spotify" ];
     };
 
-  discord = _: {
-    home = _: {
-      home.packages = [ pkgs.discord ];
+  discord =
+    _:
+    lib.optionalAttrs (isDarwin || (isLinux && isx86_64)) {
+      home = _: { home.packages = [ pkgs.discord ]; };
     };
-  };
 
-  dropbox = _: {
-    home = _: { home.packages = [ pkgs.dropbox ]; };
-  };
+  dropbox =
+    _:
+    lib.optionalAttrs (isDarwin || (isLinux && isx86_64)) {
+      home = _: { home.packages = [ pkgs.dropbox ]; };
+    };
 
-  onlyoffice = _: {
-    home =
-      _:
-      lib.optionalAttrs isLinux {
-        home.packages = [ pkgs.onlyoffice-desktopeditors ];
-      };
-  };
+  onlyoffice =
+    _:
+    lib.optionalAttrs (isLinux && isx86_64) {
+      home = _: { home.packages = [ pkgs.onlyoffice-desktopeditors ]; };
+    };
 
   twingate =
     _:
