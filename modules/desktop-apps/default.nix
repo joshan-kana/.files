@@ -82,12 +82,13 @@ in
           home.sessionVariables.MOZ_DISABLE_SAFE_MODE_KEY = disableSafeModeKey;
           programs.firefox =
             lib.optionalAttrs isDarwin {
-              package = pkgs.firefox-bin;
+              package = null;
               configPath = "Library/Application Support/Firefox";
             }
             // lib.optionalAttrs isLinux {
               configPath = ".mozilla/firefox";
             };
+          home.packages = lib.optionals isDarwin [ pkgs.firefox-bin-unwrapped ];
         }
         // lib.optionalAttrs isDarwin {
           # The graphical login environment does not inherit shell variables.
@@ -111,7 +112,18 @@ in
       environment.sessionVariables.MOZ_DISABLE_SAFE_MODE_KEY = disableSafeModeKey;
     };
 
-  floorp = _: { };
+  floorp = _: {
+    home =
+      _:
+      lib.optionalAttrs isDarwin {
+        programs.floorp = {
+          enable = true;
+          package = null;
+          darwinDefaultsId = "app.floorp.Floorp";
+        };
+        home.packages = [ pkgs.floorp-bin-unwrapped ];
+      };
+  };
 
   kitty = _: {
     home = _: {
