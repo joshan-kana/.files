@@ -20,7 +20,33 @@ PanelWindow {
     readonly property real dockTop: frameConnected ? theme.barHeight + theme.spacing3 : theme.panelTopOffset
     readonly property int cardHeight: Math.max(92, Math.min(170, Math.floor((screen ? screen.height : 1440) - dockTop - (frameConnected ? theme.frameThickness : theme.spacing3))))
     readonly property int cardGap: theme.spacing2 + theme.spacing1
-    readonly property int toastCount: notificationState.popups.count
+    readonly property int toastCount: {
+        const revision = notificationState.popupRevision;
+        return notificationState.visibleCountForOutput(screen ? screen.name : "");
+    }
+    readonly property bool outputFullscreen: Hyprland.monitorFor(screen)?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 0) ?? false
+    onOutputFullscreenChanged: {
+        if (outputFullscreen && screen)
+            notificationState.concealOrdinaryPopupsOnOutput(screen.name);
+    }
+    onMaxToastSlotsChanged: {
+        if (screen)
+            notificationState.setOutputCapacity(screen.name, maxToastSlots);
+    }
+    onFrameDocksChanged: {
+        if (screen)
+            notificationState.setFrameDocks(screen.name, frameDocks);
+    }
+    Component.onCompleted: {
+        if (screen) {
+            notificationState.setOutputCapacity(screen.name, maxToastSlots);
+            notificationState.setFrameDocks(screen.name, frameDocks);
+        }
+    }
+    Component.onDestruction: {
+        if (screen)
+            notificationState.setFrameDocks(screen.name, []);
+    }
     property int contourEpoch: 0
     // Reserve the full bounded stack, including when there are no toasts.
     // Resizing the right-anchored Wayland surface as notifications arrive
@@ -72,7 +98,7 @@ PanelWindow {
     PopupSurfaceLifecycle {
         id: surfaceLifecycle
         popup: popup
-        exposed: popup.notificationState.popupVisible && !popup.notificationState.locked
+        exposed: popup.notificationState.popupVisible && popup.toastCount > 0 && !popup.notificationState.locked
         // Only actual cards accept input, not the transparent reserved slots.
         interactiveItem: toastInputArea
     }
@@ -116,6 +142,7 @@ PanelWindow {
             required property string phase
             required property int index
             required property int slot
+            required property string outputName
             required property bool evicted
             property bool attachmentReady: false
             property real attachmentProgress: 0
@@ -171,7 +198,7 @@ PanelWindow {
             width: popup.frameAttached ? popup.width * attachmentProgress : popup.width
             height: popup.cardHeight
             clip: popup.frameAttached
-            visible: !evicted && slot < popup.maxToastSlots
+            visible: !evicted && outputName === (popup.screen ? popup.screen.name : "") && slot < popup.maxToastSlots
             onVisibleChanged: popup.contourEpoch++
 
             Behavior on y {
