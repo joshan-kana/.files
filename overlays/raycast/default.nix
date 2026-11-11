@@ -14,7 +14,7 @@ _: {
           license = prev.lib.licenses.unfree;
           unpacker = prev._7zz;
           unpackCmd = ''
-            7zz x -sns- -snld20 -y "$curSrc"
+            7zz x -sns- -snld20 -spd -y "$curSrc"
           '';
           passthru = rec {
             autoUpdate = true;
