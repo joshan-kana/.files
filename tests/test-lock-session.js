@@ -156,63 +156,76 @@ test("Session uses the lock screen vector glyph and displays a coloured action i
   );
 });
 
-test("Session keycaps stay outside the morphing surface and Restore uses the shared active tile style", () => {
+test("Session uses animated shared tile hints and physical QWE/ASD action positions", () => {
   const button = fs.readFileSync(
     path.join(root, "qml/SessionActionButton.qml"),
     "utf8",
   );
+  const hint = fs.readFileSync(path.join(root, "qml/TileKeyHint.qml"), "utf8");
   const content = fs.readFileSync(
     path.join(root, "qml/SystemContent.qml"),
     "utf8",
   );
-  assert.match(session, /shortcut: String\(actionIndex \+ 1\)/);
-  assert.match(button, /KeyHint \{[\s\S]*?shortcut: button\.shortcut/);
-  assert.match(content, /event\.key >= Qt\.Key_1 && event\.key <= Qt\.Key_6/);
-  assert.match(
-    content,
-    /sessionPanel\.invoke\("activateIndex", event\.key - Qt\.Key_1\)/,
-  );
-  assert.match(session, /function activateIndex\(index: int\): void \{/);
-  assert.doesNotMatch(button, /statusLabel|statusText|"ON"|"OFF"/);
-  assert.doesNotMatch(session, /statusLabel:/);
+
+  for (const [id, key] of [
+    ["lock", "Q"],
+    ["suspend", "W"],
+    ["logout", "E"],
+    ["reboot", "A"],
+    ["poweroff", "S"],
+    ["restore", "D"],
+  ])
+    assert.match(session, new RegExp(`id: "${id}",\\s*shortcut: "${key}"`));
+  assert.match(session, /shortcut: modelData\.shortcut/);
+  assert.match(session, /function activateShortcut\(key: int\): bool \{/);
   assert.match(
     session,
-    /active: modelData\.id === "restore" && panel\.restoreWindowsOnExit/,
+    /entries\.findIndex\(entry => entry\.shortcut === shortcut\)/,
   );
-  assert.match(button, /luminous: button\.active/);
-  assert.match(button, /outlined: button\.active/);
+  assert.match(
+    content,
+    /sessionPanel\.invoke\("activateShortcut", event\.key\) === true/,
+  );
+  assert.match(content, /key: sessionPanel\.actionShortcutLegend/);
+  assert.match(session, /actionShortcutLegend: entries\.slice\(0, 3\)/);
+  assert.match(session, /function activateIndex\(index: int\): void \{/);
+  assert.doesNotMatch(session, /String\(actionIndex \+ 1\)|shortcut: "1-6"/);
+
   assert.match(
     button,
-    /borderColor: button\.armed \? button\.theme\.warning : button\.selected \|\| button\.active \? button\.accentColor/,
+    /TileKeyHint \{[\s\S]*?motion: button\.motion[\s\S]*?circular: button\.selected \|\| pointer\.pointerHovered/,
   );
   assert.match(
     button,
     /cornerRadius: button\.selected \|\| pointer\.pointerHovered \? width \/ 2/,
   );
   assert.match(
-    button,
-    /KeyHint \{\s*anchors \{\s*top: parent\.top\s*right: parent\.right/,
+    hint,
+    /anchors \{\s*top: parent\.top\s*right: parent\.right\s*topMargin: animatedInset\s*rightMargin: animatedInset/,
   );
-  assert.ok(
-    button.indexOf("    KeyHint {") > button.indexOf("    ShellSurface {"),
+  assert.match(
+    hint,
+    /property real animatedInset: circular \? circleInset : cornerInset/,
   );
-  assert.ok(button.indexOf("    KeyHint {") < button.lastIndexOf("    Text {"));
-  assert.doesNotMatch(
-    button,
-    /KeyHint \{[\s\S]*?anchors \{\s*top: parent\.top\s*right: parent\.right\s*margins:/,
+  assert.match(
+    hint,
+    /Behavior on animatedInset \{\s*Anim \{[\s\S]*?type: Anim\.FastSpatial/,
   );
-  assert.match(session, /shortcut: String\(actionIndex \+ 1\)/);
-  assert.doesNotMatch(session, /shortcut: "1-6"|label: "Direct action"/);
+  assert.match(hint, /Math\.min\(parent\.width, parent\.height\)/);
+
+  // The full keycap fits inside a circular tile with room for its outline.
+  const radius = 115 / 2;
+  const inset = radius * (1 - Math.SQRT1_2) + 2 + 4;
+  assert.ok(Math.hypot(radius - inset, radius - inset) < radius - 2);
+
+  assert.match(
+    session,
+    /active: modelData\.id === "restore" && panel\.restoreWindowsOnExit/,
+  );
+  assert.match(button, /luminous: button\.active/);
+  assert.match(button, /outlined: button\.active/);
+  assert.doesNotMatch(button, /statusLabel|statusText|"ON"|"OFF"/);
   assert.match(session, /Item \{\s*id: hintRegion\s*width: buttonGrid\.width/);
-  assert.match(
-    session,
-    /naturalWidth: moveHint\.implicitWidth \+ actionHint\.implicitWidth \+ panel\.theme\.spacing3/,
-  );
-  assert.match(
-    session,
-    /Flow \{\s*id: hintFlow\s*width: Math\.min\(parent\.width, hintRegion\.naturalWidth\)/,
-  );
-  assert.match(session, /anchors\.horizontalCenter: parent\.horizontalCenter/);
   assert.match(
     session,
     /KeyHint \{\s*id: moveHint[\s\S]*?shortcut: "HJKL"\s*label: "Move"/,
@@ -220,5 +233,57 @@ test("Session keycaps stay outside the morphing surface and Restore uses the sha
   assert.match(
     session,
     /KeyHint \{\s*id: actionHint[\s\S]*?shortcut: "ENTER"\s*label: panel\.armedAction\.length > 0 \? "Confirm" : "Activate"/,
+  );
+});
+
+test("Escape cancels an armed Session action before backing out", () => {
+  const content = fs.readFileSync(
+    path.join(root, "qml/SystemContent.qml"),
+    "utf8",
+  );
+  const host = fs.readFileSync(
+    path.join(root, "qml/ShellExpansionHost.qml"),
+    "utf8",
+  );
+  const deferred = fs.readFileSync(
+    path.join(root, "qml/DeferredDetail.qml"),
+    "utf8",
+  );
+  assert.match(
+    deferred,
+    /readonly property string armedAction: panel && typeof panel\.armedAction === "string" \? panel\.armedAction : ""/,
+  );
+  assert.match(
+    deferred,
+    /readonly property string actionShortcutLegend: panel && typeof panel\.actionShortcutLegend === "string" \? panel\.actionShortcutLegend : ""/,
+  );
+  assert.match(
+    session,
+    /function cancelConfirmation\(\): void \{\s*armTimer\.stop\(\);\s*armedAction = "";\s*statusText = "";\s*statusError = false;/,
+  );
+  assert.match(
+    content,
+    /readonly property bool sessionConfirmationPending: sessionPanel\.open && sessionPanel\.armedAction\.length > 0/,
+  );
+  assert.match(
+    content,
+    /if \(sessionPanel\.open\) \{[\s\S]*?event\.key === Qt\.Key_Escape[\s\S]*?if \(sessionPanel\.armedAction\.length > 0\)\s*sessionPanel\.invoke\("cancelConfirmation"\);\s*else\s*root\.backFromDetail\(\)/,
+  );
+  assert.match(
+    content,
+    /action: sessionPanel\.armedAction\.length > 0 \? "Cancel confirmation"/,
+  );
+  assert.match(host, /sessionConfirmationPending\) \? "Cancel"/);
+  assert.match(
+    content,
+    /if \(root\.helpOpen\) \{[\s\S]*?sessionPanel\.open && sessionPanel\.armedAction\.length > 0\)\s*sessionPanel\.invoke\("cancelConfirmation"\);\s*root\.helpOpen = false;/,
+  );
+  const cancellation =
+    session.match(
+      /function cancelConfirmation\(\): void \{([\s\S]*?)\n {4}\}/,
+    )?.[1] || "";
+  assert.doesNotMatch(
+    cancellation,
+    /execute\(|closeView\(|sessionCommand|execDetached|backFromDetail/,
   );
 });

@@ -149,6 +149,7 @@ FocusScope {
     readonly property bool maintenanceOperationRunning: resetRunning || (networkPanel.open && networkPanel.profileActionRunning) || (recordingsPanel.open && recordingsPanel.captureTrashRunning)
     readonly property string maintenanceOperationRole: recordingsPanel.open && recordingsPanel.captureTrashRunning ? "capture" : networkPanel.open && networkPanel.profileActionRunning ? "connectivity" : ""
     readonly property bool sessionOpen: sessionPanel.open
+    readonly property bool sessionConfirmationPending: sessionPanel.open && sessionPanel.armedAction.length > 0
     readonly property bool resourcesOpen: resourcesPanel.open
     readonly property bool recordingsOpen: recordingsPanel.open
     readonly property string helpTitle: recordingsPanel.open ? "Captures" : wallpaperPanel.open ? "Wallpaper library" : mixerOpen ? "Application mixer" : resourcesPanel.open ? "Resource monitor" : (bluetoothPanel.open ? "Bluetooth controls" : (networkPanel.open ? "Network controls" : (themePanel.open ? "Theme controls" : (sessionPanel.open ? "Session controls" : (trayMenu.open ? "Tray menu controls" : "System controls")))))
@@ -313,8 +314,8 @@ FocusScope {
                         action: "Navigate actions"
                     },
                     {
-                        key: "1-6",
-                        action: "Activate the matching session action (confirm power actions twice)"
+                        key: sessionPanel.actionShortcutLegend,
+                        action: "Activate the matching session tile (confirm power actions twice)"
                     },
                     {
                         key: "ENTER",
@@ -322,7 +323,7 @@ FocusScope {
                     },
                     {
                         key: "ESC",
-                        action: root.returnToControls ? "Back to Controls" : "Close"
+                        action: sessionPanel.armedAction.length > 0 ? "Cancel confirmation" : root.returnToControls ? "Back to Controls" : "Close"
                     }
                 ] : (trayMenu.open ? [
                         {
@@ -1608,6 +1609,8 @@ FocusScope {
 
                 if (root.helpOpen) {
                     if (helpKey || event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
+                        if ((event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) && sessionPanel.open && sessionPanel.armedAction.length > 0)
+                            sessionPanel.invoke("cancelConfirmation");
                         root.helpOpen = false;
                         event.accepted = true;
                     } else if (event.key === Qt.Key_J || event.key === Qt.Key_Down) {
@@ -1765,11 +1768,13 @@ FocusScope {
                 }
 
                 if (sessionPanel.open) {
-                    if (event.key >= Qt.Key_1 && event.key <= Qt.Key_6) {
-                        sessionPanel.invoke("activateIndex", event.key - Qt.Key_1);
+                    if (sessionPanel.invoke("activateShortcut", event.key) === true) {
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
-                        root.backFromDetail();
+                        if (sessionPanel.armedAction.length > 0)
+                            sessionPanel.invoke("cancelConfirmation");
+                        else
+                            root.backFromDetail();
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Up || event.key === Qt.Key_K) {
                         sessionPanel.invoke("moveGrid", 0, -1);

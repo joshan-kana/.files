@@ -87,17 +87,12 @@ Item {
             }
         }
         // All Visual Modes tiles use the same surface-relative top-right keycap.
-        KeyHint {
+        TileKeyHint {
             visible: chip.shortcut.length > 0
-            anchors {
-                top: parent.top
-                right: parent.right
-                topMargin: chip.theme.spacing2
-                rightMargin: chip.theme.spacing2
-            }
             shortcut: chip.shortcut
             compact: true
             runtime: chip.runtime
+            motion: chip.motion
             theme: chip.theme
             emphasized: chip.active
             emphasisColor: chip.activeColor

@@ -59,6 +59,7 @@ Item {
     readonly property var entries: [
         {
             id: "lock",
+            shortcut: "Q",
             accentRole: "connectivity",
             label: "Lock",
             icon: "",
@@ -67,6 +68,7 @@ Item {
         },
         {
             id: "suspend",
+            shortcut: "W",
             accentRole: "media",
             label: "Suspend",
             icon: "󰤄",
@@ -75,6 +77,7 @@ Item {
         },
         {
             id: "logout",
+            shortcut: "E",
             accentRole: "capture",
             label: "Log out",
             icon: "󰍃",
@@ -83,6 +86,7 @@ Item {
         },
         {
             id: "reboot",
+            shortcut: "A",
             accentRole: "resources",
             label: "Reboot",
             icon: "󰜉",
@@ -91,6 +95,7 @@ Item {
         },
         {
             id: "poweroff",
+            shortcut: "S",
             accentRole: "attention",
             label: "Power off",
             icon: "󰐥",
@@ -99,6 +104,7 @@ Item {
         },
         {
             id: "restore",
+            shortcut: "D",
             accentRole: "resources",
             label: "Restore windows",
             icon: "󰑓",
@@ -106,6 +112,8 @@ Item {
             destructive: false
         }
     ]
+
+    readonly property string actionShortcutLegend: entries.slice(0, 3).map(entry => entry.shortcut).join("/") + " · " + entries.slice(3).map(entry => entry.shortcut).join("/")
 
     visible: open
 
@@ -181,6 +189,13 @@ Item {
         }
     }
 
+    function cancelConfirmation(): void {
+        armTimer.stop();
+        armedAction = "";
+        statusText = "";
+        statusError = false;
+    }
+
     function execute(entry): void {
         if (!entry)
             return;
@@ -210,6 +225,15 @@ Item {
 
         Quickshell.execDetached([runtime.sessionCommand, entry.id, restoreWindowsOnExit ? "restore" : "fresh"]);
         closeView();
+    }
+
+    function activateShortcut(key: int): bool {
+        const shortcut = String.fromCharCode(key);
+        const index = entries.findIndex(entry => entry.shortcut === shortcut);
+        if (index < 0)
+            return false;
+        activateIndex(index);
+        return true;
     }
 
     function activateIndex(index: int): void {
@@ -294,7 +318,7 @@ Item {
                         motion: panel.motion
                         icon: modelData.icon
                         lockGlyph: modelData.id === "lock"
-                        shortcut: String(actionIndex + 1)
+                        shortcut: modelData.shortcut
                         label: modelData.label
                         accentColor: panel.theme.roleColor(modelData.accentRole)
                         active: modelData.id === "restore" && panel.restoreWindowsOnExit
