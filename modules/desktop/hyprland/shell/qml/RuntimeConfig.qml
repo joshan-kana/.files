@@ -67,10 +67,10 @@ QtObject {
     readonly property real textScale: root.configData.accessibility.textScale
     readonly property bool animationsEnabled: root.configData.motion.animationsEnabled
     readonly property bool restoreWindowsOnExit: root.configData.session.restoreWindowsOnExit
-    readonly property real panelOpacity: root.configData.visual.panelOpacity
-    readonly property real focusOpacity: root.configData.visual.focusOpacity
-    readonly property real scrimOpacity: root.configData.visual.scrimOpacity
-    readonly property real squircleExponent: root.configData.visual.squircleExponent
+    readonly property real panelOpacity: root.themeAdapter.visual.panelOpacity
+    readonly property real focusOpacity: root.themeAdapter.visual.focusOpacity
+    readonly property real scrimOpacity: root.themeAdapter.visual.scrimOpacity
+    readonly property real squircleExponent: root.themeAdapter.visual.squircleExponent
     readonly property var keybindings: root.configData.keybindings
     readonly property var shortcuts: root.configData.shortcuts
     readonly property var shortcutHints: root.configData.shortcutHints
@@ -126,6 +126,14 @@ QtObject {
             property JsonObject fonts: JsonObject {
                 property string mono: "monospace"
             }
+
+            property JsonObject visual: JsonObject {
+                property real panelOpacity: 1.0
+                property real focusOpacity: 0.96
+                property real scrimOpacity: 0.50
+                property real squircleExponent: 4.5
+            }
+
             property string wallpaper: ""
 
             property JsonObject tools: JsonObject {
@@ -195,13 +203,6 @@ QtObject {
 
             property JsonObject weather: JsonObject {
                 property string location: ""
-            }
-
-            property JsonObject visual: JsonObject {
-                property real panelOpacity: 0.99
-                property real focusOpacity: 0.96
-                property real scrimOpacity: 0.50
-                property real squircleExponent: 4.5
             }
 
             property JsonObject tools: JsonObject {
