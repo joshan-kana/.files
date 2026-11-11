@@ -32,7 +32,6 @@
         programs.kitty.package = pkgs.kitty-virgl;
       };
     };
-    twingate = _: { enable = false; };
   };
 
   users.users.${config.dotfiles.users.primary.name}.openssh.authorizedKeys.keys = [

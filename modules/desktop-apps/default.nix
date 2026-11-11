@@ -301,8 +301,8 @@ in
     );
 
   spotify =
-    { lib, options, ... }:
-    lib.optionalAttrs (isLinux && isx86_64 && lib.hasAttrByPath [ "programs" "spicetify" ] options) {
+    _:
+    lib.optionalAttrs (isLinux && isx86_64) {
       programs.spicetify.enable = true;
     }
     // lib.optionalAttrs isDarwin {
