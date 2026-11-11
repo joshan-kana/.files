@@ -6,6 +6,28 @@ const path = require("node:path");
 const base = path.join(__dirname, "../modules/desktop/hyprland/shell/qml");
 const read = (name) => fs.readFileSync(path.join(base, name), "utf8");
 
+test("hover and press motion on shared Controls tiles stays inside the clipped viewport", () => {
+  for (const name of [
+    "QuickSettingChip.qml",
+    "OpacitySetting.qml",
+    "AdjustableSetting.qml",
+    "ConnectivityTile.qml",
+  ]) {
+    const scale = read(name).match(/^\s*scale:\s*[^\n]+$/m)?.[0];
+    assert.ok(scale, `${name} must expose its interaction scale`);
+    const values = scale.match(/\b\d+(?:\.\d+)?\b/g).map(Number);
+    assert.equal(
+      values.length,
+      3,
+      `${name} needs press, hover and rest scales`,
+    );
+    const [pressed, hovered, resting] = values;
+    assert.ok(pressed < resting, `${name} press should shrink`);
+    assert.ok(resting < hovered, `${name} hover should grow from rest`);
+    assert.equal(hovered, 1, `${name} hover must not exceed its layout bounds`);
+  }
+});
+
 test("nine Controls visual modes form two consistent rows at normal desktop width", () => {
   const controls = read("SystemContent.qml");
   assert.match(controls, /width < 450 \? 3 : 5/);
