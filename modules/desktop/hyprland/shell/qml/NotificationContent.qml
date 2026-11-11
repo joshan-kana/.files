@@ -11,6 +11,7 @@ FocusScope {
     required property Motion motion
 
     property bool engaged: false
+    property bool replyEditing: false
     property int selectedIndex: 0
     property int selectedMemberIndex: 0
     property string expandedGroupKey: ""
@@ -47,6 +48,8 @@ FocusScope {
     onEngagedChanged: {
         if (engaged)
             Qt.callLater(focusKeyboard);
+        else
+            replyEditing = false;
     }
 
     onGroupsChanged: {
@@ -313,10 +316,6 @@ FocusScope {
                 {
                     shortcut: "E",
                     label: "Expand"
-                },
-                {
-                    shortcut: "ESC",
-                    label: "Close"
                 }
             ]
         }
@@ -469,6 +468,12 @@ FocusScope {
                                 center.selectedIndex = groupItem.index;
                                 center.selectedMemberIndex = index;
                                 center.focusReply();
+                            }
+                            onReplyFocusChanged: focused => {
+                                if (focused)
+                                    center.replyEditing = true;
+                                else if (center.selectedNotification() === modelData)
+                                    center.replyEditing = false;
                             }
                             onReplyFinished: center.focusKeyboard()
                             onReadToggled: center.notificationState.toggleRead(modelData)

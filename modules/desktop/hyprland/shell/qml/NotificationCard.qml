@@ -22,6 +22,7 @@ SquircleSurface {
     signal defaultRequested
     signal actionRequested(int index)
     signal replyRequested(string message)
+    signal replyFocusChanged(bool focused)
     signal replyFocusRequested
     signal replyFinished
 
@@ -333,6 +334,7 @@ SquircleSurface {
                     font.family: card.runtime.fontMono
                     font.pixelSize: card.theme.fontSize(11)
                     clip: true
+                    onActiveFocusChanged: card.replyFocusChanged(activeFocus)
                     Keys.onReturnPressed: {
                         card.sendReply();
                     }

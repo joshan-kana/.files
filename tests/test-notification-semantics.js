@@ -123,3 +123,22 @@ test("notification direct actions own their canonical on-control keyhints", () =
   assert.doesNotMatch(footer, /shortcut: "(?:M|R|DEL|[1-9])"/);
   assert.match(footer, /shortcut: "J\/K/);
 });
+
+test("Escape has one shared owner and describes reply editing accurately", () => {
+  const center = qml("NotificationContent.qml");
+  const card = qml("NotificationCard.qml");
+  const host = qml("ShellExpansionHost.qml");
+  const footer = center.slice(
+    center.indexOf("id: footer"),
+    center.indexOf("id: list"),
+  );
+  assert.doesNotMatch(footer, /shortcut: "ESC"/);
+  assert.match(host, /shortcut: "ESC",\s+label: host\.escapeHintLabel/);
+  assert.match(host, /activityContent && activityContent\.replyEditing/);
+  assert.match(center, /onReplyFocusChanged: focused =>/);
+  assert.match(
+    card,
+    /onActiveFocusChanged: card\.replyFocusChanged\(activeFocus\)/,
+  );
+  assert.match(card, /Keys\.onEscapePressed: \{\s+card\.replyFinished\(\);/);
+});
