@@ -25,7 +25,6 @@ QtObject {
     required property BrightnessState brightnessState
     required property NightLightState nightLightState
     required property NotificationState notificationState
-    required property NotificationPopup notificationPopup
     required property Motion motion
     signal frozenCaptureRequested(bool copy)
     signal recordingSelectionRequested
@@ -227,7 +226,7 @@ QtObject {
             return;
 
         const geometry = origin || ambientBar.originFor(screen, "activity");
-        notificationPopup.concealForActivity();
+        notificationState.hidePopup();
         hideTransient("activity");
         expansionState.show("activity", screen, geometry.center, geometry.width, geometry.height, "");
     }
@@ -242,7 +241,7 @@ QtObject {
         const geometry = origin || ambientBar.originFor(screen, "activity");
         const opening = !(expansionState.hasCurrent && expansionState.currentName === "activity" && expansionState.screen === screen);
         if (opening) {
-            notificationPopup.concealForActivity();
+            notificationState.hidePopup();
             hideTransient("activity");
         }
         expansionState.toggle("activity", screen, geometry.center, geometry.width, geometry.height, "");

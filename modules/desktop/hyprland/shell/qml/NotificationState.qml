@@ -5,6 +5,7 @@ import QtCore
 import Quickshell.Io
 import "NotificationJournal.js" as Journal
 import "NotificationPolicy.js" as Policy
+import "NotificationPreferenceMigration.js" as PreferenceMigration
 import "ToastQueue.js" as ToastQueue
 import "NotificationSemantics.js" as NotificationSemantics
 
@@ -23,6 +24,9 @@ QtObject {
     readonly property bool presentation: settings.presentationSource === "default" ? runtime.notificationPresentation : settings.presentation
     readonly property bool historyEnabled: settings.historySource === "default" ? runtime.notificationHistoryEnabled : settings.historyEnabled
     property bool outputFullscreen: false
+    property string preferredOutput: ""
+    property var outputCapacities: ({})
+    property var frameDocksByOutput: ({})
     readonly property bool locked: ["requested", "locked"].includes(lockState.text().trim())
     property var journal: []
     property var liveById: ({})
@@ -47,10 +51,20 @@ QtObject {
         onFileChanged: reload()
     }
 
-    property Settings preferences: Settings {
-        id: settings
+    // All persistent desktop preferences share the existing categorized
+    // preferences.ini store. The old Notifications category is read-only and
+    // consulted once to migrate prior choices without losing per-app rules.
+    property Settings previousPreferences: Settings {
+        id: previousSettings
         location: "file://" + Quickshell.env("HOME") + "/.config/linux-desktop/notifications.ini"
         category: "Notifications"
+    }
+
+    property Settings preferences: Settings {
+        id: settings
+        location: "file://" + Quickshell.env("HOME") + "/.config/linux-desktop/preferences.ini"
+        category: "Notifications"
+        property bool legacyMigrated: false
         property bool silent: root.runtime.notificationSilent
         property bool presentation: root.runtime.notificationPresentation
         property bool historyEnabled: root.runtime.notificationHistoryEnabled
@@ -146,6 +160,7 @@ QtObject {
     }
 
     Component.onCompleted: {
+        PreferenceMigration.migrate(settings, previousSettings);
         journal = historyEnabled ? Journal.restore(archiveFile.text()) : [];
         nextRecord = journal.length;
         if (!historyEnabled)
@@ -177,7 +192,11 @@ QtObject {
         settings.preferenceSource = "default";
         settings.presentationSource = "default";
         settings.historySource = "default";
+        settings.appsJson = "{}";
         settings.setValue("preferenceSource", "default");
+        settings.setValue("presentationSource", "default");
+        settings.setValue("historySource", "default");
+        settings.setValue("appsJson", "{}");
         settings.sync();
     }
 
@@ -344,11 +363,60 @@ QtObject {
         return NotificationSemantics.timeoutMs(notification.expireTimeout, notification.urgency, NotificationUrgency.Critical, NotificationUrgency.Low);
     }
 
+    function visibleCountForOutput(outputName: string): int {
+        // popupRevision invalidates this model query for each output surface.
+        const revision = popupRevision;
+        let count = 0;
+        for (let i = 0; i < popups.count; ++i) {
+            const item = popups.get(i);
+            if (item.outputName === outputName && !item.evicted)
+                count++;
+        }
+        return count;
+    }
+
+    function setOutputCapacity(outputName: string, slots: int): void {
+        if (!outputName || outputCapacities[outputName] === slots)
+            return;
+        const next = Object.assign({}, outputCapacities);
+        next[outputName] = slots;
+        outputCapacities = next;
+        rebalancePopups(Date.now());
+        popupRevision++;
+    }
+
+    function setFrameDocks(outputName: string, docks: var): void {
+        if (!outputName)
+            return;
+        const next = Object.assign({}, frameDocksByOutput);
+        next[outputName] = docks;
+        frameDocksByOutput = next;
+    }
+
+    function moveOrphanedPopups(validOutputs: var): void {
+        const names = new Set(validOutputs || []);
+        const fallback = names.has(preferredOutput) ? preferredOutput : Array.from(names)[0] || "";
+        if (!fallback)
+            return;
+        let changed = false;
+        for (let i = 0; i < popups.count; ++i) {
+            if (!names.has(popups.get(i).outputName)) {
+                popups.setProperty(i, "outputName", fallback);
+                changed = true;
+            }
+        }
+        if (changed) {
+            rebalancePopups(Date.now());
+            popupRevision++;
+            schedulePopups();
+        }
+    }
+
     function rebalancePopups(now: real): void {
         const entries = [];
         for (let i = 0; i < popups.count; ++i)
             entries.push(popups.get(i));
-        const layout = ToastQueue.layout(entries, maxToasts, now, 220);
+        const layout = ToastQueue.layoutByOutput(entries, outputCapacities, maxToasts, now, 220);
         for (let i = 0; i < layout.length; ++i) {
             const current = entries[i];
             const next = layout[i];
@@ -365,7 +433,7 @@ QtObject {
         }
         // Keep a bounded exit layer during exceptional notification floods.
         // Normally all three old cards remain until their exit completes.
-        for (let i = popups.count - 1; i >= 0 && popups.count > maxToasts * 2; --i) {
+        for (let i = popups.count - 1; i >= 0 && popups.count > maxToasts * 2 * Math.max(1, Quickshell.screens.length); --i) {
             if (popups.get(i).phase === "closing")
                 popups.remove(i);
         }
@@ -380,6 +448,7 @@ QtObject {
         const timeout = timeoutFor(notification);
         popups.insert(0, {
             notification: notification,
+            outputName: preferredOutput || (Quickshell.screens.length > 0 ? Quickshell.screens[0].name : ""),
             phase: "visible",
             slot: 0,
             evicted: false,
@@ -461,6 +530,21 @@ QtObject {
             if (notification && NotificationSemantics.groupKey(notification) === groupKey) {
                 popups.remove(i);
                 if (notification.transient || !recordKey(notification))
+                    notification.expire();
+            }
+        }
+        rebalancePopups(Date.now());
+        popupRevision++;
+        schedulePopups();
+    }
+
+    function concealOrdinaryPopupsOnOutput(outputName: string): void {
+        for (let i = popups.count - 1; i >= 0; --i) {
+            const item = popups.get(i);
+            const notification = item.notification;
+            if (item.outputName === outputName && notification && notification.urgency !== NotificationUrgency.Critical) {
+                popups.remove(i);
+                if (notification.transient)
                     notification.expire();
             }
         }

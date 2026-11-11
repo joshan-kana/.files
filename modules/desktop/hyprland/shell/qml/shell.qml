@@ -250,6 +250,7 @@ ShellRoot {
     NotificationState {
         id: notifications
         runtime: runtime
+        preferredOutput: screens.focusedScreen ? screens.focusedScreen.name : ""
         outputFullscreen: !!(Hyprland.monitorFor(screens.focusedScreen)?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 0) ?? false)
     }
 
@@ -293,8 +294,7 @@ ShellRoot {
         islands: ambientBar.frameIslands
         hub: expansionHost.frameBounds
         hubScreen: expansionHost.screen
-        toast: notificationPopup.frameDocks
-        toastScreen: notificationPopup.screen
+        toastByOutput: notifications.frameDocksByOutput
         osd: osdPopup.frameBounds
         osdScreen: osdPopup.screen
         resize: resizeOverlay.frameBounds
@@ -450,17 +450,19 @@ ShellRoot {
         motion: motion
     }
 
-    NotificationPopup {
-        id: notificationPopup
-        screen: screens.focusedScreen
+    // A single freedesktop server serves bounded, independent toast layouts
+    // on every compositor output. Existing cards stay on their origin when
+    // keyboard focus changes; no popup Wayland surface teleports.
+    NotificationPopups {
         notificationState: notifications
         runtime: runtime
         theme: theme
         motion: motion
         frameEnabled: appearance.frameVisible
-        hubVisible: (expansionState.hasCurrent || expansionHost.closing) && expansionHost.screen === screen
+        hubVisible: expansionState.hasCurrent || expansionHost.closing
+        hubScreen: expansionHost.screen
         hubBounds: expansionHost.frameBounds
-        onCenterRequested: actions.showNotifications()
+        onCenterRequested: screen => actions.showNotifications(screen)
     }
 
     OsdPopup {
@@ -853,7 +855,6 @@ ShellRoot {
         brightnessState: brightness
         nightLightState: nightLight
         notificationState: notifications
-        notificationPopup: notificationPopup
         motion: motion
         onFrozenCaptureRequested: copy => screenshotPicker.begin(copy, screens.focusedScreen, "image")
         onRecordingSelectionRequested: {

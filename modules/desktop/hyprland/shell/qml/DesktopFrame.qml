@@ -28,8 +28,7 @@ Variants {
     property var islands: ({})
     property var hub: null
     property var hubScreen: null
-    property var toast: null
-    property var toastScreen: null
+    property var toastByOutput: ({})
     property var osd: null
     property var osdScreen: null
     property var resize: null
@@ -70,7 +69,7 @@ Variants {
         }
         // Collect reactive sources cheaply, then build the expensive shared
         // outline once after all same-turn geometry changes have settled.
-        readonly property var geometryInputs: [modelData ? modelData.width : 1, modelData ? modelData.height : 1, frame.thickness, frame.rounding, frame.theme.squircleExponent, frame.barVisible ? (frame.islands[modelData.name] || []) : [], frame.hubScreen === modelData ? frame.hub : null, frame.toastScreen === modelData ? frame.toast : [], squircleGeometry, frame.osdScreen === modelData ? frame.osd : null, frame.resizeScreen === modelData ? frame.resize : null, output.busyHere]
+        readonly property var geometryInputs: [modelData ? modelData.width : 1, modelData ? modelData.height : 1, frame.thickness, frame.rounding, frame.theme.squircleExponent, frame.barVisible ? (frame.islands[modelData.name] || []) : [], frame.hubScreen === modelData ? frame.hub : null, (frame.toastByOutput[modelData.name] || []), squircleGeometry, frame.osdScreen === modelData ? frame.osd : null, frame.resizeScreen === modelData ? frame.resize : null, output.busyHere]
         property var geometry: ({
                 inner: "",
                 fill: "",
