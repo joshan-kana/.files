@@ -268,8 +268,9 @@ SquircleSurface {
             width: parent.width
             visible: text.length > 0
             maximumLineCount: card.expanded ? 20 : 2
-            text: card.notification ? card.notification.body : ""
-            textFormat: Text.PlainText
+            text: card.notificationState.bodyMarkup(card.notification)
+            textFormat: Text.StyledText
+            onLinkActivated: link => card.notificationState.openBodyLink(link)
             color: card.theme.text
             opacity: 0.78
             font.family: card.runtime.fontMono
@@ -304,10 +305,53 @@ SquircleSurface {
                     compact: true
                     horizontalCompact: true
                     title: modelData.text || "Action"
+                    iconName: card.notificationState.safeActionIcon(card.notification, modelData)
                     shortcut: card.selected && index < 9 ? String(index + 1) : ""
                     width: Math.min(actionButtons.width, Math.max(130, implicitWidth))
                     onActivated: card.actionRequested(index)
                 }
+            }
+        }
+
+        Flow {
+            id: applicationOptions
+            visible: card.expanded && !!card.notification
+            width: parent.width
+            spacing: card.theme.spacing2
+            readonly property var preferences: card.notificationState.applicationPreferences(card.notification)
+
+            ShellAction {
+                runtime: card.runtime
+                theme: card.theme
+                motion: card.motion
+                compact: true
+                horizontalCompact: true
+                title: applicationOptions.preferences.popups === false ? "Allow popups" : "Mute popups"
+                shortcut: card.selected ? "ALT+P" : ""
+                width: Math.min(parent.width, Math.max(142, implicitWidth))
+                onActivated: card.notificationState.setApplicationPreference(card.notification, "popups", applicationOptions.preferences.popups === false)
+            }
+            ShellAction {
+                runtime: card.runtime
+                theme: card.theme
+                motion: card.motion
+                compact: true
+                horizontalCompact: true
+                title: applicationOptions.preferences.history === false ? "Save history" : "Hide history"
+                shortcut: card.selected ? "ALT+H" : ""
+                width: Math.min(parent.width, Math.max(142, implicitWidth))
+                onActivated: card.notificationState.setApplicationPreference(card.notification, "history", applicationOptions.preferences.history === false)
+            }
+            ShellAction {
+                runtime: card.runtime
+                theme: card.theme
+                motion: card.motion
+                compact: true
+                horizontalCompact: true
+                title: applicationOptions.preferences.silent === true ? "Unmute app" : "Quiet app"
+                shortcut: card.selected ? "ALT+S" : ""
+                width: Math.min(parent.width, Math.max(142, implicitWidth))
+                onActivated: card.notificationState.setApplicationPreference(card.notification, "silent", applicationOptions.preferences.silent !== true)
             }
         }
 

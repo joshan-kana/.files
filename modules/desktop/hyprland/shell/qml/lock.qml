@@ -2,12 +2,27 @@
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
 
 ShellRoot {
     id: root
 
     property bool armed: false
     property bool authenticated: false
+
+    // The existing secure lock is authoritative. The desktop notification
+    // owner consumes its atomic transition marker; no polling or second lock
+    // service is created.
+    FileView {
+        id: notificationLockState
+        path: Quickshell.env("XDG_RUNTIME_DIR") + "/linux-desktop-session-lock.state"
+        blockWrites: true
+        atomicWrites: true
+    }
+
+    function publishLockState(state: string): void {
+        notificationLockState.setText(state + "\n");
+    }
 
     RuntimeConfig {
         id: runtime
@@ -49,6 +64,7 @@ ShellRoot {
 
     Component.onCompleted: {
         armed = true;
+        publishLockState("requested");
         lockScreen.lockSession();
         // Acquiring the lock is asynchronous. An initially false `locked`
         // property is never grounds to terminate the process.
@@ -60,12 +76,18 @@ ShellRoot {
         function onUnlockAuthorized(): void {
             root.authenticated = true;
             if (!lockScreen.locked)
+                root.publishLockState("unlocked");
+            if (!lockScreen.locked)
                 retireAfterUnlock.restart();
         }
 
         function onLockStateChanged(): void {
-            if (root.authenticated && !lockScreen.locked)
+            if (root.authenticated && !lockScreen.locked) {
+                root.publishLockState("unlocked");
                 retireAfterUnlock.restart();
+            } else if (lockScreen.locked) {
+                root.publishLockState("locked");
+            }
         }
     }
 }
