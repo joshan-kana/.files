@@ -145,3 +145,47 @@ test("locking hides the entire notification status island", () => {
     /visible: !bar\.notificationState\.locked && barContent\.width/,
   );
 });
+
+test("ordinary popup suppression never accesses a removed ListModel wrapper", () => {
+  const state = fs.readFileSync(
+    path.join(root, "NotificationState.qml"),
+    "utf8",
+  );
+  assert.match(
+    state,
+    /function concealOrdinaryPopups\(\): void \{[\s\S]*?const notification = item\.notification;[\s\S]*?popups\.remove\(i\);\s*if \(notification\.transient\)/,
+  );
+  assert.match(state, /if \(liveById\[key\] === notification\)/);
+});
+
+test("graceful desktop shutdown commits pending bounded history atomically", () => {
+  const state = fs.readFileSync(
+    path.join(root, "NotificationState.qml"),
+    "utf8",
+  );
+  assert.match(
+    state,
+    /Component\.onDestruction:[\s\S]*?archiveFile\.blockWrites = true;\s*archiveFile\.setText\(Journal\.serialize\(journal\)\)/,
+  );
+  const journalFile = fs.readFileSync(
+    path.join(root, "NotificationJournal.js"),
+    "utf8",
+  );
+  assert.match(journalFile, /const maxBytes = 2 \* 1024 \* 1024/);
+});
+
+test("only safe theme icon names, never arbitrary sender paths, survive restart", () => {
+  const now = Date.now();
+  for (const icon of [
+    "/etc/passwd",
+    "file:///home/user/a.png",
+    "https://example.net/image",
+    "../../secret",
+    "a/b",
+  ])
+    assert.equal(journal.snapshot({ appIcon: icon }, "id", now).appIcon, "");
+  assert.equal(
+    journal.snapshot({ appIcon: "dialog-information" }, "id", now).appIcon,
+    "dialog-information",
+  );
+});

@@ -12,9 +12,11 @@ function snapshot(notification, recordId, when, read = false) {
     appName: String(notification.appName || "SYSTEM").slice(0, 256),
     desktopEntry: String(notification.desktopEntry || "").slice(0, 256),
     // Icon names are safe to retain. Never copy sender image paths or bytes.
-    appIcon: String(notification.appIcon || "").startsWith("/")
-      ? ""
-      : String(notification.appIcon || "").slice(0, 256),
+    appIcon: /^[A-Za-z0-9][A-Za-z0-9_.-]{0,255}$/.test(
+      String(notification.appIcon || ""),
+    )
+      ? String(notification.appIcon)
+      : "",
     summary: String(notification.summary || "").slice(0, 2048),
     body: String(notification.body || "").slice(0, 16384),
     urgency: Number(notification.urgency) || 0,
