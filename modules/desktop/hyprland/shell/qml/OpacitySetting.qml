@@ -23,7 +23,9 @@ ShellSurface {
     Accessible.role: Accessible.Button
     Accessible.name: label + ", " + Math.round(opacityValue * 100) + "% opacity"
 
-    scale: toggleArea.pressed ? 0.94 : tileHover.hovered ? 1.018 : 1
+    // Scale inward at rest and fill the allocated bounds on hover.
+    // The hub viewport clips content outside its edge during panel morphs.
+    scale: toggleArea.pressed ? 0.94 : tileHover.hovered ? 1 : 0.982
     Behavior on scale {
         Anim {
             motion: setting.motion
