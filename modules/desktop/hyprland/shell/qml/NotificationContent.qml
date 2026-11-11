@@ -349,6 +349,7 @@ FocusScope {
             color: center.theme.readableRoleColor("critical")
             visible: center.notificationState.persistenceError.length > 0
             Accessible.role: Accessible.AlertMessage
+            Accessible.name: text
         }
 
         ShellSurface {
@@ -511,6 +512,9 @@ FocusScope {
                             theme: center.theme
                             motion: center.motion
                             cornerRadius: center.theme.radiusSmall
+                            Accessible.role: Accessible.Button
+                            Accessible.name: (groupItem.modelData.name || "Notifications") + ", " + groupItem.modelData.notifications.length + " notifications"
+                            Accessible.description: groupItem.expanded ? "Collapse notification group" : "Expand notification group"
                             onActivated: {
                                 center.selectedIndex = groupItem.index;
                                 center.selectedMemberIndex = 0;

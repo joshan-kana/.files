@@ -138,6 +138,9 @@ PanelWindow {
 
         ShellSurface {
             id: toast
+            Accessible.role: Accessible.AlertMessage
+            Accessible.name: notification ? (notification.appName || "SYSTEM") + ": " + (notification.summary || "") : "Notification"
+            Accessible.description: notification ? (notification.body || "") : ""
             required property var notification
             required property string phase
             required property int index
