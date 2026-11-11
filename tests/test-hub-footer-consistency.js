@@ -30,7 +30,7 @@ test("Escape label follows the actual focus owner", () => {
   const controls = source("SystemContent.qml");
   assert.match(
     host,
-    /escapeHintLabel: systemContent && systemContent\.resetConfirmPending \? "Cancel"/,
+    /escapeHintLabel: systemContent && \(systemContent\.resetConfirmPending \|\| systemContent\.sessionConfirmationPending\) \? "Cancel"/,
   );
   assert.match(
     host,
