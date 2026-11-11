@@ -13,6 +13,9 @@ _: {
           homepage = "https://raycast.com";
           license = prev.lib.licenses.unfree;
           unpacker = prev._7zz;
+          unpackCmd = ''
+            7zz x -sns- -snld20 -y "$curSrc"
+          '';
           passthru = rec {
             autoUpdate = true;
             updateUrl = "https://formulae.brew.sh/api/cask/raycast.json";
