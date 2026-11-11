@@ -33,9 +33,27 @@ Item {
     property var parameterTarget: null
     property string priorQuery: ""
     property string selectionIdentity: ""
-    readonly property var quicklinks: PaletteUtilities.parseQuicklinks(JSON.stringify(runtime.paletteQuicklinks || []))
+    // JsonAdapter fills nested arrays after the first QML property evaluation.
+    // Refresh on the actual runtime FileView load rather than retaining an
+    // empty provider list from the initial binding evaluation.
+    property var quicklinks: []
+    property var defaultSnippets: []
     property var userSnippets: null
-    readonly property var snippets: userSnippets === null ? PaletteUtilities.parseSnippets(JSON.stringify(runtime.paletteSnippets || [])) : userSnippets
+    readonly property var snippets: userSnippets === null ? defaultSnippets : userSnippets
+
+    function refreshDeclaredProviders(): void {
+        quicklinks = PaletteUtilities.parseQuicklinks(JSON.stringify(runtime.paletteQuicklinks || []));
+        defaultSnippets = PaletteUtilities.parseSnippets(JSON.stringify(runtime.paletteSnippets || []));
+    }
+
+    Connections {
+        target: palette.runtime.configFile
+        function onLoaded(): void {
+            palette.refreshDeclaredProviders();
+        }
+    }
+
+    Component.onCompleted: refreshDeclaredProviders()
     readonly property var indexedSnippets: snippets.map(item => indexSearchEntry(Object.assign({}, item)))
 
     Settings {
