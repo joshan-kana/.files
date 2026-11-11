@@ -26,7 +26,9 @@ Item {
     signal activated
 
     implicitHeight: 92
-    scale: interaction.pressed ? 0.982 : interaction.pointerHovered ? 1.012 : 1
+    // Scale inward at rest and fill the allocated bounds on hover.
+    // The hub viewport clips content outside its edge during panel morphs.
+    scale: interaction.pressed ? 0.982 : interaction.pointerHovered ? 1 : 0.988
 
     Behavior on scale {
         Anim {
