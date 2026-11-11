@@ -191,11 +191,9 @@ PanelWindow {
             borderColor: toast.notification && toast.notification.urgency === NotificationUrgency.Critical ? Qt.rgba(popup.theme.critical.r, popup.theme.critical.g, popup.theme.critical.b, 0.58) : popup.theme.subtleBorder
             borderWidth: popup.frameAttached ? 0 : popup.theme.borderFocus
 
-            // Only a forced-out toast slides below the three-card window.
-            // All ordinary entry, expiry and dismiss animations are unchanged.
-            // In framed mode the entire card exits through the clipped
-            // three-slot viewport, with its contour. Fading its content first
-            // leaves an empty dark frame silhouette during overflow.
+            // Overflow is obscured by the replacement in the last visible
+            // slot. Ordinary expiry/dismissal still retracts its connected
+            // contour, while detached cards use the normal opacity fade.
             opacity: popup.frameAttached ? 1 : (toast.phase === "visible" && !toast.evicted ? 1 : 0)
             scale: popup.frameAttached ? 1 : (toast.phase === "visible" ? 1 : 0.965)
 
