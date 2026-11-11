@@ -92,6 +92,8 @@ snacks.setup({
 	zen = { enabled = true },
 })
 
+require("editor.pairs").setup()
+
 require("blink.cmp").setup({
 	keymap = {
 		preset = "enter",

@@ -714,6 +714,13 @@
           ) self.nixosConfigurations) pkgs.emptyFile;
           docs = self.packages.${system}.docs;
           repo-quality = treefmt.config.build.check self;
+          neovim-pairs = pkgs.runCommand "neovim-pairs-tests" { nativeBuildInputs = [ pkgs.neovim ]; } ''
+            export HOME="$TMPDIR"
+            export EDITOR_PAIRS_PLUGIN="${pkgs.vimPlugins.nvim-autopairs}"
+            export EDITOR_PAIRS_MODULE="${./modules/cli/neovim/pairs.lua}"
+            nvim --headless -l ${./tests/neovim-pairs.lua}
+            touch "$out"
+          '';
           git-attributes =
             assert lib.assertMsg (
               builtins.readFile ./.gitattributes == gitAttributesText
