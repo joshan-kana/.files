@@ -34,7 +34,7 @@ test("Escape label follows the actual focus owner", () => {
   );
   assert.match(
     host,
-    /helpVisible \|\| detailVisible \|\| \(systemContent && \(systemContent\.audioChooserOpen \|\| systemContent\.selectedSlider\.length > 0\)\) \? "Back" : "Close"/,
+    /helpVisible \|\| detailVisible \|\| \(systemContent && \(systemContent\.audioChooserOpen \|\| systemContent\.selectedSlider\.length > 0\)\) \|\| \(activityContent && activityContent\.replyEditing\) \? "Back" : "Close"/,
   );
   assert.match(
     controls,
@@ -61,6 +61,10 @@ test("tab hints are only shown when their I/O shortcuts actually work", () => {
     2,
   );
   assert.match(host, /model: \(host\.tabShortcutsEnabled \? \[/);
+  assert.match(
+    host,
+    /tabShortcutsEnabled:.*!\(activityContent && activityContent\.replyEditing\)/,
+  );
 });
 
 test("footer inset and panel height agree for both measured and live geometry", () => {
@@ -107,10 +111,16 @@ test("keycap material and compact footer presentation use the shared theme", () 
   assert.match(source("KeyHintStrip.qml"), /property bool compact: true/);
 });
 
-test("local notification and wallpaper panels show their supported Escape action", () => {
+test("Activity leaves Escape to the shared hub footer while wallpaper keeps its local Back action", () => {
+  const host = source("ShellExpansionHost.qml");
   const activity = source("NotificationContent.qml");
   const wallpaper = source("WallpaperPanel.qml");
-  assert.match(activity, /shortcut: "ESC",\s*label: "Close"/);
+  const activityFooter = activity.slice(
+    activity.indexOf("id: footer"),
+    activity.indexOf("id: list"),
+  );
+  assert.doesNotMatch(activityFooter, /shortcut: "ESC"/);
+  assert.match(host, /shortcut: "ESC",\s*label: host\.escapeHintLabel/);
   assert.match(activity, /event\.key === Qt\.Key_Escape/);
   assert.match(wallpaper, /shortcut: "ESC",\s*label: "Back"/);
   assert.match(wallpaper, /event\.key === Qt\.Key_Escape/);
