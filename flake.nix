@@ -41,7 +41,9 @@
 
     # Stylix: declarative themes and typography.
     stylix = {
-      url = "github:nix-community/stylix";
+      # Keep the Rofi target compatible with Home Manager until upstream merges:
+      # https://github.com/nix-community/stylix/pull/2501
+      url = "github:nix-community/stylix/refs/pull/2501/head";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
