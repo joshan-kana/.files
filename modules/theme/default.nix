@@ -420,7 +420,7 @@ in
 
             # Hyprland shadows use theme palette colours; the compositor
             # module owns the shadow geometry and runtime behavior.
-            wayland.windowManager.hyprland.settings.decoration.shadow = {
+            wayland.windowManager.hyprland.settings.config.decoration.shadow = {
               color = lib.mkForce "rgba(${config.lib.stylix.colors.base0D}14)";
               color_inactive = lib.mkForce "rgba(${config.lib.stylix.colors.base00}0e)";
             };
