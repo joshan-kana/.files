@@ -16,6 +16,7 @@ PanelWindow {
 
     property bool frameEnabled: false
     property bool hubVisible: false
+    property var hubBounds: null
     readonly property real dockTop: frameConnected ? theme.barHeight + theme.spacing3 : theme.panelTopOffset
     readonly property int cardHeight: Math.max(92, Math.min(170, Math.floor((screen ? screen.height : 1440) - dockTop - (frameConnected ? theme.frameThickness : theme.spacing3))))
     readonly property int cardGap: theme.spacing2 + theme.spacing1
@@ -32,8 +33,8 @@ PanelWindow {
         for (let i = 0; i < notificationState.popups.count; ++i) {
             const toast = toastRepeater.itemAt(i);
             if (toast && toast.visible) {
-                // Clip an evicted toast's frame outline to the same bounded
-                // three-slot Wayland viewport as its content.
+                // Frame geometry follows only painted cards. Evicted entries
+                // remain in the model for cleanup, not on the visible frame.
                 const y = Math.max(0, toast.y);
                 const bottom = Math.min(popup.height, toast.y + toast.height);
                 if (bottom > y + 0.05)
@@ -42,6 +43,7 @@ PanelWindow {
                         y: frameBounds.y + y,
                         width: toast.width,
                         height: bottom - y,
+                        cornerRadius: toast.cornerRadius,
                         hovered: toast.hovered,
                         pressed: toast.pointerPressed,
                         visible: frameAttached && toast.attachmentProgress > 0.001
@@ -51,11 +53,14 @@ PanelWindow {
         return result;
     }
     readonly property bool frameConnected: frameEnabled && !(Hyprland.monitorFor(screen)?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false)
-    // The shared frame is below the Overlay hub. While they overlap, draw
-    // self-contained toast surfaces instead of transparent frame attachments.
-    readonly property bool frameAttached: frameConnected && !hubVisible
+    // Only overlapping surfaces need an independent fill. The shared frame
+    // continues to own the toast's squircle when the hub is merely nearby.
+    readonly property real toastLeft: screen ? screen.width - width - margins.right : 0
+    readonly property real occupiedHeight: interactiveToastSlots * cardHeight + Math.max(0, interactiveToastSlots - 1) * cardGap
+    readonly property bool hubOverlapsToasts: hubVisible && hubBounds && hubBounds.visible !== false && hubBounds.x < toastLeft + width && hubBounds.x + hubBounds.width > toastLeft && hubBounds.y < dockTop + occupiedHeight && hubBounds.y + hubBounds.height > dockTop
+    readonly property bool frameAttached: frameConnected && !hubOverlapsToasts
     readonly property var frameBounds: ({
-            x: screen ? screen.width - width - margins.right : 0,
+            x: toastLeft,
             y: margins.top,
             width: width,
             height: height,
@@ -145,14 +150,19 @@ PanelWindow {
             }
             readonly property color urgencyColor: notification && notification.urgency === NotificationUrgency.Critical ? popup.theme.critical : notification && notification.urgency === NotificationUrgency.Low ? popup.theme.textMuted : popup.theme.roleColor("notifications")
             readonly property bool pointerPressed: toastPress.visualPressed
+            readonly property var explicitActions: popup.notificationState.explicitActions(notification)
             hovered: toastPress.pointerHovered && phase === "visible"
-            onHoveredChanged: popup.contourEpoch++
+            onHoveredChanged: {
+                popup.contourEpoch++;
+                popup.notificationState.pausePopup(toast.notification, hovered);
+            }
             onPointerPressedChanged: popup.contourEpoch++
             x: popup.width - width
             y: slot * (popup.cardHeight + popup.cardGap)
-            // Outgoing cards remain beneath the live stack. When another
-            // notification takes their slot, it covers the exit naturally
-            // instead of rendering two crooked cards side by side.
+            // Expiring cards may finish their ordinary exit under live cards.
+            // Evicted cards, however, are not painted: the replacement's
+            // animated arrival would otherwise reveal their old text beneath
+            // it, even when both use the same bounded slot.
             z: phase === "closing" ? 0 : 1
             onXChanged: popup.contourEpoch++
             onYChanged: popup.contourEpoch++
@@ -161,7 +171,8 @@ PanelWindow {
             width: popup.frameAttached ? popup.width * attachmentProgress : popup.width
             height: popup.cardHeight
             clip: popup.frameAttached
-            visible: slot < popup.maxToastSlots || evicted
+            visible: !evicted && slot < popup.maxToastSlots
+            onVisibleChanged: popup.contourEpoch++
 
             Behavior on y {
                 NumberAnimation {
@@ -173,20 +184,18 @@ PanelWindow {
             theme: popup.theme
             motion: popup.motion
             surfaceLayer: ShellSurface.Pane
-            cornerRadius: theme.radiusPanel
+            cornerRadius: popup.theme.radiusMedium
             frameConnected: popup.frameAttached
             // Preserve readable toast backing above the hub, even when
             // the user's general shell-glass preference is translucent.
-            glassAllowed: !popup.hubVisible
+            glassAllowed: !popup.hubOverlapsToasts
             fillColor: popup.theme.paneBase
             borderColor: toast.notification && toast.notification.urgency === NotificationUrgency.Critical ? Qt.rgba(popup.theme.critical.r, popup.theme.critical.g, popup.theme.critical.b, 0.58) : popup.theme.subtleBorder
             borderWidth: popup.frameAttached ? 0 : popup.theme.borderFocus
 
-            // Only a forced-out toast slides below the three-card window.
-            // All ordinary entry, expiry and dismiss animations are unchanged.
-            // In framed mode the entire card exits through the clipped
-            // three-slot viewport, with its contour. Fading its content first
-            // leaves an empty dark frame silhouette during overflow.
+            // Ordinary expiry/dismissal still retracts its connected contour,
+            // while detached cards use the normal opacity fade. Evicted cards
+            // do not participate in the rendered stack.
             opacity: popup.frameAttached ? 1 : (toast.phase === "visible" && !toast.evicted ? 1 : 0)
             scale: popup.frameAttached ? 1 : (toast.phase === "visible" ? 1 : 0.965)
 
@@ -212,7 +221,7 @@ PanelWindow {
                 id: toastPress
                 theme: popup.theme
                 motion: popup.motion
-                cornerRadius: popup.theme.radiusPanel
+                cornerRadius: toast.cornerRadius
                 stateColor: popup.theme.roleColor("notifications")
                 // The shared frame draws this exact attached contour. A
                 // second rectangular/pill overlay would double-highlight it.
@@ -225,9 +234,7 @@ PanelWindow {
                         popup.notificationState.dismiss(toast.notification);
                     } else {
                         popup.notificationState.hidePopup(toast.notification);
-                        if (popup.notificationState.captureKind(toast.notification))
-                            popup.notificationState.invokeDefault(toast.notification);
-                        else
+                        if (!popup.notificationState.invokeDefault(toast.notification))
                             popup.centerRequested();
                     }
                 }
@@ -276,12 +283,10 @@ PanelWindow {
                             cornerRadius: popup.theme.radiusSmall
                             fillColor: popup.theme.blend(popup.theme.controlBase, toast.urgencyColor, 0.15)
 
-                            Text {
-                                anchors.centerIn: parent
-                                text: popup.notificationState.captureKind(toast.notification) === "screenshot" ? "󰹑" : popup.notificationState.captureKind(toast.notification) === "recording" ? "󰕧" : toast.notification && toast.notification.urgency === NotificationUrgency.Critical ? "󰀪" : "󰂚"
-                                color: toast.urgencyColor
-                                font.family: "Symbols Nerd Font"
-                                font.pixelSize: popup.theme.fontSize(14)
+                            NotificationArtwork {
+                                anchors.fill: parent
+                                anchors.margins: 3
+                                notification: toast.notification
                             }
                         }
 
@@ -294,17 +299,19 @@ PanelWindow {
                             font.pixelSize: popup.theme.fontSize(10)
                             font.weight: Font.DemiBold
                             font.letterSpacing: 1.4
+                            width: Math.min(implicitWidth, Math.max(90, parent.width * 0.42))
+                            elide: Text.ElideRight
                         }
 
                         Item {
-                            width: Math.max(0, parent.width - appMark.width - appName.implicitWidth - actionHint.implicitWidth - parent.spacing * 3)
+                            width: Math.max(0, parent.width - appMark.width - appName.width - actionHint.implicitWidth - parent.spacing * 3)
                             height: 1
                         }
 
                         Text {
                             id: actionHint
                             anchors.verticalCenter: parent.verticalCenter
-                            text: !toast.notification ? "" : toast.notification.urgency === NotificationUrgency.Critical ? "CRITICAL" : toast.notification.actions.length > 0 ? toast.notification.actions.length + " ACTION" + (toast.notification.actions.length === 1 ? "" : "S") : popup.notificationState.captureKind(toast.notification) ? "OPEN" : ""
+                            text: !toast.notification ? "" : toast.notification.urgency === NotificationUrgency.Critical ? "CRITICAL" : toast.explicitActions.length > 0 ? toast.explicitActions.length + " ACTION" + (toast.explicitActions.length === 1 ? "" : "S") : toast.notification.hasInlineReply ? "REPLY" : ""
                             color: popup.theme.textMuted
                             font.family: popup.runtime.fontMono
                             font.pixelSize: popup.theme.fontSize(9)
@@ -313,7 +320,7 @@ PanelWindow {
                     }
 
                     MarqueeText {
-                        width: parent.width
+                        width: Math.max(1, parent.width - (preview.visible ? preview.width + popup.theme.spacing2 : 0))
                         text: toast.notification ? toast.notification.summary : ""
                         textFormat: Text.PlainText
                         color: popup.theme.textStrong
@@ -323,8 +330,8 @@ PanelWindow {
                     }
 
                     Text {
-                        width: parent.width
-                        maximumLineCount: 3
+                        width: Math.max(1, parent.width - (preview.visible ? preview.width + popup.theme.spacing2 : 0))
+                        maximumLineCount: toast.explicitActions.length > 0 ? 2 : 3
                         text: toast.notification ? toast.notification.body : ""
                         textFormat: Text.PlainText
                         visible: text.length > 0
@@ -337,22 +344,60 @@ PanelWindow {
                     }
                 }
 
-                ShellAction {
+                NotificationArtwork {
+                    id: preview
+                    notification: toast.notification
+                    preview: true
+                    visible: !!toast.notification && !!toast.notification.image
+                    width: 96
+                    height: 70
+                    anchors {
+                        top: parent.top
+                        right: parent.right
+                        topMargin: 38
+                    }
+                }
+
+                Row {
+                    id: quickActions
                     anchors {
                         right: parent.right
                         bottom: parent.bottom
                     }
-                    visible: popup.notificationState.captureKind(toast.notification).length > 0
-                    width: 132
-                    height: 31
-                    runtime: popup.runtime
-                    theme: popup.theme
-                    motion: popup.motion
-                    compact: true
-                    horizontalCompact: true
-                    icon: "󰏫"
-                    title: popup.notificationState.captureKind(toast.notification) === "screenshot" ? "Markup" : "Trim"
-                    onActivated: popup.notificationState.invokeCaptureEdit(toast.notification)
+                    spacing: popup.theme.spacing1
+                    visible: toast.explicitActions.length > 0 || (toast.notification && toast.notification.hasInlineReply)
+
+                    Repeater {
+                        model: toast.explicitActions.slice(0, 2)
+                        delegate: ShellAction {
+                            required property int index
+                            required property var modelData
+                            runtime: popup.runtime
+                            theme: popup.theme
+                            motion: popup.motion
+                            compact: true
+                            horizontalCompact: true
+                            width: Math.min(135, Math.max(78, implicitWidth))
+                            height: 31
+                            title: modelData.text || "Action"
+                            onActivated: popup.notificationState.invokeAction(toast.notification, index)
+                        }
+                    }
+                    ShellAction {
+                        visible: toast.explicitActions.length > 2 || (toast.notification && toast.notification.hasInlineReply)
+                        runtime: popup.runtime
+                        theme: popup.theme
+                        motion: popup.motion
+                        compact: true
+                        horizontalCompact: true
+                        width: 78
+                        height: 31
+                        title: toast.notification && toast.notification.hasInlineReply ? "Reply…" : "More…"
+                        onActivated: {
+                            popup.notificationState.hidePopup(toast.notification);
+                            popup.centerRequested();
+                        }
+                    }
                 }
 
                 Text {
@@ -361,7 +406,8 @@ PanelWindow {
                         bottom: parent.bottom
                         leftMargin: popup.theme.spacing4
                     }
-                    text: popup.notificationState.captureKind(toast.notification) ? "CLICK TO OPEN" : "CLICK · HISTORY  /  RMB · DISMISS"
+                    visible: !quickActions.visible
+                    text: popup.notificationState.hasDefaultAction(toast.notification) ? "CLICK · OPEN  /  RMB · DISMISS" : "CLICK · HISTORY  /  RMB · DISMISS"
                     color: popup.theme.textMuted
                     opacity: 0.62
                     font.family: popup.runtime.fontMono

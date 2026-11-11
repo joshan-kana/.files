@@ -449,6 +449,7 @@ ShellRoot {
         motion: motion
         frameEnabled: appearance.frameVisible
         hubVisible: (expansionState.hasCurrent || expansionHost.closing) && expansionHost.screen === screen
+        hubBounds: expansionHost.frameBounds
         onCenterRequested: actions.showNotifications()
     }
 
@@ -1157,6 +1158,16 @@ ShellRoot {
         name: "notifications"
         description: "Open notification history"
         onPressed: actions.toggleNotifications()
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "notifications-act"
+        description: "Activate latest notification"
+        onPressed: {
+            if (!notifications.invokeLatest())
+                actions.showNotifications();
+        }
     }
 
     IpcHandler {

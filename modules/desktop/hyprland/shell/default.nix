@@ -1517,7 +1517,6 @@ in
           wallpaperLibrary = lib.getExe wallpaperLibrary;
           recordingToggle = lib.getExe recordingToggle;
           recordingLibrary = lib.getExe recordingLibrary;
-          notificationOpen = lib.getExe notificationOpen;
           frozenCapture = lib.getExe frozenCapture;
           colourPicker = lib.getExe colourPicker;
           nightLightControl = lib.getExe nightLightControl;
@@ -1754,7 +1753,7 @@ in
           pkgs.imagemagick
           pkgs.coreutils
           pkgs.wl-clipboard
-          pkgs.libnotify
+          pkgs.systemd
           pkgs.satty
         ];
         text = ''
@@ -1791,7 +1790,7 @@ in
               if [ "$mode" = copy ]; then
                 wl-copy --type image/png < "$output"
               fi
-              notify-send --app-name=linux-desktop "Screenshot saved" "$output" || true
+              systemd-run --user --quiet --collect -- ${lib.getExe captureNotify} screenshot "$output" || true
               if [ "$mode" = annotate ]; then
                 ${lib.getExe imageMarkup} "$output"
               fi
@@ -1879,6 +1878,36 @@ in
             edit-recording) exec losslesscut --disable-networking "$path" ;;
           esac
           exec xdg-open "$path"
+        '';
+      };
+
+      captureNotify = pkgs.writeShellApplication {
+        name = "linux-desktop-capture-notify";
+        runtimeInputs = [
+          pkgs.coreutils
+          pkgs.libnotify
+        ];
+        text = ''
+          [ "$#" -eq 2 ] || exit 2
+          kind="$1"
+          file="$2"
+          case "$kind" in
+            screenshot)
+              choice="$(notify-send --app-name=linux-desktop --icon=image-x-generic \
+                --hint="string:image-path:$file" --action=default=Open \
+                --action=edit=Markup "Screenshot saved" "$file")" || exit 0
+              ;;
+            recording)
+              choice="$(notify-send --app-name=linux-desktop --icon=video-x-generic \
+                --action=default=Open --action=edit=Trim \
+                "Recording saved" "$(basename -- "$file")")" || exit 0
+              ;;
+            *) exit 2 ;;
+          esac
+          case "$choice" in
+            default) exec ${lib.getExe notificationOpen} "$kind" "$([ "$kind" = recording ] && basename -- "$file" || printf '%s\n' "$file")" ;;
+            edit) exec ${lib.getExe notificationOpen} "edit-$kind" "$([ "$kind" = recording ] && basename -- "$file" || printf '%s\n' "$file")" ;;
+          esac
         '';
       };
 
@@ -1991,6 +2020,7 @@ in
           pkgs.coreutils
           pkgs.ffmpeg
           pkgs.libnotify
+          pkgs.systemd
         ];
         text = ''
           state="''${XDG_RUNTIME_DIR:?}/linux-desktop-recording.state"
@@ -2000,7 +2030,7 @@ in
           case "$previous" in recording|finalising) ;; *) exit 0 ;; esac
           if [ -s "$savedPath" ] && ffprobe -v error -select_streams v:0 -show_entries stream=codec_type -of csv=p=0 "$savedPath" | grep -qx video; then
             printf 'completed\n%s\n%s\n' "$started" "$savedPath" > "$state"
-            notify-send --app-name=linux-desktop "Recording saved" "$(basename "$savedPath")" || true
+            systemd-run --user --quiet --collect -- ${lib.getExe captureNotify} recording "$savedPath" || true
           else
             printf 'failed\n%s\n%s\n' "$started" "$savedPath" > "$state"
             notify-send --app-name=linux-desktop -u critical "Recording failed" "Could not finalise the selected capture" || true

@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Services.Notifications
 import QtCore
 import "ToastQueue.js" as ToastQueue
+import "NotificationSemantics.js" as NotificationSemantics
 
 QtObject {
     id: root
@@ -12,6 +13,7 @@ QtObject {
     // event-driven timer handles expiry for the bounded three-toast stack.
     property ListModel popups: ListModel {}
     property int popupRevision: 0
+    readonly property int historyLimit: 200
     readonly property int maxToasts: 3
     readonly property bool popupVisible: popups.count > 0
     readonly property bool silent: settings.preferenceSource === "default" ? runtime.notificationSilent : settings.silent
@@ -89,21 +91,41 @@ QtObject {
 
     property NotificationServer server: NotificationServer {
         keepOnReload: true
-        persistenceSupported: false
+        persistenceSupported: true
         bodySupported: true
         bodyMarkupSupported: false
         bodyHyperlinksSupported: false
         bodyImagesSupported: false
         actionsSupported: true
         actionIconsSupported: false
-        imageSupported: false
-        inlineReplySupported: false
+        imageSupported: true
+        inlineReplySupported: true
 
         onNotification: notification => {
             notification.tracked = !notification.transient;
-            if (!root.silent)
+            if (!notification.lastGeneration && (!root.silent || notification.urgency === NotificationUrgency.Critical))
                 root.showPopup(notification);
+            Qt.callLater(root.pruneHistory);
         }
+    }
+
+    function pruneHistory(): void {
+        const records = [...history];
+        const excess = records.length - historyLimit;
+        for (let i = 0; i < excess; ++i)
+            records[i].tracked = false;
+    }
+
+    function explicitActions(notification): var {
+        return NotificationSemantics.explicitActions(notification ? notification.actions : []);
+    }
+
+    function hasDefaultAction(notification): bool {
+        return !!NotificationSemantics.defaultAction(notification ? notification.actions : []);
+    }
+
+    function timeoutFor(notification): real {
+        return NotificationSemantics.timeoutMs(notification.expireTimeout, notification.urgency, NotificationUrgency.Critical, NotificationUrgency.Low);
     }
 
     function rebalancePopups(now: real): void {
@@ -139,12 +161,15 @@ QtObject {
             if (popups.get(i).notification === notification)
                 popups.remove(i);
         }
+        const timeout = timeoutFor(notification);
         popups.insert(0, {
             notification: notification,
             phase: "visible",
             slot: 0,
             evicted: false,
-            expires: now + (notification.urgency === NotificationUrgency.Critical ? 9000 : 5000),
+            expires: timeout === 0 ? 0 : now + timeout,
+            paused: false,
+            remaining: 0,
             removeAt: 0
         });
         rebalancePopups(now);
@@ -159,8 +184,13 @@ QtObject {
         let due = Infinity;
         for (let i = 0; i < popups.count; ++i) {
             const item = popups.get(i);
-            due = Math.min(due, item.phase === "visible" ? item.expires : item.removeAt);
+            if (item.phase === "closing")
+                due = Math.min(due, item.removeAt);
+            else if (!item.paused && item.expires > 0)
+                due = Math.min(due, item.expires);
         }
+        if (!Number.isFinite(due))
+            return;
         popupTimer.interval = Math.max(1, due - Date.now());
         popupTimer.restart();
     }
@@ -173,7 +203,7 @@ QtObject {
                 const item = root.popups.get(i);
                 if (item.phase === "closing" && item.removeAt <= now)
                     root.popups.remove(i);
-                else if (item.phase === "visible" && item.expires <= now) {
+                else if (item.phase === "visible" && !item.paused && item.expires > 0 && item.expires <= now) {
                     root.popups.setProperty(i, "phase", "closing");
                     root.popups.setProperty(i, "removeAt", now + 220);
                 }
@@ -182,6 +212,22 @@ QtObject {
             root.popupRevision++;
             root.schedulePopups();
         }
+    }
+
+    function pausePopup(notification, pause: bool): void {
+        for (let i = 0; i < popups.count; ++i) {
+            const item = popups.get(i);
+            if (item.notification !== notification || item.phase !== "visible" || item.paused === pause)
+                continue;
+            if (pause) {
+                popups.setProperty(i, "remaining", item.expires > 0 ? Math.max(1, item.expires - Date.now()) : 0);
+                popups.setProperty(i, "paused", true);
+            } else {
+                popups.setProperty(i, "expires", item.remaining > 0 ? Date.now() + item.remaining : 0);
+                popups.setProperty(i, "paused", false);
+            }
+        }
+        schedulePopups();
     }
 
     function hidePopup(notification): void {
@@ -211,40 +257,43 @@ QtObject {
         notification.tracked = false;
     }
 
-    function captureKind(notification): string {
-        if (!notification || notification.appName !== "linux-desktop")
-            return "";
-        if (notification.summary === "Screenshot saved" || notification.summary === "Screenshot copied")
-            return "screenshot";
-        if (notification.summary === "Recording saved")
-            return "recording";
-        return "";
-    }
-
-    function invokeCaptureEdit(notification): void {
-        const kind = captureKind(notification);
-        if (!kind || runtime.notificationOpen.length === 0)
-            return;
-        Quickshell.execDetached([runtime.notificationOpen, kind === "screenshot" ? "edit-screenshot" : "edit-recording", notification.body]);
+    function invokeDefault(notification): bool {
+        if (!notification)
+            return false;
+        const action = NotificationSemantics.defaultAction(notification.actions);
+        if (!action)
+            return false;
         setRead(notification, true);
-        hidePopup();
-    }
-
-    function invokeDefault(notification): void {
-        const kind = captureKind(notification);
-        if (kind && runtime.notificationOpen.length > 0) {
-            Quickshell.execDetached([runtime.notificationOpen, kind, notification.body]);
-            setRead(notification, true);
-            return;
-        }
-        invokeAction(notification, 0);
+        hidePopup(notification);
+        action.invoke();
+        return true;
     }
 
     function invokeAction(notification, index: int): void {
-        if (!notification || !notification.actions || index < 0 || index >= notification.actions.length)
+        const actions = explicitActions(notification);
+        if (!notification || index < 0 || index >= actions.length)
             return;
+        setRead(notification, true);
+        hidePopup(notification);
+        actions[index].invoke();
+    }
 
-        notification.actions[index].invoke();
+    function sendReply(notification, message: string): void {
+        if (!notification || !notification.hasInlineReply || !message.trim())
+            return;
+        setRead(notification, true);
+        hidePopup(notification);
+        notification.sendInlineReply(message);
+    }
+
+    function invokeLatest(): bool {
+        for (let i = 0; i < popups.count; ++i) {
+            const item = popups.get(i);
+            if (item.phase === "visible")
+                return invokeDefault(item.notification);
+        }
+        const latest = history.length > 0 ? history[history.length - 1] : null;
+        return latest ? invokeDefault(latest) : false;
     }
 
     function clearAll(): void {
