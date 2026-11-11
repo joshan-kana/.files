@@ -25,7 +25,7 @@ test("notification settings join the canonical categorized desktop preference st
   );
 });
 
-test("existing user choices and per-application overrides migrate once without replacing new choices", () => {
+test("legacy preferences override newly materialized defaults exactly once", () => {
   assert.match(
     source,
     /PreferenceMigration\.migrate\(settings, previousSettings\)/,
@@ -62,7 +62,7 @@ test("restore-declared resets all notification overrides but retains Activity re
   assert.doesNotMatch(body, /clearAll|journal =|archiveFile/);
 });
 
-test("migration is idempotent, read-only for legacy state and preserves new entries", () => {
+test("migration preserves legacy selections, then newer user changes remain authoritative", () => {
   const helper = fs.readFileSync(
     path.join(path.dirname(pathToState), "NotificationPreferenceMigration.js"),
     "utf8",
@@ -116,10 +116,16 @@ test("migration is idempotent, read-only for legacy state and preserves new entr
   });
   const target = wrap(current);
   ctx.migrate(target, wrap(legacy, true));
-  assert.equal(target.silent, false, "existing new override wins");
+  assert.equal(
+    target.silent,
+    true,
+    "legacy user override wins over Qt's initialized default",
+  );
   assert.equal(target.appsJson, legacy.appsJson);
   assert.equal(target.presentationSource, "user");
   const firstWrites = written.length;
+  target.silent = false;
   ctx.migrate(target, wrap(legacy, true));
+  assert.equal(target.silent, false, "new preference wins after migration");
   assert.equal(written.length, firstWrites, "repeat migration must be inert");
 });
