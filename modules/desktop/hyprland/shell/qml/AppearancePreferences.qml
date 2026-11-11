@@ -94,7 +94,7 @@ QtObject {
     Component.onCompleted: {
         if (saved.userOverrides !== "")
             return;
-        const legacy = Object.keys(runtime.appearanceDefaults).filter(key => saved.value(key, null) !== null);
+        const legacy = Object.keys(runtime.appearanceDefaults).filter(key => key !== "objectName" && saved.value(key, null) !== null);
         saved.userOverrides = JSON.stringify(legacy);
         saved.setValue("userOverrides", saved.userOverrides);
         saved.sync();

@@ -32,8 +32,13 @@ test("Quicklinks are declared in Nix, not duplicated inside QML or JavaScript", 
   );
   assert.match(
     qml,
-    /PaletteUtilities\.parseQuicklinks\(JSON\.stringify\(runtime\.paletteQuicklinks/,
+    /quicklinks = PaletteUtilities\.parseQuicklinks\(JSON\.stringify\(runtime\.paletteQuicklinks/,
   );
+  assert.match(
+    qml,
+    /function onLoaded\(\): void \{\s*palette\.refreshDeclaredProviders\(\)/,
+  );
+  assert.match(qml, /Component\.onCompleted: refreshDeclaredProviders\(\)/);
   assert.doesNotMatch(qml, /quicklinks\.json/);
   assert.doesNotMatch(read("qml/PaletteUtilities.js"), /DEFAULT_QUICKLINKS/);
 });
@@ -111,7 +116,7 @@ test("User-owned snippets remain higher precedence than Nix defaults", () => {
   const palette = read("qml/CommandPalette.qml");
   assert.match(
     palette,
-    /userSnippets === null \? PaletteUtilities\.parseSnippets\(JSON\.stringify\(runtime\.paletteSnippets/,
+    /userSnippets === null \? defaultSnippets : userSnippets/,
   );
   assert.match(palette, /snippets\.json/);
   assert.match(
