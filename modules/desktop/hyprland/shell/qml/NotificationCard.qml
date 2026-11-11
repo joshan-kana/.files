@@ -22,6 +22,7 @@ SquircleSurface {
     signal defaultRequested
     signal actionRequested(int index)
     signal replyRequested(string message)
+    signal replyFocusRequested
     signal replyFinished
 
     function focusReply(): void {
@@ -201,16 +202,50 @@ SquircleSurface {
 
                 ShellAction {
                     id: readToggle
-                    width: 36
+                    width: 56
                     height: 36
                     runtime: card.runtime
                     theme: card.theme
                     motion: card.motion
                     iconOnly: true
+                    iconHint: true
+                    inlineIconHint: true
+                    shortcut: card.selected ? "M" : ""
                     active: card.read
                     icon: card.read ? "󰄭" : "󰄬"
                     title: card.read ? "Mark unread" : "Mark read"
                     onActivated: card.readToggled()
+                }
+
+                ShellAction {
+                    visible: !!card.notification && card.notification.hasInlineReply
+                    width: visible ? 56 : 0
+                    height: 36
+                    runtime: card.runtime
+                    theme: card.theme
+                    motion: card.motion
+                    iconOnly: true
+                    iconHint: true
+                    inlineIconHint: true
+                    shortcut: card.selected ? "R" : ""
+                    icon: "󰆁"
+                    title: "Reply"
+                    onActivated: card.replyFocusRequested()
+                }
+
+                ShellAction {
+                    width: 64
+                    height: 36
+                    runtime: card.runtime
+                    theme: card.theme
+                    motion: card.motion
+                    iconOnly: true
+                    iconHint: true
+                    inlineIconHint: true
+                    shortcut: card.selected ? "DEL" : ""
+                    icon: "󰆴"
+                    title: "Dismiss"
+                    onActivated: card.dismissAnimated()
                 }
             }
         }
@@ -264,8 +299,10 @@ SquircleSurface {
                     theme: card.theme
                     motion: card.motion
                     compact: true
-                    title: (index + 1) + "  " + (modelData.text || "Action")
-                    width: Math.min(implicitWidth, actionButtons.width)
+                    horizontalCompact: true
+                    title: modelData.text || "Action"
+                    shortcut: card.selected && index < 9 ? String(index + 1) : ""
+                    width: Math.min(actionButtons.width, Math.max(130, implicitWidth))
                     onActivated: card.actionRequested(index)
                 }
             }
@@ -323,8 +360,10 @@ SquircleSurface {
                 theme: card.theme
                 motion: card.motion
                 compact: true
+                horizontalCompact: true
                 title: "Send"
-                width: 85
+                shortcut: reply.activeFocus ? "ENTER" : ""
+                width: 126
                 height: 42
                 enabled: reply.text.trim().length > 0
                 onActivated: card.sendReply()

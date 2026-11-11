@@ -315,19 +315,6 @@ FocusScope {
                     label: "Expand"
                 },
                 {
-                    shortcut: "R",
-                    label: "Reply",
-                    visible: !!center.selectedNotification() && center.selectedNotification().hasInlineReply
-                },
-                {
-                    shortcut: "M",
-                    label: "Read"
-                },
-                {
-                    shortcut: "DEL",
-                    label: "Dismiss"
-                },
-                {
                     shortcut: "ESC",
                     label: "Close"
                 }
@@ -477,6 +464,11 @@ FocusScope {
                             onReplyRequested: message => {
                                 center.notificationState.sendReply(modelData, message);
                                 center.focusKeyboard();
+                            }
+                            onReplyFocusRequested: {
+                                center.selectedIndex = groupItem.index;
+                                center.selectedMemberIndex = index;
+                                center.focusReply();
                             }
                             onReplyFinished: center.focusKeyboard()
                             onReadToggled: center.notificationState.toggleRead(modelData)

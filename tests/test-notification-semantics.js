@@ -88,3 +88,32 @@ test("grouping prefers desktop identity over a mutable display name", () => {
   assert.notEqual(ctx.groupKey(a), ctx.groupKey(other));
   assert.equal(ctx.groupKey({ appName: "Example" }), "name:example");
 });
+
+test("notification direct actions own their canonical on-control keyhints", () => {
+  const card = qml("NotificationCard.qml");
+  const content = qml("NotificationContent.qml");
+  assert.match(
+    card,
+    /iconHint: true\s+inlineIconHint: true\s+shortcut: card\.selected \? "M" : ""/,
+  );
+  assert.match(
+    card,
+    /iconHint: true\s+inlineIconHint: true\s+shortcut: card\.selected \? "R" : ""/,
+  );
+  assert.match(
+    card,
+    /iconHint: true\s+inlineIconHint: true\s+shortcut: card\.selected \? "DEL" : ""/,
+  );
+  assert.match(
+    card,
+    /shortcut: card\.selected && index < 9 \? String\(index \+ 1\) : ""/,
+  );
+  assert.match(card, /onActivated: card\.replyFocusRequested\(\)/);
+  assert.match(content, /onReplyFocusRequested:/);
+  const footer = content.slice(
+    content.indexOf("id: footer"),
+    content.indexOf("id: list"),
+  );
+  assert.doesNotMatch(footer, /shortcut: "(?:M|R|DEL|[1-9])"/);
+  assert.match(footer, /shortcut: "J\/K/);
+});
