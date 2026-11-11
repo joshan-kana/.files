@@ -143,3 +143,62 @@ test("Preference reset returns control to Nix instead of freezing the old defaul
     assert.match(source, /preferenceSource = "user"/);
   }
 });
+
+test("Theme-owned shell presentation is applied through the theme app scope", () => {
+  const shellNix = read("default.nix");
+  const themeNix = fs.readFileSync(
+    path.join(__dirname, "../modules/theme/default.nix"),
+    "utf8",
+  );
+  const runtime = read("qml/RuntimeConfig.qml");
+
+  assert.match(
+    themeNix,
+    /scopeEdits = \{[\s\S]*?desktop =[\s\S]*?hyprland = \{[\s\S]*?shell = \{[\s\S]*?home =/,
+  );
+  assert.match(
+    themeNix,
+    /xdg\.configFile\."linux-desktop\/theme\.json"\.source =[\s\S]*?visual = \{/,
+  );
+  for (const [name, value] of [
+    ["panelOpacity", "1.0"],
+    ["focusOpacity", "0.96"],
+    ["scrimOpacity", "0.50"],
+    ["squircleExponent", "4.5"],
+  ]) {
+    assert.match(
+      themeNix,
+      new RegExp(name + " = " + value.replace(".", "\\.")),
+    );
+    assert.match(
+      runtime,
+      new RegExp(
+        "readonly property real " +
+          name +
+          ": root\\.themeAdapter\\.visual\\." +
+          name,
+      ),
+    );
+  }
+  assert.doesNotMatch(shellNix, /shellVisual\s*=/);
+  assert.doesNotMatch(shellNix, /visual = shellVisual/);
+  assert.doesNotMatch(shellNix, /config\.stylix\.fonts\.monospace\.name/);
+  const hyprlandNix = fs.readFileSync(
+    path.join(__dirname, "../modules/desktop/hyprland/default.nix"),
+    "utf8",
+  );
+  assert.match(
+    themeNix,
+    /scopeEdits = \{[\s\S]*?desktop =[\s\S]*?hyprland = \{[\s\S]*?stylix\.targets\.hyprland\.hyprpaper\.enable = false/,
+  );
+  assert.match(
+    themeNix,
+    /wayland\.windowManager\.hyprland\.settings\.decoration\.shadow = \{/,
+  );
+  assert.doesNotMatch(hyprlandNix, /stylix\.|lib\.stylix/);
+  assert.match(shellNix, /--font-family monospace/);
+  assert.equal(
+    (runtime.match(/property JsonObject visual: JsonObject/g) || []).length,
+    1,
+  );
+});
