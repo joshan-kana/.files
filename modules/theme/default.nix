@@ -383,7 +383,7 @@ in
       ...
     }:
     {
-      stylix.targets.qt.platform = "kde";
+      stylix.targets.qt.platform = "qtct";
       home.activation.themeWarmCache = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         cacheDir=${lib.escapeShellArg "${config.xdg.stateHome}/dotfiles/theme-cache/${configurationName}"}
         if [ -d "$cacheDir" ] && [ "$(cat "$cacheDir/.revision" 2>/dev/null)" != ${lib.escapeShellArg (toString inputs.self.outPath)} ]; then
