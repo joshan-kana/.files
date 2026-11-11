@@ -133,3 +133,73 @@ test("the shutdown guard ignores transient acquisition states and runs once afte
   stop(state, quickshell);
   assert.equal(calls.length, 1, "retirement is idempotent");
 });
+
+test("Session uses the lock screen vector glyph and displays a coloured action icon at rest", () => {
+  const actionButton = fs.readFileSync(
+    path.join(root, "qml/SessionActionButton.qml"),
+    "utf8",
+  );
+  const lockScreen = fs.readFileSync(
+    path.join(root, "qml/LockScreen.qml"),
+    "utf8",
+  );
+  assert.match(lockScreen, /LockGlyph \{/);
+  assert.match(actionButton, /LockGlyph \{\s*visible: button\.lockGlyph/);
+  assert.match(session, /lockGlyph: modelData\.id === "lock"/);
+  assert.match(
+    actionButton,
+    /color: button\.armed \? button\.theme\.warning : button\.accentColor/,
+  );
+  assert.doesNotMatch(
+    actionButton,
+    /text: button\.icon\s+color: button\.armed \? button\.theme\.warning : button\.selected/,
+  );
+});
+
+test("Session keycaps stay outside the morphing surface and Restore uses the shared active tile style", () => {
+  const button = fs.readFileSync(
+    path.join(root, "qml/SessionActionButton.qml"),
+    "utf8",
+  );
+  const content = fs.readFileSync(
+    path.join(root, "qml/SystemContent.qml"),
+    "utf8",
+  );
+  assert.match(session, /shortcut: String\(actionIndex \+ 1\)/);
+  assert.match(button, /KeyHint \{[\s\S]*?shortcut: button\.shortcut/);
+  assert.match(content, /event\.key >= Qt\.Key_1 && event\.key <= Qt\.Key_6/);
+  assert.match(
+    content,
+    /sessionPanel\.invoke\("activateIndex", event\.key - Qt\.Key_1\)/,
+  );
+  assert.match(session, /function activateIndex\(index: int\): void \{/);
+  assert.doesNotMatch(button, /statusLabel|statusText|"ON"|"OFF"/);
+  assert.doesNotMatch(session, /statusLabel:/);
+  assert.match(
+    session,
+    /active: modelData\.id === "restore" && panel\.restoreWindowsOnExit/,
+  );
+  assert.match(button, /luminous: button\.active/);
+  assert.match(button, /outlined: button\.active/);
+  assert.match(
+    button,
+    /borderColor: button\.armed \? button\.theme\.warning : button\.selected \|\| button\.active \? button\.accentColor/,
+  );
+  assert.match(
+    button,
+    /cornerRadius: button\.selected \|\| pointer\.pointerHovered \? width \/ 2/,
+  );
+  assert.match(
+    button,
+    /KeyHint \{\s*anchors \{\s*top: parent\.top\s*right: parent\.right/,
+  );
+  assert.ok(
+    button.indexOf("    KeyHint {") > button.indexOf("    ShellSurface {"),
+  );
+  assert.ok(button.indexOf("    KeyHint {") < button.lastIndexOf("    Text {"));
+  assert.doesNotMatch(
+    button,
+    /KeyHint \{[\s\S]*?anchors \{\s*top: parent\.top\s*right: parent\.right\s*margins:/,
+  );
+  assert.match(session, /shortcut: "1-6",\s*label: "Direct action"/);
+});

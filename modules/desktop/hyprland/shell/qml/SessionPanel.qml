@@ -49,7 +49,7 @@ Item {
             id: "lock",
             accentRole: "connectivity",
             label: "Lock",
-            icon: "󰌾",
+            icon: "",
             description: "Secure the current Wayland session",
             destructive: false
         },
@@ -200,6 +200,14 @@ Item {
         closeView();
     }
 
+    function activateIndex(index: int): void {
+        if (index < 0 || index >= entries.length)
+            return;
+        if (selectedIndex !== index)
+            moveSelection(index - selectedIndex);
+        activateSelected();
+    }
+
     function activateSelected(): void {
         const entry = selectedEntry();
         if (!entry)
@@ -273,7 +281,9 @@ Item {
                         theme: panel.theme
                         motion: panel.motion
                         icon: modelData.icon
-                        label: modelData.id === "restore" ? (panel.restoreWindowsOnExit ? "Restore ON" : "Restore OFF") : modelData.label
+                        lockGlyph: modelData.id === "lock"
+                        shortcut: String(actionIndex + 1)
+                        label: modelData.label
                         accentColor: panel.theme.roleColor(modelData.accentRole)
                         active: modelData.id === "restore" && panel.restoreWindowsOnExit
                         selected: panel.selectedIndex === actionIndex
@@ -316,14 +326,24 @@ Item {
             font.weight: Font.DemiBold
         }
 
-        Text {
+        KeyHintStrip {
             width: parent.width
-            horizontalAlignment: Text.AlignHCenter
-            wrapMode: Text.Wrap
-            text: "H/J/K/L · NAVIGATE   ENTER · ARM/RUN   ESC · BACK"
-            color: panel.theme.textMuted
-            font.family: panel.runtime.fontMono
-            font.pixelSize: panel.theme.fontKeyHint
+            runtime: panel.runtime
+            theme: panel.theme
+            hints: [
+                {
+                    shortcut: "H/J/K/L",
+                    label: "Navigate"
+                },
+                {
+                    shortcut: "1-6",
+                    label: "Direct action"
+                },
+                {
+                    shortcut: "ENTER",
+                    label: "Activate / confirm"
+                }
+            ]
         }
     }
 }
