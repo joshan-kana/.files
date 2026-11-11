@@ -503,6 +503,18 @@ in
     description = "Default quiet notifications mode.";
   };
 
+  scopeOptions.notificationsPresentation = lib.mkOption {
+    type = lib.types.bool;
+    default = false;
+    description = "Default notification presentation mode (hide popups, retain Activity history).";
+  };
+
+  scopeOptions.notificationsHistoryEnabled = lib.mkOption {
+    type = lib.types.bool;
+    default = true;
+    description = "Default notification history retention preference.";
+  };
+
   scopeOptions.weatherLocation = lib.mkOption {
     type = lib.types.str;
     default = "";
@@ -1487,7 +1499,11 @@ in
         };
         inherit (scopeConfig) appearance;
         capture.freezeEnabled = scopeConfig.captureFreezeEnabled;
-        notifications.silent = scopeConfig.notificationsSilent;
+        notifications = {
+          silent = scopeConfig.notificationsSilent;
+          presentation = scopeConfig.notificationsPresentation;
+          historyEnabled = scopeConfig.notificationsHistoryEnabled;
+        };
         weather.location = scopeConfig.weatherLocation;
         keybindings = cheatsheetBindings;
         shortcutHints.launcherSlots = launcherSlotsHint;
@@ -1555,9 +1571,21 @@ in
 
       lockCommand = pkgs.writeShellApplication {
         name = "linux-desktop-lock";
-        runtimeInputs = [ pkgs.systemd ];
+        runtimeInputs = [
+          pkgs.coreutils
+          pkgs.systemd
+        ];
         text = ''
-          exec systemctl --user start linux-desktop-lock.service
+          # Hide notification content before the asynchronous lock compositor
+          # handshake begins. The lock shell releases this marker only after
+          # successfully authenticated unlock.
+          marker="''${XDG_RUNTIME_DIR:?}/linux-desktop-session-lock.state"
+          temp="$(mktemp "''${marker}.XXXXXX")"
+          trap 'rm -f -- "$temp"' EXIT
+          printf 'requested\n' > "$temp"
+          chmod 600 "$temp"
+          mv -f -- "$temp" "$marker"
+          systemctl --user start linux-desktop-lock.service
         '';
       };
 

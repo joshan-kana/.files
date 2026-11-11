@@ -55,7 +55,10 @@ test("server advertises only rendered notification capabilities", () => {
   assert.match(state, /imageSupported: true/);
   assert.match(state, /inlineReplySupported: true/);
   assert.match(state, /persistenceSupported: true/);
-  assert.match(state, /bodyMarkupSupported: false/);
+  assert.match(state, /bodyMarkupSupported: true/);
+  assert.match(state, /bodyHyperlinksSupported: true/);
+  assert.match(state, /actionIconsSupported: true/);
+  assert.match(state, /bodyImagesSupported: false/);
   assert.match(card, /NotificationArtwork/);
   assert.match(card, /sendReply\(\)/);
   assert.match(popup, /NotificationArtwork/);

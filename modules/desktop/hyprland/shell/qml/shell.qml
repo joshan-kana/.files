@@ -249,6 +249,15 @@ ShellRoot {
     NotificationState {
         id: notifications
         runtime: runtime
+        outputFullscreen: !!(Hyprland.monitorFor(screens.focusedScreen)?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 0) ?? false)
+    }
+
+    Connections {
+        target: notifications
+        function onLockedChanged(): void {
+            if (notifications.locked)
+                actions.hideTransient("");
+        }
     }
 
     RecordingState {
@@ -1165,7 +1174,7 @@ ShellRoot {
         name: "notifications-act"
         description: "Activate latest notification"
         onPressed: {
-            if (!notifications.invokeLatest())
+            if (!notifications.locked && !notifications.invokeLatest())
                 actions.showNotifications();
         }
     }
@@ -1353,11 +1362,11 @@ ShellRoot {
         }
 
         function notificationsOpen(): bool {
-            return expansionState.hasCurrent && expansionState.currentName === "activity";
+            return !notifications.locked && expansionState.hasCurrent && expansionState.currentName === "activity";
         }
 
         function notificationCount(): int {
-            return notifications.count;
+            return notifications.locked ? 0 : notifications.count;
         }
 
         function notificationsSilent(): bool {

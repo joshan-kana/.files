@@ -220,6 +220,8 @@ QtObject {
     }
 
     function showNotifications(targetScreen: var, origin: var): void {
+        if (notificationState.locked)
+            return;
         const screen = targetScreen || screenRouter.focusedScreen;
         if (!screen)
             return;
@@ -231,6 +233,8 @@ QtObject {
     }
 
     function toggleNotifications(targetScreen: var, origin: var): void {
+        if (notificationState.locked)
+            return;
         const screen = targetScreen || screenRouter.focusedScreen;
         if (!screen)
             return;
