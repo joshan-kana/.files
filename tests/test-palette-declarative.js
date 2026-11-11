@@ -193,7 +193,7 @@ test("Theme-owned shell presentation is applied through the theme app scope", ()
   );
   assert.match(
     themeNix,
-    /wayland\.windowManager\.hyprland\.settings\.decoration\.shadow = \{/,
+    /wayland\.windowManager\.hyprland\.settings\.config\.decoration\.shadow = \{/,
   );
   assert.doesNotMatch(hyprlandNix, /stylix\.|lib\.stylix/);
   assert.match(shellNix, /--font-family monospace/);
