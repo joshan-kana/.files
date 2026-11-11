@@ -1,7 +1,6 @@
 {
   config,
   editScope,
-  lib,
   moduleRegistry,
   pkgs,
   ...
@@ -22,8 +21,7 @@
     ;
 
   imports = [
-    (moduleRegistry.profiles { inherit lib; }).desktop.default
-    (moduleRegistry.profiles { inherit lib; }).desktop.arm
+    (moduleRegistry.profiles { }).desktop
   ];
 
   hardware = import ./hardware.nix;
@@ -34,6 +32,7 @@
         programs.kitty.package = pkgs.kitty-virgl;
       };
     };
+    twingate = _: { enable = false; };
   };
 
   users.users.${config.dotfiles.users.primary.name}.openssh.authorizedKeys.keys = [

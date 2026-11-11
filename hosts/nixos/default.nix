@@ -1,7 +1,6 @@
 {
   extendScope,
   inputs,
-  lib,
   moduleRegistry,
   pkgs,
   ...
@@ -22,7 +21,7 @@
 
   imports = [
     inputs.spicetify-nix.nixosModules.spicetify
-    (moduleRegistry.profiles { inherit lib; }).desktop.default
+    (moduleRegistry.profiles { }).desktop
   ];
 
   dotfiles = {
