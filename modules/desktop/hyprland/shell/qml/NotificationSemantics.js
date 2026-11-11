@@ -33,3 +33,14 @@ function groupKey(notification) {
     ? "desktop:" + desktopEntry.toLowerCase()
     : "name:" + appName.toLowerCase();
 }
+
+// Keep keyboard selection attached to its notification when another sender
+// inserts a newer group at the top of Activity.
+function findNotification(groups, notification) {
+  if (!notification) return null;
+  for (let groupIndex = 0; groupIndex < (groups || []).length; ++groupIndex) {
+    const memberIndex = groups[groupIndex].notifications.indexOf(notification);
+    if (memberIndex >= 0) return { groupIndex, memberIndex };
+  }
+  return null;
+}

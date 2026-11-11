@@ -12,6 +12,8 @@ FocusScope {
 
     property bool engaged: false
     property bool replyEditing: false
+    property bool restoringSelection: false
+    property var selectedNotificationAnchor: null
     property int selectedIndex: 0
     property int selectedMemberIndex: 0
     property string expandedGroupKey: ""
@@ -55,14 +57,24 @@ FocusScope {
     onGroupsChanged: {
         if (!groups)
             return;
-        selectedIndex = Math.max(0, Math.min(selectedIndex, Math.max(0, groups.length - 1)));
+        const preserved = NotificationSemantics.findNotification(groups, selectedNotificationAnchor);
+        restoringSelection = true;
+        selectedIndex = preserved ? preserved.groupIndex : Math.max(0, Math.min(selectedIndex, Math.max(0, groups.length - 1)));
         const group = selectedGroup();
-        selectedMemberIndex = group ? Math.max(0, Math.min(selectedMemberIndex, group.notifications.length - 1)) : 0;
+        selectedMemberIndex = preserved ? preserved.memberIndex : group ? Math.max(0, Math.min(selectedMemberIndex, group.notifications.length - 1)) : 0;
         if (!groups.some(group => group.key === expandedGroupKey))
             expandedGroupKey = "";
-        if (engaged)
-            Qt.callLater(focusKeyboard);
+        selectedNotificationAnchor = selectedNotification();
+        restoringSelection = false;
+        // A new notification must not take the keyboard away from a reply.
+        if (engaged && !replyEditing)
+            Qt.callLater(() => {
+                if (!replyEditing)
+                    focusKeyboard();
+            });
     }
+
+    onSelectedIndexChanged: rememberSelection()
 
     function focusKeyboard(): void {
         if (engaged)
@@ -85,8 +97,16 @@ FocusScope {
             list.contentY = Math.max(0, top);
     }
 
-    onSelectedMemberIndexChanged: Qt.callLater(ensureSelectedVisible)
+    onSelectedMemberIndexChanged: {
+        rememberSelection();
+        Qt.callLater(ensureSelectedVisible);
+    }
     onExpandedGroupKeyChanged: Qt.callLater(ensureSelectedVisible)
+
+    function rememberSelection(): void {
+        if (!restoringSelection)
+            selectedNotificationAnchor = selectedNotification();
+    }
 
     function selectedGroup(): var {
         return groups && groups.length > 0 ? groups[Math.max(0, Math.min(selectedIndex, groups.length - 1))] : null;
@@ -100,6 +120,7 @@ FocusScope {
     function selectGroup(delta: int): void {
         selectedIndex = Math.max(0, Math.min(groups.length - 1, selectedIndex + delta));
         selectedMemberIndex = 0;
+        rememberSelection();
     }
 
     function navigate(delta: int): void {
@@ -467,6 +488,7 @@ FocusScope {
                             onReplyFocusRequested: {
                                 center.selectedIndex = groupItem.index;
                                 center.selectedMemberIndex = index;
+                                center.rememberSelection();
                                 center.focusReply();
                             }
                             onReplyFocusChanged: focused => {

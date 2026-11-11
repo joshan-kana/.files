@@ -142,3 +142,26 @@ test("Escape has one shared owner and describes reply editing accurately", () =>
   );
   assert.match(card, /Keys\.onEscapePressed: \{\s+card\.replyFinished\(\);/);
 });
+
+test("new notification groups do not move the selected action or steal reply focus", () => {
+  const a = { summary: "A" };
+  const b = { summary: "B" };
+  const original = [{ key: "app-a", notifications: [a, b] }];
+  const inserted = [{ key: "app-other", notifications: [{}] }, ...original];
+  assert.deepEqual(
+    { ...ctx.findNotification(original, b) },
+    { groupIndex: 0, memberIndex: 1 },
+  );
+  assert.deepEqual(
+    { ...ctx.findNotification(inserted, b) },
+    { groupIndex: 1, memberIndex: 1 },
+  );
+  assert.equal(ctx.findNotification(inserted, {}), null);
+  const center = qml("NotificationContent.qml");
+  assert.match(
+    center,
+    /NotificationSemantics\.findNotification\(groups, selectedNotificationAnchor\)/,
+  );
+  assert.match(center, /engaged && !replyEditing/);
+  assert.match(center, /onSelectedIndexChanged: rememberSelection\(\)/);
+});

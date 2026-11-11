@@ -135,7 +135,7 @@ PanelWindow {
         },
         {
             key: "ESC",
-            action: "Close Activity"
+            action: activityContent && activityContent.replyEditing ? "Return to Activity" : "Close Activity"
         }
     ] : expansionState.currentName === "weather" ? [
         {
