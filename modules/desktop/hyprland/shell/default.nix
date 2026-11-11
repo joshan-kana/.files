@@ -411,6 +411,7 @@ in
         wallpaperSpectrumEnabled = lib.mkOption {
           type = lib.types.bool;
           default = false;
+          description = "Enable the audio spectrum visualizer over the wallpaper.";
         };
         wallpaperResizeMode = lib.mkOption {
           type = lib.types.enum [
@@ -418,38 +419,47 @@ in
             "crop"
           ];
           default = "fit";
+          description = "Scale selected wallpaper images to fit within the display or crop them to fill it.";
         };
         wallpaperTargetOutput = lib.mkOption {
           type = lib.types.str;
           default = "";
+          description = "Display name for wallpaper selections. Empty uses the active display; \\\"all\\\" targets every display.";
         };
         musicReactiveEnabled = lib.mkOption {
           type = lib.types.bool;
           default = false;
+          description = "Tint desktop shell surfaces in response to the currently playing audio.";
         };
         barVisible = lib.mkOption {
           type = lib.types.bool;
           default = true;
+          description = "Show the desktop island bar.";
         };
         frameVisible = lib.mkOption {
           type = lib.types.bool;
           default = true;
+          description = "Show the desktop frame around the display.";
         };
         windowTransparencyEnabled = lib.mkOption {
           type = lib.types.bool;
           default = false;
+          description = "Use the configured opacity for active and inactive application windows.";
         };
         shellGlassEnabled = lib.mkOption {
           type = lib.types.bool;
           default = false;
+          description = "Use translucent shell surfaces with compositor backdrop blur.";
         };
         windowOpacity = lib.mkOption {
-          type = lib.types.float;
+          type = lib.types.numbers.between 0.2 1.0;
           default = 0.82;
+          description = "Opacity of application windows when transparency is enabled, from 0.2 to 1.0 inclusive.";
         };
         glassOpacity = lib.mkOption {
-          type = lib.types.float;
+          type = lib.types.numbers.between 0.2 1.0;
           default = 0.70;
+          description = "Opacity of translucent shell surfaces, from 0.2 to 1.0 inclusive.";
         };
         mediaVisualizerMode = lib.mkOption {
           type = lib.types.enum [
@@ -457,10 +467,12 @@ in
             "curve"
           ];
           default = "bars";
+          description = "Choose the media visualizer presentation: animated bars or a continuous curve.";
         };
         mediaLyricsVisible = lib.mkOption {
           type = lib.types.bool;
           default = false;
+          description = "Show synchronized lyrics in the media view when the player supplies them.";
         };
         mediaSeekSeconds = lib.mkOption {
           type = lib.types.enum [
@@ -471,11 +483,12 @@ in
             60
           ];
           default = 10;
+          description = "Number of seconds to move forward or backward with the media seek actions.";
         };
       };
     };
     default = { };
-    description = "Default desktop appearance settings; explicit user selections take precedence.";
+    description = "Desktop appearance defaults. Explicit user preferences take precedence until restored to the declared values.";
   };
 
   scopeOptions.captureFreezeEnabled = lib.mkOption {
