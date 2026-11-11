@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "NotificationSemantics.js" as NotificationSemantics
 
 FocusScope {
     id: center
@@ -10,6 +11,11 @@ FocusScope {
     required property Motion motion
 
     property bool engaged: false
+    property bool replyEditing: false
+    property var replyOwner: null
+    property var replyDrafts: new Map()
+    property bool restoringSelection: false
+    property var selectedNotificationAnchor: null
     property int selectedIndex: 0
     property int selectedMemberIndex: 0
     property string expandedGroupKey: ""
@@ -23,7 +29,7 @@ FocusScope {
             if (!notification)
                 continue;
             const app = notification.appName || "SYSTEM";
-            const key = app.toLowerCase();
+            const key = NotificationSemantics.groupKey(notification);
             if (!byApp.has(key)) {
                 const group = {
                     key: key,
@@ -46,18 +52,56 @@ FocusScope {
     onEngagedChanged: {
         if (engaged)
             Qt.callLater(focusKeyboard);
+        else {
+            replyEditing = false;
+            replyOwner = null;
+        }
     }
 
     onGroupsChanged: {
         if (!groups)
             return;
-        selectedIndex = Math.max(0, Math.min(selectedIndex, Math.max(0, groups.length - 1)));
+        const activeNotifications = new Set(items);
+        for (const notification of replyDrafts.keys()) {
+            if (!activeNotifications.has(notification))
+                replyDrafts.delete(notification);
+        }
+        const preserved = NotificationSemantics.findNotification(groups, selectedNotificationAnchor);
+        restoringSelection = true;
+        selectedIndex = preserved ? preserved.groupIndex : Math.max(0, Math.min(selectedIndex, Math.max(0, groups.length - 1)));
         const group = selectedGroup();
-        selectedMemberIndex = group ? Math.max(0, Math.min(selectedMemberIndex, group.notifications.length - 1)) : 0;
+        selectedMemberIndex = preserved ? preserved.memberIndex : group ? Math.max(0, Math.min(selectedMemberIndex, group.notifications.length - 1)) : 0;
         if (!groups.some(group => group.key === expandedGroupKey))
             expandedGroupKey = "";
-        if (engaged)
-            Qt.callLater(focusKeyboard);
+        selectedNotificationAnchor = selectedNotification();
+        restoringSelection = false;
+        Qt.callLater(ensureSelectedVisible);
+        // Recreated group delegates must recover the draft and keyboard focus
+        // of the notification already being answered.
+        if (engaged && replyOwner && NotificationSemantics.findNotification(groups, replyOwner)) {
+            Qt.callLater(() => {
+                if (engaged && replyOwner)
+                    focusReply();
+            });
+        } else if (engaged && !replyEditing) {
+            Qt.callLater(() => {
+                if (!replyEditing)
+                    focusKeyboard();
+            });
+        }
+    }
+
+    onSelectedIndexChanged: rememberSelection()
+
+    function replyDraftFor(notification): string {
+        return replyDrafts.get(notification) || "";
+    }
+
+    function storeReplyDraft(notification, draft: string): void {
+        if (draft)
+            replyDrafts.set(notification, draft);
+        else
+            replyDrafts.delete(notification);
     }
 
     function focusKeyboard(): void {
@@ -81,8 +125,16 @@ FocusScope {
             list.contentY = Math.max(0, top);
     }
 
-    onSelectedMemberIndexChanged: Qt.callLater(ensureSelectedVisible)
+    onSelectedMemberIndexChanged: {
+        rememberSelection();
+        Qt.callLater(ensureSelectedVisible);
+    }
     onExpandedGroupKeyChanged: Qt.callLater(ensureSelectedVisible)
+
+    function rememberSelection(): void {
+        if (!restoringSelection)
+            selectedNotificationAnchor = selectedNotification();
+    }
 
     function selectedGroup(): var {
         return groups && groups.length > 0 ? groups[Math.max(0, Math.min(selectedIndex, groups.length - 1))] : null;
@@ -96,6 +148,7 @@ FocusScope {
     function selectGroup(delta: int): void {
         selectedIndex = Math.max(0, Math.min(groups.length - 1, selectedIndex + delta));
         selectedMemberIndex = 0;
+        rememberSelection();
     }
 
     function navigate(delta: int): void {
@@ -113,8 +166,25 @@ FocusScope {
 
     function toggleExpanded(): void {
         const group = selectedGroup();
-        if (group)
+        if (group) {
             expandedGroupKey = expandedGroupKey === group.key ? "" : group.key;
+            if (!expandedGroupKey)
+                selectedMemberIndex = 0;
+        }
+    }
+
+    function focusReply(): void {
+        const notification = selectedNotification();
+        const group = selectedGroup();
+        if (!notification || !notification.hasInlineReply || !group)
+            return;
+        expandedGroupKey = group.key;
+        Qt.callLater(() => {
+            const groupItem = list.itemAtIndex(selectedIndex);
+            const card = groupItem ? groupItem.memberAt(selectedMemberIndex) : null;
+            if (card && card.notification === notification)
+                card.focusReply();
+        });
     }
 
     function dismissNotification(notification): void {
@@ -294,19 +364,7 @@ FocusScope {
                 },
                 {
                     shortcut: "E",
-                    label: center.notificationState.captureKind(center.selectedNotification()) === "screenshot" ? "Markup" : center.notificationState.captureKind(center.selectedNotification()) === "recording" ? "Trim" : "Expand"
-                },
-                {
-                    shortcut: "M",
-                    label: "Read"
-                },
-                {
-                    shortcut: "DEL",
-                    label: "Dismiss"
-                },
-                {
-                    shortcut: "ESC",
-                    label: "Close"
+                    label: "Expand"
                 }
             ]
         }
@@ -429,18 +487,16 @@ FocusScope {
                             required property int index
                             width: groupColumn.width
                             notification: modelData
+                            replyDraft: center.replyDraftFor(modelData)
                             read: center.notificationState.isRead(modelData)
                             runtime: center.runtime
                             theme: center.theme
                             motion: center.motion
+                            notificationState: center.notificationState
                             groupCount: !groupItem || !groupItem.modelData ? 1 : groupItem.expanded ? 1 : groupItem.modelData.notifications.length
                             selected: !!groupItem && center.selectedIndex === groupItem.index && center.selectedMemberIndex === index
                             expanded: !!groupItem && groupItem.expanded && selected
                             onActivated: {
-                                if (center.notificationState.captureKind(modelData)) {
-                                    center.notificationState.invokeDefault(modelData);
-                                    return;
-                                }
                                 const sameSelection = center.selectedIndex === groupItem.index && center.selectedMemberIndex === index;
                                 center.selectedIndex = groupItem.index;
                                 center.selectedMemberIndex = index;
@@ -449,8 +505,36 @@ FocusScope {
                                 else
                                     center.expandedGroupKey = groupItem.modelData.key;
                             }
-                            onDefaultRequested: center.notificationState.invokeDefault(modelData)
+                            onDefaultRequested: {
+                                if (!center.notificationState.invokeDefault(modelData))
+                                    center.toggleExpanded();
+                            }
                             onActionRequested: action => center.notificationState.invokeAction(modelData, action)
+                            onReplyRequested: message => {
+                                center.storeReplyDraft(modelData, "");
+                                center.replyOwner = null;
+                                center.replyEditing = false;
+                                center.notificationState.sendReply(modelData, message);
+                                center.focusKeyboard();
+                            }
+                            onReplyTextEdited: message => center.storeReplyDraft(modelData, message)
+                            onReplyFocusRequested: {
+                                center.selectedIndex = groupItem.index;
+                                center.selectedMemberIndex = index;
+                                center.rememberSelection();
+                                center.focusReply();
+                            }
+                            onReplyFocusChanged: focused => {
+                                if (focused) {
+                                    center.replyOwner = modelData;
+                                    center.replyEditing = true;
+                                }
+                            }
+                            onReplyFinished: {
+                                center.replyOwner = null;
+                                center.replyEditing = false;
+                                center.focusKeyboard();
+                            }
                             onReadToggled: center.notificationState.toggleRead(modelData)
                             onDismissRequested: center.dismissNotification(modelData)
                         }
@@ -493,16 +577,21 @@ FocusScope {
                     center.selectGroup(((event.key === Qt.Key_D || event.key === Qt.Key_PageDown) ? 1 : -1) * steps);
                     event.accepted = true;
                 } else if (event.key === Qt.Key_E) {
-                    if (center.notificationState.captureKind(center.selectedNotification()))
-                        center.notificationState.invokeCaptureEdit(center.selectedNotification());
-                    else
-                        center.toggleExpanded();
+                    center.toggleExpanded();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_R) {
+                    center.focusReply();
                     event.accepted = true;
                 } else if (event.key >= Qt.Key_1 && event.key <= Qt.Key_9) {
-                    center.notificationState.invokeAction(center.selectedNotification(), event.key - Qt.Key_1);
+                    const group = center.selectedGroup();
+                    const index = event.key - Qt.Key_1;
+                    const actions = center.notificationState.explicitActions(center.selectedNotification());
+                    if (group && index < (center.expandedGroupKey === group.key ? actions.length : Math.min(2, actions.length)))
+                        center.notificationState.invokeAction(center.selectedNotification(), index);
                     event.accepted = true;
                 } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                    center.notificationState.invokeDefault(center.selectedNotification());
+                    if (!center.notificationState.invokeDefault(center.selectedNotification()))
+                        center.toggleExpanded();
                     event.accepted = true;
                 } else if (event.key === Qt.Key_Delete || event.key === Qt.Key_Backspace) {
                     center.dismissSelected();

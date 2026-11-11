@@ -62,9 +62,9 @@ test("connected popups borrow the frame material, while overlapping toasts use t
   assert.match(toasts, /frameConnected: popup\.frameAttached/);
   assert.match(
     toasts,
-    /readonly property bool frameAttached: frameConnected && !hubVisible/,
+    /readonly property bool frameAttached: frameConnected && !hubOverlapsToasts/,
   );
-  assert.match(toasts, /glassAllowed: !popup\.hubVisible/);
+  assert.match(toasts, /glassAllowed: !popup\.hubOverlapsToasts/);
   assert.match(toasts, /fillColor: popup\.theme\.paneBase/);
   const prefs = qml("AppearancePreferences.qml");
   const shell = qml("shell.qml");

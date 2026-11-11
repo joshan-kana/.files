@@ -6,6 +6,7 @@ SquircleSurface {
     id: card
 
     required property var notification
+    required property NotificationState notificationState
     required property RuntimeConfig runtime
     required property Theme theme
     required property Motion motion
@@ -15,11 +16,30 @@ SquircleSurface {
     property bool expanded: false
     property int groupCount: 1
     property bool dismissing: false
-    readonly property var safeActions: notification && notification.actions ? notification.actions : []
+    property string replyDraft: ""
+    readonly property var safeActions: notificationState.explicitActions(notification)
 
     signal activated
     signal defaultRequested
     signal actionRequested(int index)
+    signal replyRequested(string message)
+    signal replyTextEdited(string message)
+    signal replyFocusChanged(bool focused)
+    signal replyFocusRequested
+    signal replyFinished
+
+    function focusReply(): void {
+        if (notification && notification.hasInlineReply)
+            reply.forceActiveFocus();
+    }
+
+    function sendReply(): void {
+        if (!reply.text.trim())
+            return;
+        replyRequested(reply.text);
+        reply.text = "";
+    }
+
     signal readToggled
     signal dismissRequested
 
@@ -131,11 +151,21 @@ SquircleSurface {
 
         Row {
             width: parent.width
+            spacing: card.theme.spacing2
+
+            NotificationArtwork {
+                notification: card.notification
+                width: 24
+                height: 24
+                anchors.verticalCenter: parent.verticalCenter
+            }
 
             Text {
                 id: appName
                 anchors.verticalCenter: parent.verticalCenter
                 text: (card.notification && card.notification.appName || "SYSTEM").toUpperCase()
+                elide: Text.ElideRight
+                width: Math.min(implicitWidth, Math.max(70, card.width * 0.38))
                 color: card.notification && card.notification.urgency === NotificationUrgency.Critical ? card.theme.readableRoleColor("critical") : card.read ? card.theme.textMuted : card.theme.readableRoleColor("notifications")
                 font.family: card.runtime.fontMono
                 font.pixelSize: card.theme.fontSize(9)
@@ -155,7 +185,7 @@ SquircleSurface {
             }
 
             Item {
-                width: Math.max(0, parent.width - appName.implicitWidth - unreadMarker.width - cardActions.implicitWidth - card.theme.spacing2 * 2)
+                width: Math.max(0, parent.width - 24 - appName.width - unreadMarker.width - cardActions.implicitWidth - card.theme.spacing2 * 5)
                 height: 1
             }
 
@@ -167,7 +197,7 @@ SquircleSurface {
                 Text {
                     id: details
                     anchors.verticalCenter: parent.verticalCenter
-                    text: (card.groupCount > 1 ? card.groupCount + " ITEMS · " : "") + (card.expanded ? "󰅃" : "󰅀") + (card.safeActions.length > 0 ? "  " + card.safeActions.length + " ACTIONS" : card.notification && card.notification.appName === "linux-desktop" && (card.notification.summary === "Screenshot saved" || card.notification.summary === "Recording saved") ? "  OPEN" : "  EXPAND")
+                    text: (card.groupCount > 1 ? card.groupCount + " ITEMS · " : "") + (card.expanded ? "󰅃" : "󰅀") + (card.safeActions.length > 0 ? "  " + card.safeActions.length + " ACTIONS" : card.notification && card.notification.hasInlineReply ? "  REPLY" : card.notificationState.hasDefaultAction(card.notification) ? "  OPEN" : "  EXPAND")
                     color: card.theme.textMuted
                     font.family: card.runtime.fontMono
                     font.pixelSize: card.theme.fontSize(8)
@@ -175,16 +205,50 @@ SquircleSurface {
 
                 ShellAction {
                     id: readToggle
-                    width: 36
+                    width: 56
                     height: 36
                     runtime: card.runtime
                     theme: card.theme
                     motion: card.motion
                     iconOnly: true
+                    iconHint: true
+                    inlineIconHint: true
+                    shortcut: card.selected ? "M" : ""
                     active: card.read
                     icon: card.read ? "󰄭" : "󰄬"
                     title: card.read ? "Mark unread" : "Mark read"
                     onActivated: card.readToggled()
+                }
+
+                ShellAction {
+                    visible: !!card.notification && card.notification.hasInlineReply
+                    width: visible ? 56 : 0
+                    height: 36
+                    runtime: card.runtime
+                    theme: card.theme
+                    motion: card.motion
+                    iconOnly: true
+                    iconHint: true
+                    inlineIconHint: true
+                    shortcut: card.selected ? "R" : ""
+                    icon: "󰆁"
+                    title: "Reply"
+                    onActivated: card.replyFocusRequested()
+                }
+
+                ShellAction {
+                    width: 64
+                    height: 36
+                    runtime: card.runtime
+                    theme: card.theme
+                    motion: card.motion
+                    iconOnly: true
+                    iconHint: true
+                    inlineIconHint: true
+                    shortcut: card.selected ? "DEL" : ""
+                    icon: "󰆴"
+                    title: "Dismiss"
+                    onActivated: card.dismissAnimated()
                 }
             }
         }
@@ -214,14 +278,22 @@ SquircleSurface {
             elide: Text.ElideRight
         }
 
+        NotificationArtwork {
+            notification: card.notification
+            preview: true
+            visible: !!card.notification && !!card.notification.image
+            width: Math.min(parent.width, 220)
+            height: visible ? (card.expanded ? 128 : 80) : 0
+        }
+
         Flow {
             id: actionButtons
             width: parent.width
             spacing: card.theme.spacing2
-            visible: card.expanded && card.safeActions.length > 0
+            visible: card.safeActions.length > 0
 
             Repeater {
-                model: card.safeActions
+                model: card.expanded ? card.safeActions : card.safeActions.slice(0, 2)
 
                 delegate: ShellAction {
                     required property int index
@@ -230,10 +302,77 @@ SquircleSurface {
                     theme: card.theme
                     motion: card.motion
                     compact: true
-                    title: (index + 1) + "  " + (modelData.text || "Action")
-                    width: Math.min(implicitWidth, actionButtons.width)
+                    horizontalCompact: true
+                    title: modelData.text || "Action"
+                    shortcut: card.selected && index < 9 ? String(index + 1) : ""
+                    width: Math.min(actionButtons.width, Math.max(130, implicitWidth))
                     onActivated: card.actionRequested(index)
                 }
+            }
+        }
+
+        Row {
+            id: replyRow
+            width: parent.width
+            spacing: card.theme.spacing2
+            visible: card.expanded && !!card.notification && card.notification.hasInlineReply
+
+            SearchFieldSurface {
+                theme: card.theme
+                motion: card.motion
+                width: Math.max(1, replyRow.width - sendReply.width - replyRow.spacing)
+                height: 42
+                fieldFocused: reply.activeFocus
+
+                TextInput {
+                    id: reply
+                    anchors.fill: parent
+                    anchors.leftMargin: card.theme.spacing3
+                    anchors.rightMargin: card.theme.spacing3
+                    verticalAlignment: TextInput.AlignVCenter
+                    color: card.theme.textStrong
+                    selectionColor: card.theme.accent
+                    selectedTextColor: card.theme.background
+                    font.family: card.runtime.fontMono
+                    font.pixelSize: card.theme.fontSize(11)
+                    clip: true
+                    text: card.replyDraft
+                    onTextEdited: card.replyTextEdited(text)
+                    onActiveFocusChanged: card.replyFocusChanged(activeFocus)
+                    Keys.onReturnPressed: {
+                        card.sendReply();
+                    }
+                    Keys.onEnterPressed: {
+                        card.sendReply();
+                    }
+                    Keys.onEscapePressed: {
+                        card.replyFinished();
+                    }
+                    Text {
+                        anchors.fill: parent
+                        visible: reply.text.length === 0
+                        text: card.notification && card.notification.inlineReplyPlaceholder || "Write a reply…"
+                        verticalAlignment: Text.AlignVCenter
+                        color: card.theme.textMuted
+                        font: reply.font
+                        elide: Text.ElideRight
+                    }
+                }
+            }
+
+            ShellAction {
+                id: sendReply
+                runtime: card.runtime
+                theme: card.theme
+                motion: card.motion
+                compact: true
+                horizontalCompact: true
+                title: "Send"
+                shortcut: reply.activeFocus ? "ENTER" : ""
+                width: 126
+                height: 42
+                enabled: reply.text.trim().length > 0
+                onActivated: card.sendReply()
             }
         }
     }

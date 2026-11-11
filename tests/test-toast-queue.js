@@ -33,7 +33,7 @@ test("three live notifications occupy stable slots without an exit layer", () =>
   );
 });
 
-test("fourth arrival evacuates oldest from slot two without removing it", () => {
+test("fourth arrival keeps the displaced card behind the third visible slot", () => {
   const next = layout([sample(0), sample(0), sample(1), sample(2)]);
   assert.deepEqual(
     next.map((entry) => [entry.phase, entry.slot]),
@@ -41,7 +41,7 @@ test("fourth arrival evacuates oldest from slot two without removing it", () => 
       ["visible", 0],
       ["visible", 1],
       ["visible", 2],
-      ["closing", 3],
+      ["closing", 2],
     ],
   );
   assert.equal(next[3].removeAt, 1220);
@@ -80,6 +80,20 @@ test("bursts retain previous exits and do not reactivate them", () => {
   );
 });
 
+test("burst eviction never draws a partially clipped fourth card", () => {
+  const items = [
+    sample(0),
+    sample(0),
+    sample(0),
+    { ...sample(2, "closing", 1140), evicted: true },
+  ];
+  const next = layout(items, 3);
+  assert.ok(next.every((entry) => entry.slot >= 0 && entry.slot < 3));
+  assert.equal(next[3].slot, next[2].slot);
+  assert.equal(next[3].phase, "closing");
+  assert.equal(next[3].evicted, true);
+});
+
 test("reduced visible capacity preserves an outgoing slot without overlap", () => {
   const next = layout([sample(0), sample(1), sample(2)], 2);
   assert.deepEqual(
@@ -87,7 +101,7 @@ test("reduced visible capacity preserves an outgoing slot without overlap", () =
     [
       ["visible", 0],
       ["visible", 1],
-      ["closing", 2],
+      ["closing", 1],
     ],
   );
   assert.equal(next[2].evicted, true);
