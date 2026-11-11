@@ -379,8 +379,9 @@ test("Compact Media shares a live spectrum, controls and full Now Playing naviga
   assert.match(card, /id: compactTransport[\s\S]*?minimal: true/);
   assert.match(
     card,
-    /parent.width - shuffleButton.width - repeatButton.width - compactTransport.width/,
+    /Row \{\s+width: implicitWidth[\s\S]*?anchors.horizontalCenter: parent.horizontalCenter/,
   );
+  assert.doesNotMatch(card, /parent.width - shuffleButton.width/);
   assert.match(card, /SpectrumBars \{/);
   assert.match(card, /barCount: 24/);
   assert.match(
@@ -668,13 +669,18 @@ test("Session uses compact hub width, not the Controls dashboard width", () => {
   assert.match(host, /width: Math.min\(host.viewportWidth, host.targetWidth\)/);
 });
 
-test("Controls Media transport has centered playback and all available seek controls", () => {
+test("Controls Media groups shuffle, transport, and repeat in one centered row", () => {
   const card = read("ControlsMediaCard.qml");
   const transport = read("MediaTransport.qml");
   assert.match(
     card,
+    /Row \{\s+width: implicitWidth[\s\S]*?anchors.horizontalCenter: parent.horizontalCenter/,
+  );
+  assert.match(
+    card,
     /id: shuffleButton[\s\S]*?id: compactTransport[\s\S]*?id: repeatButton/,
   );
+  assert.doesNotMatch(card, /parent.width - shuffleButton.width/);
   assert.match(card, /simple: card.width < 490/);
   assert.match(card, /id: compactTransport[\s\S]*?width: implicitWidth/);
   assert.match(transport, /action: "back"/);
