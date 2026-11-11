@@ -65,7 +65,9 @@ test("notification viewport remains stable as the number of toasts changes", () 
     source,
     /implicitHeight: Math\.max\(1, maxToastSlots \* cardHeight/,
   );
-  assert.match(source, /visible: slot < popup\.maxToastSlots \|\| evicted/);
+  // Keep the stack viewport fixed while evicted cards finish model cleanup
+  // without revealing stale text beneath cards animating into their slots.
+  assert.match(source, /visible: !evicted && slot < popup\.maxToastSlots/);
   assert.doesNotMatch(
     source,
     /implicitHeight:[^\n]*(toastCount|visibleToastCount)/,
