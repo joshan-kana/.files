@@ -15,6 +15,7 @@ _: {
           };
 
           cargoHash = "sha256-OYJNkWU9Tfx/ZDlO0kfy9sqE0i1YsB9Dy5GR29IAtMI=";
+          nativeBuildInputs = [ final.mold ];
           patches = [
             ../../patches/hypr-persist/reconnect-ipc.patch
             ../../patches/hypr-persist/opt-in-restoration.patch
