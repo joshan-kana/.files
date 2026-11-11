@@ -201,5 +201,24 @@ test("Session keycaps stay outside the morphing surface and Restore uses the sha
     button,
     /KeyHint \{[\s\S]*?anchors \{\s*top: parent\.top\s*right: parent\.right\s*margins:/,
   );
-  assert.match(session, /shortcut: "1-6",\s*label: "Direct action"/);
+  assert.match(session, /shortcut: String\(actionIndex \+ 1\)/);
+  assert.doesNotMatch(session, /shortcut: "1-6"|label: "Direct action"/);
+  assert.match(session, /Item \{\s*id: hintRegion\s*width: buttonGrid\.width/);
+  assert.match(
+    session,
+    /naturalWidth: moveHint\.implicitWidth \+ actionHint\.implicitWidth \+ panel\.theme\.spacing3/,
+  );
+  assert.match(
+    session,
+    /Flow \{\s*id: hintFlow\s*width: Math\.min\(parent\.width, hintRegion\.naturalWidth\)/,
+  );
+  assert.match(session, /anchors\.horizontalCenter: parent\.horizontalCenter/);
+  assert.match(
+    session,
+    /KeyHint \{\s*id: moveHint[\s\S]*?shortcut: "HJKL"\s*label: "Move"/,
+  );
+  assert.match(
+    session,
+    /KeyHint \{\s*id: actionHint[\s\S]*?shortcut: "ENTER"\s*label: panel\.armedAction\.length > 0 \? "Confirm" : "Activate"/,
+  );
 });
