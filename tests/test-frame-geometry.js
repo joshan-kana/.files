@@ -323,6 +323,63 @@ test("notification attachments expand from the right edge without invalid corner
   }
 });
 
+test("right-edge toast wells use the same squircle radius and independent frame shoulders", () => {
+  const width = 1920;
+  const height = 1080;
+  const edge = 26;
+  const radius = 42;
+  const toast = {
+    x: width - edge - 440,
+    y: 95,
+    width: 440,
+    height: 170,
+    cornerRadius: 25,
+    visible: true,
+  };
+  const shape = contour(width, height, edge, radius, 4.5, [], null, [toast]);
+  check(shape, width, height);
+  const at = (x, y) =>
+    shape.points.some(
+      (point) => Math.abs(point.x - x) < 0.001 && Math.abs(point.y - y) < 0.001,
+    );
+  // A panel's 25px squircle corner and the connected frame's inner turn
+  // must have one radius rather than two independently guessed values.
+  assert.ok(at(toast.x + toast.cornerRadius, toast.y));
+  assert.ok(at(toast.x, toast.y + toast.cornerRadius));
+  assert.ok(at(toast.x, toast.y + toast.height - toast.cornerRadius));
+  // The upper gap is only 27px. It must not reduce the lower shoulder.
+  const upper = Math.min(radius * 0.65, toast.y - edge - radius);
+  const lower = radius * 0.65;
+  assert.ok(at(width - edge - upper, toast.y));
+  assert.ok(at(width - edge - lower, toast.y + toast.height));
+  assert.ok(lower > upper);
+});
+
+test("toast outline remains finite and within the monitor through clipped reveals", () => {
+  const width = 1280;
+  const height = 720;
+  const edge = 26;
+  const radius = 42;
+  for (const progress of [0.01, 0.05, 0.2, 0.5, 0.8, 1]) {
+    for (const visibleHeight of [3, 15, 65, 170]) {
+      const toastWidth = 440 * progress;
+      const toasts = [0, 1, 2].map((slot) => ({
+        x: width - edge - toastWidth,
+        y: 95 + slot * 184,
+        width: toastWidth,
+        height: visibleHeight,
+        cornerRadius: 25,
+        visible: true,
+      }));
+      check(
+        contour(width, height, edge, radius, 4.5, [], null, toasts),
+        width,
+        height,
+      );
+    }
+  }
+});
+
 test("short connected notches never fold their stroke across a widget", () => {
   const width = 1920,
     height = 1080,

@@ -14,6 +14,9 @@ test("notification toasts render above the Controls hub without changing popup g
   const hub = qml("ShellExpansionHost.qml");
   const root = qml("shell.qml");
   assert.match(hub, /WlrLayershell\.layer: WlrLayer\.Overlay/);
+  assert.ok(
+    root.indexOf("ShellExpansionHost {") < root.indexOf("NotificationPopup {"),
+  );
   assert.match(popup, /WlrLayershell\.layer: WlrLayer\.Overlay/);
   assert.match(
     popup,
@@ -35,8 +38,12 @@ test("notification toasts render above the Controls hub without changing popup g
     /visible: frameAttached && toast\.attachmentProgress > 0\.001/,
   );
   assert.match(popup, /frameConnected: popup\.frameAttached/);
-  assert.match(popup, /cornerRadius: popup\.theme\.radiusMedium/);
   assert.match(popup, /cornerRadius: toast\.cornerRadius/);
+  assert.match(popup, /cornerRadius: popup\.theme\.radiusMedium/);
+  assert.match(
+    popup,
+    /height: bottom - y,\s+cornerRadius: toast\.cornerRadius/,
+  );
   assert.match(popup, /readonly property bool hubOverlapsToasts:/);
   assert.match(root, /hubBounds: expansionHost\.frameBounds/);
   assert.match(popup, /glassAllowed: !popup\.hubOverlapsToasts/);

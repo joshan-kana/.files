@@ -461,6 +461,9 @@ function contour(
       left: Math.max(left + outerRadius + 3, item.x),
       top: Math.max(top + outerRadius + 3, item.y),
       bottom: Math.min(bottom - outerRadius - 3, item.y + item.height),
+      cornerRadius: Number.isFinite(item.cornerRadius)
+        ? Math.max(0, item.cornerRadius)
+        : radius * 0.78,
       hovered: Boolean(item.hovered),
       pressed: Boolean(item.pressed),
     }))
@@ -471,7 +474,10 @@ function contour(
     const last = mergedDocks[mergedDocks.length - 1];
     if (last && notch.top <= last.bottom + 3) {
       last.left = Math.min(last.left, notch.left);
-      last.bottom = Math.max(last.bottom, notch.bottom);
+      if (notch.bottom > last.bottom) {
+        last.bottom = notch.bottom;
+        last.bottomRadius = notch.cornerRadius;
+      }
       last.hovered = last.hovered || notch.hovered;
       last.pressed = last.pressed || notch.pressed;
     } else {
@@ -479,6 +485,8 @@ function contour(
         left: notch.left,
         top: notch.top,
         bottom: notch.bottom,
+        topRadius: notch.cornerRadius,
+        bottomRadius: notch.cornerRadius,
         hovered: notch.hovered,
         pressed: notch.pressed,
       });
@@ -491,31 +499,70 @@ function contour(
       i + 1 < mergedDocks.length
         ? mergedDocks[i + 1].top
         : bottom - outerRadius;
-    const shoulder = Math.max(
+    // The entry and exit shoulders are independent, like the top bar's
+    // island wells. A short gap above a toast must not flatten its lower
+    // shoulder, or vice versa. The end shoulders can use the complete free
+    // gap to meet the frame corner without a square tangent stub.
+    const depth = dock.bottom - dock.top;
+    const topShoulder = Math.max(
       0,
       Math.min(
         radius * 0.65,
-        (dock.top - previous) * 0.43,
-        (next - dock.bottom) * 0.43,
+        depth / 2,
+        (dock.top - previous) * (i === 0 ? 1 : 0.5),
       ),
     );
-    const r = Math.max(
+    const bottomShoulder = Math.max(
       0,
       Math.min(
-        radius * 0.78,
-        (right - dock.left) / 3,
-        (dock.bottom - dock.top) / 2,
+        radius * 0.65,
+        depth / 2,
+        (next - dock.bottom) * (i === mergedDocks.length - 1 ? 1 : 0.5),
       ),
     );
+    // Use the same corner radii as the attached SquircleSurface. A second
+    // frame-only radius makes the two edges diverge during the reveal.
+    const topRadius = Math.max(
+      0,
+      Math.min(dock.topRadius, (right - dock.left) / 2, depth / 2),
+    );
+    const bottomRadius = Math.max(
+      0,
+      Math.min(dock.bottomRadius, (right - dock.left) / 2, depth / 2),
+    );
     const dockStartCommand = pathCommands.length;
-    add(right, dock.top - shoulder);
-    corner(right - shoulder, dock.top - shoulder, shoulder, 0, Math.PI / 2);
-    add(dock.left + r, dock.top);
-    corner(dock.left + r, dock.top + r, r, -Math.PI / 2, -Math.PI);
-    add(dock.left, dock.bottom - r);
-    corner(dock.left + r, dock.bottom - r, r, Math.PI, Math.PI / 2);
-    add(right - shoulder, dock.bottom);
-    corner(right - shoulder, dock.bottom + shoulder, shoulder, -Math.PI / 2, 0);
+    add(right, dock.top - topShoulder);
+    corner(
+      right - topShoulder,
+      dock.top - topShoulder,
+      topShoulder,
+      0,
+      Math.PI / 2,
+    );
+    add(dock.left + topRadius, dock.top);
+    corner(
+      dock.left + topRadius,
+      dock.top + topRadius,
+      topRadius,
+      -Math.PI / 2,
+      -Math.PI,
+    );
+    add(dock.left, dock.bottom - bottomRadius);
+    corner(
+      dock.left + bottomRadius,
+      dock.bottom - bottomRadius,
+      bottomRadius,
+      Math.PI,
+      Math.PI / 2,
+    );
+    add(right - bottomShoulder, dock.bottom);
+    corner(
+      right - bottomShoulder,
+      dock.bottom + bottomShoulder,
+      bottomShoulder,
+      -Math.PI / 2,
+      0,
+    );
     if (dock.hovered || dock.pressed) {
       const fillPath =
         pathCommands

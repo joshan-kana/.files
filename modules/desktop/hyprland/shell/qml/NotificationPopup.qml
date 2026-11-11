@@ -43,6 +43,7 @@ PanelWindow {
                         y: frameBounds.y + y,
                         width: toast.width,
                         height: bottom - y,
+                        cornerRadius: toast.cornerRadius,
                         hovered: toast.hovered,
                         pressed: toast.pointerPressed,
                         visible: frameAttached && toast.attachmentProgress > 0.001
