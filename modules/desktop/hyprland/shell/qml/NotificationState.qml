@@ -14,13 +14,14 @@ QtObject {
     property int popupRevision: 0
     readonly property int maxToasts: 3
     readonly property bool popupVisible: popups.count > 0
-    readonly property bool silent: settings.silent
+    readonly property bool silent: settings.preferenceSource === "default" ? runtime.notificationSilent : settings.silent
 
     property Settings preferences: Settings {
         id: settings
         location: "file://" + Quickshell.env("HOME") + "/.config/linux-desktop/notifications.ini"
         category: "Notifications"
-        property bool silent: false
+        property bool silent: root.runtime.notificationSilent
+        property string preferenceSource: ""
     }
 
     onSilentChanged: {
@@ -29,12 +30,24 @@ QtObject {
     }
 
     function toggleSilent(): void {
-        settings.silent = !settings.silent;
+        settings.silent = !silent;
+        settings.preferenceSource = "user";
+        settings.setValue("preferenceSource", "user");
+        settings.sync();
+    }
+
+    Component.onCompleted: {
+        if (settings.preferenceSource !== "")
+            return;
+        // Preserve explicitly stored values from older settings files.
+        settings.preferenceSource = settings.value("silent", null) === null ? "default" : "user";
+        settings.setValue("preferenceSource", settings.preferenceSource);
+        settings.sync();
     }
 
     function resetToDeclared(): void {
-        settings.silent = false;
-        settings.setValue("silent", false);
+        settings.preferenceSource = "default";
+        settings.setValue("preferenceSource", "default");
         settings.sync();
     }
     readonly property var history: server.trackedNotifications.values
