@@ -14,24 +14,39 @@ test("window and glass opacity persist independently from 20% to 100%", () => {
     assert.match(
       prefs,
       new RegExp(
-        "property real " + setting + ": " + defaultValue.replace(".", "\\."),
-      ),
-    );
-    assert.match(
-      prefs,
-      new RegExp(
-        setting +
-          ": Math\\.max\\(0\\.20, Math\\.min\\(1, saved\\." +
+        "property real " +
           setting +
-          "\\)\\)",
+          ": appearance\\.runtime\\.appearanceDefaults\\." +
+          setting,
+      ),
+    );
+    assert.ok(
+      prefs.includes(
+        setting + ': Math.max(0.20, Math.min(1, effective("' + setting + '"))',
       ),
     );
     assert.match(
       prefs,
-      new RegExp('saved\\.setValue\\("' + setting + '", next\\)'),
+      new RegExp('storeOverride\\("' + setting + '", next\\)'),
     );
     assert.match(prefs, /Math\.max\(0\.20, Math\.min\(1, value\)\)/);
   }
+  const nix = fs.readFileSync(
+    path.join(__dirname, "../modules/desktop/hyprland/shell/default.nix"),
+    "utf8",
+  );
+  for (const [setting, defaultValue] of [
+    ["windowOpacity", "0.82"],
+    ["glassOpacity", "0.70"],
+  ])
+    assert.match(
+      nix,
+      new RegExp(
+        setting +
+          " = lib\\.mkOption[\\s\\S]*?default = " +
+          defaultValue.replace(".", "\\."),
+      ),
+    );
   assert.match(prefs, /saved\.sync\(\)/);
   assert.match(
     prefs,

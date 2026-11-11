@@ -13,35 +13,59 @@ QtObject {
         id: saved
         location: "file://" + Quickshell.env("HOME") + "/.config/linux-desktop/preferences.ini"
         category: "Appearance"
-        property bool wallpaperSpectrumEnabled: false
-        property string wallpaperResizeMode: "fit"
-        property string wallpaperTargetOutput: ""
-        property bool musicReactiveEnabled: false
-        property bool barVisible: true
-        property bool frameVisible: true
-        property bool windowTransparencyEnabled: false
-        property bool shellGlassEnabled: false
-        property real windowOpacity: 0.82
-        property real glassOpacity: 0.70
-        property string mediaVisualizerMode: "bars"
-        property bool mediaLyricsVisible: false
-        property int mediaSeekSeconds: 10
+        property bool wallpaperSpectrumEnabled: appearance.runtime.appearanceDefaults.wallpaperSpectrumEnabled
+        property string wallpaperResizeMode: appearance.runtime.appearanceDefaults.wallpaperResizeMode
+        property string wallpaperTargetOutput: appearance.runtime.appearanceDefaults.wallpaperTargetOutput
+        property bool musicReactiveEnabled: appearance.runtime.appearanceDefaults.musicReactiveEnabled
+        property bool barVisible: appearance.runtime.appearanceDefaults.barVisible
+        property bool frameVisible: appearance.runtime.appearanceDefaults.frameVisible
+        property bool windowTransparencyEnabled: appearance.runtime.appearanceDefaults.windowTransparencyEnabled
+        property bool shellGlassEnabled: appearance.runtime.appearanceDefaults.shellGlassEnabled
+        property real windowOpacity: appearance.runtime.appearanceDefaults.windowOpacity
+        property real glassOpacity: appearance.runtime.appearanceDefaults.glassOpacity
+        property string mediaVisualizerMode: appearance.runtime.appearanceDefaults.mediaVisualizerMode
+        property bool mediaLyricsVisible: appearance.runtime.appearanceDefaults.mediaLyricsVisible
+        property int mediaSeekSeconds: appearance.runtime.appearanceDefaults.mediaSeekSeconds
+        property string userOverrides: ""
     }
 
-    readonly property bool wallpaperSpectrumEnabled: saved.wallpaperSpectrumEnabled
-    readonly property string wallpaperResizeMode: saved.wallpaperResizeMode === "crop" ? "crop" : "fit"
-    readonly property string wallpaperTargetOutput: saved.wallpaperTargetOutput
-    readonly property bool musicReactiveEnabled: saved.musicReactiveEnabled
-    readonly property bool barVisible: saved.barVisible
-    readonly property bool frameVisible: saved.frameVisible
-    readonly property bool windowTransparencyEnabled: saved.windowTransparencyEnabled
-    readonly property bool shellGlassEnabled: saved.shellGlassEnabled
-    readonly property real windowOpacity: Math.max(0.20, Math.min(1, saved.windowOpacity))
-    readonly property real glassOpacity: Math.max(0.20, Math.min(1, saved.glassOpacity))
-    readonly property string mediaVisualizerMode: saved.mediaVisualizerMode === "curve" ? "curve" : "bars"
-    readonly property bool mediaLyricsVisible: saved.mediaLyricsVisible
+    readonly property var overrideKeys: parseOverrideKeys(saved.userOverrides)
+    readonly property bool wallpaperSpectrumEnabled: effective("wallpaperSpectrumEnabled")
+    readonly property string wallpaperResizeMode: effective("wallpaperResizeMode") === "crop" ? "crop" : "fit"
+    readonly property string wallpaperTargetOutput: effective("wallpaperTargetOutput")
+    readonly property bool musicReactiveEnabled: effective("musicReactiveEnabled")
+    readonly property bool barVisible: effective("barVisible")
+    readonly property bool frameVisible: effective("frameVisible")
+    readonly property bool windowTransparencyEnabled: effective("windowTransparencyEnabled")
+    readonly property bool shellGlassEnabled: effective("shellGlassEnabled")
+    readonly property real windowOpacity: Math.max(0.20, Math.min(1, effective("windowOpacity")))
+    readonly property real glassOpacity: Math.max(0.20, Math.min(1, effective("glassOpacity")))
+    readonly property string mediaVisualizerMode: effective("mediaVisualizerMode") === "curve" ? "curve" : "bars"
+    readonly property bool mediaLyricsVisible: effective("mediaLyricsVisible")
     readonly property var seekIntervals: [5, 10, 15, 30, 60]
-    readonly property int mediaSeekSeconds: seekIntervals.includes(saved.mediaSeekSeconds) ? saved.mediaSeekSeconds : 10
+    readonly property int mediaSeekSeconds: seekIntervals.includes(effective("mediaSeekSeconds")) ? effective("mediaSeekSeconds") : runtime.appearanceDefaults.mediaSeekSeconds
+
+    function parseOverrideKeys(value: string): var {
+        try {
+            const parsed = JSON.parse(value);
+            return Array.isArray(parsed) ? parsed.filter(key => typeof key === "string") : [];
+        } catch (_) {
+            return [];
+        }
+    }
+
+    function effective(key: string): var {
+        return overrideKeys.includes(key) ? saved[key] : runtime.appearanceDefaults[key];
+    }
+
+    function storeOverride(key: string, value: var): void {
+        saved[key] = value;
+        saved.setValue(key, value);
+        if (!overrideKeys.includes(key)) {
+            saved.userOverrides = JSON.stringify([...overrideKeys, key]);
+            saved.setValue("userOverrides", saved.userOverrides);
+        }
+    }
 
     // Preloaded panels retain their Wayland layers while closed, but an
     // invisible surface must not force compositor blur of the live wallpaper.
@@ -65,26 +89,22 @@ QtObject {
     onOsdGlassExposedChanged: applyGlassRule("linux-desktop-shell-glass-osd", "^linux-desktop-osd$", osdGlassExposed)
     onResizeGlassExposedChanged: applyGlassRule("linux-desktop-shell-glass-resize", "^linux-desktop-resize-controls$", resizeGlassExposed)
 
+    // The override list is the source of preference precedence. Existing INI
+    // values are retained during migration; reset clears only their authority.
+    Component.onCompleted: {
+        if (saved.userOverrides !== "")
+            return;
+        const legacy = Object.keys(runtime.appearanceDefaults).filter(key => saved.value(key, null) !== null);
+        saved.userOverrides = JSON.stringify(legacy);
+        saved.setValue("userOverrides", saved.userOverrides);
+        saved.sync();
+        applyWindowTransparency();
+        applyShellGlass();
+    }
+
     function resetToDeclared(): void {
-        const defaults = {
-            wallpaperSpectrumEnabled: false,
-            wallpaperResizeMode: "fit",
-            wallpaperTargetOutput: "",
-            musicReactiveEnabled: false,
-            barVisible: true,
-            frameVisible: true,
-            windowTransparencyEnabled: false,
-            shellGlassEnabled: false,
-            windowOpacity: 0.82,
-            glassOpacity: 0.70,
-            mediaVisualizerMode: "bars",
-            mediaLyricsVisible: false,
-            mediaSeekSeconds: 10
-        };
-        for (const key of Object.keys(defaults)) {
-            saved[key] = defaults[key];
-            saved.setValue(key, defaults[key]);
-        }
+        saved.userOverrides = "[]";
+        saved.setValue("userOverrides", "[]");
         saved.sync();
         windowOpacityApply.stop();
         applyWindowTransparency();
@@ -95,45 +115,38 @@ QtObject {
         if (output.length === 0 || wallpaperTargetOutput === output)
             return;
         saved.wallpaperTargetOutput = output;
-        saved.setValue("wallpaperTargetOutput", output);
+        storeOverride("wallpaperTargetOutput", output);
         saved.sync();
     }
 
     function toggleWallpaperResizeMode(): void {
         saved.wallpaperResizeMode = wallpaperResizeMode === "fit" ? "crop" : "fit";
-        saved.setValue("wallpaperResizeMode", saved.wallpaperResizeMode);
+        storeOverride("wallpaperResizeMode", saved.wallpaperResizeMode);
         saved.sync();
     }
 
     function toggleWallpaperSpectrum(): void {
-        saved.wallpaperSpectrumEnabled = !saved.wallpaperSpectrumEnabled;
-        saved.setValue("wallpaperSpectrumEnabled", saved.wallpaperSpectrumEnabled);
+        saved.wallpaperSpectrumEnabled = !wallpaperSpectrumEnabled;
+        storeOverride("wallpaperSpectrumEnabled", saved.wallpaperSpectrumEnabled);
         saved.sync();
     }
 
     function toggleMusicReactive(): void {
-        saved.musicReactiveEnabled = !saved.musicReactiveEnabled;
-        saved.setValue("musicReactiveEnabled", saved.musicReactiveEnabled);
+        saved.musicReactiveEnabled = !musicReactiveEnabled;
+        storeOverride("musicReactiveEnabled", saved.musicReactiveEnabled);
         saved.sync();
     }
 
     function toggleFrame(): void {
-        saved.frameVisible = !saved.frameVisible;
-        saved.setValue("frameVisible", saved.frameVisible);
+        saved.frameVisible = !frameVisible;
+        storeOverride("frameVisible", saved.frameVisible);
         saved.sync();
     }
 
     function toggleBar(): void {
-        saved.barVisible = !saved.barVisible;
-        saved.setValue("barVisible", saved.barVisible);
+        saved.barVisible = !barVisible;
+        storeOverride("barVisible", saved.barVisible);
         saved.sync();
-    }
-
-    // Keep the compositor in sync with the persisted state even after a
-    // Quickshell crash or a new Hyprland session.
-    Component.onCompleted: {
-        applyWindowTransparency();
-        applyShellGlass();
     }
 
     // The runtime's tool path arrives from a Nix-generated JSON file. On
@@ -180,8 +193,8 @@ QtObject {
             return;
         saved.windowOpacity = next;
         saved.windowTransparencyEnabled = true;
-        saved.setValue("windowOpacity", next);
-        saved.setValue("windowTransparencyEnabled", true);
+        storeOverride("windowOpacity", next);
+        storeOverride("windowTransparencyEnabled", true);
         saved.sync();
         windowOpacityApply.restart();
     }
@@ -193,8 +206,8 @@ QtObject {
         const wasEnabled = shellGlassEnabled;
         saved.glassOpacity = next;
         saved.shellGlassEnabled = true;
-        saved.setValue("glassOpacity", next);
-        saved.setValue("shellGlassEnabled", true);
+        storeOverride("glassOpacity", next);
+        storeOverride("shellGlassEnabled", true);
         saved.sync();
         // Alpha is a live QML theme binding. Only a newly enabled glass mode
         // needs Hyprland blur rules; dragging never spawns seven processes.
@@ -203,8 +216,8 @@ QtObject {
     }
 
     function toggleWindowTransparency(): void {
-        saved.windowTransparencyEnabled = !saved.windowTransparencyEnabled;
-        saved.setValue("windowTransparencyEnabled", saved.windowTransparencyEnabled);
+        saved.windowTransparencyEnabled = !windowTransparencyEnabled;
+        storeOverride("windowTransparencyEnabled", saved.windowTransparencyEnabled);
         saved.sync();
         applyWindowTransparency();
     }
@@ -231,8 +244,8 @@ QtObject {
     }
 
     function toggleShellGlass(): void {
-        saved.shellGlassEnabled = !saved.shellGlassEnabled;
-        saved.setValue("shellGlassEnabled", saved.shellGlassEnabled);
+        saved.shellGlassEnabled = !shellGlassEnabled;
+        storeOverride("shellGlassEnabled", saved.shellGlassEnabled);
         saved.sync();
         applyShellGlass();
     }
@@ -243,19 +256,19 @@ QtObject {
         if (index === current)
             return;
         saved.mediaSeekSeconds = seekIntervals[index];
-        saved.setValue("mediaSeekSeconds", saved.mediaSeekSeconds);
+        storeOverride("mediaSeekSeconds", saved.mediaSeekSeconds);
         saved.sync();
     }
 
     function toggleMediaVisualizer(): void {
         saved.mediaVisualizerMode = mediaVisualizerMode === "bars" ? "curve" : "bars";
-        saved.setValue("mediaVisualizerMode", saved.mediaVisualizerMode);
+        storeOverride("mediaVisualizerMode", saved.mediaVisualizerMode);
         saved.sync();
     }
 
     function toggleMediaLyrics(): void {
-        saved.mediaLyricsVisible = !saved.mediaLyricsVisible;
-        saved.setValue("mediaLyricsVisible", saved.mediaLyricsVisible);
+        saved.mediaLyricsVisible = !mediaLyricsVisible;
+        storeOverride("mediaLyricsVisible", saved.mediaLyricsVisible);
         saved.sync();
     }
 }

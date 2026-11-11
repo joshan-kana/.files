@@ -8,7 +8,7 @@ QtObject {
 
     required property RuntimeConfig runtime
 
-    readonly property string preferredLocation: Quickshell.env("LINUX_DESKTOP_WEATHER_LOCATION") || ""
+    readonly property string preferredLocation: Quickshell.env("LINUX_DESKTOP_WEATHER_LOCATION") || runtime.weatherLocation
     property string city: ""
     property string status: "Locating…"
     property bool loading: false

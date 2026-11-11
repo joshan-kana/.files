@@ -102,6 +102,406 @@ let
   };
 in
 {
+  scopeOptions.quicklinks = lib.mkOption {
+    type = lib.types.listOf (
+      lib.types.submodule {
+        options = {
+          name = lib.mkOption { type = lib.types.str; };
+          alias = lib.mkOption { type = lib.types.str; };
+          url = lib.mkOption { type = lib.types.str; };
+          keywords = lib.mkOption {
+            type = lib.types.listOf lib.types.str;
+            default = [ ];
+          };
+          browser = lib.mkOption {
+            type = lib.types.str;
+            default = "";
+          };
+        };
+      }
+    );
+    description = "Declarative website search providers for the command palette.";
+    default = [
+      {
+        name = "Search Nix Packages";
+        alias = "np";
+        url = "https://search.nixos.org/packages?query={query}";
+        keywords = [
+          "nixpkgs"
+          "packages"
+        ];
+      }
+      {
+        name = "Search NixOS Options";
+        alias = "no";
+        url = "https://search.nixos.org/options?query={query}";
+        keywords = [
+          "nixos"
+          "options"
+        ];
+      }
+      {
+        name = "Search NixOS Wiki";
+        alias = "nw";
+        url = "https://wiki.nixos.org/w/index.php?search={query}";
+        keywords = [
+          "nixos"
+          "wiki"
+        ];
+      }
+      {
+        name = "Search ArchWiki";
+        alias = "aw";
+        url = "https://wiki.archlinux.org/index.php?search={query}";
+        keywords = [
+          "linux"
+          "arch"
+          "documentation"
+        ];
+      }
+      {
+        name = "Search Linux Man Pages";
+        alias = "man";
+        url = "https://www.mankier.com/search?q={query}";
+        keywords = [
+          "manual"
+          "linux"
+          "manpages"
+        ];
+      }
+      {
+        name = "Search GitHub";
+        alias = "gh";
+        url = "https://github.com/search?q={query}";
+        keywords = [
+          "repositories"
+          "code"
+        ];
+      }
+      {
+        name = "Search GitHub Code";
+        alias = "ghc";
+        url = "https://github.com/search?type=code&q={query}";
+        keywords = [
+          "code"
+          "repositories"
+        ];
+      }
+      {
+        name = "Search GitLab";
+        alias = "gl";
+        url = "https://gitlab.com/search?search={query}";
+        keywords = [
+          "repositories"
+          "code"
+        ];
+      }
+      {
+        name = "Search MDN";
+        alias = "mdn";
+        url = "https://developer.mozilla.org/en-US/search?q={query}";
+        keywords = [
+          "web"
+          "javascript"
+          "css"
+        ];
+      }
+      {
+        name = "Search Stack Overflow";
+        alias = "so";
+        url = "https://stackoverflow.com/search?q={query}";
+        keywords = [
+          "questions"
+          "programming"
+        ];
+      }
+      {
+        name = "Search crates.io";
+        alias = "crates";
+        url = "https://crates.io/search?q={query}";
+        keywords = [
+          "rust"
+          "packages"
+        ];
+      }
+      {
+        name = "Search docs.rs";
+        alias = "docsrs";
+        url = "https://docs.rs/releases/search?query={query}";
+        keywords = [
+          "rust"
+          "documentation"
+        ];
+      }
+      {
+        name = "Search PyPI";
+        alias = "pypi";
+        url = "https://pypi.org/search/?q={query}";
+        keywords = [
+          "python"
+          "packages"
+        ];
+      }
+      {
+        name = "Search npm";
+        alias = "npm";
+        url = "https://www.npmjs.com/search?q={query}";
+        keywords = [
+          "javascript"
+          "packages"
+        ];
+      }
+      {
+        name = "Search Homebrew";
+        alias = "brew";
+        url = "https://formulae.brew.sh/search/?q={query}";
+        keywords = [
+          "macos"
+          "packages"
+        ];
+      }
+      {
+        name = "Search Docker Hub";
+        alias = "docker";
+        url = "https://hub.docker.com/search?q={query}";
+        keywords = [
+          "containers"
+          "images"
+        ];
+      }
+      {
+        name = "Search DuckDuckGo";
+        alias = "ddg";
+        url = "https://duckduckgo.com/?q={query}";
+        keywords = [
+          "web"
+          "search"
+        ];
+      }
+      {
+        name = "Search Google";
+        alias = "gg";
+        url = "https://www.google.com/search?q={query}";
+        keywords = [
+          "web"
+          "search"
+        ];
+      }
+      {
+        name = "Search Bing";
+        alias = "bing";
+        url = "https://www.bing.com/search?q={query}";
+        keywords = [
+          "web"
+          "search"
+        ];
+      }
+      {
+        name = "Search Kagi";
+        alias = "kagi";
+        url = "https://kagi.com/search?q={query}";
+        keywords = [
+          "web"
+          "search"
+        ];
+      }
+      {
+        name = "Search Wikipedia";
+        alias = "wiki";
+        url = "https://en.wikipedia.org/w/index.php?search={query}";
+        keywords = [ "encyclopedia" ];
+      }
+      {
+        name = "Search Wiktionary";
+        alias = "wikt";
+        url = "https://en.wiktionary.org/w/index.php?search={query}";
+        keywords = [ "dictionary" ];
+      }
+      {
+        name = "Search Google Scholar";
+        alias = "scholar";
+        url = "https://scholar.google.com/scholar?q={query}";
+        keywords = [
+          "research"
+          "academic"
+        ];
+      }
+      {
+        name = "Search arXiv";
+        alias = "arxiv";
+        url = "https://arxiv.org/search/?query={query}&searchtype=all";
+        keywords = [
+          "papers"
+          "research"
+        ];
+      }
+      {
+        name = "Search YouTube";
+        alias = "yt";
+        url = "https://www.youtube.com/results?search_query={query}";
+        keywords = [ "videos" ];
+      }
+      {
+        name = "Search Reddit";
+        alias = "rd";
+        url = "https://www.reddit.com/search/?q={query}";
+        keywords = [
+          "community"
+          "discussions"
+        ];
+      }
+      {
+        name = "Search IMDb";
+        alias = "imdb";
+        url = "https://www.imdb.com/find/?q={query}";
+        keywords = [
+          "movies"
+          "television"
+        ];
+      }
+      {
+        name = "Search OpenStreetMap";
+        alias = "osm";
+        url = "https://www.openstreetmap.org/search?query={query}";
+        keywords = [
+          "maps"
+          "places"
+        ];
+      }
+      {
+        name = "Translate with Google";
+        alias = "trans";
+        url = "https://translate.google.com/?sl=auto&tl=en&text={query}&op=translate";
+        keywords = [
+          "translation"
+          "language"
+        ];
+      }
+    ];
+  };
+
+  scopeOptions.fileSearchRoots = lib.mkOption {
+    type = lib.types.listOf lib.types.str;
+    default = [
+      "Documents"
+      "Downloads"
+      "Desktop"
+      "Projects"
+      "repos"
+      "src"
+      "Uni"
+    ];
+    description = "Search roots relative to the home directory, or absolute paths, for the private palette index.";
+  };
+
+  scopeOptions.snippets = lib.mkOption {
+    type = lib.types.listOf (
+      lib.types.submodule {
+        options = {
+          name = lib.mkOption { type = lib.types.str; };
+          text = lib.mkOption { type = lib.types.str; };
+          keywords = lib.mkOption {
+            type = lib.types.listOf lib.types.str;
+            default = [ ];
+          };
+        };
+      }
+    );
+    default = [ ];
+    description = "Non-secret default snippets. User-owned snippets.json overrides these at runtime.";
+  };
+
+  scopeOptions.appearance = lib.mkOption {
+    type = lib.types.submodule {
+      options = {
+        wallpaperSpectrumEnabled = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+        };
+        wallpaperResizeMode = lib.mkOption {
+          type = lib.types.enum [
+            "fit"
+            "crop"
+          ];
+          default = "fit";
+        };
+        wallpaperTargetOutput = lib.mkOption {
+          type = lib.types.str;
+          default = "";
+        };
+        musicReactiveEnabled = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+        };
+        barVisible = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+        };
+        frameVisible = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+        };
+        windowTransparencyEnabled = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+        };
+        shellGlassEnabled = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+        };
+        windowOpacity = lib.mkOption {
+          type = lib.types.float;
+          default = 0.82;
+        };
+        glassOpacity = lib.mkOption {
+          type = lib.types.float;
+          default = 0.70;
+        };
+        mediaVisualizerMode = lib.mkOption {
+          type = lib.types.enum [
+            "bars"
+            "curve"
+          ];
+          default = "bars";
+        };
+        mediaLyricsVisible = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+        };
+        mediaSeekSeconds = lib.mkOption {
+          type = lib.types.enum [
+            5
+            10
+            15
+            30
+            60
+          ];
+          default = 10;
+        };
+      };
+    };
+    default = { };
+    description = "Default desktop appearance settings; explicit user selections take precedence.";
+  };
+
+  scopeOptions.captureFreezeEnabled = lib.mkOption {
+    type = lib.types.bool;
+    default = true;
+    description = "Default frozen screenshot capture mode.";
+  };
+
+  scopeOptions.notificationsSilent = lib.mkOption {
+    type = lib.types.bool;
+    default = false;
+    description = "Default quiet notifications mode.";
+  };
+
+  scopeOptions.weatherLocation = lib.mkOption {
+    type = lib.types.str;
+    default = "";
+    description = "Optional weather city or latitude,longitude. Empty uses IP-based approximate lookup.";
+  };
+
   scopeOptions.animationsEnabled = lib.mkOption {
     type = lib.types.bool;
     default = true;
@@ -1073,6 +1473,15 @@ in
         accessibility.textScale = scopeConfig.textScale;
         motion.animationsEnabled = scopeConfig.animationsEnabled;
         session.restoreWindowsOnExit = scopeConfig.restoreWindowsOnExit;
+        palette = {
+          inherit (scopeConfig) quicklinks;
+          inherit (scopeConfig) snippets;
+          fileRoots = scopeConfig.fileSearchRoots;
+        };
+        inherit (scopeConfig) appearance;
+        capture.freezeEnabled = scopeConfig.captureFreezeEnabled;
+        notifications.silent = scopeConfig.notificationsSilent;
+        weather.location = scopeConfig.weatherLocation;
         visual = shellVisual;
         keybindings = cheatsheetBindings;
         shortcutHints.launcherSlots = launcherSlotsHint;
