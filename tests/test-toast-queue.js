@@ -106,3 +106,54 @@ test("reduced visible capacity preserves an outgoing slot without overlap", () =
   );
   assert.equal(next[2].evicted, true);
 });
+
+const byOutput = (items, capacities = {}, limit = 3, now = 1000) =>
+  Array.from(context.layoutByOutput(items, capacities, limit, now, 220));
+
+test("two outputs keep independent full toast stacks without teleporting or duplicating", () => {
+  const items = [
+    { ...sample(0), outputName: "HEADLESS-1" },
+    { ...sample(0), outputName: "Virtual-1" },
+    { ...sample(0), outputName: "HEADLESS-1" },
+    { ...sample(0), outputName: "Virtual-1" },
+    { ...sample(0), outputName: "Virtual-1" },
+  ];
+  const result = byOutput(items);
+  assert.deepEqual(
+    result.map((x) => [x.phase, x.slot]),
+    [
+      ["visible", 0],
+      ["visible", 0],
+      ["visible", 1],
+      ["visible", 1],
+      ["visible", 2],
+    ],
+  );
+  const eviction = byOutput([
+    { ...sample(0), outputName: "HEADLESS-1" },
+    ...items,
+  ]);
+  assert.equal(eviction[0].slot, 0);
+  assert.equal(eviction[3].slot, 2);
+  assert.equal(eviction[5].phase, "visible");
+});
+
+test("constrained secondary output capacity does not reduce primary capacity", () => {
+  const items = [
+    { ...sample(0), outputName: "HEADLESS-1" },
+    { ...sample(0), outputName: "HEADLESS-1" },
+    { ...sample(0), outputName: "HEADLESS-1" },
+    { ...sample(0), outputName: "Virtual-1" },
+    { ...sample(0), outputName: "Virtual-1" },
+    { ...sample(0), outputName: "Virtual-1" },
+  ];
+  const result = byOutput(items, { "HEADLESS-1": 2, "Virtual-1": 3 });
+  assert.deepEqual(
+    result.slice(0, 3).map((x) => x.phase),
+    ["visible", "visible", "closing"],
+  );
+  assert.deepEqual(
+    result.slice(3).map((x) => x.phase),
+    ["visible", "visible", "visible"],
+  );
+});

@@ -25,3 +25,36 @@ function layout(entries, capacity, now, exitDuration) {
     };
   });
 }
+
+// The notification server and queue remain singular. A compositor output
+// owns only its visible three-card layout; moving keyboard focus must never
+// transport already displayed alerts to another monitor.
+function layoutByOutput(
+  entries,
+  capacities,
+  defaultCapacity,
+  now,
+  exitDuration,
+) {
+  const groups = new Map();
+  entries.forEach((entry, index) => {
+    const output = String(entry.outputName || "");
+    if (!groups.has(output)) groups.set(output, []);
+    groups.get(output).push({ entry, index });
+  });
+  const result = Array(entries.length);
+  for (const [output, group] of groups) {
+    const capacity =
+      capacities && capacities[output] ? capacities[output] : defaultCapacity;
+    const arranged = layout(
+      group.map(({ entry }) => entry),
+      capacity,
+      now,
+      exitDuration,
+    );
+    group.forEach(({ index }, i) => {
+      result[index] = arranged[i];
+    });
+  }
+  return result;
+}
