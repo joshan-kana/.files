@@ -109,7 +109,12 @@ test("Indexer and desktop defaults use the generated runtime configuration", () 
     nix,
     /capture\.freezeEnabled = scopeConfig\.captureFreezeEnabled/,
   );
-  assert.match(nix, /notifications\.silent = scopeConfig\.notificationsSilent/);
+  assert.match(nix, /silent = scopeConfig\.notificationsSilent/);
+  assert.match(nix, /presentation = scopeConfig\.notificationsPresentation/);
+  assert.match(
+    nix,
+    /historyEnabled = scopeConfig\.notificationsHistoryEnabled/,
+  );
 });
 
 test("User-owned snippets remain higher precedence than Nix defaults", () => {

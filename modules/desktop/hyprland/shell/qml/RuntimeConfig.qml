@@ -78,6 +78,8 @@ QtObject {
     readonly property var appearanceDefaults: root.configData.appearance
     readonly property bool captureFreezeEnabled: root.configData.capture.freezeEnabled
     readonly property bool notificationSilent: root.configData.notifications.silent
+    readonly property bool notificationPresentation: root.configData.notifications.presentation
+    readonly property bool notificationHistoryEnabled: root.configData.notifications.historyEnabled
     readonly property string weatherLocation: root.configData.weather.location
 
     function shortcut(id) {
@@ -198,6 +200,8 @@ QtObject {
 
             property JsonObject notifications: JsonObject {
                 property bool silent: false
+                property bool presentation: false
+                property bool historyEnabled: true
             }
 
             property JsonObject weather: JsonObject {

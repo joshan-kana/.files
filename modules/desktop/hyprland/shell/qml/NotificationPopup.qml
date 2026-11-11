@@ -52,7 +52,7 @@ PanelWindow {
         }
         return result;
     }
-    readonly property bool frameConnected: frameEnabled && !(Hyprland.monitorFor(screen)?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false)
+    readonly property bool frameConnected: frameEnabled && !notificationState.locked && !(Hyprland.monitorFor(screen)?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false)
     // Only overlapping surfaces need an independent fill. The shared frame
     // continues to own the toast's squircle when the hub is merely nearby.
     readonly property real toastLeft: screen ? screen.width - width - margins.right : 0
@@ -72,7 +72,7 @@ PanelWindow {
     PopupSurfaceLifecycle {
         id: surfaceLifecycle
         popup: popup
-        exposed: popup.notificationState.popupVisible
+        exposed: popup.notificationState.popupVisible && !popup.notificationState.locked
         // Only actual cards accept input, not the transparent reserved slots.
         interactiveItem: toastInputArea
     }
@@ -332,8 +332,9 @@ PanelWindow {
                     Text {
                         width: Math.max(1, parent.width - (preview.visible ? preview.width + popup.theme.spacing2 : 0))
                         maximumLineCount: toast.explicitActions.length > 0 ? 2 : 3
-                        text: toast.notification ? toast.notification.body : ""
-                        textFormat: Text.PlainText
+                        text: popup.notificationState.bodyMarkup(toast.notification)
+                        textFormat: Text.StyledText
+                        onLinkActivated: link => popup.notificationState.openBodyLink(link)
                         visible: text.length > 0
                         color: popup.theme.text
                         opacity: 0.84
@@ -380,6 +381,7 @@ PanelWindow {
                             width: Math.min(135, Math.max(78, implicitWidth))
                             height: 31
                             title: modelData.text || "Action"
+                            iconName: popup.notificationState.safeActionIcon(toast.notification, modelData)
                             onActivated: popup.notificationState.invokeAction(toast.notification, index)
                         }
                     }

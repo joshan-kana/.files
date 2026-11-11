@@ -30,7 +30,7 @@ test("lock launcher and desktop shell share the same native visuals import", () 
 });
 test("session widget and global keybind use the same lock command", () => {
   assert.match(nix, /lockSession = lib\.getExe lockCommand/);
-  assert.match(nix, /exec systemctl --user start linux-desktop-lock\.service/);
+  assert.match(nix, /systemctl --user start linux-desktop-lock\.service/);
   assert.match(session, /Quickshell\.execDetached\(\[runtime\.lockSession\]\)/);
   assert.match(
     actions,
@@ -46,7 +46,7 @@ test("Home Manager switches preserve an active session lock without starting a n
   assert.match(lock[1], /Restart = "no"/);
   assert.doesNotMatch(lock[1], /X-RestartIfChanged/);
   assert.doesNotMatch(lock[1], /Install\.WantedBy/);
-  assert.match(nix, /exec systemctl --user start linux-desktop-lock\.service/);
+  assert.match(nix, /systemctl --user start linux-desktop-lock\.service/);
 });
 
 test("the lock service cannot retire during asynchronous acquisition or a rebuild", () => {
@@ -56,7 +56,10 @@ test("the lock service cannot retire during asynchronous acquisition or a rebuil
   assert.match(lock[1], /X-SwitchMethod = "keep-old"/);
   assert.match(lock[1], /Restart = "no"/);
   assert.doesNotMatch(lock[1], /Install\.WantedBy|X-RestartIfChanged/);
-  assert.match(qml, /armed = true;\s*lockScreen\.lockSession\(\)/);
+  assert.match(
+    qml,
+    /armed = true;\s*publishLockState\("requested"\);\s*lockScreen\.lockSession\(\)/,
+  );
   assert.doesNotMatch(qml, /if \(!lockScreen\.locked\)\s*stopLockService\(\)/);
   assert.match(
     qml,
@@ -286,4 +289,25 @@ test("Escape cancels an armed Session action before backing out", () => {
     cancellation,
     /execute\(|closeView\(|sessionCommand|execDetached|backFromDetail/,
   );
+});
+
+test("lock request is published before compositor acquisition, and unlock requires authentication", () => {
+  const shell = fs.readFileSync(
+    path.join(root, "qml/NotificationState.qml"),
+    "utf8",
+  );
+  assert.match(nix, /printf 'requested\\n' > "\$temp"/);
+  assert.match(
+    qml,
+    /publishLockState\("requested"\);\s*lockScreen\.lockSession\(\)/,
+  );
+  assert.match(
+    qml,
+    /if \(root\.authenticated && !lockScreen\.locked\) \{\s*root\.publishLockState\("unlocked"\)/,
+  );
+  assert.match(
+    shell,
+    /readonly property bool locked: \["requested", "locked"\]\.includes\(lockState\.text\(\)\.trim\(\)\)/,
+  );
+  assert.match(shell, /onLockedChanged: \{\s*if \(locked\)\s*hidePopup\(\)/);
 });

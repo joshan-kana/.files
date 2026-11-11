@@ -295,6 +295,37 @@ FocusScope {
                         theme: center.theme
                         motion: center.motion
                         compact: true
+                        active: center.notificationState.presentation
+                        activeColor: center.theme.warning
+                        width: center.theme.minActionTarget
+                        height: center.theme.minActionTarget
+                        iconOnly: true
+                        icon: center.notificationState.presentation ? "󰍺" : "󰍹"
+                        title: center.notificationState.presentation ? "Exit presentation mode" : "Presentation mode"
+                        shortcut: "P"
+                        iconHint: true
+                        onActivated: center.notificationState.togglePresentation()
+                    }
+                    ShellAction {
+                        runtime: center.runtime
+                        theme: center.theme
+                        motion: center.motion
+                        compact: true
+                        active: center.notificationState.historyEnabled
+                        width: center.theme.minActionTarget
+                        height: center.theme.minActionTarget
+                        iconOnly: true
+                        icon: center.notificationState.historyEnabled ? "󰋚" : "󰗨"
+                        title: center.notificationState.historyEnabled ? "Disable saved history" : "Enable saved history"
+                        shortcut: "SHIFT+H"
+                        iconHint: true
+                        onActivated: center.notificationState.toggleHistory()
+                    }
+                    ShellAction {
+                        runtime: center.runtime
+                        theme: center.theme
+                        motion: center.motion
+                        compact: true
                         enabled: center.notificationState.count > 0
                         width: center.theme.minActionTarget
                         height: center.theme.minActionTarget
@@ -307,6 +338,17 @@ FocusScope {
                     }
                 }
             }
+        }
+
+        Text {
+            anchors {
+                top: header.bottom
+                horizontalCenter: parent.horizontalCenter
+            }
+            text: "Couldn't save notification history"
+            color: center.theme.readableRoleColor("critical")
+            visible: center.notificationState.persistenceError.length > 0
+            Accessible.role: Accessible.AlertMessage
         }
 
         ShellSurface {
@@ -550,7 +592,15 @@ FocusScope {
             focus: center.engaged
 
             Keys.onPressed: event => {
-                if (event.key === Qt.Key_Escape) {
+                if ((event.modifiers & Qt.AltModifier) && [Qt.Key_P, Qt.Key_H, Qt.Key_S].includes(event.key)) {
+                    const notification = center.selectedNotification();
+                    if (notification && center.expandedGroupKey === center.selectedGroup().key) {
+                        const name = event.key === Qt.Key_P ? "popups" : event.key === Qt.Key_H ? "history" : "silent";
+                        const prefs = center.notificationState.applicationPreferences(notification);
+                        center.notificationState.setApplicationPreference(notification, name, name === "silent" ? prefs.silent !== true : prefs[name] === false);
+                        event.accepted = true;
+                    }
+                } else if (event.key === Qt.Key_Escape) {
                     center.closeRequested();
                     event.accepted = true;
                 } else if (event.key === Qt.Key_Up || event.key === Qt.Key_K) {
@@ -561,6 +611,12 @@ FocusScope {
                     event.accepted = true;
                 } else if (event.key === Qt.Key_Left || event.key === Qt.Key_H || event.key === Qt.Key_Right || event.key === Qt.Key_L) {
                     center.selectGroup((event.key === Qt.Key_Left || event.key === Qt.Key_H) ? -1 : 1);
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_H && (event.modifiers & Qt.ShiftModifier)) {
+                    center.notificationState.toggleHistory();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_P) {
+                    center.notificationState.togglePresentation();
                     event.accepted = true;
                 } else if (event.key === Qt.Key_M && (event.modifiers & Qt.ShiftModifier)) {
                     center.notificationState.markAllRead();
