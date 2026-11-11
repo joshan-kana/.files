@@ -13,6 +13,9 @@ _:
             patches = (old.patches or [ ]) ++ [
               ../../patches/webhook/max-body-size.patch
             ];
+            passthru = (old.passthru or { }) // {
+              autoUpdate = false;
+            };
           });
     })
   ];
