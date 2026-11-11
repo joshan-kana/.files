@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "DesktopIcons.js" as DesktopIcons
 import Quickshell
 import Quickshell.Io
 
@@ -261,7 +262,8 @@ Item {
             runtime: panel.runtime
             theme: panel.theme
             motion: panel.motion
-            glyph: "▧"
+            glyph: DesktopIcons.glyphFor("wallpaper")
+            glyphFont: "Symbols Nerd Font"
             glyphColor: panel.theme.roleColor("wallpaper")
             eyebrow: "Appearance / wallpapers"
             title: "Wallpaper library"

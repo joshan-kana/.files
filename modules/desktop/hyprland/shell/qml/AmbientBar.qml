@@ -599,7 +599,7 @@ Variants {
                 onVisibleChanged: Qt.callLater(bar.publishOrigins)
 
                 // Notification history remains reachable through Activity when space is tight.
-                visible: barContent.width - (clockIsland.x + clockIsland.width) >= systemIsland.width + (recordingIsland.visible ? recordingIsland.width + bars.theme.spacing3 : 0) + width + bars.theme.spacing3 * 2
+                visible: !bar.notificationState.locked && barContent.width - (clockIsland.x + clockIsland.width) >= systemIsland.width + (recordingIsland.visible ? recordingIsland.width + bars.theme.spacing3 : 0) + width + bars.theme.spacing3 * 2
                 width: notificationRow.implicitWidth + bars.theme.spacing3 * 2
                 height: bars.theme.barIslandHeight
                 anchors {

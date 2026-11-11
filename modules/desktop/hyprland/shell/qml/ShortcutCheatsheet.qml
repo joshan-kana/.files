@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "DesktopIcons.js" as DesktopIcons
 
 Item {
     id: window
@@ -210,7 +211,7 @@ Item {
                     theme: window.theme
                     motion: window.motion
                     quiet: true
-                    glyph: "󰌌"
+                    glyph: DesktopIcons.glyphFor("shortcuts")
                     glyphFont: "Symbols Nerd Font"
                     glyphColor: window.theme.roleColor("workspace")
                     title: "Shortcuts"

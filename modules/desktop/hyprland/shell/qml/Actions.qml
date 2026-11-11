@@ -353,6 +353,10 @@ QtObject {
             showResources();
         else if (commandId === "theme.toggle")
             showTheme();
+        else if (commandId === "wallpaper.toggle")
+            showWallpaper();
+        else if (commandId === "captures.library")
+            showCaptures();
         else if (commandId === "session.toggle")
             showSession();
         else if (commandId === "notifications.toggle")

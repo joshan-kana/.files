@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "DesktopIcons.js" as DesktopIcons
 
 FocusScope {
     id: mixer
@@ -207,7 +208,7 @@ FocusScope {
                 runtime: mixer.runtime
                 theme: mixer.theme
                 motion: mixer.motion
-                glyph: "♫"
+                glyph: DesktopIcons.glyphFor("audioMixer")
                 glyphColor: mixer.theme.roleColor("audio")
                 eyebrow: "Audio / " + mixer.streams.length + (mixer.streams.length === 1 ? " active channel" : " active channels")
                 title: "Audio mixer"

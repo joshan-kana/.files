@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "DesktopIcons.js" as DesktopIcons
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Io
@@ -170,6 +171,8 @@ Item {
             name: command.name,
             genericName: command.description || "Desktop action",
             icon: command.icon || "system-run",
+            glyph: command.glyph || "",
+            glyphFont: command.glyph ? "Symbols Nerd Font" : "",
             key: palette.runtime.shortcut(command.id),
             commandId: command.id,
             parameterMode: command.parameterMode || "",
@@ -1528,6 +1531,7 @@ Item {
                                 anchors.centerIn: parent
                                 visible: !!modelData.glyph
                                 text: modelData.glyph || ""
+                                font.family: modelData.glyphFont || ""
                                 color: theme.textStrong
                                 font.pixelSize: theme.fontSize(24)
                             }
