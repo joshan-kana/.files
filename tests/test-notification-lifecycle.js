@@ -189,3 +189,11 @@ test("only safe theme icon names, never arbitrary sender paths, survive restart"
     "dialog-information",
   );
 });
+
+test("Qt Quick Text link activation uses its supported onLinkActivated signal", () => {
+  for (const file of ["NotificationPopup.qml", "NotificationCard.qml"]) {
+    const source = fs.readFileSync(path.join(root, file), "utf8");
+    assert.match(source, /textFormat: Text.StyledText\s+onLinkActivated:/);
+    assert.doesNotMatch(source, /textInteractionFlags:/);
+  }
+});
