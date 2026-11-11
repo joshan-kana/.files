@@ -12,6 +12,8 @@ FocusScope {
 
     property bool engaged: false
     property bool replyEditing: false
+    property var replyOwner: null
+    property var replyDrafts: new Map()
     property bool restoringSelection: false
     property var selectedNotificationAnchor: null
     property int selectedIndex: 0
@@ -50,13 +52,20 @@ FocusScope {
     onEngagedChanged: {
         if (engaged)
             Qt.callLater(focusKeyboard);
-        else
+        else {
             replyEditing = false;
+            replyOwner = null;
+        }
     }
 
     onGroupsChanged: {
         if (!groups)
             return;
+        const activeNotifications = new Set(items);
+        for (const notification of replyDrafts.keys()) {
+            if (!activeNotifications.has(notification))
+                replyDrafts.delete(notification);
+        }
         const preserved = NotificationSemantics.findNotification(groups, selectedNotificationAnchor);
         restoringSelection = true;
         selectedIndex = preserved ? preserved.groupIndex : Math.max(0, Math.min(selectedIndex, Math.max(0, groups.length - 1)));
@@ -66,15 +75,34 @@ FocusScope {
             expandedGroupKey = "";
         selectedNotificationAnchor = selectedNotification();
         restoringSelection = false;
-        // A new notification must not take the keyboard away from a reply.
-        if (engaged && !replyEditing)
+        Qt.callLater(ensureSelectedVisible);
+        // Recreated group delegates must recover the draft and keyboard focus
+        // of the notification already being answered.
+        if (engaged && replyOwner && NotificationSemantics.findNotification(groups, replyOwner)) {
+            Qt.callLater(() => {
+                if (engaged && replyOwner)
+                    focusReply();
+            });
+        } else if (engaged && !replyEditing) {
             Qt.callLater(() => {
                 if (!replyEditing)
                     focusKeyboard();
             });
+        }
     }
 
     onSelectedIndexChanged: rememberSelection()
+
+    function replyDraftFor(notification): string {
+        return replyDrafts.get(notification) || "";
+    }
+
+    function storeReplyDraft(notification, draft: string): void {
+        if (draft)
+            replyDrafts.set(notification, draft);
+        else
+            replyDrafts.delete(notification);
+    }
 
     function focusKeyboard(): void {
         if (engaged)
@@ -459,6 +487,7 @@ FocusScope {
                             required property int index
                             width: groupColumn.width
                             notification: modelData
+                            replyDraft: center.replyDraftFor(modelData)
                             read: center.notificationState.isRead(modelData)
                             runtime: center.runtime
                             theme: center.theme
@@ -482,9 +511,13 @@ FocusScope {
                             }
                             onActionRequested: action => center.notificationState.invokeAction(modelData, action)
                             onReplyRequested: message => {
+                                center.storeReplyDraft(modelData, "");
+                                center.replyOwner = null;
+                                center.replyEditing = false;
                                 center.notificationState.sendReply(modelData, message);
                                 center.focusKeyboard();
                             }
+                            onReplyTextEdited: message => center.storeReplyDraft(modelData, message)
                             onReplyFocusRequested: {
                                 center.selectedIndex = groupItem.index;
                                 center.selectedMemberIndex = index;
@@ -492,12 +525,16 @@ FocusScope {
                                 center.focusReply();
                             }
                             onReplyFocusChanged: focused => {
-                                if (focused)
+                                if (focused) {
+                                    center.replyOwner = modelData;
                                     center.replyEditing = true;
-                                else if (center.selectedNotification() === modelData)
-                                    center.replyEditing = false;
+                                }
                             }
-                            onReplyFinished: center.focusKeyboard()
+                            onReplyFinished: {
+                                center.replyOwner = null;
+                                center.replyEditing = false;
+                                center.focusKeyboard();
+                            }
                             onReadToggled: center.notificationState.toggleRead(modelData)
                             onDismissRequested: center.dismissNotification(modelData)
                         }

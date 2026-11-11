@@ -16,6 +16,7 @@ PanelWindow {
 
     property bool frameEnabled: false
     property bool hubVisible: false
+    property var hubBounds: null
     readonly property real dockTop: frameConnected ? theme.barHeight + theme.spacing3 : theme.panelTopOffset
     readonly property int cardHeight: Math.max(92, Math.min(170, Math.floor((screen ? screen.height : 1440) - dockTop - (frameConnected ? theme.frameThickness : theme.spacing3))))
     readonly property int cardGap: theme.spacing2 + theme.spacing1
@@ -51,11 +52,14 @@ PanelWindow {
         return result;
     }
     readonly property bool frameConnected: frameEnabled && !(Hyprland.monitorFor(screen)?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false)
-    // The shared frame is below the Overlay hub. While they overlap, draw
-    // self-contained toast surfaces instead of transparent frame attachments.
-    readonly property bool frameAttached: frameConnected && !hubVisible
+    // Only overlapping surfaces need an independent fill. The shared frame
+    // continues to own the toast's squircle when the hub is merely nearby.
+    readonly property real toastLeft: screen ? screen.width - width - margins.right : 0
+    readonly property real occupiedHeight: interactiveToastSlots * cardHeight + Math.max(0, interactiveToastSlots - 1) * cardGap
+    readonly property bool hubOverlapsToasts: hubVisible && hubBounds && hubBounds.visible !== false && hubBounds.x < toastLeft + width && hubBounds.x + hubBounds.width > toastLeft && hubBounds.y < dockTop + occupiedHeight && hubBounds.y + hubBounds.height > dockTop
+    readonly property bool frameAttached: frameConnected && !hubOverlapsToasts
     readonly property var frameBounds: ({
-            x: screen ? screen.width - width - margins.right : 0,
+            x: toastLeft,
             y: margins.top,
             width: width,
             height: height,
@@ -177,11 +181,11 @@ PanelWindow {
             theme: popup.theme
             motion: popup.motion
             surfaceLayer: ShellSurface.Pane
-            cornerRadius: theme.radiusPanel
+            cornerRadius: popup.theme.radiusMedium
             frameConnected: popup.frameAttached
             // Preserve readable toast backing above the hub, even when
             // the user's general shell-glass preference is translucent.
-            glassAllowed: !popup.hubVisible
+            glassAllowed: !popup.hubOverlapsToasts
             fillColor: popup.theme.paneBase
             borderColor: toast.notification && toast.notification.urgency === NotificationUrgency.Critical ? Qt.rgba(popup.theme.critical.r, popup.theme.critical.g, popup.theme.critical.b, 0.58) : popup.theme.subtleBorder
             borderWidth: popup.frameAttached ? 0 : popup.theme.borderFocus
@@ -216,7 +220,7 @@ PanelWindow {
                 id: toastPress
                 theme: popup.theme
                 motion: popup.motion
-                cornerRadius: popup.theme.radiusPanel
+                cornerRadius: toast.cornerRadius
                 stateColor: popup.theme.roleColor("notifications")
                 // The shared frame draws this exact attached contour. A
                 // second rectangular/pill overlay would double-highlight it.

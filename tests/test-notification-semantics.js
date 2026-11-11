@@ -173,3 +173,25 @@ test("new notification groups do not move the selected action or steal reply foc
   assert.match(center, /engaged && !replyEditing/);
   assert.match(center, /onSelectedIndexChanged: rememberSelection\(\)/);
 });
+
+test("reply draft and focus follow the notification across incoming alerts", () => {
+  const center = qml("NotificationContent.qml");
+  const card = qml("NotificationCard.qml");
+  assert.match(center, /property var replyDrafts: new Map\(\)/);
+  assert.match(center, /property var replyOwner: null/);
+  assert.match(center, /replyDraft: center\.replyDraftFor\(modelData\)/);
+  assert.match(
+    center,
+    /onReplyTextEdited: message => center\.storeReplyDraft\(modelData, message\)/,
+  );
+  assert.match(
+    center,
+    /if \(engaged && replyOwner && NotificationSemantics\.findNotification\(groups, replyOwner\)\)/,
+  );
+  assert.match(card, /text: card\.replyDraft/);
+  assert.match(card, /onTextEdited: card\.replyTextEdited\(text\)/);
+  assert.doesNotMatch(
+    center,
+    /else if \(center\.selectedNotification\(\) === modelData\)\s+center\.replyEditing = false/,
+  );
+});

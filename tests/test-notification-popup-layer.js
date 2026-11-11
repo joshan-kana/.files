@@ -28,12 +28,16 @@ test("notification toasts render above the Controls hub without changing popup g
   );
   assert.match(
     popup,
-    /readonly property bool frameAttached: frameConnected && !hubVisible/,
+    /readonly property bool frameAttached: frameConnected && !hubOverlapsToasts/,
   );
   assert.match(
     popup,
     /visible: frameAttached && toast\.attachmentProgress > 0\.001/,
   );
   assert.match(popup, /frameConnected: popup\.frameAttached/);
-  assert.match(popup, /glassAllowed: !popup\.hubVisible/);
+  assert.match(popup, /cornerRadius: popup\.theme\.radiusMedium/);
+  assert.match(popup, /cornerRadius: toast\.cornerRadius/);
+  assert.match(popup, /readonly property bool hubOverlapsToasts:/);
+  assert.match(root, /hubBounds: expansionHost\.frameBounds/);
+  assert.match(popup, /glassAllowed: !popup\.hubOverlapsToasts/);
 });

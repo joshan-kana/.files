@@ -16,12 +16,14 @@ SquircleSurface {
     property bool expanded: false
     property int groupCount: 1
     property bool dismissing: false
+    property string replyDraft: ""
     readonly property var safeActions: notificationState.explicitActions(notification)
 
     signal activated
     signal defaultRequested
     signal actionRequested(int index)
     signal replyRequested(string message)
+    signal replyTextEdited(string message)
     signal replyFocusChanged(bool focused)
     signal replyFocusRequested
     signal replyFinished
@@ -334,6 +336,8 @@ SquircleSurface {
                     font.family: card.runtime.fontMono
                     font.pixelSize: card.theme.fontSize(11)
                     clip: true
+                    text: card.replyDraft
+                    onTextEdited: card.replyTextEdited(text)
                     onActiveFocusChanged: card.replyFocusChanged(activeFocus)
                     Keys.onReturnPressed: {
                         card.sendReply();

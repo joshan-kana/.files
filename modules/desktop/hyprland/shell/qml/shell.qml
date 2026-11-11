@@ -449,6 +449,7 @@ ShellRoot {
         motion: motion
         frameEnabled: appearance.frameVisible
         hubVisible: (expansionState.hasCurrent || expansionHost.closing) && expansionHost.screen === screen
+        hubBounds: expansionHost.frameBounds
         onCenterRequested: actions.showNotifications()
     }
 
