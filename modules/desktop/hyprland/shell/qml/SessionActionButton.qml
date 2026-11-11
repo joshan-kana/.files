@@ -89,23 +89,17 @@ Item {
             onEntered: button.hovered()
             onActivated: button.activated()
         }
-    }
 
-    // The surface morphs from a squircle to a circle on focus/hover.
-    // Keep the keycap outside that shape so its corners never disappear.
-    KeyHint {
-        anchors {
-            top: parent.top
-            right: parent.right
-            topMargin: button.theme.spacing2
-            rightMargin: button.theme.spacing2
+        TileKeyHint {
+            runtime: button.runtime
+            theme: button.theme
+            motion: button.motion
+            circular: button.selected || pointer.pointerHovered
+            shortcut: button.shortcut
+            compact: true
+            emphasized: button.selected
+            emphasisColor: button.accentColor
         }
-        runtime: button.runtime
-        theme: button.theme
-        shortcut: button.shortcut
-        compact: true
-        emphasized: button.selected
-        emphasisColor: button.accentColor
     }
 
     Text {

@@ -36,6 +36,8 @@ Loader {
     readonly property bool busy: !!(panel && panel.busy)
     readonly property bool editorRequestRunning: !!(panel && panel.editorRequestRunning)
     readonly property bool statusError: !!(panel && panel.statusError)
+    readonly property string armedAction: panel && typeof panel.armedAction === "string" ? panel.armedAction : ""
+    readonly property string actionShortcutLegend: panel && typeof panel.actionShortcutLegend === "string" ? panel.actionShortcutLegend : ""
     readonly property bool passwordPrompt: !!(panel && panel.passwordPrompt)
     readonly property bool detailView: !!(panel && panel.detailView)
     readonly property bool savedView: !!(panel && panel.savedView)
