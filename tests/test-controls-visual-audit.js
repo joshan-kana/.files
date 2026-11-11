@@ -681,10 +681,10 @@ test("slider mode retains Tab, J/K selection and H/L edits without duplicate leg
     /shortcut: setting.keyboardSelected \? "H\/L" : setting.toggleShortcut/,
   );
   for (const tile of [opacity, night]) {
-    assert.equal((tile.match(/KeyHint \{/g) || []).length, 1);
+    assert.equal((tile.match(/TileKeyHint \{/g) || []).length, 1);
     assert.match(
       tile,
-      /KeyHint \{[\s\S]*?right: parent.right[\s\S]*?shortcut: setting.keyboardSelected/,
+      /TileKeyHint \{[\s\S]*?shortcut: setting.keyboardSelected/,
     );
     assert.doesNotMatch(tile, /id: adjustHint|adjustHint\.implicitWidth/);
     assert.match(tile, /ShellSlider \{\s*width: parent.width/);
@@ -699,24 +699,34 @@ test("slider mode retains Tab, J/K selection and H/L edits without duplicate leg
   );
 });
 
-test("Visual Modes keycaps share one tile-relative top-right baseline", () => {
+test("Visual Modes tile keycaps use one shared corner and motion convention", () => {
+  const shared = read("TileKeyHint.qml");
+  assert.match(shared, /property real cornerInset: theme\.spacing2/);
+  assert.match(
+    shared,
+    /property real animatedInset: circular \? circleInset : cornerInset/,
+  );
+  assert.match(shared, /Behavior on animatedInset \{\s*Anim \{/);
+  assert.match(shared, /motion: hint\.motion\s*type: Anim\.FastSpatial/);
+
   for (const [file, owner, tail] of [
     ["QuickSettingChip.qml", "chip", "MarqueeText {"],
     ["OpacitySetting.qml", "setting", "ShellSlider {"],
     ["AdjustableSetting.qml", "setting", "ShellSlider {"],
   ]) {
     const source = read(file);
-    const hintStart = source.indexOf("KeyHint {");
+    const hintStart = source.indexOf("TileKeyHint {");
     assert.ok(
       hintStart > source.indexOf(tail),
       `${file}: keycap must not be nested in the content row`,
     );
-    assert.equal((source.match(/KeyHint \{/g) || []).length, 1);
+    assert.equal((source.match(/TileKeyHint \{/g) || []).length, 1);
     const hint = source.slice(hintStart);
-    assert.match(hint, /anchors \{\s*top: parent\.top\s*right: parent\.right/);
-    assert.ok(hint.includes(`topMargin: ${owner}.theme.spacing2`));
-    assert.ok(hint.includes(`rightMargin: ${owner}.theme.spacing2`));
+    assert.match(hint, new RegExp(`motion: ${owner}\\.motion`));
     assert.match(hint, /compact: true/);
-    assert.doesNotMatch(hint, /verticalCenter: parent\.verticalCenter/);
+    assert.doesNotMatch(
+      hint,
+      /verticalCenter: parent\.verticalCenter|topMargin:|rightMargin:/,
+    );
   }
 });
