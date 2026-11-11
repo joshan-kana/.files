@@ -9,7 +9,9 @@ Item {
     required property Motion motion
 
     property string icon: ""
+    property bool lockGlyph: false
     property string label: ""
+    property string shortcut: ""
     property bool selected: false
     property bool active: false
     property bool armed: false
@@ -36,6 +38,9 @@ Item {
         cornerRadius: button.selected || pointer.pointerHovered ? width / 2 : button.theme.radiusLarge
         exponent: button.selected || pointer.pointerHovered ? 2.2 : button.theme.squircleExponent
         fillColor: button.armed ? button.theme.focusFill : button.selected || button.active ? button.theme.blend(button.theme.controlBase, button.accentColor, button.theme.dark ? 0.24 : 0.14) : button.theme.expressiveSurfaceStrong
+        luminous: button.active
+        luminousColor: button.accentColor
+        outlined: button.active
         borderColor: button.armed ? button.theme.warning : button.selected || button.active ? button.accentColor : "transparent"
         borderWidth: button.selected || button.armed || button.active ? button.theme.borderFocus : 0
 
@@ -54,10 +59,21 @@ Item {
             }
         }
 
+        // The icon represents the action, not hover or keyboard focus.
+        // Reuse the same vector lock as the session lock screen.
+        LockGlyph {
+            visible: button.lockGlyph
+            anchors.centerIn: parent
+            width: 46
+            height: 46
+            color: button.armed ? button.theme.warning : button.accentColor
+        }
+
         Text {
+            visible: !button.lockGlyph
             anchors.centerIn: parent
             text: button.icon
-            color: button.armed ? button.theme.warning : button.selected ? button.accentColor : button.theme.textStrong
+            color: button.armed ? button.theme.warning : button.accentColor
             font.family: "Symbols Nerd Font"
             font.pixelSize: button.theme.fontSize(43)
             font.weight: Font.Normal
@@ -73,6 +89,23 @@ Item {
             onEntered: button.hovered()
             onActivated: button.activated()
         }
+    }
+
+    // The surface morphs from a squircle to a circle on focus/hover.
+    // Keep the keycap outside that shape so its corners never disappear.
+    KeyHint {
+        anchors {
+            top: parent.top
+            right: parent.right
+            topMargin: button.theme.spacing2
+            rightMargin: button.theme.spacing2
+        }
+        runtime: button.runtime
+        theme: button.theme
+        shortcut: button.shortcut
+        compact: true
+        emphasized: button.selected
+        emphasisColor: button.accentColor
     }
 
     Text {
