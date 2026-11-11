@@ -334,7 +334,6 @@ PanelWindow {
                         maximumLineCount: toast.explicitActions.length > 0 ? 2 : 3
                         text: popup.notificationState.bodyMarkup(toast.notification)
                         textFormat: Text.StyledText
-                        textInteractionFlags: Qt.LinksAccessibleByMouse | Qt.LinksAccessibleByKeyboard
                         onLinkActivated: link => popup.notificationState.openBodyLink(link)
                         visible: text.length > 0
                         color: popup.theme.text
