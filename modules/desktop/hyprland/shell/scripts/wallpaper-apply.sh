@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC1090,SC1091,SC2154
-# Nix injects the shared script path; it defines the transition arrays.
-source "${WALLPAPER_COMMON:-$(dirname "$0")/wallpaper-common.sh}"
 exec 9>"${XDG_RUNTIME_DIR:?}/linux-desktop-wallpaper.lock"
 flock -n 9 || exit 0
 
@@ -40,6 +37,7 @@ for _ in {1..25}; do
           if [ -n "$default_video" ]; then
             awww img --outputs "$output" --transition-type none "$default_still"
           else
+            # shellcheck disable=SC2154 # Populated by wallpaper_transition in the shared source.
             awww img --outputs "$output" "${transition_args[@]}" "$wallpaper"
           fi
         fi
@@ -81,6 +79,7 @@ for _ in {1..25}; do
         if [ -f "$quiet" ] && [[ ${image,,} == *.gif ]]; then
           still="$(linux-desktop-wallpaper-library poster "$image")" || continue
         fi
+        # shellcheck disable=SC2154 # Populated by wallpaper_transition in the shared source.
         awww img "${args[@]}" --resize "$resize" "${transition_args[@]}" "$still"
         ;;
       esac

@@ -510,10 +510,8 @@ in
           pkgs.systemd
           pkgs.util-linux
         ];
-        text = ''
-          source ${./scripts/wallpaper-common.sh}
-        ''
-        + builtins.readFile ./scripts/wallpaper-apply.sh;
+        text =
+          builtins.readFile ./scripts/wallpaper-common.sh + builtins.readFile ./scripts/wallpaper-apply.sh;
       };
 
       wallpaperLibrary = pkgs.writeShellApplication {
@@ -527,10 +525,8 @@ in
           pkgs.systemd
           pkgs.util-linux
         ];
-        text = ''
-          source ${./scripts/wallpaper-common.sh}
-        ''
-        + builtins.readFile ./scripts/wallpaper-library.sh;
+        text =
+          builtins.readFile ./scripts/wallpaper-common.sh + builtins.readFile ./scripts/wallpaper-library.sh;
       };
 
       wallpaperVideoFromState = pkgs.writeShellApplication {

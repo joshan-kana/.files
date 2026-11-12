@@ -101,17 +101,10 @@ test("selecting an all-display video clears stale output ownership before playba
   const os = require("node:os");
   const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "wallpaper-all-set-"));
   try {
-    const script = wallpaper("wallpaper-library.sh").replace(
-      /^source .*$/m,
-      "source " +
-        JSON.stringify(
-          path.join(
-            __dirname,
-            "../modules/desktop/hyprland/shell/scripts/wallpaper-common.sh",
-          ),
-        ) +
-        "\nwallpaper_transition_duration=0",
-    );
+    const script =
+      wallpaper("wallpaper-common.sh") +
+      "\nwallpaper_transition_duration=0\n" +
+      wallpaper("wallpaper-library.sh");
     const scriptFile = path.join(scratch, "library.sh");
     const bin = path.join(scratch, "bin");
     const state = path.join(scratch, "state", "linux-desktop", "wallpapers");
