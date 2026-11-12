@@ -109,6 +109,16 @@ FocusScope {
             keySink.forceActiveFocus();
     }
 
+    function navigateBack(): void {
+        if (replyEditing) {
+            replyOwner = null;
+            replyEditing = false;
+            focusKeyboard();
+        } else {
+            closeRequested();
+        }
+    }
+
     function ensureSelectedVisible(): void {
         const groupItem = list.itemAtIndex(selectedIndex);
         if (!groupItem || !groupItem.expanded)
@@ -605,7 +615,7 @@ FocusScope {
                         event.accepted = true;
                     }
                 } else if (event.key === Qt.Key_Escape) {
-                    center.closeRequested();
+                    center.navigateBack();
                     event.accepted = true;
                 } else if (event.key === Qt.Key_Up || event.key === Qt.Key_K) {
                     center.navigate(-1);

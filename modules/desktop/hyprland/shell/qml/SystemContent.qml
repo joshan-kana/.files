@@ -443,6 +443,48 @@ FocusScope {
         keyboardFocus.forceActiveFocus();
     }
 
+    function navigateBack(): void {
+        // One action for the header and Escape. Resolve nested interactions
+        // before changing pages or closing the hub.
+        if (resetConfirmPending) {
+            resetConfirmPending = false;
+        } else if (helpOpen) {
+            if (sessionPanel.open && sessionPanel.armedAction.length > 0)
+                sessionPanel.invoke("cancelConfirmation");
+            helpOpen = false;
+        } else if (mixerOpen) {
+            mixerView.finishLoading();
+            if (!mixerView.panel || !mixerView.panel.handleKey(Qt.Key_Escape, Qt.NoModifier))
+                backFromDetail();
+        } else if (audioChooserOpen) {
+            audioDeck.handleKey(Qt.Key_Escape, Qt.NoModifier);
+        } else if (networkPanel.open && networkPanel.passwordPrompt) {
+            networkPanel.invoke("cancelPassword");
+        } else if (recordingsPanel.open && recordingsPanel.deletePending.length > 0) {
+            recordingsPanel.invoke("cancelDelete");
+        } else if (sessionPanel.open && sessionPanel.armedAction.length > 0) {
+            sessionPanel.invoke("cancelConfirmation");
+        } else if (networkPanel.open && networkPanel.detailView) {
+            networkPanel.invoke("toggleDetailView");
+        } else if (trayMenu.open) {
+            if (trayMenu.panel && trayMenu.panel.stack.length <= 1) {
+                trayMenu.closeMenu();
+                if (requestedView.startsWith("tray:"))
+                    detailRequested("controls");
+                keyboardFocus.forceActiveFocus();
+            } else {
+                trayMenu.invoke("goBack");
+            }
+        } else if (!detailsVisible && selectedSlider.length > 0) {
+            selectedSlider = "";
+            keyboardFocus.forceActiveFocus();
+        } else if (detailsVisible) {
+            backFromDetail();
+        } else {
+            closeRequested();
+        }
+    }
+
     function markDetail(view: string): void {
         if (requestedView !== view)
             detailRequested(view);
@@ -1598,10 +1640,15 @@ FocusScope {
             }
 
             Keys.onPressed: event => {
+                if (event.key === Qt.Key_Escape) {
+                    root.navigateBack();
+                    event.accepted = true;
+                    return;
+                }
                 if (root.resetConfirmPending) {
                     if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
                         root.startDefaultReset();
-                    else if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace || (event.key === Qt.Key_C && (event.modifiers & Qt.ShiftModifier)))
+                    else if (event.key === Qt.Key_Backspace || (event.key === Qt.Key_C && (event.modifiers & Qt.ShiftModifier)))
                         root.resetConfirmPending = false;
                     event.accepted = true;
                     return;
@@ -1609,8 +1656,8 @@ FocusScope {
                 const helpKey = event.key === Qt.Key_Question || (event.key === Qt.Key_Slash && (event.modifiers & Qt.ShiftModifier));
 
                 if (root.helpOpen) {
-                    if (helpKey || event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
-                        if ((event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) && sessionPanel.open && sessionPanel.armedAction.length > 0)
+                    if (helpKey || event.key === Qt.Key_Backspace) {
+                        if ((event.key === Qt.Key_Backspace) && sessionPanel.open && sessionPanel.armedAction.length > 0)
                             sessionPanel.invoke("cancelConfirmation");
                         root.helpOpen = false;
                         event.accepted = true;
@@ -1650,7 +1697,7 @@ FocusScope {
                 }
 
                 if (wallpaperPanel.open) {
-                    if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
+                    if (event.key === Qt.Key_Backspace) {
                         root.backFromDetail();
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Slash) {
@@ -1688,7 +1735,7 @@ FocusScope {
                 }
 
                 if (recordingsPanel.open) {
-                    if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
+                    if (event.key === Qt.Key_Backspace) {
                         if (recordingsPanel.deletePending.length > 0)
                             recordingsPanel.invoke("cancelDelete");
                         else
@@ -1719,7 +1766,7 @@ FocusScope {
                 }
 
                 if (resourcesPanel.open) {
-                    if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
+                    if (event.key === Qt.Key_Backspace) {
                         root.backFromDetail();
                         event.accepted = true;
                     } else if (event.key === Qt.Key_C) {
@@ -1733,7 +1780,7 @@ FocusScope {
                 }
 
                 if (bluetoothPanel.open) {
-                    if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
+                    if (event.key === Qt.Key_Backspace) {
                         root.backFromDetail();
                         event.accepted = true;
                     } else if ((event.key === Qt.Key_Up || event.key === Qt.Key_K)) {
@@ -1771,7 +1818,7 @@ FocusScope {
                 if (sessionPanel.open) {
                     if (sessionPanel.invoke("activateShortcut", event.key) === true) {
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
+                    } else if (event.key === Qt.Key_Backspace) {
                         if (sessionPanel.armedAction.length > 0)
                             sessionPanel.invoke("cancelConfirmation");
                         else
@@ -1801,7 +1848,7 @@ FocusScope {
                     if (event.key === Qt.Key_Slash) {
                         themePanel.invoke("enterSearch");
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
+                    } else if (event.key === Qt.Key_Backspace) {
                         root.backFromDetail();
                         event.accepted = true;
                     } else if ((event.key === Qt.Key_Up || event.key === Qt.Key_K)) {
@@ -1834,7 +1881,7 @@ FocusScope {
                     if (networkPanel.passwordPrompt)
                         return;
 
-                    if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
+                    if (event.key === Qt.Key_Backspace) {
                         if (networkPanel.detailView)
                             networkPanel.invoke("toggleDetailView");
                         else
@@ -1876,8 +1923,8 @@ FocusScope {
                 }
 
                 if (trayMenu.open) {
-                    if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace || (event.key === Qt.Key_Left || event.key === Qt.Key_H)) {
-                        if ((event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) && trayMenu.panel && trayMenu.panel.stack.length <= 1) {
+                    if (event.key === Qt.Key_Backspace || (event.key === Qt.Key_Left || event.key === Qt.Key_H)) {
+                        if ((event.key === Qt.Key_Backspace) && trayMenu.panel && trayMenu.panel.stack.length <= 1) {
                             // A tray menu opened inside Controls has no hub
                             // navigation history. Dismiss it locally instead
                             // of letting expansionState.back() close the hub.
@@ -1920,7 +1967,7 @@ FocusScope {
                     return;
                 }
                 if (root.selectedSlider.length > 0) {
-                    if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
+                    if (event.key === Qt.Key_Backspace) {
                         root.selectedSlider = "";
                     } else if (!shifted && (event.key === Qt.Key_K || event.key === Qt.Key_Up)) {
                         root.cycleSlider(-1);
@@ -1937,14 +1984,12 @@ FocusScope {
                         // semantics; only editing keys belong to the slider.
                         root.selectedSlider = "";
                     }
-                    if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace || (!shifted && (event.key === Qt.Key_H || event.key === Qt.Key_Left || event.key === Qt.Key_L || event.key === Qt.Key_Right || event.key === Qt.Key_K || event.key === Qt.Key_Up || event.key === Qt.Key_J || event.key === Qt.Key_Down)) || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                    if (event.key === Qt.Key_Backspace || (!shifted && (event.key === Qt.Key_H || event.key === Qt.Key_Left || event.key === Qt.Key_L || event.key === Qt.Key_Right || event.key === Qt.Key_K || event.key === Qt.Key_Up || event.key === Qt.Key_J || event.key === Qt.Key_Down)) || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                         event.accepted = true;
                         return;
                     }
                 }
-                if (event.key === Qt.Key_Escape) {
-                    root.closeRequested();
-                } else if (shifted && event.key === Qt.Key_C) {
+                if (shifted && event.key === Qt.Key_C) {
                     root.resetConfirmPending = true;
                     root.resetStatus = "";
                 } else if (shifted && event.key === Qt.Key_F) {

@@ -4,6 +4,10 @@ The Hyprland shell's `Super+Space` palette searches installed applications, regi
 
 The native Quickshell palette remains the only launcher. `Alt+1` through `Alt+4` select its existing Unified, Apps, Actions, and Emoji scopes. `Tab` changes between typing and list navigation; `Alt+Enter` reveals contextual actions for the selected result. The dedicated clipboard-history picker remains separate.
 
+## Hub navigation
+
+Home, Controls and Activity share a fixed header. Back on the left and Keyboard Help on the right remain available across root pages and detail views; the three page tabs sit between them. Back and `Esc` use the active page's navigation action. An open confirmation, picker, search detail or contextual help closes first; otherwise a detail returns to its owning page, and Back from a root page closes the hub. Calendar visibility and notification reply editing retain their in-place cancellation behavior. `Shift+Esc` bypasses nested history and closes the hub.
+
 ## Website searches
 
 Quicklinks are configured by `desktop.hyprland.shell.quicklinks` in `shell/default.nix` and transported through the Nix-generated `runtime.json`. Search directly by alias, for example `gl nixpkgs` for GitLab or `gh nixpkgs` for GitHub. Selecting an alias alone opens the inline query field.
