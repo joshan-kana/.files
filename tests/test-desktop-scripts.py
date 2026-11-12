@@ -8,8 +8,8 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPTS = ROOT / "modules/desktop/hyprland/shell/scripts"
-THEME = ROOT / "modules/theme/scripts/theme-set.sh"
+SCRIPTS = ROOT / "scripts/linux-desktop"
+THEME = ROOT / "scripts/linux-desktop/theme-set.sh"
 
 
 class DesktopScriptTests(unittest.TestCase):

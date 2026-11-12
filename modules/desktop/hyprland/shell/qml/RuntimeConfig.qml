@@ -62,6 +62,7 @@ QtObject {
     readonly property color accentUtility: root.themeAdapter.theme.accentUtility
     readonly property color accentEnergy: root.themeAdapter.theme.accentEnergy
     readonly property color accentNature: root.themeAdapter.theme.accentNature
+    readonly property var roleColors: root.themeAdapter.roles
 
     readonly property real textScale: root.configData.accessibility.textScale
     readonly property bool animationsEnabled: root.configData.motion.animationsEnabled
@@ -122,6 +123,29 @@ QtObject {
                 property string accentUtility: "#c9664a"
                 property string accentEnergy: "#ffd24a"
                 property string accentNature: "#3de5f0"
+            }
+
+            property JsonObject roles: JsonObject {
+                property string media: ""
+                property string workspace: ""
+                property string attention: ""
+                property string display: ""
+                property string connectivity: ""
+                property string warmth: ""
+                property string capture: ""
+                property string screenshot: ""
+                property string audio: ""
+                property string resources: ""
+                property string power: ""
+                property string notifications: ""
+                property string calendar: ""
+                property string wallpaper: ""
+                property string clipboard: ""
+                property string weather: ""
+                property string precipitation: ""
+                property string positive: ""
+                property string warning: ""
+                property string critical: ""
             }
 
             property JsonObject fonts: JsonObject {
