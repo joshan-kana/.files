@@ -53,6 +53,22 @@ test("Escape and Back share the same Controls cancellation priorities", () => {
   assert.match(system, /else if \(helpOpen\)[\s\S]*?helpOpen = false;/);
   assert.match(
     system,
+    /else if \(themePanel\.open && themePanel\.panel && themePanel\.panel\.searching\)[\s\S]*?themePanel\.invoke\("leaveSearch"\)/,
+  );
+  assert.match(
+    system,
+    /else if \(wallpaperPanel\.open && wallpaperPanel\.panel && wallpaperPanel\.panel\.searching\)[\s\S]*?wallpaperPanel\.invoke\("leaveSearch"\)/,
+  );
+  assert.match(
+    qml("ThemePanel.qml"),
+    /function leaveSearch\(\): void \{\s*keyboardRequested\(\)/,
+  );
+  assert.match(
+    qml("WallpaperPanel.qml"),
+    /function leaveSearch\(\): void \{\s*panel\.keyboardRequested\(\)/,
+  );
+  assert.match(
+    system,
     /else if \(mixerOpen\)[\s\S]*?handleKey\(Qt\.Key_Escape, Qt\.NoModifier\)/,
   );
   assert.match(
