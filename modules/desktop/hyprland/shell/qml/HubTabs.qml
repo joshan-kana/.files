@@ -25,15 +25,18 @@ Item {
 
     signal tabRequested(string destination)
     signal helpRequested
+    signal backRequested
     property bool helpOpen: false
+    property string backLabel: "Back"
 
     implicitHeight: 46
 
     ShellSurface {
         id: track
-        width: parent.width - helpButton.width - root.theme.spacing2
+        width: parent.width - backButton.width - helpButton.width - root.theme.spacing2 * 2
         height: 42
-        anchors.left: parent.left
+        anchors.left: backButton.right
+        anchors.leftMargin: root.theme.spacing2
         theme: root.theme
         motion: root.motion
         surfaceLayer: ShellSurface.Control
@@ -108,12 +111,47 @@ Item {
                         stateColor: root.theme.textStrong
                         hoverOpacity: 0.13
                         pressOpacity: 0.20
+                        disabled: root.helpOpen
                         Accessible.role: Accessible.Button
                         Accessible.name: tab.modelData.label
                         onActivated: root.tabRequested(tab.modelData.destination)
                     }
                 }
             }
+        }
+    }
+
+    // Back and Help flank the same three tabs on every hub page. Navigation
+    // is dispatched by the active view, not by an extra header history.
+    ShellSurface {
+        id: backButton
+        width: 42
+        height: 42
+        anchors.left: parent.left
+        theme: root.theme
+        motion: root.motion
+        surfaceLayer: ShellSurface.Control
+        cornerRadius: root.theme.radiusLarge
+        fillColor: root.theme.expressiveSurface
+        Accessible.role: Accessible.Button
+        Accessible.name: root.backLabel + " (Esc)"
+
+        Text {
+            anchors.centerIn: parent
+            text: "←"
+            font.family: root.runtime.fontMono
+            font.pixelSize: root.theme.fontSize(22)
+            font.weight: Font.DemiBold
+            color: root.theme.textStrong
+        }
+
+        StateLayer {
+            theme: root.theme
+            motion: root.motion
+            cornerRadius: root.theme.radiusLarge
+            Accessible.role: Accessible.Button
+            Accessible.name: root.backLabel + " (Esc)"
+            onActivated: root.backRequested()
         }
     }
 

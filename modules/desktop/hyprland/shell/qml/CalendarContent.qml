@@ -24,6 +24,15 @@ FocusScope {
     property bool calendarPickerOpen: false
     property int calendarPickerIndex: 0
 
+    function navigateBack(): void {
+        if (calendarPickerOpen) {
+            calendarPickerOpen = false;
+            keySink.forceActiveFocus();
+        } else {
+            closeRequested();
+        }
+    }
+
     function toggleCalendarAt(index: int): void {
         if (index < 0 || index >= agenda.calendars.length)
             return;
@@ -141,7 +150,7 @@ FocusScope {
         Keys.onPressed: event => {
             if (calendar.calendarPickerOpen) {
                 if (event.key === Qt.Key_Escape || event.key === Qt.Key_C) {
-                    calendar.calendarPickerOpen = false;
+                    calendar.navigateBack();
                 } else if (event.key === Qt.Key_J || event.key === Qt.Key_Down) {
                     calendar.calendarPickerIndex = Math.min(agenda.calendars.length - 1, calendar.calendarPickerIndex + 1);
                 } else if (event.key === Qt.Key_K || event.key === Qt.Key_Up) {
@@ -159,7 +168,7 @@ FocusScope {
                 calendar.calendarPickerOpen = true;
                 event.accepted = true;
             } else if (event.key === Qt.Key_Escape) {
-                calendar.closeRequested();
+                calendar.navigateBack();
                 event.accepted = true;
             } else if (event.key === Qt.Key_K || event.key === Qt.Key_Up || event.key === Qt.Key_PageUp) {
                 calendar.browseMonths(-1);
