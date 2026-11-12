@@ -501,6 +501,50 @@ PanelWindow {
         onActivated: scopedHelp.scrollHints(-1)
     }
 
+    // Home, Weather and Activity use the shared Help viewer rather than
+    // their own key sink. Match the Controls and Now Playing scroll keys.
+    Shortcut {
+        sequence: "Up"
+        context: Qt.ApplicationShortcut
+        enabled: host.otherHelpOpen
+        onActivated: scopedHelp.scrollHints(-1)
+    }
+
+    Shortcut {
+        sequence: "Down"
+        context: Qt.ApplicationShortcut
+        enabled: host.otherHelpOpen
+        onActivated: scopedHelp.scrollHints(1)
+    }
+
+    Shortcut {
+        sequence: "U"
+        context: Qt.ApplicationShortcut
+        enabled: host.otherHelpOpen
+        onActivated: scopedHelp.scrollHints(-4)
+    }
+
+    Shortcut {
+        sequence: "D"
+        context: Qt.ApplicationShortcut
+        enabled: host.otherHelpOpen
+        onActivated: scopedHelp.scrollHints(4)
+    }
+
+    Shortcut {
+        sequence: "PgUp"
+        context: Qt.ApplicationShortcut
+        enabled: host.otherHelpOpen
+        onActivated: scopedHelp.scrollHints(-4)
+    }
+
+    Shortcut {
+        sequence: "PgDown"
+        context: Qt.ApplicationShortcut
+        enabled: host.otherHelpOpen
+        onActivated: scopedHelp.scrollHints(4)
+    }
+
     Shortcut {
         sequence: "Shift+Esc"
         context: Qt.ApplicationShortcut
@@ -1068,7 +1112,17 @@ PanelWindow {
 
         Item {
             z: 200
-            anchors.fill: parent
+            // Keep contextual Help inside the hub's content region. The
+            // shared Back/Help header sits above it and the navigation footer
+            // stays below it, even when Controls is taller than the display.
+            anchors {
+                top: tabs.bottom
+                bottom: hubFooter.top
+                left: parent.left
+                right: parent.right
+                topMargin: host.theme.spacing3
+                bottomMargin: host.theme.spacing3
+            }
             opacity: shellSurface.contentReveal
 
             WidgetHelp {
