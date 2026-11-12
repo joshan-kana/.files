@@ -56,13 +56,13 @@ QtObject {
     // consulted once to migrate prior choices without losing per-app rules.
     property Settings previousPreferences: Settings {
         id: previousSettings
-        location: "file://" + Quickshell.env("HOME") + "/.config/linux-desktop/notifications.ini"
+        location: "file://" + (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/linux-desktop/notifications.ini"
         category: "Notifications"
     }
 
     property Settings preferences: Settings {
         id: settings
-        location: "file://" + Quickshell.env("HOME") + "/.config/linux-desktop/preferences.ini"
+        location: "file://" + (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/linux-desktop/preferences.ini"
         category: "Notifications"
         property bool legacyMigrated: false
         property bool silent: root.runtime.notificationSilent

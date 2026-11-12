@@ -5,6 +5,10 @@ const { test } = require("node:test");
 
 const root = path.join(__dirname, "../modules/desktop/hyprland/shell");
 const nix = fs.readFileSync(path.join(root, "default.nix"), "utf8");
+const lockCommand = fs.readFileSync(
+  path.join(__dirname, "../modules/desktop/hyprland/shell/scripts/lock.sh"),
+  "utf8",
+);
 const session = fs.readFileSync(
   path.join(root, "qml/SessionPanel.qml"),
   "utf8",
@@ -30,7 +34,10 @@ test("lock launcher and desktop shell share the same native visuals import", () 
 });
 test("session widget and global keybind use the same lock command", () => {
   assert.match(nix, /lockSession = lib\.getExe lockCommand/);
-  assert.match(nix, /systemctl --user start linux-desktop-lock\.service/);
+  assert.match(
+    lockCommand,
+    /systemctl --user start linux-desktop-lock\.service/,
+  );
   assert.match(session, /Quickshell\.execDetached\(\[runtime\.lockSession\]\)/);
   assert.match(
     actions,
@@ -46,7 +53,10 @@ test("Home Manager switches preserve an active session lock without starting a n
   assert.match(lock[1], /Restart = "no"/);
   assert.doesNotMatch(lock[1], /X-RestartIfChanged/);
   assert.doesNotMatch(lock[1], /Install\.WantedBy/);
-  assert.match(nix, /systemctl --user start linux-desktop-lock\.service/);
+  assert.match(
+    lockCommand,
+    /systemctl --user start linux-desktop-lock\.service/,
+  );
 });
 
 test("the lock service cannot retire during asynchronous acquisition or a rebuild", () => {
@@ -296,7 +306,7 @@ test("lock request is published before compositor acquisition, and unlock requir
     path.join(root, "qml/NotificationState.qml"),
     "utf8",
   );
-  assert.match(nix, /printf 'requested\\n' > "\$temp"/);
+  assert.match(lockCommand, /printf 'requested\\n' >\s*"\$temp"/);
   assert.match(
     qml,
     /publishLockState\("requested"\);\s*lockScreen\.lockSession\(\)/,

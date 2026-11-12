@@ -3,6 +3,12 @@ const { test } = require("node:test");
 const fs = require("node:fs");
 const path = require("node:path");
 
+const script = (name) =>
+  fs.readFileSync(
+    path.join(__dirname, "../modules/desktop/hyprland/shell/scripts", name),
+    "utf8",
+  );
+const restoreWallpaper = () => script("wallpaper-apply.sh");
 const read = (name) =>
   fs.readFileSync(
     path.join(__dirname, "../modules/desktop/hyprland/shell/qml", name),
@@ -78,13 +84,10 @@ test("login wallpaper restoration reads the Stylix theme, not the unrelated runt
     path.join(__dirname, "../modules/desktop/hyprland/shell/default.nix"),
     "utf8",
   );
-  const restore = nix.slice(
-    nix.indexOf('name = "linux-desktop-wallpaper-apply";'),
-    nix.indexOf("wallpaperLibrary = pkgs.writeShellApplication"),
-  );
+  const restore = script("wallpaper-apply.sh");
   assert.match(restore, /linux-desktop\/theme\.json/);
   assert.match(restore, /wallpaper="\$\(jq -er '\.wallpaper/);
-  assert.doesNotMatch(restore, /linux-desktop\/runtime\.json/);
+  assert.match(restore, /linux-desktop\/runtime\.json/);
   assert.match(restore, /for entry in "\$state_dir"\/\*\.wall;/);
   assert.match(restore, /cmp -s "\$entry" "\$state_dir\/all\.wall"/);
   assert.match(
@@ -106,23 +109,18 @@ test("full-screen video and lock-screen posters retain source resolution", () =>
     path.join(__dirname, "../modules/desktop/hyprland/shell/default.nix"),
     "utf8",
   );
-  const poster = nix.slice(
-    nix.indexOf('if [ "$action" = thumbnail ] || [ "$action" = poster ]; then'),
-    nix.indexOf(
-      'case "$output" in',
-      nix.indexOf(
-        'if [ "$action" = thumbnail ] || [ "$action" = poster ]; then',
-      ),
-    ),
-  );
+  const poster = script("wallpaper-library.sh");
   assert.match(
     poster,
     /if \[ "\$action" = poster \]; then\s+ffmpeg[^\n]*-frames:v 1 -update 1/,
   );
   assert.match(poster, /\$key\$suffix\.png/);
   assert.match(poster, /scale=380:250:force_original_aspect_ratio=decrease/);
-  assert.match(nix, /wallpaperLibrary\} poster "\$image"/);
-  assert.match(nix, /still="\$\(\$0 poster "\$image"\)"/);
+  assert.match(
+    restoreWallpaper(),
+    /linux-desktop-wallpaper-library poster "\$image"/,
+  );
+  assert.match(poster, /still="\$\(\$0 poster "\$image"\)"/);
   assert.match(read("LockScreen.qml"), /"poster", pendingPoster/);
 });
 
@@ -131,20 +129,17 @@ test("all-display video does not cover explicit monitor overrides", () => {
     path.join(__dirname, "../modules/desktop/hyprland/shell/default.nix"),
     "utf8",
   );
-  const player = nix.slice(
-    nix.indexOf("wallpaperVideoFromState = pkgs.writeShellApplication"),
-    nix.indexOf("videoWallpaper = pkgs.writeShellApplication"),
-  );
+  const player = script("wallpaper-video-from-state.sh");
   assert.match(player, /awww query/);
   assert.match(
     player,
-    /if \[ -f "\$state_dir\/\$monitor\.wall" \] && ! cmp -s "\$file" "\$state_dir\/\$monitor\.wall"; then/,
+    /if \[ -f "\$state_dir\/\$monitor\.wall" \] && \{ \[ ! -f "\$file" \] \|\| ! cmp -s "\$file" "\$state_dir\/\$monitor\.wall"; \}; then/,
   );
   assert.match(player, /mpvpaper[^\n]*"\$monitor" "\$video" &/);
   assert.doesNotMatch(player, /output='\*'/);
   assert.match(player, /wait -n/);
   assert.match(
-    nix,
+    script("wallpaper-library.sh"),
     /systemctl --user restart linux-desktop-wallpaper-video@all\.service/,
   );
 });
@@ -156,16 +151,8 @@ test("video player launches only on displays not owned by another selection", ()
     path.join(__dirname, "../modules/desktop/hyprland/shell/default.nix"),
     "utf8",
   );
-  const player = nix.slice(
-    nix.indexOf("wallpaperVideoFromState = pkgs.writeShellApplication"),
-    nix.indexOf("videoWallpaper = pkgs.writeShellApplication"),
-  );
-  const script = player
-    .slice(
-      player.indexOf("text = ''") + "text = ''".length,
-      player.lastIndexOf("'';"),
-    )
-    .replaceAll("''${", "${");
+  const player = script("wallpaper-video-from-state.sh");
+  const source = player;
   const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "wallpaper-owner-"));
   try {
     const bin = path.join(scratch, "bin");
@@ -196,7 +183,7 @@ test("video player launches only on displays not owned by another selection", ()
       fs.writeFileSync(log, "");
       const result = spawnSync(
         "bash",
-        ["-euo", "pipefail", "-c", script, "wallpaper-player", output],
+        ["-euo", "pipefail", "-c", source, "wallpaper-player", output],
         {
           env: {
             ...process.env,

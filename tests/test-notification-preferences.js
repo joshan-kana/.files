@@ -13,7 +13,7 @@ const source = fs.readFileSync(pathToState, "utf8");
 test("notification settings join the canonical categorized desktop preference store", () => {
   assert.match(
     source,
-    /property Settings preferences: Settings \{\s*id: settings\s*location: "file:\/\/" \+ Quickshell\.env\("HOME"\) \+ "\/\.config\/linux-desktop\/preferences\.ini"\s*category: "Notifications"/,
+    /property Settings preferences: Settings \{\s*id: settings\s*location:[^\n]*XDG_CONFIG_HOME[^\n]*preferences\.ini[^\n]*\s*category: "Notifications"/,
   );
   assert.match(
     source,
