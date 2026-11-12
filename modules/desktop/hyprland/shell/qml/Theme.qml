@@ -22,49 +22,11 @@ QtObject {
     readonly property color accentEnergy: runtime.accentEnergy
     readonly property color accentNature: runtime.accentNature
 
-    // Stylix owns the palette. Components select a semantic role, not a
-    // favourite colour; surface fills remain quiet regardless of the role.
+    // The theme scope assigns Stylix colors to semantic roles.
+    // Components select a role without embedding palette policy.
     function roleColor(role: string): color {
-        switch (role) {
-        case "media":
-            return accentSecondary;
-        case "workspace":
-            return accentWorkspace;
-        case "attention":
-            return critical;
-        case "display":
-            return accent;
-        case "connectivity":
-            return accentTertiary;
-        case "warmth":
-            return accentWarm;
-        case "capture":
-            return accentWarm;
-        case "audio":
-            return accentUtility;
-        case "resources":
-            return accentEnergy;
-        case "power":
-            return accent;
-        case "notifications":
-        case "calendar":
-        case "wallpaper":
-            return accentNature;
-        case "clipboard":
-            return accentUtility;
-        case "weather":
-            return accentWarm;
-        case "precipitation":
-            return accentTertiary;
-        case "positive":
-            return positive;
-        case "warning":
-            return warning;
-        case "critical":
-            return critical;
-        default:
-            return accent;
-        }
+        const chosen = runtime.roleColors[role];
+        return chosen ? chosen : accent;
     }
 
     function audioLevelColor(muted: bool): color {

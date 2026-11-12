@@ -6,7 +6,7 @@ const { test } = require("node:test");
 const root = path.join(__dirname, "../modules/desktop/hyprland/shell");
 const nix = fs.readFileSync(path.join(root, "default.nix"), "utf8");
 const lockCommand = fs.readFileSync(
-  path.join(__dirname, "../modules/desktop/hyprland/shell/scripts/lock.sh"),
+  path.join(__dirname, "../scripts/linux-desktop/lock.sh"),
   "utf8",
 );
 const session = fs.readFileSync(
