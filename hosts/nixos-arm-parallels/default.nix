@@ -18,6 +18,7 @@
     appimage
     audio
     virtualisation
+    desktop
     ;
 
   imports = [
@@ -25,12 +26,6 @@
   ];
 
   hardware = import ./hardware.nix;
-
-  desktop = editScope moduleRegistry.desktop {
-    hyprland.home = _: {
-      wayland.windowManager.hyprland.settings.config.quirks.skip_non_kms_dmabuf_formats = false;
-    };
-  };
 
   system = extendScope moduleRegistry.system {
     parallels = _: {
