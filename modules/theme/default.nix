@@ -499,7 +499,7 @@ in
                     operationDir="''${XDG_STATE_HOME:-$HOME/.local/state}/linux-desktop/theme-operation"
                     operationUnit=linux-desktop-theme-apply.scope
                   ''
-                  + builtins.readFile ./scripts/theme-set.sh;
+                  + builtins.readFile ../../scripts/linux-desktop/theme-set.sh;
                 };
               in
               {
@@ -526,6 +526,30 @@ in
                         accentUtility = colors.base0F;
                         accentEnergy = colors.base0A;
                         accentNature = colors.base0B;
+                      };
+                      # Feature palette roles are chosen by the theme owner.
+                      # Shell components only consume these semantic names.
+                      roles = {
+                        media = colors.base0E;
+                        workspace = colors.base0D;
+                        attention = colors.base08;
+                        display = colors.base0D;
+                        connectivity = colors.base0C;
+                        warmth = colors.base09;
+                        capture = colors.base09;
+                        screenshot = colors.base0D;
+                        audio = colors.base0F;
+                        resources = colors.base0A;
+                        power = colors.base0D;
+                        notifications = colors.base0B;
+                        calendar = colors.base0B;
+                        wallpaper = colors.base0B;
+                        clipboard = colors.base0F;
+                        weather = colors.base09;
+                        precipitation = colors.base0C;
+                        positive = colors.base0B;
+                        warning = colors.base0A;
+                        critical = colors.base08;
                       };
                       # Theme-owned presentation values are injected into
                       # the shell's theme data through its semantic app scope.

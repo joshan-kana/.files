@@ -6,6 +6,11 @@ const vm = require("node:vm");
 
 const shell = path.join(__dirname, "../modules/desktop/hyprland/shell");
 const read = (file) => fs.readFileSync(path.join(shell, file), "utf8");
+const readScript = (file) =>
+  fs.readFileSync(
+    path.join(__dirname, "../scripts/linux-desktop", file),
+    "utf8",
+  );
 const utilities = vm.runInNewContext(
   read("qml/PaletteUtilities.js") +
     "\n({ parseQuicklinks, quicklinkResult, linkUrl, parseSnippets })",
@@ -98,7 +103,7 @@ test("Safe URL schemes, aliases and clipboard consent remain enforced", () => {
 
 test("Indexer and desktop defaults use the generated runtime configuration", () => {
   const nix = read("default.nix");
-  const indexer = read("scripts/palette-search.py");
+  const indexer = readScript("palette-search.py");
   const runtime = read("qml/RuntimeConfig.qml");
   assert.match(nix, /fileRoots = scopeConfig\.fileSearchRoots/);
   assert.match(indexer, /\["palette"\]\["fileRoots"\]/);
@@ -201,7 +206,7 @@ test("Theme-owned shell presentation is applied through the theme app scope", ()
     /wayland\.windowManager\.hyprland\.settings\.config\.decoration\.shadow = \{/,
   );
   assert.doesNotMatch(hyprlandNix, /stylix\.|lib\.stylix/);
-  assert.match(read("scripts/markup.sh"), /--font-family monospace/);
+  assert.match(readScript("markup.sh"), /--font-family monospace/);
   assert.equal(
     (runtime.match(/property JsonObject visual: JsonObject/g) || []).length,
     1,
