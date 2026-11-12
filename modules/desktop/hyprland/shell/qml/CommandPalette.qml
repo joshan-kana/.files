@@ -54,7 +54,18 @@ Item {
         }
     }
 
-    Component.onCompleted: refreshDeclaredProviders()
+    Component.onCompleted: {
+        refreshDeclaredProviders();
+        // Usage history is state rather than configuration. Preserve the old
+        // identities once and then clear the legacy configuration copy.
+        if (!usageHistory.migrated) {
+            const legacy = parsePreferenceKeys(launcherPreferences.recent);
+            if (legacy.length > 0 && parsePreferenceKeys(usageHistory.recent).length === 0)
+                usageHistory.recent = JSON.stringify(legacy);
+            usageHistory.migrated = true;
+            launcherPreferences.recent = "[]";
+        }
+    }
     readonly property var indexedSnippets: snippets.map(item => indexSearchEntry(Object.assign({}, item)))
 
     Settings {
@@ -62,12 +73,20 @@ Item {
         location: "file://" + (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/linux-desktop/palette.ini"
         category: "Launcher"
         property string favourites: "[]"
-        property string recent: "[]"
+        property string recent: "[]" // Read only for the one-time state migration.
         property bool rememberRecent: true
     }
 
+    Settings {
+        id: usageHistory
+        location: "file://" + (Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state") + "/linux-desktop/palette.ini"
+        category: "Usage"
+        property string recent: "[]"
+        property bool migrated: false
+    }
+
     readonly property var favouriteKeys: parsePreferenceKeys(launcherPreferences.favourites)
-    readonly property var recentKeys: parsePreferenceKeys(launcherPreferences.recent)
+    readonly property var recentKeys: parsePreferenceKeys(usageHistory.recent)
     readonly property bool rememberRecents: launcherPreferences.rememberRecent
 
     function parsePreferenceKeys(value: string): var {
@@ -94,7 +113,7 @@ Item {
         if (!rememberRecents || !entry || !["command", "application", "quicklink"].includes(entry.kind))
             return;
         const key = identity(entry);
-        launcherPreferences.recent = JSON.stringify([key, ...recentKeys.filter(current => current !== key)].slice(0, 30));
+        usageHistory.recent = JSON.stringify([key, ...recentKeys.filter(current => current !== key)].slice(0, 30));
     }
     property var localResults: []
     property string activeFileQuery: ""
@@ -1007,11 +1026,11 @@ Item {
             hide();
         rememberEntry(entry);
         if (entry.kind === "command" && entry.commandId === "launcher.clearRecent")
-            launcherPreferences.recent = "[]";
+            usageHistory.recent = "[]";
         else if (entry.kind === "command" && entry.commandId === "launcher.toggleHistory") {
             launcherPreferences.rememberRecent = !launcherPreferences.rememberRecent;
             if (!launcherPreferences.rememberRecent)
-                launcherPreferences.recent = "[]";
+                usageHistory.recent = "[]";
         } else if (entry.kind === "command")
             commandTriggered(entry.commandId);
         else if (entry.kind === "application" && entry.desktopEntry)
