@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC1090,SC1091,SC2154
-# Nix injects the shared script path; it defines the transition arrays.
-source "${WALLPAPER_COMMON:-$(dirname "$0")/wallpaper-common.sh}"
 library="$HOME/wallpapers"
 state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/linux-desktop/wallpapers"
 runtime="${XDG_CONFIG_HOME:-$HOME/.config}/linux-desktop/runtime.json"
@@ -190,6 +187,7 @@ set)
       systemctl --user stop "linux-desktop-wallpaper-video@$monitor.service" || true
     done
   fi
+  # shellcheck disable=SC2154 # Populated by wallpaper_transition in the shared source.
   awww img "${args[@]}" --resize "$resize" "${transition_args[@]}" "$still"
   mkdir -p "$state_dir"
   temp="$(mktemp "$state_dir/.wallpaper.XXXXXXXX")"
@@ -215,6 +213,7 @@ set)
     if [ ! -f "$XDG_RUNTIME_DIR/linux-desktop-wallpaper-motion-disabled" ]; then
       # Let the eased poster transition finish before playing the
       # same first frame as video, avoiding an abrupt hard swap.
+      # shellcheck disable=SC2154 # The shared wallpaper source owns the duration.
       sleep "$wallpaper_transition_duration"
     fi
     if [ "$output" != all ] && [ -f "$state_dir/all.wall" ] && cmp -s "$state_file" "$state_dir/all.wall"; then
