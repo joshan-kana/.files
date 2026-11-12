@@ -201,7 +201,7 @@ test("Theme-owned shell presentation is applied through the theme app scope", ()
     /wayland\.windowManager\.hyprland\.settings\.config\.decoration\.shadow = \{/,
   );
   assert.doesNotMatch(hyprlandNix, /stylix\.|lib\.stylix/);
-  assert.match(shellNix, /--font-family monospace/);
+  assert.match(read("scripts/markup.sh"), /--font-family monospace/);
   assert.equal(
     (runtime.match(/property JsonObject visual: JsonObject/g) || []).length,
     1,

@@ -7,6 +7,11 @@ const shell = fs.readFileSync(
   path.join(__dirname, "../modules/desktop/hyprland/shell/default.nix"),
   "utf8",
 );
+const wallpaper = (name) =>
+  fs.readFileSync(
+    path.join(__dirname, "../modules/desktop/hyprland/shell/scripts", name),
+    "utf8",
+  );
 const qml = (name) =>
   fs.readFileSync(
     path.join(__dirname, `../modules/desktop/hyprland/shell/qml/${name}`),
@@ -14,13 +19,10 @@ const qml = (name) =>
   );
 
 test("all-display wallpaper supersedes older output selections and players", () => {
-  const library = shell.slice(
-    shell.indexOf("wallpaperLibrary = pkgs.writeShellApplication"),
-    shell.indexOf("wallpaperVideoFromState = pkgs.writeShellApplication"),
-  );
+  const library = wallpaper("wallpaper-library.sh");
   const set = library.slice(
-    library.indexOf("            set)"),
-    library.indexOf("            reset)"),
+    library.indexOf("\nset)"),
+    library.indexOf("\nreset)"),
   );
   assert.match(
     set,
@@ -99,21 +101,17 @@ test("selecting an all-display video clears stale output ownership before playba
   const os = require("node:os");
   const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "wallpaper-all-set-"));
   try {
-    const library = shell.slice(
-      shell.indexOf("wallpaperLibrary = pkgs.writeShellApplication"),
-      shell.indexOf("wallpaperVideoFromState = pkgs.writeShellApplication"),
+    const script = wallpaper("wallpaper-library.sh").replace(
+      /^source .*$/m,
+      "source " +
+        JSON.stringify(
+          path.join(
+            __dirname,
+            "../modules/desktop/hyprland/shell/scripts/wallpaper-common.sh",
+          ),
+        ) +
+        "\nwallpaper_transition_duration=0",
     );
-    const script = library
-      .slice(
-        library.indexOf("text = ''") + "text = ''".length,
-        library.lastIndexOf("'';"),
-      )
-      .replaceAll("''${", "${")
-      .replaceAll(
-        "${wallpaperTransition}",
-        "transition_args=(--transition-type none)",
-      )
-      .replaceAll("${wallpaperTransitionDuration}", "0");
     const scriptFile = path.join(scratch, "library.sh");
     const bin = path.join(scratch, "bin");
     const state = path.join(scratch, "state", "linux-desktop", "wallpapers");
@@ -137,6 +135,7 @@ test("selecting an all-display video clears stale output ownership before playba
     );
     const log = path.join(scratch, "commands.log");
     for (const [name, code] of Object.entries({
+      flock: "#!/bin/bash\nexit 0\n",
       systemctl: '#!/bin/bash\necho "systemctl $*" >> "$COMMAND_LOG"\n',
       awww: '#!/bin/bash\necho "awww $*" >> "$COMMAND_LOG"\n',
       ffprobe: "#!/bin/bash\necho video\n",

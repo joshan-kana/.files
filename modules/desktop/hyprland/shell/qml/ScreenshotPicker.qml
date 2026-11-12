@@ -30,7 +30,7 @@ Item {
     property bool liveExportPending: false
     property Settings capturePreferences: Settings {
         id: capturePreferences
-        location: "file://" + Quickshell.env("HOME") + "/.config/linux-desktop/preferences.ini"
+        location: "file://" + (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/linux-desktop/preferences.ini"
         category: "Capture"
         property bool freezeEnabled: picker.runtime.captureFreezeEnabled
         property string preferenceSource: ""
@@ -244,8 +244,12 @@ Item {
             const recordGeometry = String(Math.round(leftEdge + (captureScreen.x || 0))) + "," + String(Math.round(topEdge + (captureScreen.y || 0))) + " " + String(Math.ceil(selectionWidth)) + "x" + String(Math.ceil(selectionHeight));
             const outputName = captureScreen.name;
             const selectedAudio = audioMode;
-            dismiss(true);
-            Quickshell.execDetached([runtime.recordingToggle, "start", outputName, recordGeometry, selectedAudio]);
+            // Keep selection geometry for retry, but hide the overlay before
+            // the recorder starts so its first frame cannot capture the picker.
+            exporting = true;
+            open = false;
+            statusText = "STARTING RECORDING…";
+            recordingStart.exec([runtime.recordingToggle, "start", outputName, recordGeometry, selectedAudio]);
             return;
         }
         exportAction = annotateAfterCapture ? "annotate" : (copying ? "copy" : "save");
@@ -349,6 +353,24 @@ Item {
                 // Image loading must resume after the transparent capture pass;
                 // leaving the entire picker invisible can suspend the decode.
                 picker.modeSnapshotPending = false;
+                keyboard.forceActiveFocus();
+            }
+        }
+    }
+
+    StdioCollector {
+        id: recordingStartError
+    }
+    Process {
+        id: recordingStart
+        stderr: recordingStartError
+        onExited: (exitCode, exitStatus) => {
+            picker.exporting = false;
+            if (exitCode === 0) {
+                picker.dismiss(true);
+            } else {
+                picker.open = true;
+                picker.statusText = "RECORDING START FAILED · ENTER TO RETRY · ESC CANCEL";
                 keyboard.forceActiveFocus();
             }
         }

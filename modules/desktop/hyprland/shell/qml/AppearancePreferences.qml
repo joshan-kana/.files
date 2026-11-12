@@ -11,7 +11,7 @@ QtObject {
 
     property Settings settings: Settings {
         id: saved
-        location: "file://" + Quickshell.env("HOME") + "/.config/linux-desktop/preferences.ini"
+        location: "file://" + (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/linux-desktop/preferences.ini"
         category: "Appearance"
         property bool wallpaperSpectrumEnabled: appearance.runtime.appearanceDefaults.wallpaperSpectrumEnabled
         property string wallpaperResizeMode: appearance.runtime.appearanceDefaults.wallpaperResizeMode

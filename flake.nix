@@ -169,14 +169,6 @@
         system:
         let
           pkgs = pkgsFor system;
-          markdownOptions = [
-            "--disable"
-            "MD013,MD057"
-            "--extend-enable"
-            "MD060"
-            "--config"
-            "MD060.style = \"aligned\""
-          ];
           javascriptIncludes = [
             "*.cjs"
             "*.js"
