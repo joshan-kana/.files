@@ -328,12 +328,6 @@ in
       home = _: { home.packages = [ pkgs.onlyoffice-desktopeditors ]; };
     };
 
-  twingate =
-    _:
-    lib.optionalAttrs isLinux {
-      services.twingate.enable = true;
-    };
-
   beeperMatrixClient = _: {
     home = _: {
       home.packages = [ pkgs.beeper ];
