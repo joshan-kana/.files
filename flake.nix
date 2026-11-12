@@ -770,6 +770,21 @@
                 bash ${./tests/update-container-lock.sh} ${./scripts/update-container-lock.sh}
                 touch "$out"
               '';
+          neovim-statement =
+            let
+              grammarPackage = pkgs.vimPlugins.nvim-treesitter.withAllGrammars;
+              grammarRuntime = pkgs.buildEnv {
+                name = "neovim-statement-grammars";
+                paths = [ grammarPackage ] ++ grammarPackage.passthru.dependencies;
+              };
+            in
+            pkgs.runCommand "neovim-statement-check" { nativeBuildInputs = [ pkgs.neovim ]; } ''
+              export HOME="$TMPDIR"
+              export EDITOR_GRAMMARS="${grammarRuntime}"
+              export EDITOR_STATEMENT_MODULE="${./modules/cli/neovim/statement.lua}"
+              nvim --headless -l ${./modules/cli/neovim/statement-spec.lua}
+              touch "$out"
+            '';
           git-attributes =
             assert lib.assertMsg (
               builtins.readFile ./.gitattributes == gitAttributesText
