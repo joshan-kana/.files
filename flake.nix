@@ -780,6 +780,25 @@
           ) self.nixosConfigurations) pkgs.emptyFile;
           docs = self.packages.${system}.docs;
           repo-quality = treefmt.config.build.check self;
+          desktop-regressions =
+            pkgs.runCommand "desktop-regression-tests"
+              {
+                nativeBuildInputs = with pkgs; [
+                  nodejs
+                  python3
+                  bash
+                  nix
+                ];
+              }
+              ''
+                export HOME="$TMPDIR"
+                export NIX_CONFIG='experimental-features = nix-command flakes'
+                cd ${self.outPath}
+                node --test tests/test-*.js
+                python3 tests/test-desktop-scripts.py
+                python3 tests/test-palette-index.py
+                touch "$out"
+              '';
           git-attributes =
             assert lib.assertMsg (
               builtins.readFile ./.gitattributes == gitAttributesText
