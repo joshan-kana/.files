@@ -131,10 +131,29 @@ class PaletteIndexTests(unittest.TestCase):
             mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": str(custom), "XDG_DATA_HOME": str(self.base / "custom-data")}),
         ):
             watched = set(self.palette.browser_watch_containers())
+            # One recursive XDG-root observer covers new publishers and app
+            # directories. No emitter is needed per discovered subdirectory.
             self.assertIn(custom, watched)
-            self.assertIn(vendor, watched)
-            self.assertIn(new_browser, watched)
+            self.assertNotIn(vendor, watched)
+            self.assertNotIn(new_browser, watched)
             self.assertNotIn(self.base / ".secrets", watched)
+
+    def test_browser_watcher_count_is_independent_of_installed_apps(self):
+        """Hundreds of XDG directories must not allocate hundreds of emitters."""
+        config = self.base / "xdg-config"
+        config.mkdir()
+        for index in range(300):
+            app = config / f"Publisher{index}" / "Browser" / "Default"
+            app.mkdir(parents=True)
+        with (
+            mock.patch.object(Path, "home", return_value=self.base),
+            mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": str(config), "XDG_DATA_HOME": str(self.base / "xdg-data")}),
+        ):
+            watched = set(self.palette.browser_watch_containers())
+            self.assertIn(config, watched)
+            self.assertLess(len(watched), 10)
+            self.assertFalse(any(path.is_relative_to(config) and path != config for path in watched))
+            self.assertEqual(len(list(self.palette.browser_profile_roots())), 0)
 
     def test_explicit_open_with_uses_xdg_data_applications(self):
         """Resolve installed desktop entries in the configured XDG data home."""

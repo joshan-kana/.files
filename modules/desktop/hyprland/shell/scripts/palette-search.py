@@ -141,38 +141,30 @@ def browser_profile_roots():
 
 
 def browser_watch_containers():
-    """Watch XDG profile ancestry so adding a browser does not need a restart."""
+    """Watch XDG roots and top-level hidden homes without per-app trees.
+
+    XDG roots are watched recursively with one inotify emitter each. Only
+    hidden home directories need individual nonrecursive watchers; known
+    browser profiles are watched recursively by their discovered root.
+    """
     home = Path.home()
     config = Path(os.environ.get("XDG_CONFIG_HOME", str(home / ".config")))
     data = Path(os.environ.get("XDG_DATA_HOME", str(home / ".local/share")))
-    roots = [config, data, home, home / ".var/app"]
-    # These are nonrecursive layout watchers, not searches of file contents.
-    # Profile directories receive their own observers once discovered.
-    selected = set()
-    for base in roots:
-        if not base.is_dir() or base.is_symlink():
-            continue
-        if base not in selected:
-            selected.add(base)
-            yield base
-        try:
-            children = sorted(base.iterdir())[:512]
-        except OSError:
-            continue
-        for child in children:
-            if not child.is_dir() or child.is_symlink() or child.name in EXCLUDED or (base == home and not child.name.startswith(".")):
-                continue
-            if child not in selected:
-                selected.add(child)
-                yield child
-            try:
-                nested = sorted(child.iterdir())[:128]
-            except OSError:
-                continue
-            for directory in nested:
-                if directory.is_dir() and not directory.is_symlink() and directory.name not in EXCLUDED and directory not in selected:
-                    selected.add(directory)
-                    yield directory
+    flatpak = home / ".var/app"
+    roots = (home, config, data, flatpak)
+    for root in roots:
+        if root.is_dir() and not root.is_symlink():
+            yield root
+    # The home-directory watcher sees creation of a new hidden application
+    # directory. The next event-driven layout refresh subscribes to its
+    # immediate children without scanning arbitrary non-browser file trees.
+    try:
+        children = sorted(home.iterdir())[:512]
+    except OSError:
+        return
+    for child in children:
+        if child.name.startswith(".") and child.name not in EXCLUDED and child.is_dir() and not child.is_symlink() and child not in roots:
+            yield child
 
 
 def bookmark_sources():
@@ -584,12 +576,22 @@ def watch_changes(search_server, home, config):
         add(config.parent, False)
         for root in roots:
             add(root, True)
-        for base in browser_layout:
-            add(base, False)
+        # A handful of recursive XDG observers covers any installed browser
+        # layout. Avoid one watchdog emitter (thread, pipe and FD) per app or
+        # profile directory, which exhausts the normal 1024-FD service limit.
+        xdg_roots = (
+            Path(os.environ.get("XDG_CONFIG_HOME", str(home / ".config"))),
+            Path(os.environ.get("XDG_DATA_HOME", str(home / ".local/share"))),
+            home / ".var/app",
+        )
+        for base in xdg_roots:
+            add(base, True)
         for base in browser_profile_roots():
-            add(base, False)
-        for source, _, _ in bookmark_sources():
-            add(source.parent, False)
+            if not any(base == root or base.is_relative_to(root) for root in xdg_roots if root.is_dir()):
+                add(base, True)
+        for base in browser_layout:
+            if not any(base == root or base.is_relative_to(root) for root in xdg_roots if root.is_dir()):
+                add(base, False)
 
         observer.start()
         try:
