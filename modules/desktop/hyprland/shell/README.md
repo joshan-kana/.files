@@ -69,6 +69,12 @@ The local palette preferences file stores favourite identities and, when enabled
 
 System-control commands call the existing shell state/action owners. `volume 35` sets audio volume to 35%, and `brightness 40` targets supported hardware brightness. Selecting **Set Volume** or **Set Brightness** exposes an inline percentage input. Workspace moves use the existing compositor dispatcher.
 
+## Connectivity and calendar ownership
+
+Quickshell's NetworkManager backend owns live devices, Wi-Fi scanning, connection state and available Wi-Fi credentials. The saved-profile details panel reads matching native `Network.nmSettings` entries without spawning a command. NetworkManager remains the authority for profiles not exposed by live device models, including offline Wi-Fi, Ethernet, VPN and WireGuard profiles; these are queried on demand with `nmcli`, not continuously polled. Live interface address and DNS diagnostics also use NetworkManager's existing interface reporting. The advanced profile editor is `nm-connection-editor`, rather than a second network configuration implementation.
+
+The calendar uses `vdirsyncer`'s read-only `singlefile` and `filesystem` storages for per-subscription vdir collections under `$XDG_DATA_HOME/calendars/subscriptions/`. The sync adapter reads each private URL only from `~/.secrets/calendar-icals/*.url` (or the legacy single-feed secret), enforces HTTPS-only redirects and a 12 MiB response limit, and passes a temporary local iCalendar file to `vdirsyncer`. Neither feed URLs nor event contents enter Nix configuration or journal output. All previous imported events remain unchanged in `$XDG_DATA_HOME/calendars/personal/` for rollback. After a successful synchronization, an ephemeral khal configuration exposes the new collections while the agenda suppresses duplicate legacy imports. Existing local events remain visible, per-source visibility uses khal's native calendar identity, and the user's khal configuration is not rewritten. The systemd user timer refreshes subscriptions every 30 minutes; errors keep previous cached data available.
+
 ## Power and session
 
 The Power & Session panel provides Lock, Suspend, Log out, Reboot, Power off and a keyboard-accessible **Restore ON/OFF** choice. H/J/K/L or arrow keys select a tile; Enter activates it, with a second confirmation for actions that end or suspend the session.
