@@ -54,10 +54,10 @@ Item {
         }
     }
 
-    function parseProfileDetails(source: string): var {
-        // Never request or render credentials, PSKs, keys or VPN secrets.
-        // These are saved configuration values, not live interface addresses.
-        const allowed = {
+    // These settings are already exposed by Quickshell's NetworkManager
+    // backend for discovered networks. Only offline or otherwise unexposed
+    // profiles require the full `nmcli connection show` fallback.
+    readonly property var allowedProfileFields: ({
             "connection.interface-name": "DEVICE CONFIG",
             "connection.autoconnect": "AUTO CONNECT",
             "ipv4.method": "IPv4 MODE",
@@ -68,19 +68,56 @@ Item {
             "ipv6.addresses": "IPv6 CONFIG",
             "ipv6.gateway": "IPv6 GATEWAY",
             "ipv6.dns": "IPv6 DNS"
-        };
+        })
+
+    function displayProfileFields(values: var): var {
+        return Object.keys(allowedProfileFields).filter(key => values[key] !== undefined && values[key] !== "" && values[key] !== "--").map(key => ({
+                    label: allowedProfileFields[key],
+                    value: values[key]
+                }));
+    }
+
+    function parseProfileDetails(source: string): var {
+        // Never request or render credentials, PSKs, keys or VPN secrets.
         const values = {};
         for (const line of source.split("\n")) {
             const fields = splitNmcli(line);
             const key = fields[0];
             const value = fields.slice(1).join(":").trim();
-            if (Object.prototype.hasOwnProperty.call(allowed, key) && value && value !== "--")
+            if (Object.prototype.hasOwnProperty.call(allowedProfileFields, key) && value && value !== "--")
                 values[key] = value;
         }
-        return Object.keys(allowed).filter(key => values[key]).map(key => ({
-                    label: allowed[key],
-                    value: values[key]
-                }));
+        return displayProfileFields(values);
+    }
+
+    function nativeProfile(uuid: string): var {
+        for (const device of system.networkDevices) {
+            for (const network of device.networks ? device.networks.values : []) {
+                for (const settings of network.nmSettings || []) {
+                    if (settings.uuid === uuid)
+                        return settings;
+                }
+            }
+        }
+        return null;
+    }
+
+    function nativeProfileDetails(settings: var): var {
+        const source = settings.read();
+        if (!source || typeof source !== "object")
+            return [];
+        const values = {};
+        for (const key of Object.keys(allowedProfileFields)) {
+            const dot = key.indexOf(".");
+            const group = source[key.slice(0, dot)];
+            const raw = group && group[key.slice(dot + 1)];
+            if (raw === undefined || raw === null || raw === "")
+                continue;
+            const display = Array.isArray(raw) ? raw.map(item => typeof item === "object" ? JSON.stringify(item) : String(item)).join(" · ") : String(raw);
+            if (display !== "" && display !== "--")
+                values[key] = display;
+        }
+        return displayProfileFields(values);
     }
 
     property StdioCollector detailOutput: StdioCollector {}
@@ -154,6 +191,14 @@ Item {
         if (!detailConnected) {
             if (detailUuid.length === 0 || profileDetailsProcess.running)
                 return;
+            const native = nativeProfile(detailUuid);
+            if (native) {
+                const rows = nativeProfileDetails(native);
+                if (rows.length > 0) {
+                    detailRows = detailBaseRows.concat(rows);
+                    return;
+                }
+            }
             profileQueryUuid = detailUuid;
             profileDetailsProcess.exec([runtime.nmcli, "--escape", "yes", "-t", "-f", "connection.interface-name,connection.autoconnect,ipv4.method,ipv4.addresses,ipv4.gateway,ipv4.dns,ipv6.method,ipv6.addresses,ipv6.gateway,ipv6.dns", "connection", "show", "uuid", detailUuid]);
             return;
