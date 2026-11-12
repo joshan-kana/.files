@@ -107,7 +107,7 @@ test("closing a toast preserves notification before invalidating the model row",
   );
   assert.match(
     popup,
-    /root\.popups\.remove\(i\);\s*if \(expire\)\s*notification\.expire\(\);/,
+    /root\.popups\.remove\(i\);\s*if \(expire && root\.isLive\(notification\)\)\s*notification\.expire\(\);/,
   );
 });
 
@@ -153,7 +153,7 @@ test("ordinary popup suppression never accesses a removed ListModel wrapper", ()
   );
   assert.match(
     state,
-    /function concealOrdinaryPopups\(\): void \{[\s\S]*?const notification = item\.notification;[\s\S]*?popups\.remove\(i\);\s*if \(notification\.transient\)/,
+    /function concealOrdinaryPopups\(\): void \{[\s\S]*?const notification = item\.notification;[\s\S]*?popups\.remove\(i\);\s*if \(notification\.transient && isLive\(notification\)\)/,
   );
   assert.match(state, /if \(liveById\[key\] === notification\)/);
 });
@@ -196,4 +196,51 @@ test("Qt Quick Text link activation uses its supported onLinkActivated signal", 
     assert.match(source, /textFormat: Text.StyledText\s+onLinkActivated:/);
     assert.doesNotMatch(source, /textInteractionFlags:/);
   }
+});
+
+test("clearing stored notifications never closes an already released Qt handle twice", () => {
+  const source = fs.readFileSync(
+    path.join(root, "NotificationState.qml"),
+    "utf8",
+  );
+  const clear =
+    source.match(/function clearAll\(\): void \{([\s\S]*?)\n {4}\}/)?.[1] ?? "";
+  assert.match(clear, /hidePopup\(\);[\s\S]*?applyJournal\(\[\]\)/);
+  assert.doesNotMatch(
+    clear,
+    /notification\.dismiss\(\)|notification\.expire\(\)|tracked\s*=/,
+  );
+  assert.match(
+    source,
+    /function isLive\(notification\): bool \{[\s\S]*?server\.trackedNotifications\.values\.includes\(notification\)/,
+  );
+  assert.match(
+    source,
+    /if \(isLive\(live\) && live\.tracked\)\s*live\.tracked = false/,
+  );
+});
+
+test("dismissal handles persistent and transient records without double close", () => {
+  const source = fs.readFileSync(
+    path.join(root, "NotificationState.qml"),
+    "utf8",
+  );
+  const dismiss =
+    source.match(
+      /function dismiss\(notification\): void \{([\s\S]*?)\n {4}\}/,
+    )?.[1] ?? "";
+  assert.match(dismiss, /const stored = !!key && journal\.some/);
+  assert.match(dismiss, /if \(stored\)[\s\S]*?applyJournal\(journal\.filter/);
+  assert.match(
+    dismiss,
+    /else if \(isLive\(notification\)\)\s*[\s\S]*?notification\.dismiss\(\)/,
+  );
+  assert.match(
+    source,
+    /function invokeAction\(notification, index: int\): void \{[\s\S]*?if \(!isLive\(notification\)/,
+  );
+  assert.match(
+    source,
+    /function sendReply\(notification, message: string\): void \{[\s\S]*?if \(!isLive\(notification\)/,
+  );
 });
