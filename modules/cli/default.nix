@@ -699,6 +699,7 @@ in
           plugins = with pkgs.vimPlugins; [
             snacks-nvim
             blink-cmp
+            nvim-autopairs
             which-key-nvim
             lualine-nvim
             nvim-lspconfig
@@ -711,6 +712,7 @@ in
           ''
           + builtins.readFile ./neovim/init.lua;
         };
+        xdg.configFile."nvim/lua/editor/pairs.lua".source = ./neovim/pairs.lua;
         xdg.configFile."nvim/lua/editor/profiles.lua".source = ./neovim/profiles.lua;
         xdg.configFile."nvim/lua/editor/guide.lua".source = ./neovim/guide.lua;
         xdg.configFile."nvim/lua/editor/lsp.lua".source = ../../.nvim/lsp.lua;
