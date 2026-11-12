@@ -42,7 +42,7 @@ test("Escape label follows the actual focus owner", () => {
   );
   assert.match(
     controls,
-    /if \(root\.helpOpen\) \{[\s\S]*?event\.key === Qt\.Key_Escape/,
+    /function navigateBack\(\): void \{[\s\S]*?else if \(helpOpen\) \{[\s\S]*?helpOpen = false;/,
   );
   assert.match(
     controls,

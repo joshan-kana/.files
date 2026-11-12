@@ -106,7 +106,7 @@ test("slider keyboard workflow respects direct actions, detail Escape and global
   assert.match(controls, /root\.selectedSlider = ""/);
   assert.match(
     controls,
-    /event\.key === Qt\.Key_Escape \|\| event\.key === Qt\.Key_Backspace/,
+    /if \(event\.key === Qt\.Key_Escape\) \{\s*root\.navigateBack\(\);/,
   );
   assert.match(controls, /shortcut: "TAB"/);
   assert.match(

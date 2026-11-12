@@ -934,7 +934,9 @@ test("the hub's content reveal follows its surface without leaving visible clipp
   for (const id of ["tabs", "hubFooter", "contentViewport"]) {
     assert.match(
       qml,
-      new RegExp(`id: ${id}\\s+opacity: shellSurface\\.contentReveal`),
+      new RegExp(
+        `id: ${id}[\\s\\S]{0,240}?opacity: shellSurface\\.contentReveal`,
+      ),
     );
   }
   // WidgetHelp implements its own opacity binding for open/close. The

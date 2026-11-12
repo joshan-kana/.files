@@ -93,6 +93,7 @@ PanelWindow {
     readonly property Item loadedContent: activeLoader ? activeLoader.item as Item : null
     readonly property SystemContent systemContent: expansionState.currentName === "system" ? loadedContent as SystemContent : null
     readonly property NotificationContent activityContent: expansionState.currentName === "activity" ? loadedContent as NotificationContent : null
+    readonly property CalendarContent calendarContent: expansionState.currentName === "calendar" ? loadedContent as CalendarContent : null
     readonly property bool themeOperationVisible: !!systemContent && systemContent.themeOperationRunning && expansionState.hasCurrent
     readonly property bool wallpaperOperationVisible: !!systemContent && systemContent.wallpaperOperationRunning && expansionState.hasCurrent
     readonly property bool captureEditorRequestVisible: !!systemContent && systemContent.captureEditorRequestRunning && expansionState.hasCurrent
@@ -193,6 +194,25 @@ PanelWindow {
             mediaContent.helpOpen = !mediaContent.helpOpen;
         else
             otherHelpOpen = !otherHelpOpen;
+    }
+
+    function navigateBack(): void {
+        if (!expansionState.hasCurrent)
+            return;
+        // Delegate to each visible page before consulting the hub's history.
+        // This keeps confirmation, picker, reply and submenu cancellation in
+        // the service/view that already owns those interactions.
+        if (systemContent) {
+            systemContent.navigateBack();
+        } else if (helpVisible) {
+            toggleHelp();
+        } else if (activityContent) {
+            activityContent.navigateBack();
+        } else if (calendarContent) {
+            calendarContent.navigateBack();
+        } else {
+            expansionState.back();
+        }
     }
 
     function presentComponent(next: Component): void {
@@ -762,6 +782,9 @@ PanelWindow {
 
         HubTabs {
             id: tabs
+            // Keep Back and Help clickable while contextual help overlays
+            // the content; inactive tabs do not intercept modal actions.
+            z: 250
             opacity: shellSurface.contentReveal
             anchors {
                 left: parent.left
@@ -776,7 +799,9 @@ PanelWindow {
             motion: host.motion
             currentTab: host.currentTab
             helpOpen: host.helpVisible
+            backLabel: host.escapeHintLabel
             onTabRequested: destination => host.navigate(destination)
+            onBackRequested: host.navigateBack()
             onHelpRequested: host.toggleHelp()
         }
 

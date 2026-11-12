@@ -23,7 +23,9 @@ test("all hub views reveal progressively while geometry expands", () => {
   for (const id of ["tabs", "hubFooter", "contentViewport"])
     assert.match(
       qml,
-      new RegExp(`id: ${id}\\s+opacity: shellSurface\\.contentReveal`),
+      new RegExp(
+        `id: ${id}[\\s\\S]{0,240}?opacity: shellSurface\\.contentReveal`,
+      ),
     );
 });
 
