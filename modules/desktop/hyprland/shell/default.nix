@@ -548,7 +548,10 @@ in
 
       agendaIcalSync = pkgs.writeShellApplication {
         name = "linux-desktop-ical-sync";
-        runtimeInputs = [ (pkgs.python3.withPackages (python: [ python.icalendar ])) ];
+        runtimeInputs = [
+          pkgs.python3
+          pkgs.vdirsyncer
+        ];
         text = ''
           exec python3 ${agendaIcalSource}
         '';
@@ -931,7 +934,8 @@ in
           Service = {
             Type = "oneshot";
             ExecStart = lib.getExe agendaIcalSync;
-            TimeoutStartSec = 45;
+            # Three feeds can independently exhaust bounded download and sync timeouts.
+            TimeoutStartSec = 300;
           };
         };
 

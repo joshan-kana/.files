@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Read-only private calendar integration for the desktop agenda."""
 
+import contextlib
 import hashlib
 import json
 import os
@@ -13,6 +14,9 @@ from pathlib import Path
 HOME = Path.home()
 CONFIG = Path(os.environ.get("XDG_CONFIG_HOME", str(HOME / ".config")))
 DATA = Path(os.environ.get("XDG_DATA_HOME", str(HOME / ".local/share")))
+STATE = Path(os.environ.get("XDG_STATE_HOME", str(HOME / ".local/state")))
+VDIR_READY = STATE / "linux-desktop/ical-vdir-ready"
+SUBSCRIPTIONS = DATA / "calendars/subscriptions"
 SOURCES = HOME / ".secrets/calendar-icals"
 CACHE = DATA / "calendars/personal"
 SETTINGS = CONFIG / "linux-desktop/calendar-visibility.json"
@@ -78,6 +82,39 @@ def read_index():
     return index
 
 
+def subscriptions_ready(feeds):
+    """Use the new view only when all current subscriptions have a vdir."""
+    return (
+        VDIR_READY.is_file()
+        and not VDIR_READY.is_symlink()
+        and all((SUBSCRIPTIONS / feed["id"]).is_dir() and not (SUBSCRIPTIONS / feed["id"]).is_symlink() for feed in feeds)
+    )
+
+
+@contextlib.contextmanager
+def khal_config(feeds):
+    """Add standard vdir collections without modifying the user's khal config."""
+    original = CONFIG / "khal/config"
+    if not subscriptions_ready(feeds):
+        yield original
+        return
+    text = original.read_text(encoding="utf-8")
+    if "[calendars]" not in text:
+        raise ValueError("khal calendar configuration missing")
+    entries = []
+    for feed in feeds:
+        folder = SUBSCRIPTIONS / feed["id"]
+        if folder.is_dir() and not folder.is_symlink():
+            entries.append("[[subscription-" + feed["id"] + "]]\n" + "path = " + str(folder) + "\n" + "type = calendar\nreadonly = True\n")
+    content = text.replace("[calendars]", "[calendars]\n" + "\n".join(entries), 1)
+    runtime = Path(os.environ.get("XDG_RUNTIME_DIR", tempfile.gettempdir()))
+    with tempfile.TemporaryDirectory(prefix="khal-subscriptions-", dir=runtime) as scratch:
+        config = Path(scratch) / "config"
+        config.write_text(content, encoding="utf-8")
+        config.chmod(0o600)
+        yield config
+
+
 def agenda(start):
     """Return the selected week with per-calendar visibility applied."""
     feeds = calendars()
@@ -92,6 +129,8 @@ def agenda(start):
     args = [
         "khal",
         "list",
+        "--json",
+        "calendar",
         "--json",
         "uid",
         "--json",
@@ -109,7 +148,14 @@ def agenda(start):
         start,
         end,
     ]
-    output = subprocess.run(args, capture_output=True, text=True, check=True).stdout
+    with khal_config(feeds) as config:
+        output = subprocess.run(
+            ["khal", "--config", str(config), *args[1:]],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout
+    native = subscriptions_ready(feeds)
     index = read_index()
     known = {feed["id"]: feed["name"] for feed in feeds}
     events = []
@@ -119,8 +165,20 @@ def agenda(start):
         for event in json.loads(line):
             uid_hash = hashlib.sha256(str(event.get("uid", "")).encode()).hexdigest()
             origins = index.get(uid_hash, set())
-            if origins and not any(source in known and source not in disabled for source in origins):
-                continue
+            if native:
+                calendar = str(event.get("calendar", ""))
+                identity = calendar.removeprefix("subscription-") if calendar.startswith("subscription-") else ""
+                if identity and (identity not in known or identity in disabled):
+                    continue
+                # Keep the old imported files for rollback but do not show
+                # the same subscribed event twice in the agenda.
+                if calendar == "personal" and origins:
+                    continue
+                source = known.get(identity, calendar if calendar != "personal" else "Local")
+            else:
+                if origins and not any(source in known and source not in disabled for source in origins):
+                    continue
+                source = next((known[item] for item in sorted(origins) if item in known), "Local")
             event_start = event.get("start-date", "")
             event_end = event.get("end-date", "")
             if event_start > end:
@@ -142,7 +200,6 @@ def agenda(start):
                     continue
                 display_date = finish.isoformat()
                 display_time = event.get("end-time", "")
-            source = next((known[item] for item in sorted(origins) if item in known), "Local")
             events.append(
                 {
                     "calendar": source,
