@@ -280,7 +280,7 @@ test("Escape cancels an armed Session action before backing out", () => {
   );
   assert.match(
     content,
-    /if \(sessionPanel\.open\) \{[\s\S]*?event\.key === Qt\.Key_Escape[\s\S]*?if \(sessionPanel\.armedAction\.length > 0\)\s*sessionPanel\.invoke\("cancelConfirmation"\);\s*else\s*root\.backFromDetail\(\)/,
+    /function navigateBack\(\): void \{[\s\S]*?else if \(sessionPanel\.open && sessionPanel\.armedAction\.length > 0\) \{\s*sessionPanel\.invoke\("cancelConfirmation"\);[\s\S]*?else if \(detailsVisible\) \{\s*backFromDetail\(\)/,
   );
   assert.match(
     content,
