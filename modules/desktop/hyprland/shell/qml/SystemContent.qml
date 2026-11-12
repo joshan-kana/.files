@@ -452,6 +452,10 @@ FocusScope {
             if (sessionPanel.open && sessionPanel.armedAction.length > 0)
                 sessionPanel.invoke("cancelConfirmation");
             helpOpen = false;
+        } else if (themePanel.open && themePanel.panel && themePanel.panel.searching) {
+            themePanel.invoke("leaveSearch");
+        } else if (wallpaperPanel.open && wallpaperPanel.panel && wallpaperPanel.panel.searching) {
+            wallpaperPanel.invoke("leaveSearch");
         } else if (mixerOpen) {
             mixerView.finishLoading();
             if (!mixerView.panel || !mixerView.panel.handleKey(Qt.Key_Escape, Qt.NoModifier))
