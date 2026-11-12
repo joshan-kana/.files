@@ -208,6 +208,13 @@ QtObject {
         return notification ? (notification.recordId || objectKeys.get(notification) || "") : "";
     }
 
+    // A retained Notification keeps its QML wrapper after the notification
+    // server destroys its protocol handle. Only tracked server members may
+    // receive an action or a second close request.
+    function isLive(notification): bool {
+        return !!notification && !notification.historical && server.trackedNotifications.values.includes(notification);
+    }
+
     function isRead(notification): bool {
         const key = recordKey(notification);
         return !!key && journal.some(record => record.recordId === key && record.read);
@@ -283,7 +290,7 @@ QtObject {
                 continue;
             const live = nextLive[record.recordId];
             delete nextLive[record.recordId];
-            if (live && live.tracked)
+            if (isLive(live) && live.tracked)
                 live.tracked = false;
         }
         liveById = nextLive;
@@ -493,7 +500,7 @@ QtObject {
                     const notification = item.notification;
                     const expire = notification && (item.closeWhenDone || notification.transient || !root.recordKey(notification));
                     root.popups.remove(i);
-                    if (expire)
+                    if (expire && root.isLive(notification))
                         notification.expire();
                 } else if (item.phase === "visible" && !item.paused && item.expires > 0 && item.expires <= now) {
                     root.popups.setProperty(i, "closeWhenDone", true);
@@ -529,7 +536,7 @@ QtObject {
             const notification = item.notification;
             if (notification && NotificationSemantics.groupKey(notification) === groupKey) {
                 popups.remove(i);
-                if (notification.transient || !recordKey(notification))
+                if ((notification.transient || !recordKey(notification)) && isLive(notification))
                     notification.expire();
             }
         }
@@ -544,7 +551,7 @@ QtObject {
             const notification = item.notification;
             if (item.outputName === outputName && notification && notification.urgency !== NotificationUrgency.Critical) {
                 popups.remove(i);
-                if (notification.transient)
+                if (notification.transient && isLive(notification))
                     notification.expire();
             }
         }
@@ -559,7 +566,7 @@ QtObject {
             const notification = item.notification;
             if (notification && notification.urgency !== NotificationUrgency.Critical) {
                 popups.remove(i);
-                if (notification.transient)
+                if (notification.transient && isLive(notification))
                     notification.expire();
             }
         }
@@ -572,7 +579,7 @@ QtObject {
         if (!notification) {
             for (let i = 0; i < popups.count; ++i) {
                 const item = popups.get(i);
-                if (item.notification && (item.notification.transient || !recordKey(item.notification)))
+                if (isLive(item.notification) && (item.notification.transient || !recordKey(item.notification)))
                     item.notification.expire();
             }
             popups.clear();
@@ -596,14 +603,17 @@ QtObject {
             return;
         hidePopup(notification);
         const key = recordKey(notification);
-        if (key)
+        const stored = !!key && journal.some(record => record.recordId === key);
+        if (stored)
+            // applyJournal releases its live handle via tracked = false.
             applyJournal(journal.filter(record => record.recordId !== key));
-        if (!notification.historical)
+        else if (isLive(notification))
+            // Nonpersistent (including transient) records have no journal owner.
             notification.dismiss();
     }
 
     function invokeDefault(notification): bool {
-        if (!notification || notification.historical || locked)
+        if (!isLive(notification) || locked)
             return false;
         const action = NotificationSemantics.defaultAction(notification.actions);
         if (!action)
@@ -616,7 +626,7 @@ QtObject {
 
     function invokeAction(notification, index: int): void {
         const actions = explicitActions(notification);
-        if (!notification || notification.historical || locked || index < 0 || index >= actions.length)
+        if (!isLive(notification) || locked || index < 0 || index >= actions.length)
             return;
         setRead(notification, true);
         hidePopup(notification);
@@ -624,7 +634,7 @@ QtObject {
     }
 
     function sendReply(notification, message: string): void {
-        if (!notification || notification.historical || locked || !notification.hasInlineReply || !message.trim())
+        if (!isLive(notification) || locked || !notification.hasInlineReply || !message.trim())
             return;
         setRead(notification, true);
         hidePopup(notification);
@@ -644,11 +654,9 @@ QtObject {
     }
 
     function clearAll(): void {
-        const items = [...history];
         hidePopup();
+        // applyJournal closes live handles by releasing their tracked state;
+        // dismissing them again after that release targets destroyed objects.
         applyJournal([]);
-        for (const notification of items)
-            if (!notification.historical)
-                notification.dismiss();
     }
 }
