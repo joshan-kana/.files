@@ -25,7 +25,7 @@ Item {
 
     Settings {
         id: preferences
-        location: "file://" + Quickshell.env("HOME") + "/.config/linux-desktop/preferences.ini"
+        location: "file://" + (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/linux-desktop/preferences.ini"
         category: "Session"
         property bool restoreWindowsOnExit: panel.runtime.restoreWindowsOnExit
         property string preferenceSource: ""

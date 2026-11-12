@@ -90,48 +90,162 @@ def files():
                     return
 
 
-def bookmarks():
-    """Yield browser bookmarks from local supported browser profiles."""
+def browser_profile_roots():
+    """Find Chromium/Gecko profile stores by layout, never by browser brand."""
     home = Path.home()
-    configs = [
-        (home / ".config/chromium", "chromium"),
-        (home / ".config/google-chrome", "google-chrome-stable"),
-        (home / ".config/BraveSoftware/Brave-Browser", "brave-browser"),
-    ]
-    for folder, browser in configs:
-        for source in [folder / "Default/Bookmarks", *sorted(folder.glob("Profile */Bookmarks"))[:12]]:
+    config_home = Path(os.environ.get("XDG_CONFIG_HOME", str(home / ".config")))
+    data_home = Path(os.environ.get("XDG_DATA_HOME", str(home / ".local/share")))
+    bases = [config_home, data_home, home, home / ".var/app"]
+    flatpak_apps = home / ".var/app"
+    if flatpak_apps.is_dir() and not flatpak_apps.is_symlink():
+        for app in sorted(flatpak_apps.iterdir())[:128]:
+            if app.is_dir() and not app.is_symlink():
+                bases.extend((app / "config", app / "data"))
+
+    seen = set()
+
+    def matching(root):
+        if root in seen or root.name in EXCLUDED or not root.is_dir() or root.is_symlink():
+            return False
+        seen.add(root)
+        return (
+            (root / "profiles.ini").is_file()
+            or (root / "Default/Bookmarks").is_file()
+            or any(root.glob("Profile */Bookmarks"))
+            or any(root.glob("*.default*/places.sqlite"))
+        )
+
+    for base in bases:
+        if not base.is_dir() or base.is_symlink():
+            continue
+        if matching(base):
+            yield base
+        try:
+            children = sorted(base.iterdir())[:512]
+        except OSError:
+            continue
+        for root in children:
+            if not root.is_dir() or root.is_symlink():
+                continue
+            if matching(root):
+                yield root
+            # Recognize nested standard profile layouts, without recursively
+            # scanning arbitrary home data.
             try:
-                data = json.loads(source.read_text())
+                nested = sorted(root.iterdir())[:128]
+            except OSError:
+                continue
+            for folder in nested:
+                if matching(folder):
+                    yield folder
+
+
+def browser_watch_containers():
+    """Watch XDG profile ancestry so adding a browser does not need a restart."""
+    home = Path.home()
+    config = Path(os.environ.get("XDG_CONFIG_HOME", str(home / ".config")))
+    data = Path(os.environ.get("XDG_DATA_HOME", str(home / ".local/share")))
+    roots = [config, data, home, home / ".var/app"]
+    # These are nonrecursive layout watchers, not searches of file contents.
+    # Profile directories receive their own observers once discovered.
+    selected = set()
+    for base in roots:
+        if not base.is_dir() or base.is_symlink():
+            continue
+        if base not in selected:
+            selected.add(base)
+            yield base
+        try:
+            children = sorted(base.iterdir())[:512]
+        except OSError:
+            continue
+        for child in children:
+            if not child.is_dir() or child.is_symlink() or child.name in EXCLUDED or (base == home and not child.name.startswith(".")):
+                continue
+            if child not in selected:
+                selected.add(child)
+                yield child
+            try:
+                nested = sorted(child.iterdir())[:128]
+            except OSError:
+                continue
+            for directory in nested:
+                if directory.is_dir() and not directory.is_symlink() and directory.name not in EXCLUDED and directory not in selected:
+                    selected.add(directory)
+                    yield directory
+
+
+def bookmark_sources():
+    """Return supported bookmark files and their discovered profile labels."""
+    import configparser
+
+    seen = set()
+    for root in browser_profile_roots():
+        label = root.name.strip(".") or "Browser"
+        for source in sorted(root.glob("*/Bookmarks"))[:24]:
+            if source.is_file() and not source.is_symlink() and source not in seen:
+                seen.add(source)
+                yield source, "chromium", label
+
+        profiles = root / "profiles.ini"
+        candidates = list(root.glob("*/places.sqlite"))[:24]
+        if profiles.is_file() and not profiles.is_symlink():
+            parser = configparser.ConfigParser(interpolation=None)
+            try:
+                parser.read(profiles, encoding="utf-8")
+                for section in parser.sections():
+                    if not section.startswith("Profile"):
+                        continue
+                    path = parser.get(section, "Path", fallback="")
+                    if not path or ".." in Path(path).parts:
+                        continue
+                    directory = root / path if parser.getboolean(section, "IsRelative", fallback=True) else Path(path)
+                    candidates.append(directory / "places.sqlite")
+            except (configparser.Error, OSError, ValueError):
+                pass
+        for source in candidates:
+            if source.is_file() and not source.is_symlink() and source not in seen:
+                seen.add(source)
+                yield source, "gecko", label
+
+
+def bookmarks():
+    """Index HTTP(S) bookmarks from discovered local browser profile formats."""
+    for source, kind, label in bookmark_sources():
+        if kind == "chromium":
+            try:
+                data = json.loads(source.read_text(encoding="utf-8"))
             except (OSError, ValueError):
                 continue
 
-            def visit(node, browser=browser):
-                if isinstance(node, dict):
-                    if node.get("type") == "url" and isinstance(node.get("url"), str):
-                        url = node["url"]
-                        if url.startswith(("http://", "https://")):
-                            yield (url, str(node.get("name", url))[:200], 2, browser)
-                    for child in node.get("children", []) or []:
-                        yield from visit(child)
+            def visit(node, source_label=label):
+                if not isinstance(node, dict):
+                    return
+                if node.get("type") == "url" and isinstance(node.get("url"), str):
+                    url = node["url"]
+                    if url.startswith(("http://", "https://")):
+                        yield url, str(node.get("name", url))[:200], 2, source_label
+                for child in node.get("children", []) or []:
+                    yield from visit(child)
 
             for node in data.get("roots", {}).values():
                 yield from visit(node)
-
-    firefox = home / ".mozilla/firefox"
-    for source in sorted(firefox.glob("*.default*/places.sqlite"))[:12]:
-        try:
-            db = sqlite3.connect(f"file:{source}?mode=ro", uri=True, timeout=0.5)
+        else:
             try:
-                rows = db.execute(
-                    "SELECT p.url, b.title FROM moz_bookmarks b JOIN moz_places p ON p.id=b.fk WHERE b.type=1 AND p.url LIKE 'http%' LIMIT 10000"
-                )
-                for url, title in rows:
-                    if isinstance(url, str) and url.startswith(("http://", "https://")):
-                        yield (url, (title or url)[:200], 2, "firefox")
-            finally:
-                db.close()
-        except (OSError, sqlite3.Error):
-            continue
+                # Read-only access to a live WAL database; never copy or mutate
+                # the browser's profile. URI encoding handles special paths.
+                db = sqlite3.connect(source.as_uri() + "?mode=ro", uri=True, timeout=0.5)
+                try:
+                    rows = db.execute(
+                        "SELECT p.url, b.title FROM moz_bookmarks b JOIN moz_places p ON p.id=b.fk WHERE b.type=1 AND p.url LIKE 'http%' LIMIT 10000"
+                    )
+                    for url, title in rows:
+                        if isinstance(url, str) and url.startswith(("http://", "https://")):
+                            yield url, (title or url)[:200], 2, label
+                finally:
+                    db.close()
+            except (OSError, sqlite3.Error):
+                continue
 
 
 def index():
@@ -233,7 +347,8 @@ def installed_desktop_entry(desktop_id):
         return None
     if "/" in desktop_id or "\\" in desktop_id or desktop_id.startswith("."):
         return None
-    entries = [Path.home() / ".local/share/applications"]
+    data_home = Path(os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local/share")))
+    entries = [data_home / "applications"]
     entries += [
         Path(root) / "applications"
         for root in os.environ.get(
@@ -439,9 +554,10 @@ def watch_changes(search_server, home, config):
         notifications = Queue()
         observer = Observer()
         watch_paths = set()
+        browser_layout = set(browser_watch_containers())
 
         class Changes(FileSystemEventHandler):
-            def on_any_event(self, event, roots=roots, notifications=notifications):
+            def on_any_event(self, event, roots=roots, notifications=notifications, browser_layout=browser_layout):
                 if event.event_type in ("opened", "closed_no_write"):
                     return
                 source = Path(event.src_path)
@@ -453,7 +569,7 @@ def watch_changes(search_server, home, config):
                     if is_bookmark_change(path):
                         notifications.put(event)
                         return
-                    if event.is_directory and is_watch_layout_change(path, roots):
+                    if event.is_directory and (path.parent in browser_layout or is_watch_layout_change(path, roots)):
                         notifications.put(event)
                         return
 
@@ -468,17 +584,12 @@ def watch_changes(search_server, home, config):
         add(config.parent, False)
         for root in roots:
             add(root, True)
-        for base in (
-            home / ".config/chromium",
-            home / ".config/google-chrome",
-            home / ".config/BraveSoftware/Brave-Browser",
-            home / ".mozilla/firefox",
-        ):
+        for base in browser_layout:
             add(base, False)
-            if base.is_dir():
-                for child in base.iterdir():
-                    if child.is_dir() and (child.name == "Default" or child.name.startswith("Profile ") or ".default" in child.name):
-                        add(child, False)
+        for base in browser_profile_roots():
+            add(base, False)
+        for source, _, _ in bookmark_sources():
+            add(source.parent, False)
 
         observer.start()
         try:
@@ -515,9 +626,7 @@ def is_indexable(path, root):
 
 def is_bookmark_change(path):
     """Recognize browser bookmark files that require reindexing."""
-    if path.name == "Bookmarks" and (path.parent.name == "Default" or path.parent.name.startswith("Profile ")):
-        return True
-    return path.name.startswith("places.sqlite") and ".default" in path.parent.name
+    return path.name in {"Bookmarks", "places.sqlite", "profiles.ini"} or path.name.startswith("places.sqlite-")
 
 
 def is_watch_layout_change(path, roots):
@@ -526,7 +635,9 @@ def is_watch_layout_change(path, roots):
         return True
     if path.parent == Path.home() and path in declared_roots():
         return True
-    return path.parent.name in {"chromium", "google-chrome", "Brave-Browser", "firefox"}
+    config = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config")))
+    data = Path(os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local/share")))
+    return path.parent in {Path.home(), config, data, Path.home() / ".var/app"} or path in set(browser_profile_roots())
 
 
 if __name__ == "__main__":

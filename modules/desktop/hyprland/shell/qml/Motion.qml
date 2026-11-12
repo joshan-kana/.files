@@ -10,7 +10,7 @@ QtObject {
     // reboot independently of the Nix-generated runtime defaults.
     property Settings preferences: Settings {
         id: preferences
-        location: "file://" + Quickshell.env("HOME") + "/.config/linux-desktop/preferences.ini"
+        location: "file://" + (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/linux-desktop/preferences.ini"
         category: "Motion"
         property bool animationsEnabled: root.runtime.animationsEnabled
         property string preferenceSource: ""

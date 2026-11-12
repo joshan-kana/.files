@@ -1019,7 +1019,7 @@ Item {
         else if (entry.kind === "file" && entry.path)
             Quickshell.execDetached([runtime.urlOpen, entry.path]);
         else if (entry.kind === "bookmark" && entry.url)
-            Quickshell.execDetached([["firefox", "chromium", "google-chrome-stable", "brave-browser"].includes(entry.browser) ? entry.browser : runtime.urlOpen, entry.url]);
+            Quickshell.execDetached([runtime.urlOpen, entry.url]);
         else if (entry.kind === "window" && entry.toplevel && entry.toplevel.wayland)
             entry.toplevel.wayland.activate();
         else if (entry.kind === "workspace" && entry.workspaceId > 0 && entry.workspaceId <= 10)
