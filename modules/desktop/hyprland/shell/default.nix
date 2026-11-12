@@ -10,7 +10,7 @@ let
 
   resourceProbe = pkgs.writeShellApplication {
     name = "linux-desktop-resource-probe";
-    text = builtins.readFile ./scripts/resource-probe.sh;
+    text = builtins.readFile ../../../../scripts/linux-desktop/resource-probe.sh;
   };
 
   palettePython = pkgs.python3.withPackages (packages: [ packages.watchdog ]);
@@ -22,7 +22,7 @@ let
       pkgs.glib
     ];
     text = ''
-      exec ${lib.getExe palettePython} ${./scripts/palette-search.py} "$@"
+      exec ${lib.getExe palettePython} ${../../../../scripts/linux-desktop/palette-search.py} "$@"
     '';
   };
 
@@ -511,7 +511,8 @@ in
           pkgs.util-linux
         ];
         text =
-          builtins.readFile ./scripts/wallpaper-common.sh + builtins.readFile ./scripts/wallpaper-apply.sh;
+          builtins.readFile ../../../../scripts/linux-desktop/wallpaper-common.sh
+          + builtins.readFile ../../../../scripts/linux-desktop/wallpaper-apply.sh;
       };
 
       wallpaperLibrary = pkgs.writeShellApplication {
@@ -526,7 +527,8 @@ in
           pkgs.util-linux
         ];
         text =
-          builtins.readFile ./scripts/wallpaper-common.sh + builtins.readFile ./scripts/wallpaper-library.sh;
+          builtins.readFile ../../../../scripts/linux-desktop/wallpaper-common.sh
+          + builtins.readFile ../../../../scripts/linux-desktop/wallpaper-library.sh;
       };
 
       wallpaperVideoFromState = pkgs.writeShellApplication {
@@ -537,12 +539,12 @@ in
           pkgs.mpvpaper
           pkgs.coreutils
         ];
-        text = builtins.readFile ./scripts/wallpaper-video-from-state.sh;
+        text = builtins.readFile ../../../../scripts/linux-desktop/wallpaper-video-from-state.sh;
       };
 
       # The subscribed iCal URL is a runtime-only secret. Google Calendar
       # publishes a standard VCALENDAR feed; khal already owns local event UI.
-      agendaIcalSource = ./scripts/ical-sync.py;
+      agendaIcalSource = ../../../../scripts/linux-desktop/ical-sync.py;
 
       agendaIcalSync = pkgs.writeShellApplication {
         name = "linux-desktop-ical-sync";
@@ -555,10 +557,10 @@ in
       agendaSetup = pkgs.writeShellApplication {
         name = "linux-desktop-agenda-setup";
         runtimeInputs = [ pkgs.coreutils ];
-        text = builtins.readFile ./scripts/agenda-setup.sh;
+        text = builtins.readFile ../../../../scripts/linux-desktop/agenda-setup.sh;
       };
 
-      agendaQuerySource = ./scripts/agenda-query.py;
+      agendaQuerySource = ../../../../scripts/linux-desktop/agenda-query.py;
 
       agendaQuery = pkgs.writeShellApplication {
         name = "linux-desktop-agenda-query";
@@ -578,7 +580,7 @@ in
           pkgs.coreutils
           pkgs.imagemagick
         ];
-        text = builtins.readFile ./scripts/clipboard-preview.sh;
+        text = builtins.readFile ../../../../scripts/linux-desktop/clipboard-preview.sh;
       };
 
       clipboardCopy = pkgs.writeShellApplication {
@@ -587,7 +589,7 @@ in
           pkgs.cliphist
           pkgs.wl-clipboard
         ];
-        text = builtins.readFile ./scripts/clipboard-copy.sh;
+        text = builtins.readFile ../../../../scripts/linux-desktop/clipboard-copy.sh;
       };
 
       spectrumAnalyzer = pkgs.linux-desktop-spectrum;
@@ -722,7 +724,7 @@ in
           pkgs.coreutils
           pkgs.systemd
         ];
-        text = builtins.readFile ./scripts/lock.sh;
+        text = builtins.readFile ../../../../scripts/linux-desktop/lock.sh;
       };
 
       nightLightControl = pkgs.writeShellApplication {
@@ -732,7 +734,7 @@ in
           pkgs.systemd
           pkgs.hyprsunset
         ];
-        text = builtins.readFile ./scripts/night-light.sh;
+        text = builtins.readFile ../../../../scripts/linux-desktop/night-light.sh;
       };
 
       colourPicker = pkgs.writeShellApplication {
@@ -744,7 +746,7 @@ in
           pkgs.libnotify
           pkgs.systemd
         ];
-        text = builtins.readFile ./scripts/pick-colour.sh;
+        text = builtins.readFile ../../../../scripts/linux-desktop/pick-colour.sh;
       };
 
       recordRegion = pkgs.writeShellApplication {
@@ -755,7 +757,7 @@ in
           pkgs.wf-recorder
           pkgs.pulseaudio
         ];
-        text = builtins.readFile ./scripts/record-region.sh;
+        text = builtins.readFile ../../../../scripts/linux-desktop/record-region.sh;
       };
 
       imageMarkup = pkgs.writeShellApplication {
@@ -767,7 +769,7 @@ in
           pkgs.satty
           pkgs.wl-clipboard
         ];
-        text = builtins.readFile ./scripts/markup.sh;
+        text = builtins.readFile ../../../../scripts/linux-desktop/markup.sh;
       };
 
       frozenCapture = pkgs.writeShellApplication {
@@ -781,7 +783,7 @@ in
           pkgs.systemd
           pkgs.satty
         ];
-        text = builtins.readFile ./scripts/frozen-capture.sh;
+        text = builtins.readFile ../../../../scripts/linux-desktop/frozen-capture.sh;
       };
 
       recordingToggle = pkgs.writeShellApplication {
@@ -790,7 +792,7 @@ in
           pkgs.systemd
           pkgs.coreutils
         ];
-        text = builtins.readFile ./scripts/recording-toggle.sh;
+        text = builtins.readFile ../../../../scripts/linux-desktop/recording-toggle.sh;
       };
 
       notificationOpen = pkgs.writeShellApplication {
@@ -800,7 +802,7 @@ in
           pkgs.xdg-utils
           pkgs.losslesscut
         ];
-        text = builtins.readFile ./scripts/open-capture.sh;
+        text = builtins.readFile ../../../../scripts/linux-desktop/open-capture.sh;
       };
 
       captureNotify = pkgs.writeShellApplication {
@@ -810,7 +812,7 @@ in
           pkgs.coreutils
           pkgs.libnotify
         ];
-        text = builtins.readFile ./scripts/capture-notify.sh;
+        text = builtins.readFile ../../../../scripts/linux-desktop/capture-notify.sh;
       };
 
       recordingLibrary = pkgs.writeShellApplication {
@@ -826,7 +828,7 @@ in
           pkgs.losslesscut
           pkgs.wl-clipboard
         ];
-        text = builtins.readFile ./scripts/recordings.sh;
+        text = builtins.readFile ../../../../scripts/linux-desktop/recordings.sh;
       };
 
       recordingFinalize = pkgs.writeShellApplication {
@@ -838,7 +840,7 @@ in
           pkgs.libnotify
           pkgs.systemd
         ];
-        text = builtins.readFile ./scripts/recording-finalize.sh;
+        text = builtins.readFile ../../../../scripts/linux-desktop/recording-finalize.sh;
       };
 
       sessionCommand = pkgs.writeShellApplication {
@@ -850,7 +852,7 @@ in
           pkgs.systemd
           pkgs.uwsm
         ];
-        text = builtins.readFile ./scripts/session.sh;
+        text = builtins.readFile ../../../../scripts/linux-desktop/session.sh;
       };
     in
     {
