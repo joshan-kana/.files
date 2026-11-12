@@ -778,6 +778,7 @@
                   python3
                   bash
                   nix
+                  vdirsyncer
                 ];
               }
               ''
@@ -787,6 +788,7 @@
                 node --test tests/test-*.js
                 python3 tests/test-desktop-scripts.py
                 python3 tests/test-palette-index.py
+                python3 tests/test-calendar-sync.py
                 touch "$out"
               '';
           git-attributes =
