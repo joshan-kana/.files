@@ -770,53 +770,23 @@
           ) self.nixosConfigurations) pkgs.emptyFile;
           docs = self.packages.${system}.docs;
           repo-quality = treefmt.config.build.check self;
-          system-update =
-            pkgs.runCommand "system-update-tests"
+          desktop-regressions =
+            pkgs.runCommand "desktop-regression-tests"
               {
                 nativeBuildInputs = with pkgs; [
+                  nodejs
+                  python3
                   bash
-                  coreutils
-                  git
-                  jq
+                  nix
                 ];
               }
               ''
-                export HOME="$TMPDIR/home"
-                mkdir -p "$HOME"
-                bash ${./tests/system-update.sh} ${./scripts/system-update.sh}
-                touch "$out"
-              '';
-          schema-update =
-            pkgs.runCommand "schema-update-tests"
-              {
-                nativeBuildInputs = with pkgs; [
-                  bash
-                  coreutils
-                  git
-                  jq
-                ];
-              }
-              ''
-                export HOME="$TMPDIR/home"
-                mkdir -p "$HOME"
-                bash ${./tests/update-schemas.sh} ${./scripts/update-schemas.sh}
-                touch "$out"
-              '';
-          container-lock-update =
-            pkgs.runCommand "container-lock-update-tests"
-              {
-                nativeBuildInputs = with pkgs; [
-                  bash
-                  coreutils
-                  diffutils
-                  git
-                  jq
-                ];
-              }
-              ''
-                export HOME="$TMPDIR/home"
-                mkdir -p "$HOME"
-                bash ${./tests/update-container-lock.sh} ${./scripts/update-container-lock.sh}
+                export HOME="$TMPDIR"
+                export NIX_CONFIG='experimental-features = nix-command flakes'
+                cd ${self.outPath}
+                node --test tests/test-*.js
+                python3 tests/test-desktop-scripts.py
+                python3 tests/test-palette-index.py
                 touch "$out"
               '';
           git-attributes =
