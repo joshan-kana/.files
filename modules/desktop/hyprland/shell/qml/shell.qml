@@ -220,7 +220,6 @@ ShellRoot {
 
     PowerProfileState {
         id: powerProfile
-        runtime: root.runtimeRef
         active: true
     }
 

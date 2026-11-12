@@ -43,7 +43,10 @@ test("Quicklinks are declared in Nix, not duplicated inside QML or JavaScript", 
     qml,
     /function onLoaded\(\): void \{\s*palette\.refreshDeclaredProviders\(\)/,
   );
-  assert.match(qml, /Component\.onCompleted: refreshDeclaredProviders\(\)/);
+  assert.match(
+    qml,
+    /Component\.onCompleted:\s*\{\s*refreshDeclaredProviders\(\)/,
+  );
   assert.doesNotMatch(qml, /quicklinks\.json/);
   assert.doesNotMatch(read("qml/PaletteUtilities.js"), /DEFAULT_QUICKLINKS/);
 });
