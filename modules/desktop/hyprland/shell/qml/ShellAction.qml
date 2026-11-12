@@ -29,6 +29,13 @@ Item {
     implicitHeight: iconOnly ? 40 : compact ? 40 : 58
     Accessible.role: Accessible.Button
     Accessible.name: title
+    // Assistive-technology press must use the same activation signal as
+    // pointer and keyboard controls. A role/name without a press handler is
+    // discoverable but cannot actually invoke sender-owned actions.
+    Accessible.onPressAction: {
+        if (root.enabled)
+            root.activated();
+    }
     opacity: enabled ? 1 : 0.42
 
     ShellSurface {
