@@ -37,15 +37,31 @@ ShellSurface {
         }
         spacing: summary.theme.spacing3
 
-        Text {
+        Row {
             width: parent.width
-            text: (summary.weather.city || "YOUR LOCATION").toUpperCase() + " · WEATHER"
-            color: summary.theme.readableRoleColor("weather")
-            opacity: 0.89
-            font.family: summary.theme.runtime.fontMono
-            font.pixelSize: summary.theme.fontPanelEyebrow
-            font.weight: Font.DemiBold
-            elide: Text.ElideRight
+            spacing: summary.theme.spacing2
+
+            Text {
+                width: Math.max(1, parent.width - forecastHint.width - parent.spacing)
+                anchors.verticalCenter: parent.verticalCenter
+                text: (summary.weather.city || "YOUR LOCATION").toUpperCase() + " · WEATHER"
+                color: summary.theme.readableRoleColor("weather")
+                opacity: 0.89
+                font.family: summary.theme.runtime.fontMono
+                font.pixelSize: summary.theme.fontPanelEyebrow
+                font.weight: Font.DemiBold
+                elide: Text.ElideRight
+            }
+
+            KeyHint {
+                id: forecastHint
+                anchors.verticalCenter: parent.verticalCenter
+                runtime: summary.theme.runtime
+                theme: summary.theme
+                compact: true
+                shortcut: "F"
+                label: "Forecast"
+            }
         }
 
         Text {
@@ -58,7 +74,7 @@ ShellSurface {
 
         Text {
             width: parent.width
-            text: summary.weather.available ? summary.weather.description + "  ·  F Forecast ↗" : summary.weather.status + "  ·  F Forecast ↗"
+            text: summary.weather.available ? summary.weather.description : summary.weather.status
             color: summary.theme.textStrong
             font.family: summary.theme.runtime.fontMono
             font.pixelSize: summary.theme.fontSize(11)
@@ -67,8 +83,29 @@ ShellSurface {
     }
 
     MouseArea {
+        id: forecastHit
         anchors.fill: parent
+        activeFocusOnTab: true
         cursorShape: Qt.PointingHandCursor
+        Accessible.role: Accessible.Button
+        Accessible.name: "Open detailed weather forecast"
+        Accessible.onPressAction: summary.forecastRequested()
         onClicked: summary.forecastRequested()
+        Keys.onPressed: event => {
+            if (event.key === Qt.Key_Enter || event.key === Qt.Key_Return || event.key === Qt.Key_Space) {
+                summary.forecastRequested();
+                event.accepted = true;
+            }
+        }
+    }
+
+    SquircleSurface {
+        anchors.fill: parent
+        visible: forecastHit.activeFocus
+        cornerRadius: summary.cornerRadius
+        exponent: summary.theme.squircleExponent
+        fillColor: "transparent"
+        borderColor: summary.theme.accent
+        borderWidth: summary.theme.borderFocus
     }
 }

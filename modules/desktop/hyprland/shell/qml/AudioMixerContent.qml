@@ -203,7 +203,7 @@ FocusScope {
             visible: !mixer.compact
 
             DetailHero {
-                width: Math.max(260, parent.width - mixerHints.width - mixer.theme.spacing2)
+                width: parent.width
                 height: parent.height
                 runtime: mixer.runtime
                 theme: mixer.theme
@@ -213,27 +213,6 @@ FocusScope {
                 eyebrow: "Audio / " + mixer.streams.length + (mixer.streams.length === 1 ? " active channel" : " active channels")
                 title: "Audio mixer"
                 detail: "Output, input and every application channel"
-            }
-
-            KeyHintStrip {
-                id: mixerHints
-                anchors {
-                    right: parent.right
-                    verticalCenter: parent.verticalCenter
-                }
-                width: Math.min(440, parent.width * 0.5)
-                runtime: mixer.runtime
-                theme: mixer.theme
-                hints: [
-                    {
-                        shortcut: "J/K",
-                        label: "Select"
-                    },
-                    {
-                        shortcut: "H/L",
-                        label: "Level"
-                    }
-                ]
             }
         }
 
@@ -398,6 +377,24 @@ FocusScope {
                 font.family: mixer.runtime.fontMono
                 font.pixelSize: mixer.theme.fontSize(11)
             }
+        }
+
+        KeyHintStrip {
+            id: mixerHints
+            visible: !mixer.compact
+            width: parent.width
+            runtime: mixer.runtime
+            theme: mixer.theme
+            hints: [
+                {
+                    shortcut: "J/K",
+                    label: "Select"
+                },
+                {
+                    shortcut: "H/L",
+                    label: "Level"
+                }
+            ]
         }
     }
 }
