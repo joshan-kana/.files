@@ -93,6 +93,7 @@ snacks.setup({
 })
 
 require("editor.pairs").setup()
+require("editor.statement").setup()
 
 require("blink.cmp").setup({
 	keymap = {
@@ -242,6 +243,7 @@ key("n", "<leader>co", function()
 	end
 end, { desc = "Select Nix configuration" })
 key("n", "<leader>ca", vim.lsp.buf.code_action, { desc = "Code actions" })
+key("n", "<leader>c;", require("editor.statement").finish, { desc = "Finish statement safely" })
 key("n", "<leader>cr", vim.lsp.buf.rename, { desc = "Rename symbol" })
 key("n", "<leader>cf", "<cmd>Format<cr>", { desc = "Format project" })
 key("n", "<leader>cd", vim.diagnostic.open_float, { desc = "Line diagnostics" })
