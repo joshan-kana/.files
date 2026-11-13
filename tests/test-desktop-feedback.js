@@ -121,6 +121,8 @@ test("inspection is reachable through canonical shortcut, palette and status isl
   );
   assert.match(nix, /statusInspect = navigationKey "status\.inspect"/);
   assert.match(shell, /name: "status-peek"/);
+  assert.match(shell, /function statusInspectionOpen\(\): bool/);
+  assert.match(shell, /function toggleStatusInspection\(\): void/);
   assert.match(shell, /id: "status\.inspect"/);
   assert.match(
     bar,
