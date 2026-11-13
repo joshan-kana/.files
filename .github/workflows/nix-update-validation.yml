@@ -10,67 +10,145 @@ on:
 permissions:
   contents: read
 
-jobs:
-  fresh-runner:
-    name: Fresh Ubuntu runner, Nix source lifecycle
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+concurrency:
+  group: nix-update-validation-${{ github.ref }}
+  cancel-in-progress: true
 
-      - name: Install Nix using production installer
-        uses: cachix/install-nix-action@v31
+jobs:
+  source-lifecycle:
+    name: Fresh Ubuntu Nix, concurrent dirty-source GC roots
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: cachix/install-nix-action@v31
         with:
           extra_nix_config: |
             accept-flake-config = true
             access-tokens = github.com=${{ github.token }}
             experimental-features = nix-command flakes
-
-      - name: Check source rooting with production Nix and real Git dirty revisions
+      - name: Materialise, register and root 48 concurrent Git snapshots
         shell: bash
         run: |
           set -euo pipefail
-          echo "Nix: $(nix --version)"
-          scratch="$(mktemp -d "$RUNNER_TEMP/nix-update-root.XXXXXX")"
+          nix --version
+          scratch="$(mktemp -d "$RUNNER_TEMP/nix-update-roots.XXXXXX")"
           trap 'rm -rf "$scratch"' EXIT
           mkdir "$scratch/repo"
           git -C "$scratch/repo" init -q
-          git -C "$scratch/repo" config user.email 'ci@example.invalid'
-          git -C "$scratch/repo" config user.name 'CI fixture'
-          printf '{ description = "gc-root test"; outputs = { self }: { }; }\n' > "$scratch/repo/flake.nix"
+          git -C "$scratch/repo" config user.email ci@example.invalid
+          git -C "$scratch/repo" config user.name CI
+          printf '{ description = "source test"; outputs = { self }: { }; }\n' > "$scratch/repo/flake.nix"
           git -C "$scratch/repo" add flake.nix
-          git -C "$scratch/repo" commit -qm 'source fixture'
-          for revision in 1 2 3; do
-            printf '{ description = "gc-root test %s"; outputs = { self }: { }; }\n' "$revision" > "$scratch/repo/flake.nix"
-            mkdir -p "$scratch/flake-$revision"
-            source="$(cd "$scratch/repo" && nix flake metadata --json | jq -r .path)"
-            echo "revision=$revision source=$source"
-            if nix-store --realise --add-root "$scratch/flake-$revision/unregistered" "$source" > "$scratch/stdout" 2> "$scratch/stderr"; then
-              echo 'Metadata path was already registered by Nix'
-            else
-              echo 'Metadata path requires explicit store registration:'
-              cat "$scratch/stderr"
-            fi
-            if [[ ! -e "$source" ]]; then
-              echo 'Metadata source is lazy; trying Nix-native materialisation mechanisms'
-              nix flake archive --json "$scratch/repo" || true
-              test ! -e "$source" || echo 'flake archive materialised the source'
-              nix eval --raw --impure --expr "(builtins.getFlake \"path:$scratch/repo\").outPath" || true
-              test ! -e "$source" || echo 'getFlake materialised the source'
-              nix flake archive --json --to local "$scratch/repo" || true
-              test ! -e "$source" || echo 'archive --to local materialised the source'
-            fi
-            if [[ -e "$source" ]]; then
-              registered="$(nix store add-path --name source "$source")"
-              nix-store --realise --add-root "$scratch/flake-$revision/source" "$registered"
-              test -f "$registered/flake.nix"
-              test -L "$scratch/flake-$revision/source"
-              nix path-info "$registered" >/dev/null
-              echo 'Materialised, registered, and rooted source successfully'
-            else
-              echo 'No Nix-native source materialisation method produced a physical path' >&2
-              exit 1
-            fi
+          git -C "$scratch/repo" commit -qm 'test fixture'
+          printf 'never include untracked files\n' > "$scratch/repo/untracked.txt"
+          for revision in $(seq 1 12); do
+            printf '{ description = "source version %s"; outputs = { self }: { }; }\n' "$revision" > "$scratch/repo/flake.nix"
+            for worker in 1 2 3 4; do
+              (
+                root="$scratch/flake-$revision-$worker"
+                mkdir "$root"
+                source="$(cd "$scratch/repo" && nix flake metadata --json | jq -r .path)"
+                if [[ ! -d "$source" ]]; then
+                  (cd "$scratch/repo" && nix flake archive --json --no-write-lock-file >/dev/null)
+                fi
+                registered="$(nix store add-path --name source "$source")"
+                nix-store --realise --add-root "$root/source" "$registered" >/dev/null
+                test -L "$root/source"
+                test -f "$root/source/flake.nix"
+                test ! -e "$root/source/untracked.txt"
+                grep -q "source version $revision" "$root/source/flake.nix"
+                nix path-info "$registered" >/dev/null
+              ) &
+            done
+            wait
           done
-          echo 'Root command passed for dirty Git revisions'
+          test "$(find "$scratch" -name source -type l | wc -l)" -eq 48
+          echo 'PASS: 48 registered and GC-rooted evaluations, 12 dirty Git revisions'
+
+  real-releases:
+    name: Real Linux updater, grouped versions and Darwin sources
+    needs: source-lifecycle
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            accept-flake-config = true
+            access-tokens = github.com=${{ github.token }}
+            experimental-features = nix-command flakes
+      - name: Build patched updater and exercise real upstream releases
+        shell: bash
+        run: |
+          set -euo pipefail
+          export NIX_REMOTE_SYSTEMS='' NIX_BUILD_HOOK=''
+          updater="$(nix build --no-link --print-out-paths .#packages.x86_64-linux.nix-update)"
+          test -x "$updater/bin/nix-update"
+          scratch="$(mktemp -d "$RUNNER_TEMP/nix-update-releases.XXXXXX")"
+          git worktree add --detach "$scratch/repo" HEAD
+          trap 'git worktree remove --force "$scratch/repo"; rm -rf "$scratch"' EXIT
+          cd "$scratch/repo"
+          export NIX_PATH="nixpkgs=$(nix eval --raw --impure --expr '(builtins.getFlake (toString ./.)).inputs.nixpkgs.outPath')"
+          for version in 1.6.0 1.7.0; do
+            "$updater/bin/nix-update" --flake --system x86_64-linux --override-filename overlays/agentgateway/default.nix --src-only --version "$version" agentgateway
+          done
+          git diff --exit-code -- overlays/agentgateway/default.nix
+          echo 'PASS: native AgentGateway version and hash round trip'
+          for version in 278.4.4020 276.4.5325; do
+            "$updater/bin/nix-update" --flake --system aarch64-darwin --override-filename overlays/dropbox/default.nix --src-only --version "$version" dropbox
+          done
+          git diff --exit-code -- overlays/dropbox/default.nix
+          echo 'PASS: real macOS Dropbox source hashes from Linux without remote builders'
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('overlays/agentgateway/default.nix')
+          s = p.read_text()
+          for old, new in {
+              'version = "1.7.0";': 'version = "1.6.0";',
+              'aarch64-darwin = "sha256-NL/JYdDkWdD4kQMQDmFzDUtdjiFRyFHTPNA0oSbrK/4=";': 'aarch64-darwin = "sha256-bOvovVcmLtziOmWjdtL1onuXzf72CXQGQu2+deHpxoU=";',
+              'aarch64-linux = "sha256-hXJKFdyfUXn7bi/YWwui1P6lbdKJq7i/j++tw76ouJ4=";': 'aarch64-linux = "sha256-tZ7KwxEDuzF9E3f9QrDLJc2aIfjD8dnuFMP/BfP5Gr8=";',
+              'x86_64-linux = "sha256-Gy/AGi3inKETu7Yli1yuex6zxyQHHAnWh6RJEy8vQvg=";': 'x86_64-linux = "sha256-SW7SfmqWtVqa18q+XCvnFyUR9Eo8sRPlM9Ir+Tp/B50=";',
+          }.items():
+              assert s.count(old) == 1, old
+              s = s.replace(old, new)
+          p.write_text(s)
+          PY
+          nix run "path:$PWD#system-update" -- --package agentgateway --system x86_64-linux
+          git diff --exit-code -- overlays/agentgateway/default.nix
+          echo 'PASS: actual system-update CLI, grouped cross-platform hashes, and native build'
+
+  native-macos:
+    name: Native macOS updater release round trip
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            accept-flake-config = true
+            access-tokens = github.com=${{ github.token }}
+            experimental-features = nix-command flakes
+      - name: Build and use patched updater on macOS ARM64
+        shell: bash
+        run: |
+          set -euo pipefail
+          export NIX_REMOTE_SYSTEMS='' NIX_BUILD_HOOK=''
+          updater="$(nix build --no-link --print-out-paths .#packages.aarch64-darwin.nix-update)"
+          test -x "$updater/bin/nix-update"
+          scratch="$(mktemp -d "$RUNNER_TEMP/nix-update-darwin.XXXXXX")"
+          git worktree add --detach "$scratch/repo" HEAD
+          trap 'git worktree remove --force "$scratch/repo"; rm -rf "$scratch"' EXIT
+          cd "$scratch/repo"
+          export NIX_PATH="nixpkgs=$(nix eval --raw --impure --expr '(builtins.getFlake (toString ./.)).inputs.nixpkgs.outPath')"
+          for version in 1.6.0 1.7.0; do
+            "$updater/bin/nix-update" --flake --system aarch64-darwin --override-filename overlays/agentgateway/default.nix --src-only --version "$version" agentgateway
+          done
+          git diff --exit-code -- overlays/agentgateway/default.nix
+          echo 'PASS: actual ARM64 macOS Nix 2.35 patched updater, real release/hash round trip'
