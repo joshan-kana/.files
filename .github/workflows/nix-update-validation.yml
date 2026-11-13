@@ -1,0 +1,57 @@
+name: Nix update compatibility
+
+on:
+  pull_request:
+    paths:
+      - patches/nix-update/portable-source-hash.patch
+      - .github/workflows/nix-update-validation.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fresh-runner:
+    name: Fresh Ubuntu runner, Nix source lifecycle
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install Nix using production installer
+        uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            accept-flake-config = true
+            access-tokens = github.com=${{ github.token }}
+            experimental-features = nix-command flakes
+
+      - name: Check source rooting with production Nix and real Git dirty revisions
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Nix: $(nix --version)"
+          scratch="$(mktemp -d "$RUNNER_TEMP/nix-update-root.XXXXXX")"
+          trap 'rm -rf "$scratch"' EXIT
+          mkdir "$scratch/repo"
+          git -C "$scratch/repo" init -q
+          git -C "$scratch/repo" config user.email 'ci@example.invalid'
+          git -C "$scratch/repo" config user.name 'CI fixture'
+          printf '{ description = "gc-root test"; outputs = { self }: { }; }\n' > "$scratch/repo/flake.nix"
+          git -C "$scratch/repo" add flake.nix
+          git -C "$scratch/repo" commit -qm 'source fixture'
+          for revision in 1 2 3; do
+            printf '{ description = "gc-root test %s"; outputs = { self }: { }; }\n' "$revision" > "$scratch/repo/flake.nix"
+            mkdir -p "$scratch/flake-$revision"
+            source="$(cd "$scratch/repo" && nix flake metadata --json | jq -r .path)"
+            echo "revision=$revision source=$source"
+            if ! nix-store --realise --add-root "$scratch/flake-$revision/source" "$source" > "$scratch/stdout" 2> "$scratch/stderr"; then
+              cat "$scratch/stdout" "$scratch/stderr"
+              echo "GC-root command failed on fresh runner" >&2
+              exit 1
+            fi
+            test -f "$source/flake.nix"
+            test -L "$scratch/flake-$revision/source"
+          done
+          echo 'Root command passed for dirty Git revisions'
