@@ -38,7 +38,7 @@ PanelWindow {
             y: margins.top,
             width: width,
             height: height * attachmentProgress,
-            visible: frameConnected && attachmentProgress > 0.001 && open
+            visible: frameConnected && attachmentProgress > 0.001
         })
     readonly property bool frameConnected: frameEnabled && !hubVisible && !(Hyprland.monitorFor(screen)?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false)
     visible: true
@@ -96,8 +96,7 @@ PanelWindow {
                 peek.closeRequested();
                 event.accepted = true;
             } else if (event.key === Qt.Key_R) {
-                peek.keyboard.refresh("inspect");
-                peek.brightness.refresh();
+                statusContent.refreshRequested();
                 event.accepted = true;
             }
         }
@@ -123,6 +122,11 @@ PanelWindow {
             brightness: peek.brightness
             recording: peek.recording
             modeName: peek.modeName
+            onRefreshRequested: {
+                peek.keyboard.refresh("inspect");
+                peek.brightness.refresh();
+            }
+            onCloseRequested: peek.closeRequested()
         }
     }
 }
