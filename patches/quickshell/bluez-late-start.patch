@@ -1,0 +1,42 @@
+diff --git a/src/bluetooth/bluez.cpp b/src/bluetooth/bluez.cpp
+index f2c4300..bf05a91 100644
+--- a/src/bluetooth/bluez.cpp
++++ b/src/bluetooth/bluez.cpp
+@@ -3,6 +3,7 @@
+ #include <qcontainerfwd.h>
+ #include <qdbusconnection.h>
+ #include <qdbusextratypes.h>
++#include <qdbusservicewatcher.h>
+ #include <qlogging.h>
+ #include <qloggingcategory.h>
+ #include <qobject.h>
+@@ -59,8 +60,27 @@ void Bluez::init() {
+ 	);
+ 
+ 	if (!this->objectManager->setInterface("org.bluez", "/", bus)) {
+-		qCDebug(logBluetooth) << "BlueZ is not running. Bluetooth integration will not work.";
+-		return;
++		qCDebug(logBluetooth) << "BlueZ is not running. Waiting for it to appear on DBus.";
++
++		auto* serviceWatcher = new QDBusServiceWatcher(
++		    "org.bluez",
++		    bus,
++		    QDBusServiceWatcher::WatchForRegistration,
++		    this
++		);
++
++		QObject::connect(
++		    serviceWatcher,
++		    &QDBusServiceWatcher::serviceRegistered,
++		    this,
++		    [this, serviceWatcher, bus](const QString&) {
++			    if (!this->objectManager->setInterface("org.bluez", "/", bus)) return;
++
++			    qCDebug(logBluetooth)
++			        << "BlueZ appeared on DBus. Bluetooth integration connected.";
++			    serviceWatcher->deleteLater();
++		    }
++		);
+ 	}
+ }
+ 

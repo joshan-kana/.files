@@ -1,0 +1,190 @@
+pragma ComponentBehavior: Bound
+import QtQuick
+
+Item {
+    id: root
+    required property RuntimeConfig runtime
+    required property Theme theme
+    required property Motion motion
+    property string currentTab: ""
+    readonly property int selectedIndex: currentTab === "home" ? 0 : currentTab === "activity" ? 2 : 1
+    // Move in logical tab units, so the active selection stays aligned while
+    // the shell changes its width during the measured-origin morph.
+    property real animatedIndex: selectedIndex
+    property bool initialized: false
+    Component.onCompleted: initialized = true
+
+    Behavior on animatedIndex {
+        enabled: root.initialized && root.motion.enabled
+        NumberAnimation {
+            duration: root.motion.spatialSlow
+            easing.type: root.motion.spatialType
+            easing.bezierCurve: root.motion.spatialCurve
+        }
+    }
+
+    signal tabRequested(string destination)
+    signal helpRequested
+    signal backRequested
+    property bool helpOpen: false
+    property string backLabel: "Back"
+
+    implicitHeight: 46
+
+    ShellSurface {
+        id: track
+        width: parent.width - backButton.width - helpButton.width - root.theme.spacing2 * 2
+        height: 42
+        anchors.left: backButton.right
+        anchors.leftMargin: root.theme.spacing2
+        theme: root.theme
+        motion: root.motion
+        surfaceLayer: ShellSurface.Control
+        cornerRadius: root.theme.radiusLarge
+        fillColor: root.theme.expressiveSurface
+
+        SquircleSurface {
+            id: slidingSelection
+            x: root.theme.spacing1 + (track.width - 2 * root.theme.spacing1) / 3 * root.animatedIndex
+            y: root.theme.spacing1
+            width: (track.width - 2 * root.theme.spacing1) / 3
+            height: track.height - 2 * root.theme.spacing1
+            exponent: root.theme.squircleExponent
+            cornerRadius: root.theme.radiusLarge
+            fillColor: root.theme.selectedTabFill
+            // Do not bloom the whole active tab with the accent colour.
+            lightColor: root.theme.textStrong
+            lightStrength: 0.025
+        }
+
+        Row {
+            anchors {
+                fill: parent
+                margins: root.theme.spacing1
+            }
+            spacing: 0
+
+            Repeater {
+                model: [
+                    {
+                        label: "Home",
+                        destination: "home"
+                    },
+                    {
+                        label: "Controls",
+                        destination: "controls"
+                    },
+                    {
+                        label: "Activity",
+                        destination: "activity"
+                    }
+                ]
+
+                delegate: Item {
+                    id: tab
+                    required property var modelData
+                    required property int index
+                    readonly property bool chosen: root.selectedIndex === index
+                    width: parent.width / 3
+                    height: parent.height
+                    Accessible.role: Accessible.Button
+                    Accessible.name: modelData.label
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: tab.modelData.label
+                        color: tab.chosen ? root.theme.textStrong : root.theme.textMuted
+                        font.family: root.runtime.fontMono
+                        font.pixelSize: root.theme.fontSize(12)
+                        font.weight: tab.chosen ? Font.DemiBold : Font.Medium
+                        Behavior on color {
+                            ColorAnimation {
+                                duration: root.motion.effectsFast
+                            }
+                        }
+                    }
+
+                    StateLayer {
+                        theme: root.theme
+                        motion: root.motion
+                        cornerRadius: root.theme.radiusMedium
+                        stateColor: root.theme.textStrong
+                        hoverOpacity: 0.13
+                        pressOpacity: 0.20
+                        disabled: root.helpOpen
+                        Accessible.role: Accessible.Button
+                        Accessible.name: tab.modelData.label
+                        onActivated: root.tabRequested(tab.modelData.destination)
+                    }
+                }
+            }
+        }
+    }
+
+    // Back and Help flank the same three tabs on every hub page. Navigation
+    // is dispatched by the active view, not by an extra header history.
+    ShellSurface {
+        id: backButton
+        width: 42
+        height: 42
+        anchors.left: parent.left
+        theme: root.theme
+        motion: root.motion
+        surfaceLayer: ShellSurface.Control
+        cornerRadius: root.theme.radiusLarge
+        fillColor: root.theme.expressiveSurface
+        Accessible.role: Accessible.Button
+        Accessible.name: root.backLabel + " (Esc)"
+
+        Text {
+            anchors.centerIn: parent
+            text: "←"
+            font.family: root.runtime.fontMono
+            font.pixelSize: root.theme.fontSize(22)
+            font.weight: Font.DemiBold
+            color: root.theme.textStrong
+        }
+
+        StateLayer {
+            theme: root.theme
+            motion: root.motion
+            cornerRadius: root.theme.radiusLarge
+            Accessible.role: Accessible.Button
+            Accessible.name: root.backLabel + " (Esc)"
+            onActivated: root.backRequested()
+        }
+    }
+
+    // One discoverable contextual-help action for every hub page and detail.
+    ShellSurface {
+        id: helpButton
+        width: 42
+        height: 42
+        anchors.right: parent.right
+        theme: root.theme
+        motion: root.motion
+        surfaceLayer: ShellSurface.Control
+        cornerRadius: root.theme.radiusLarge
+        selected: root.helpOpen
+        fillColor: root.helpOpen ? root.theme.selectedTabFill : root.theme.expressiveSurface
+        Accessible.role: Accessible.Button
+        Accessible.name: "Keyboard help"
+
+        KeyHint {
+            anchors.centerIn: parent
+            runtime: root.runtime
+            theme: root.theme
+            shortcut: "?"
+            compact: true
+            emphasized: root.helpOpen
+        }
+
+        StateLayer {
+            theme: root.theme
+            motion: root.motion
+            cornerRadius: root.theme.radiusLarge
+            selected: root.helpOpen
+            onActivated: root.helpRequested()
+        }
+    }
+}

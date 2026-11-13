@@ -1,6 +1,8 @@
 {
-  inputs,
+  configurationFlakeSubdirectory ? null,
   configurationName,
+  configurationOutputName,
+  inputs,
   lib,
   pkgs,
   scopeConfig,
@@ -380,6 +382,7 @@ in
     {
       config,
       lib,
+      pkgs,
       ...
     }:
     {
@@ -393,6 +396,7 @@ in
       '';
     }
     // lib.optionalAttrs isLinux {
+      home.packages = [ (lib.hiPrio pkgs.breeze-camera-photo-fixed) ];
       dconf.settings."org/gnome/desktop/interface".color-scheme = lib.mkForce (
         {
           light = "prefer-light";
@@ -409,11 +413,157 @@ in
     desktop =
       lib.optionalAttrs isLinux {
         hyprland = {
-          home = _: {
+          home = { config, ... }: {
+            # This compositor uses awww for wallpaper rendering rather than
+            # the Stylix-managed hyprpaper service.
+            stylix.targets.hyprland.hyprpaper.enable = false;
+
+            # Hyprland shadows use theme palette colours; the compositor
+            # module owns the shadow geometry and runtime behavior.
+            wayland.windowManager.hyprland.settings.config.decoration.shadow = {
+              color = lib.mkForce "rgba(${config.lib.stylix.colors.base0D}14)";
+              color_inactive = lib.mkForce "rgba(${config.lib.stylix.colors.base00}0e)";
+            };
+
             # Preserve GTK client headerbars while hiding toolkit window buttons.
             gtk.gtk3.extraConfig.gtk-decoration-layout = ":";
             gtk.gtk4.extraConfig.gtk-decoration-layout = ":";
             dconf.settings."org/gnome/desktop/wm/preferences".button-layout = ":";
+          };
+
+          shell = {
+            home =
+              {
+                config,
+                osConfig,
+                pkgs,
+                ...
+              }:
+              let
+                colors = config.lib.stylix.colors.withHashtag;
+                themeFlakeSubdirectory = "modules/theme";
+                configuredTheme =
+                  if configurationFlakeSubdirectory == themeFlakeSubdirectory then
+                    lib.removePrefix "${configurationName}-" configurationOutputName
+                  else
+                    themeRegistry.default;
+                themeManifest = pkgs.writeText "dotfiles-theme-registry.json" (
+                  builtins.toJSON {
+                    inherit (themeRegistry) default;
+                    themes = lib.mapAttrsToList (
+                      name: value:
+                      {
+                        inherit name;
+                        inherit (value) label;
+                      }
+                      // lib.optionalAttrs (value ? colors) {
+                        preview =
+                          let
+                            inherit (value) colors;
+                          in
+                          {
+                            background = "#${colors.base00}";
+                            surface = "#${colors.base01}";
+                            outline = "#${colors.base03}";
+                            text = "#${colors.base05}";
+                            swatches = [
+                              "#${colors.base08}"
+                              "#${colors.base0A}"
+                              "#${colors.base0B}"
+                              "#${colors.base0D}"
+                              "#${colors.base0E}"
+                            ];
+                          };
+                      }
+                    ) themeRegistry.variants;
+                  }
+                );
+
+                # The chooser is a frontend to the canonical full-system themed output.
+                themeSet = pkgs.writeShellApplication {
+                  name = "theme-set";
+                  runtimeInputs = [
+                    pkgs.coreutils
+                    pkgs.jq
+                    pkgs.systemd
+                    pkgs.util-linux
+                    pkgs.nh
+                  ];
+                  text = ''
+                    configuredTheme=${lib.escapeShellArg configuredTheme}
+                    repoPath=${lib.escapeShellArg osConfig.dotfiles.paths.repoPath}
+                    themeFlakeRef="path:$repoPath?dir=${themeFlakeSubdirectory}"
+                    manifest=${lib.escapeShellArg (toString themeManifest)}
+                    expectedUser=${lib.escapeShellArg osConfig.dotfiles.users.primary.name}
+                    configurationName=${lib.escapeShellArg configurationName}
+                    operationDir="''${XDG_STATE_HOME:-$HOME/.local/state}/linux-desktop/theme-operation"
+                    operationUnit=linux-desktop-theme-apply.scope
+                  ''
+                  + builtins.readFile ../../scripts/linux-desktop/theme-set.sh;
+                };
+              in
+              {
+                home.packages = [ themeSet ];
+                xdg.configFile."linux-desktop/theme.json".source =
+                  (pkgs.formats.json { }).generate "linux-desktop-theme.json"
+                    {
+                      theme = {
+                        background = colors.base00;
+                        surface = colors.base01;
+                        surfaceRaised = colors.base02;
+                        outline = colors.base03;
+                        textMuted = colors.base04;
+                        text = colors.base05;
+                        textStrong = colors.base06;
+                        critical = colors.base08;
+                        warning = colors.base0A;
+                        positive = colors.base0B;
+                        accent = colors.base0D;
+                        accentSecondary = colors.base0E;
+                        accentTertiary = colors.base0C;
+                        accentWarm = colors.base09;
+                        accentWorkspace = colors.base0D;
+                        accentUtility = colors.base0F;
+                        accentEnergy = colors.base0A;
+                        accentNature = colors.base0B;
+                      };
+                      # Feature palette roles are chosen by the theme owner.
+                      # Shell components only consume these semantic names.
+                      roles = {
+                        media = colors.base0E;
+                        workspace = colors.base0D;
+                        attention = colors.base08;
+                        display = colors.base0D;
+                        connectivity = colors.base0C;
+                        warmth = colors.base09;
+                        capture = colors.base09;
+                        screenshot = colors.base0D;
+                        audio = colors.base0F;
+                        resources = colors.base0A;
+                        power = colors.base0D;
+                        notifications = colors.base0B;
+                        calendar = colors.base0B;
+                        wallpaper = colors.base0B;
+                        clipboard = colors.base0F;
+                        weather = colors.base09;
+                        precipitation = colors.base0C;
+                        positive = colors.base0B;
+                        warning = colors.base0A;
+                        critical = colors.base08;
+                      };
+                      # Theme-owned presentation values are injected into
+                      # the shell's theme data through its semantic app scope.
+                      visual = {
+                        panelOpacity = 1.0;
+                        focusOpacity = 0.96;
+                        scrimOpacity = 0.50;
+                        squircleExponent = 4.5;
+                      };
+                      fonts.mono = config.stylix.fonts.monospace.name;
+                      wallpaper = toString osConfig.stylix.image;
+                      tools.themeSet = lib.getExe themeSet;
+                    };
+              };
           };
         };
       }

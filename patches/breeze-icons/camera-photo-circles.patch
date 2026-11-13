@@ -1,0 +1,28 @@
+--- a/icons/devices/64/camera-photo.svg
++++ b/icons/devices/64/camera-photo.svg
+@@ -56,10 +56,10 @@
+  <metadata id="metadata5458"/>
+  <g inkscape:label="Capa 1" inkscape:groupmode="layer" id="layer1" transform="matrix(1 0 0 1 -376.57144 -491.79797)">
+   <rect width="5.999985" x="424.57144" y="503.79794" height="3.00001" style="fill:url(#linearGradient4208)" id="rect4200"/>
+-  <path cx="408.57144" cy="519.79797" inkscape:connector-curvature="0" style="fill:url(#linearGradient4352);stroke-linecap:round;stroke-linejoin:round;stroke-width:2" id="circle4309-6" r="9.999989"/>
++  <circle cx="408.57144" cy="519.79797" inkscape:connector-curvature="0" style="fill:url(#linearGradient4352);stroke-linecap:round;stroke-linejoin:round;stroke-width:2" id="circle4309-6" r="9.999989"/>
+   <rect width="52" x="382.57144" y="507.77063" rx="0" height="32.05469" style="fill:url(#linearGradient4617);stroke-linecap:round;stroke-linejoin:round;stroke-width:2" id="rect4288"/>
+   <path inkscape:connector-curvature="0" style="fill:url(#linearGradient4749);stroke-linecap:square;stroke-width:0.1" id="path4715" d="m 426.07142,510.80188 a 1.5,1.5 0 0 0 -1.5,1.5 1.5,1.5 0 0 0 1.5,1.5 1.5,1.5 0 0 0 1.5,-1.5 1.5,1.5 0 0 0 -1.5,-1.5 z"/>
+-  <path cx="408.57144" cy="519.79797" inkscape:connector-curvature="0" style="fill:url(#linearGradient4352-6);stroke-linecap:round;stroke-linejoin:round;stroke-width:2" id="circle4309-6-0" r="9.999989"/>
++  <circle cx="408.57144" cy="519.79797" inkscape:connector-curvature="0" style="fill:url(#linearGradient4352-6);stroke-linecap:round;stroke-linejoin:round;stroke-width:2" id="circle4309-6-0" r="9.999989"/>
+   <path inkscape:connector-curvature="0" style="fill:url(#linearGradient4735-2);opacity:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-width:2" id="rect4727-1" d="m 412.88588,512.51088 -22.6289,22.6289 0.68554,0.68555 32.62891,0 0,-10.62891 z"/>
+   <circle cx="401.57144" cy="523.82532" style="fill:url(#linearGradient4609-6);stroke-linecap:round;stroke-linejoin:round;stroke-width:2" id="path4286-2" r="16"/>
+   <path inkscape:connector-curvature="0" style="fill:url(#linearGradient4510-5);stroke-linecap:round;stroke-linejoin:round;stroke-width:2" id="path4286-9-6" d="m 387.57147,523.8253 a 13.999973,13.999973 0 0 1 13.99997,-13.99997 13.999973,13.999973 0 0 1 13.99997,13.99997 13.999973,13.999973 0 0 1 -13.99997,13.99998 13.999973,13.999973 0 0 1 -13.99997,-13.99998 z"/>
+@@ -70,10 +70,10 @@
+   <circle cx="401.57144" cy="523.82532" style="fill:#2c3e50;stroke-linecap:round;stroke-linejoin:round;stroke-width:2" r="3.999988" id="circle4354-5-1-8"/>
+   <circle cx="398.57144" cy="520.82532" style="fill:#84cbfe;stroke-linecap:round;stroke-linejoin:round;stroke-width:2" id="path4786-1" r="1"/>
+   <ellipse cx="396.57141" cy="518.82538" rx="1.499994" ry="1.499987" style="fill:#84cbfe;stroke-linecap:round;stroke-linejoin:round;stroke-width:2" id="path4786-6-8"/>
+-  <path cx="408.57144" cy="519.79797" inkscape:connector-curvature="0" style="fill:url(#linearGradient4352-5);stroke-linecap:round;stroke-linejoin:round;stroke-width:2" id="circle4309-6-7" r="9.999989"/>
++  <circle cx="408.57144" cy="519.79797" inkscape:connector-curvature="0" style="fill:url(#linearGradient4352-5);stroke-linecap:round;stroke-linejoin:round;stroke-width:2" id="circle4309-6-7" r="9.999989"/>
+   <path style="fill:url(#linearGradient4861);stroke-linecap:round" id="rect4850" d="M 55 23 C 53.891989 23 53 23.891989 53 25 L 53 39 C 53 40.108011 53.891989 41 55 41 L 56 41 L 58 41 L 58 39 L 58 25 L 58 23 L 56 23 L 55 23 z " transform="matrix(1 0 0 1 376.57144 491.79797)"/>
+   <rect width="51.999996" x="382.57144" y="505.798" height="2.00001" style="fill:url(#linearGradient4784-5);stroke-linecap:round;stroke-linejoin:round;stroke-width:2" id="rect4290"/>
+-  <path cx="408.57144" cy="519.79797" inkscape:connector-curvature="0" style="fill:url(#linearGradient4352-9);stroke-linecap:round;stroke-linejoin:round;stroke-width:2" id="circle4309-6-4" r="9.999989"/>
++  <circle cx="408.57144" cy="519.79797" inkscape:connector-curvature="0" style="fill:url(#linearGradient4352-9);stroke-linecap:round;stroke-linejoin:round;stroke-width:2" id="circle4309-6-4" r="9.999989"/>
+   <rect width="51.999996" x="382.57144" y="539.79797" height="2.00001" style="fill:url(#linearGradient4784-5-7);stroke-linecap:round;stroke-linejoin:round;stroke-width:2" id="rect4290-6"/>
+  </g>
+ </svg>
