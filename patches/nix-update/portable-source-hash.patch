@@ -24,7 +24,7 @@
 +            )
 +            if source["urls"] and source["mode"] in {"flat", "recursive"}:
 +                args = [
-+                    "nix", "store", "prefetch-file", "--json", "--hash-type",
++                    "nix", "store", "prefetch-file", "--json", "--name", "source", "--hash-type",
 +                    source["hash"].split("-", 1)[0] if "-" in source["hash"] else source["algo"],
 +                ]
 +                if source["mode"] == "recursive":
