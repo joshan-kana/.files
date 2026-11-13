@@ -651,8 +651,12 @@ Item {
             theme: panel.theme
             hints: [
                 {
-                    shortcut: "H/J/K/L",
-                    label: "Choose"
+                    shortcut: "H/L",
+                    label: "Columns"
+                },
+                {
+                    shortcut: "J/K",
+                    label: "Rows"
                 },
                 {
                     shortcut: "U/D",
@@ -665,10 +669,6 @@ Item {
                 {
                     shortcut: "ENTER",
                     label: "Set"
-                },
-                {
-                    shortcut: "ESC",
-                    label: "Back"
                 }
             ]
         }

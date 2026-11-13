@@ -383,42 +383,31 @@ FocusScope {
 
         Row {
             width: parent.width
+            spacing: calendar.theme.spacing2
 
-            Row {
-                id: calendarHints
-                spacing: calendar.theme.spacing2
-                Repeater {
-                    model: [
-                        {
-                            shortcut: "J/K",
-                            label: "Months"
-                        },
-                        {
-                            shortcut: "H/L",
-                            label: "Days"
-                        },
-                        {
-                            shortcut: "U/D",
-                            label: "Events"
-                        },
-                        {
-                            shortcut: "C",
-                            label: "Calendars"
-                        }
-                    ]
-                    delegate: KeyHint {
-                        required property var modelData
-                        shortcut: modelData.shortcut
-                        label: modelData.label
-                        runtime: calendar.runtime
-                        theme: calendar.theme
+            KeyHintStrip {
+                width: Math.max(1, parent.width - resetButton.width - parent.spacing)
+                anchors.verticalCenter: parent.verticalCenter
+                runtime: calendar.runtime
+                theme: calendar.theme
+                hints: [
+                    {
+                        shortcut: "J/K",
+                        label: "Months"
+                    },
+                    {
+                        shortcut: "H/L",
+                        label: "Days"
+                    },
+                    {
+                        shortcut: "U/D",
+                        label: "Events"
+                    },
+                    {
+                        shortcut: "C",
+                        label: "Calendars"
                     }
-                }
-            }
-
-            Item {
-                width: Math.max(0, parent.width - calendarHints.implicitWidth - resetButton.width)
-                height: 1
+                ]
             }
 
             ShellAction {
