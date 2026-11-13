@@ -396,11 +396,11 @@
         "uv2nix": "uv2nix"
       },
       "locked": {
-        "lastModified": 1794542030,
-        "narHash": "sha256-m9HoVES7gJJ8wvaXk6HZacVug6du5AjIL+Hp/9fHEzY=",
+        "lastModified": 1794554894,
+        "narHash": "sha256-eGsDkg2csUIAoDpEXwYNL6BFtXEtNIx1ixOXtpPhfO4=",
         "owner": "NousResearch",
         "repo": "hermes-agent",
-        "rev": "6905478e5df01c2171f225e4eb40aa20fd6a9bd9",
+        "rev": "55b0b2611f683a12450163b9fe423abbd61a9923",
         "type": "github"
       },
       "original": {
@@ -480,11 +480,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1794529915,
-        "narHash": "sha256-7RDIC9WIlfKgsyh+OkjeL3Ae5KvokiF5JclFFtHrLUM=",
+        "lastModified": 1794551759,
+        "narHash": "sha256-kL6q4ItZT++IjrrDlcUOL9L0XNzTLb2+4xQgpHBzx/I=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "60533bc9bb15b0c60c12607ecf8dfc00c87b298e",
+        "rev": "860075d959fc68c31fd405989daf85c1b1f0db38",
         "type": "github"
       },
       "original": {
@@ -1094,11 +1094,11 @@
     "trash-guides": {
       "flake": false,
       "locked": {
-        "lastModified": 1794525261,
-        "narHash": "sha256-os1mtSOwkxjntmEFYZQRsMym7cgLxEwbWq0a2JRz/jk=",
+        "lastModified": 1794543270,
+        "narHash": "sha256-3ltX8oFY4VyEzQYVpGKY1IvPB6ASMvY9J1RrMFrf2SY=",
         "owner": "TRaSH-Guides",
         "repo": "Guides",
-        "rev": "93c1f6d3755a44d03e3cc318cfcc8f2670178494",
+        "rev": "6986f2a94441c05cd880c5840fc0d5857c908e1d",
         "type": "github"
       },
       "original": {
