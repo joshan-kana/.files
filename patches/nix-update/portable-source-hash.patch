@@ -54,7 +54,7 @@
  
  
  class ParseState(Enum):
-@@ -121,11 +126,38 @@
+@@ -121,11 +126,54 @@
              return None
  
          flake_dir = _metadata_flake_dir(metadata)
@@ -64,8 +64,24 @@
          return None
 -    return path
 +
-+    # A metadata source can exist on disk but remain unregistered in the store.
-+    # Register the already Git-filtered snapshot before assigning a GC root.
++    # Nix 2.35 may expose a lazy tree from metadata without materialising it.
++    # Archive the Git-filtered snapshot before registering the store source.
++    if not Path(path).is_dir():
++        try:
++            archive = subprocess.run(
++                ["nix", "flake", "archive", "--json", "--no-write-lock-file"],
++                cwd=import_path,
++                check=True,
++                capture_output=True,
++                text=True,
++            )
++        except subprocess.CalledProcessError as error:
++            detail = error.stderr.strip() if error.stderr else str(error)
++            msg = f"Cannot materialise local flake {import_path}: {detail}"
++            raise RuntimeError(msg) from error
++        path = json.loads(archive.stdout)["path"]
++
++    # An existing metadata path may still be unregistered with the daemon.
 +    root = tempfile.TemporaryDirectory(prefix="nix-update-flake-")
 +    try:
 +        registered = subprocess.run(
