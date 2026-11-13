@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Wayland
+import "FeedbackSemantics.js" as FeedbackSemantics
 
 PanelWindow {
     id: popup
@@ -11,10 +12,12 @@ PanelWindow {
     required property Theme theme
     required property Motion motion
     property bool frameEnabled: false
+    property bool barVisible: true
+    property bool suspended: false
+    readonly property bool exposedNow: osd.visible && !suspended
     readonly property bool frameConnected: frameEnabled && !(Hyprland.monitorFor(screen)?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false)
-    // The contour itself grows from the bottom edge; it does not wait for a
-    // completed panel to appear and then snap an outline around it.
-    property real attachmentProgress: frameConnected && osd.visible ? 1 : 0
+    // The feedback shares the upper interaction origin with active modes.
+    property real attachmentProgress: frameConnected && exposedNow ? 1 : 0
     Behavior on attachmentProgress {
         NumberAnimation {
             duration: popup.motion.morph
@@ -24,22 +27,22 @@ PanelWindow {
     }
     readonly property var frameBounds: ({
             x: screen ? (screen.width - width) / 2 : 0,
-            y: screen ? screen.height - theme.frameThickness - height * attachmentProgress : 0,
+            y: margins.top,
             width: width,
             height: height * attachmentProgress,
-            visible: frameConnected && attachmentProgress > 0.001
+            visible: frameConnected && exposedNow && attachmentProgress > 0.001
         })
 
     property bool closing: false
     readonly property bool keyboardMode: osd.kind === "keyboard"
-    readonly property color accentColor: keyboardMode && osd.keyboardLocked ? theme.warning : osd.muted ? theme.warning : (osd.kind === "brightness" ? theme.roleColor("warmth") : theme.roleColor("audio"))
+    readonly property color accentColor: keyboardMode && osd.keyboardState !== "off" ? theme.warning : osd.muted ? theme.warning : (osd.kind === "brightness" ? theme.roleColor("warmth") : theme.roleColor("audio"))
 
     visible: true
     updatesEnabled: surfaceLifecycle.needsRendering
     PopupSurfaceLifecycle {
         id: surfaceLifecycle
         popup: popup
-        exposed: popup.osd.visible || popup.closing || popup.attachmentProgress > 0.001
+        exposed: popup.exposedNow || popup.closing || popup.attachmentProgress > 0.001
     }
     mask: surfaceLifecycle.inputRegion
     color: "transparent"
@@ -47,9 +50,9 @@ PanelWindow {
     implicitHeight: 76
     exclusionMode: ExclusionMode.Ignore
 
-    // Centre the OSD at the bottom in both modes, below the Controls hub.
-    anchors.bottom: true
-    margins.bottom: frameConnected ? theme.frameThickness : theme.panelSideOffset
+    // Keyboard feedback and interactive modes share a consistent top anchor.
+    anchors.top: true
+    margins.top: frameConnected ? (barVisible ? theme.barInsetTop : theme.frameThickness) : theme.panelTopOffset
 
     WlrLayershell.namespace: "linux-desktop-osd"
 
@@ -63,7 +66,7 @@ PanelWindow {
         target: popup.osd
 
         function onVisibleChanged(): void {
-            if (popup.osd.visible) {
+            if (popup.exposedNow) {
                 closeTimer.stop();
                 popup.closing = false;
             } else if (popup.motion.fast > 0) {
@@ -80,7 +83,7 @@ PanelWindow {
         anchors {
             left: parent.left
             right: parent.right
-            bottom: parent.bottom
+            top: parent.top
         }
         // Content is clipped by the very same extent used by the joined
         // frame contour. Nothing fades away before an independent outline.
@@ -98,15 +101,15 @@ PanelWindow {
         // Attached content appears only after the continuous frame contour
         // opens far enough to hold it. No double-painted surface or residual
         // line through the disappearing body.
-        opacity: popup.frameConnected ? 1 : (popup.osd.visible ? 1 : 0)
-        scale: popup.frameConnected ? 1 : (popup.osd.visible ? 1 : 0.97)
+        opacity: popup.frameConnected ? 1 : (popup.exposedNow ? 1 : 0)
+        scale: popup.frameConnected ? 1 : (popup.exposedNow ? 1 : 0.97)
 
         Behavior on opacity {
             enabled: !popup.frameConnected
             NumberAnimation {
                 duration: popup.motion.fast
-                easing.type: popup.osd.visible ? popup.motion.enterType : popup.motion.exitType
-                easing.bezierCurve: popup.osd.visible ? popup.motion.enterCurve : popup.motion.exitCurve
+                easing.type: popup.exposedNow ? popup.motion.enterType : popup.motion.exitType
+                easing.bezierCurve: popup.exposedNow ? popup.motion.enterCurve : popup.motion.exitCurve
             }
         }
 
@@ -129,6 +132,15 @@ PanelWindow {
                     right: parent.right
                     left: parent.left
                 }
+                spacing: popup.theme.spacing2
+
+                Text {
+                    width: popup.theme.fontSize(20)
+                    text: FeedbackSemantics.symbol(popup.osd.kind, popup.osd.muted, popup.osd.value, popup.osd.keyboardState)
+                    color: popup.accentColor
+                    font.family: "Symbols Nerd Font"
+                    font.pixelSize: popup.theme.fontSize(18)
+                }
 
                 Text {
                     text: popup.osd.label
@@ -140,13 +152,13 @@ PanelWindow {
                 }
 
                 Item {
-                    width: parent.width - parent.children[0].width - valueText.width
+                    width: Math.max(0, parent.width - parent.children[0].width - parent.children[1].width - valueText.width - parent.spacing * 3)
                     height: 1
                 }
 
                 Text {
                     id: valueText
-                    text: popup.keyboardMode ? (popup.osd.keyboardLocked ? "󰪛  ON" : "󰪜  OFF") : popup.osd.value + "%"
+                    text: popup.keyboardMode ? FeedbackSemantics.stateLabel(popup.osd.keyboardState) : popup.osd.muted ? "MUTED" : popup.osd.value + "%"
                     color: popup.theme.textStrong
                     font.family: popup.runtime.fontMono
                     font.pixelSize: popup.theme.fontSize(12)

@@ -49,6 +49,7 @@ Variants {
 
     signal mediaRequested(var screen, var origin)
     signal systemRequested(var screen, var origin)
+    signal systemStatusRequested(var screen)
     signal trayMenuRequested(var screen, var origin, int index)
     signal calendarRequested(var screen, var origin)
     signal notificationsRequested(var screen, var origin)
@@ -764,6 +765,7 @@ Variants {
                 onXChanged: Qt.callLater(bar.publishOrigins)
                 onWidthChanged: Qt.callLater(bar.publishOrigins)
                 onActivated: bars.systemRequested(bar.modelData, bars.originFor(bar.modelData, "system"))
+                onInspectRequested: bars.systemStatusRequested(bar.modelData)
                 onTrayMenuRequested: index => bars.trayMenuRequested(bar.modelData, bars.originFor(bar.modelData, "system"), index)
             }
         }
