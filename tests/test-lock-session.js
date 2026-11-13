@@ -286,7 +286,11 @@ test("Escape cancels an armed Session action before backing out", () => {
     content,
     /action: sessionPanel\.armedAction\.length > 0 \? "Cancel confirmation"/,
   );
-  assert.match(host, /sessionConfirmationPending\) \? "Cancel"/);
+  assert.match(
+    host,
+    /confirmationPending: !!systemContent && \(systemContent\.resetConfirmPending \|\| systemContent\.sessionConfirmationPending/,
+  );
+  assert.match(host, /escapeHintLabel: confirmationPending \? "Cancel"/);
   assert.match(
     content,
     /if \(root\.helpOpen\) \{[\s\S]*?sessionPanel\.open && sessionPanel\.armedAction\.length > 0\)\s*sessionPanel\.invoke\("cancelConfirmation"\);\s*root\.helpOpen = false;/,
