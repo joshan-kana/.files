@@ -57,7 +57,8 @@ PanelWindow {
     property bool closing: false
     property bool frameEnabled: false
     property bool barVisible: true
-    readonly property bool frameConnected: frameEnabled && !(Hyprland.monitorFor(screen)?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false)
+    readonly property bool screenFullscreen: Hyprland.monitorFor(screen)?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false
+    readonly property bool frameConnected: frameEnabled && !screenFullscreen
     property real attachmentProgress: frameConnected ? (open ? 1 : 0) : 1
     Behavior on attachmentProgress {
         NumberAnimation {
@@ -87,6 +88,7 @@ PanelWindow {
     updatesEnabled: surfaceLifecycle.needsRendering
     mask: surfaceLifecycle.inputRegion
     WlrLayershell.namespace: "linux-desktop-resize-controls"
+    WlrLayershell.layer: screenFullscreen ? WlrLayer.Overlay : WlrLayer.Top
     WlrLayershell.keyboardFocus: open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
     PopupSurfaceLifecycle {

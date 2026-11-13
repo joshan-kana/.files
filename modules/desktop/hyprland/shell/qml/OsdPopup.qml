@@ -15,7 +15,8 @@ PanelWindow {
     property bool barVisible: true
     property bool suspended: false
     readonly property bool exposedNow: osd.visible && !suspended
-    readonly property bool frameConnected: frameEnabled && !(Hyprland.monitorFor(screen)?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false)
+    readonly property bool screenFullscreen: Hyprland.monitorFor(screen)?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false
+    readonly property bool frameConnected: frameEnabled && !screenFullscreen
     // The feedback shares the upper interaction origin with active modes.
     property real attachmentProgress: frameConnected && exposedNow ? 1 : 0
     Behavior on attachmentProgress {
@@ -55,6 +56,7 @@ PanelWindow {
     margins.top: frameConnected ? (barVisible ? theme.barInsetTop : theme.frameThickness) : theme.panelTopOffset
 
     WlrLayershell.namespace: "linux-desktop-osd"
+    WlrLayershell.layer: screenFullscreen ? WlrLayer.Overlay : WlrLayer.Top
 
     Timer {
         id: closeTimer

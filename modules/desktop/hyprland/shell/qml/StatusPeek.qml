@@ -40,7 +40,8 @@ PanelWindow {
             height: height * attachmentProgress,
             visible: frameConnected && attachmentProgress > 0.001
         })
-    readonly property bool frameConnected: frameEnabled && !hubVisible && !(Hyprland.monitorFor(screen)?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false)
+    readonly property bool screenFullscreen: Hyprland.monitorFor(screen)?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false
+    readonly property bool frameConnected: frameEnabled && !hubVisible && !screenFullscreen
     visible: true
     focusable: true
     color: "transparent"
@@ -51,6 +52,7 @@ PanelWindow {
     anchors.top: true
     margins.top: hubVisible && hubBounds.visible && hubBounds.y + hubBounds.height + implicitHeight + theme.spacing3 < (screen ? screen.height : 1000) ? hubBounds.y + hubBounds.height + theme.spacing3 : topOffset
     WlrLayershell.namespace: "linux-desktop-status-inspection"
+    WlrLayershell.layer: screenFullscreen ? WlrLayer.Overlay : WlrLayer.Top
     WlrLayershell.keyboardFocus: open ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
     PopupSurfaceLifecycle {
         id: lifecycle
