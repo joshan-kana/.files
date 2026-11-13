@@ -1761,7 +1761,7 @@ FocusScope {
                         recordingsPanel.invoke("editSelected");
                     } else if (event.key === Qt.Key_C) {
                         recordingsPanel.invoke("copySelected");
-                    } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_O) {
+                    } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                         recordingsPanel.invoke("openSelected");
                     } else if (event.key === Qt.Key_R) {
                         recordingsPanel.invoke("refresh");
@@ -1906,7 +1906,7 @@ FocusScope {
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                         networkPanel.invoke("activateSelected");
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_I) {
+                    } else if (event.key === Qt.Key_V) {
                         networkPanel.invoke("toggleDetailView");
                         event.accepted = true;
                     } else if (event.key === Qt.Key_R && networkPanel.detailView) {

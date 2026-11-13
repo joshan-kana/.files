@@ -42,6 +42,21 @@ const global = new Map(
     .map((binding) => [chord(binding), binding.description]),
 );
 
+test("hub tab keys derive from the canonical workspace navigation bindings", () => {
+  const previous = bindings.find(
+    (binding) => binding.id === "workspace.previous",
+  );
+  const next = bindings.find((binding) => binding.id === "workspace.next");
+  assert.equal(previous.keys, "I");
+  assert.equal(next.keys, "O");
+  const shell = fs.readFileSync(
+    path.join(repo, "modules/desktop/hyprland/shell/default.nix"),
+    "utf8",
+  );
+  assert.match(shell, /hubPrevious = navigationKey "workspace.previous"/);
+  assert.match(shell, /hubNext = navigationKey "workspace.next"/);
+});
+
 test("all physical chords are unique within each compositor submap", () => {
   const seen = new Set();
   for (const binding of bindings) {
@@ -82,9 +97,9 @@ test("desktop destinations, capture, media, and workspace pairs have no old alia
     ["SUPER+ALT+P", "Capture history"],
     ["SUPER+M", "Application mixer"],
     ["SUPER+N", "Now playing"],
-    ["SUPER+U", "Previous workspace"],
+    ["SUPER+I", "Previous workspace"],
     ["SUPER+O", "Next workspace"],
-    ["SUPER+SHIFT+U", "Move window to previous workspace"],
+    ["SUPER+SHIFT+I", "Move window to previous workspace"],
     ["SUPER+SHIFT+O", "Move window to next workspace"],
   ]);
   for (const [key, description] of expected)

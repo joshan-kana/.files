@@ -396,7 +396,7 @@ in
     description = "Focus previous display";
   })
   (mk {
-    keys = "SHIFT + U";
+    keys = "SHIFT + I";
     action = dispatcher ''hl.dsp.window.move({ workspace = "e-1", follow = false })'';
     section = "WORKSPACES";
     description = "Move window to previous workspace";
@@ -408,13 +408,15 @@ in
     description = "Move window to next workspace";
   })
   (mk {
-    keys = "U";
+    keys = "I";
+    id = "workspace.previous";
     action = dispatcher ''hl.dsp.focus({ workspace = "e-1" })'';
     section = "WORKSPACES";
     description = "Previous workspace";
   })
   (mk {
     keys = "O";
+    id = "workspace.next";
     action = dispatcher ''hl.dsp.focus({ workspace = "e+1" })'';
     section = "WORKSPACES";
     description = "Next workspace";

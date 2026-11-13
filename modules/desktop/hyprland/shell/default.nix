@@ -615,6 +615,13 @@ in
         else
           "${mainModifierLabel} + ${(builtins.head launcherSlotBindings).keys}–${(lib.last launcherSlotBindings).keys}";
 
+      navigationKey =
+        id:
+        let
+          binding = lib.findFirst (entry: entry.id == id && entry.submap == null) null keybindings;
+        in
+        if binding == null then throw "Missing canonical navigation shortcut: ${id}" else binding.keys;
+
       renderShortcut =
         binding:
         let
@@ -658,7 +665,11 @@ in
         };
         weather.location = scopeConfig.weatherLocation;
         keybindings = cheatsheetBindings;
-        shortcutHints.launcherSlots = launcherSlotsHint;
+        shortcutHints = {
+          launcherSlots = launcherSlotsHint;
+          hubPrevious = navigationKey "workspace.previous";
+          hubNext = navigationKey "workspace.next";
+        };
         inherit shortcuts;
 
         tools = {
