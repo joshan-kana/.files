@@ -33,7 +33,7 @@ ShellRoot {
 
     property var statusTargetScreen: null
     property var resizeTargetScreen: null
-    function toggleStatusInspection(targetScreen: var = null): void {
+    function toggleStatusInspection(targetScreen: var): void {
         if (resizeOverlay.open) {
             resizeOverlay.inspectOpen = !resizeOverlay.inspectOpen;
             if (resizeOverlay.inspectOpen)
