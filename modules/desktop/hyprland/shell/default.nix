@@ -669,6 +669,8 @@ in
           launcherSlots = launcherSlotsHint;
           hubPrevious = navigationKey "workspace.previous";
           hubNext = navigationKey "workspace.next";
+          statusInspect = navigationKey "status.inspect";
+          microphoneMute = navigationKey "audio.microphoneMute";
         };
         inherit shortcuts;
 

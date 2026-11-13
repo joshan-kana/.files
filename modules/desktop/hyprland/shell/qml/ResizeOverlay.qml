@@ -4,12 +4,54 @@ import QtQuick
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Wayland
+import Quickshell.Io
+import "FeedbackSemantics.js" as FeedbackSemantics
 
 PanelWindow {
     id: overlay
     required property RuntimeConfig runtime
     required property Theme theme
     required property Motion motion
+    required property KeyboardState keyboard
+    required property SystemState system
+    property bool inspectOpen: false
+    property string targetAddress: ""
+    property bool readbackPending: false
+    property StdioCollector windowOutput: StdioCollector {}
+    property Process windowQuery: Process {
+        stdout: overlay.windowOutput
+        onExited: (exitCode, exitStatus) => {
+            overlay.readbackPending = false;
+            if (exitCode !== 0) {
+                overlay.lastAction = "Unable to read window geometry";
+                return;
+            }
+            try {
+                const window = JSON.parse(overlay.windowOutput.text);
+                if (!window || !Array.isArray(window.size) || window.size.length < 2) {
+                    overlay.lastAction = "Window geometry unavailable";
+                    return;
+                }
+                if (overlay.targetAddress && window.address && overlay.targetAddress !== window.address) {
+                    overlay.lastAction = "Focused window changed";
+                    return;
+                }
+                overlay.targetAddress = window.address || overlay.targetAddress;
+                overlay.lastAction = `${window.size[0]} × ${window.size[1]}`;
+            } catch (error) {
+                overlay.lastAction = "Window geometry unavailable";
+            }
+        }
+    }
+    property Timer geometryReadback: Timer {
+        interval: 100
+        onTriggered: {
+            if (!overlay.windowQuery.running && overlay.runtime.hyprctl.length > 0) {
+                overlay.readbackPending = true;
+                overlay.windowQuery.exec([overlay.runtime.hyprctl, "-j", "activewindow"]);
+            }
+        }
+    }
     property bool open: false
     property string lastAction: ""
     property bool closing: false
@@ -37,7 +79,7 @@ PanelWindow {
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
     implicitWidth: 510
-    implicitHeight: 210
+    implicitHeight: inspectOpen ? 268 : 210
     anchors {
         top: true
     }
@@ -57,7 +99,10 @@ PanelWindow {
         if (open) {
             closing = false;
             closeTimer.stop();
-            lastAction = "H/J/K/L change size, Shift reverses";
+            inspectOpen = false;
+            lastAction = "Reading window geometry…";
+            targetAddress = "";
+            geometryReadback.restart();
             Qt.callLater(() => resizeKeys.forceActiveFocus());
         } else if (motion.enabled) {
             closing = true;
@@ -75,12 +120,14 @@ PanelWindow {
 
     function resizeWindow(x: int, y: int): void {
         Hyprland.dispatch(`hl.dsp.window.resize({ x = ${x}, y = ${y}, relative = true })`);
-        lastAction = `${x > 0 ? "+" : ""}${x} × ${y > 0 ? "+" : ""}${y}`;
+        lastAction = "Reading resulting dimensions…";
+        geometryReadback.restart();
     }
 
     function balance(): void {
         Hyprland.dispatch('hl.dsp.layout("splitratio 1.0 exact")');
-        lastAction = "Balanced split";
+        lastAction = "Reading resulting dimensions…";
+        geometryReadback.restart();
     }
 
     FocusScope {
@@ -125,6 +172,10 @@ PanelWindow {
                 overlay.resizeWindow(size, 0);
             } else if (event.key === Qt.Key_B) {
                 overlay.balance();
+            } else if (event.key === Qt.Key_S) {
+                overlay.inspectOpen = !overlay.inspectOpen;
+                if (overlay.inspectOpen)
+                    overlay.keyboard.refresh("inspect");
             } else {
                 return;
             }
@@ -152,7 +203,7 @@ PanelWindow {
                     width: parent.width
                     spacing: overlay.theme.spacing3
                     Text {
-                        text: "󰩨"
+                        text: FeedbackSemantics.symbol("resize", false, 0, "")
                         color: overlay.theme.accent
                         font.family: "Symbols Nerd Font"
                         font.pixelSize: overlay.theme.fontSize(28)
@@ -219,6 +270,25 @@ PanelWindow {
                     }
                 }
 
+                Row {
+                    width: parent.width
+                    height: overlay.inspectOpen ? overlay.theme.fontSize(26) : 0
+                    visible: overlay.inspectOpen
+                    spacing: overlay.theme.spacing2
+                    Text {
+                        text: `Caps ${overlay.keyboard.description(overlay.keyboard.capsState)} · Num ${overlay.keyboard.description(overlay.keyboard.numState)}`
+                        color: overlay.theme.textStrong
+                        font.family: overlay.runtime.fontMono
+                        font.pixelSize: overlay.theme.fontSize(10)
+                    }
+                    Text {
+                        text: overlay.system.microphoneAvailable ? (overlay.system.microphoneMuted ? "Mic muted" : "Mic unmuted") : "Mic unavailable"
+                        color: overlay.theme.textMuted
+                        font.family: overlay.runtime.fontMono
+                        font.pixelSize: overlay.theme.fontSize(10)
+                    }
+                }
+
                 KeyHintStrip {
                     width: parent.width
                     runtime: overlay.runtime
@@ -231,6 +301,10 @@ PanelWindow {
                         {
                             shortcut: "B",
                             label: "Balance"
+                        },
+                        {
+                            shortcut: "S",
+                            label: overlay.inspectOpen ? "Hide status" : "Inspect"
                         },
                         {
                             shortcut: "ESC",
