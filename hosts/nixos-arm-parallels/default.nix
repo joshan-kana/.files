@@ -1,6 +1,7 @@
 {
   config,
   editScope,
+  extendScope,
   moduleRegistry,
   pkgs,
   ...
@@ -8,7 +9,6 @@
 
 {
   inherit (moduleRegistry)
-    system
     backups
     nix
     theme
@@ -25,6 +25,15 @@
   ];
 
   hardware = import ./hardware.nix;
+
+  system = extendScope moduleRegistry.system {
+    parallels = _: {
+      systemd.user.services.prlcc.serviceConfig = {
+        Restart = "on-failure";
+        RestartSec = "2s";
+      };
+    };
+  };
 
   desktopApps = editScope moduleRegistry.desktopApps {
     kitty = _: {
