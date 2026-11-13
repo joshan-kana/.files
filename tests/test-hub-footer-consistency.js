@@ -149,6 +149,18 @@ test("detail navigation has one global Escape hint and locally owned movement hi
   assert.match(strip, /occupied \+ strip\.groupSpacing \+ width > limit/);
 });
 
+test("wallpaper detail height follows its content, without an empty band before hub navigation", () => {
+  const wallpaper = source("WallpaperPanel.qml");
+  assert.match(wallpaper, /implicitHeight: galleryLayout\.implicitHeight/);
+  assert.match(
+    wallpaper,
+    /Column \{\s*id: galleryLayout\s*anchors\.fill: parent/,
+  );
+  assert.match(wallpaper, /id: statusBanner/);
+  assert.match(wallpaper, /KeyHintStrip \{/);
+  assert.doesNotMatch(wallpaper, /implicitHeight: 770/);
+});
+
 test("footer background retains physical clearance even when content is taller than the clipped surface", () => {
   const host = source("ShellExpansionHost.qml");
   assert.match(host, /footerBottomClearance: theme\.spacing5\s*\n/);

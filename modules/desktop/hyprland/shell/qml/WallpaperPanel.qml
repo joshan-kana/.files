@@ -68,7 +68,9 @@ Item {
 
     visible: open
     implicitWidth: 1120
-    implicitHeight: 770
+    // Derive the detail height from its content so shared navigation retains
+    // the same clearance as other details when the gallery layout changes.
+    implicitHeight: galleryLayout.implicitHeight
 
     onOpenChanged: {
         if (open)
@@ -253,6 +255,7 @@ Item {
     }
 
     Column {
+        id: galleryLayout
         anchors.fill: parent
         spacing: panel.theme.spacing3
 
