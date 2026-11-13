@@ -477,10 +477,6 @@ Item {
                 {
                     shortcut: "F",
                     label: panel.forgetAddress.length > 0 ? "Confirm" : "Forget"
-                },
-                {
-                    shortcut: "ESC",
-                    label: "Back"
                 }
             ]
         }

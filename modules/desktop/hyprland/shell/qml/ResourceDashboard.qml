@@ -378,10 +378,6 @@ Item {
                 {
                     shortcut: "R",
                     label: "Refresh"
-                },
-                {
-                    shortcut: "ESC",
-                    label: "Back"
                 }
             ]
         }

@@ -1026,10 +1026,6 @@ Item {
                     {
                         shortcut: "A",
                         label: "Advanced"
-                    },
-                    {
-                        shortcut: "ESC",
-                        label: "Back"
                     }
                 ]
             }

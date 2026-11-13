@@ -16,6 +16,9 @@ Item {
     Flow {
         id: hintFlow
         width: parent.width
+        // Centre the actual key/label group, not the full-width Flow box.
+        // Individual hint delegates remain indivisible when space is tight.
+        x: Math.max(0, (strip.width - childrenRect.width) / 2)
         height: childrenRect.height
         spacing: strip.groupSpacing
 

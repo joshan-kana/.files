@@ -111,10 +111,11 @@ test("keycap material and compact footer presentation use the shared theme", () 
   assert.match(source("KeyHintStrip.qml"), /property bool compact: true/);
 });
 
-test("Activity leaves Escape to the shared hub footer while wallpaper keeps its local Back action", () => {
+test("detail navigation has one global Escape hint and locally owned movement hints", () => {
   const host = source("ShellExpansionHost.qml");
   const activity = source("NotificationContent.qml");
   const wallpaper = source("WallpaperPanel.qml");
+  const theme = source("ThemePanel.qml");
   const activityFooter = activity.slice(
     activity.indexOf("id: footer"),
     activity.indexOf("id: list"),
@@ -122,8 +123,17 @@ test("Activity leaves Escape to the shared hub footer while wallpaper keeps its 
   assert.doesNotMatch(activityFooter, /shortcut: "ESC"/);
   assert.match(host, /shortcut: "ESC",\s*label: host\.escapeHintLabel/);
   assert.match(activity, /event\.key === Qt\.Key_Escape/);
-  assert.match(wallpaper, /shortcut: "ESC",\s*label: "Back"/);
+  for (const gallery of [wallpaper, theme]) {
+    assert.doesNotMatch(gallery, /shortcut: "ESC"/);
+    assert.match(gallery, /shortcut: "H\/L",\s*label: "Columns"/);
+    assert.match(gallery, /shortcut: "J\/K",\s*label: "Rows"/);
+    assert.match(gallery, /shortcut: "\/",\s*label: "Search"/);
+  }
   assert.match(wallpaper, /event\.key === Qt\.Key_Escape/);
+  assert.match(
+    source("KeyHintStrip.qml"),
+    /x: Math\.max\(0, \(strip\.width - childrenRect\.width\) \/ 2\)/,
+  );
 });
 
 test("footer background retains physical clearance even when content is taller than the clipped surface", () => {

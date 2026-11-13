@@ -690,36 +690,32 @@ Item {
         }
         spacing: panel.theme.spacing2
 
-        Row {
-            anchors.right: parent.right
-            spacing: panel.theme.spacing2
-            Repeater {
-                model: [
-                    {
-                        shortcut: "H/L",
-                        label: "Choose"
-                    },
-                    {
-                        shortcut: "J/K",
-                        label: "Rows"
-                    },
-                    {
-                        shortcut: "ENTER",
-                        label: "Apply"
-                    },
-                    {
-                        shortcut: "ESC",
-                        label: panel.returnToControls ? "Back" : "Close"
-                    }
-                ]
-                delegate: KeyHint {
-                    required property var modelData
-                    shortcut: modelData.shortcut
-                    label: modelData.label
-                    theme: panel.theme
-                    runtime: panel.runtime
+        KeyHintStrip {
+            width: parent.width
+            runtime: panel.runtime
+            theme: panel.theme
+            hints: [
+                {
+                    shortcut: "H/L",
+                    label: "Columns"
+                },
+                {
+                    shortcut: "J/K",
+                    label: "Rows"
+                },
+                {
+                    shortcut: "U/D",
+                    label: "Page"
+                },
+                {
+                    shortcut: "/",
+                    label: "Search"
+                },
+                {
+                    shortcut: "ENTER",
+                    label: "Apply"
                 }
-            }
+            ]
         }
 
         TextMetrics {
