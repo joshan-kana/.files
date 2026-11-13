@@ -82,6 +82,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    embedded-tooling = {
+      url = "github:joshan-kana/embedded-tooling";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     pre-commit-hooks = {
       url = "github:cachix/git-hooks.nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -141,6 +146,12 @@
           inherit system;
           overlays = overlaysFor system;
         };
+      embeddedFor =
+        system:
+        inputs.embedded-tooling.lib.mkFor {
+          pkgs = pkgsFor system;
+          treefmtConfig = (treefmtBaseFor system).config.build.configFile;
+        };
 
       repoToolExcludedDirs = [
         ".direnv/"
@@ -165,7 +176,7 @@
         "MD060.style = \"aligned\""
       ];
 
-      treefmtFor =
+      treefmtModuleFor =
         system:
         let
           pkgs = pkgsFor system;
@@ -174,7 +185,8 @@
             hass = "hass"
           '';
         in
-        treefmt-nix.lib.evalModule pkgs {
+        {
+          imports = [ inputs.embedded-tooling.lib.treefmtModule ];
           projectRootFile = "flake.nix";
 
           programs = {
@@ -284,11 +296,6 @@
                 includes = [ "*.inc" ];
               };
               typos.priority = 1;
-              lua-lint = {
-                command = lib.getExe pkgs.lua54Packages.luacheck;
-                includes = [ "*.lua" ];
-                priority = 2;
-              };
               actionlint = {
                 command = lib.getExe pkgs.actionlint;
                 includes = [
@@ -307,11 +314,6 @@
                   "*.png"
                   "*.yuck"
                 ];
-              };
-              toml-lint = {
-                command = lib.getExe pkgs.taplo;
-                options = [ "lint" ];
-                includes = [ "*.toml" ];
               };
               nix-query-lint = {
                 command = toString (
@@ -354,6 +356,21 @@
           };
         };
 
+      treefmtBaseFor = system: treefmt-nix.lib.evalModule (pkgsFor system) (treefmtModuleFor system);
+
+      treefmtFor =
+        system:
+        let
+          embedded = embeddedFor system;
+        in
+        treefmt-nix.lib.evalModule (pkgsFor system) {
+          imports = [ (treefmtModuleFor system) ];
+          settings.formatter = {
+            nix-embedded = embedded.formatter;
+            nixfmt-final = embedded.finalNixfmtFormatter;
+          };
+        };
+
       preCommitFor =
         system:
         let
@@ -365,7 +382,7 @@
             repo-quality = {
               enable = true;
               name = "Repository formatting and linting";
-              entry = "nix build --no-link .#checks.${system}.repo-quality";
+              entry = "nix build --no-link .#checks.${system}.repo-quality .#checks.${system}.embedded-lint";
               excludes = preCommitExcludes;
               pass_filenames = false;
             };
@@ -616,6 +633,7 @@
             pkgs.vimPlugins.nvim-lspconfig
             neovimGrammarRuntime
           ];
+          embedded = embeddedFor system;
           preCommit = preCommitFor system;
           docsCommands = docsCommandsFor system;
           repoOptionsFzf = pkgs.writeShellApplication {
@@ -667,6 +685,8 @@
               formatRepo
               repoOptionsFzf
               treefmt.config.build.wrapper
+              embedded.lspPackage
+              embedded.package
               docsCommands.build
               docsCommands.serve
             ];
@@ -697,6 +717,7 @@
         let
           pkgs = pkgsFor system;
           treefmt = treefmtFor system;
+          embedded = embeddedFor system;
           semanticTest = import ./tests/semantic-scopes.nix { inherit inputs system; };
           semanticPortabilityTest = import ./tests/semantic-system-portability.nix { inherit inputs; };
           semanticOptionsTest = import ./tests/semantic-options.nix {
@@ -714,6 +735,11 @@
           ) self.nixosConfigurations) pkgs.emptyFile;
           docs = self.packages.${system}.docs;
           repo-quality = treefmt.config.build.check self;
+          embedded-lint = embedded.lintCheck {
+            src = self;
+            excludes = repoToolExcludedDirs;
+          };
+          embedded-lsp = embedded.lspCheck;
           git-attributes =
             assert lib.assertMsg (
               builtins.readFile ./.gitattributes == gitAttributesText
