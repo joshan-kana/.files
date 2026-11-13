@@ -91,7 +91,7 @@ test("Theme search uses filtered gallery items and the shared search field", () 
   const controls = qml("SystemContent.qml");
   assert.match(theme, /SearchFieldSurface \{/);
   assert.match(theme, /id: searchField/);
-  assert.match(theme, /text: "\/ {2}Search themes"/);
+  assert.match(theme, /text: "Search themes"/);
   assert.match(theme, /function enterSearch\(\): void/);
   assert.match(theme, /function leaveSearch\(\): void/);
   assert.match(theme, /model: panel.filteredThemes/);

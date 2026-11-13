@@ -355,14 +355,13 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: panel.theme.spacing1
 
-                        Text {
-                            width: parent.width
-                            horizontalAlignment: Text.AlignRight
-                            text: deviceRow.modelData.pairing ? "P  CANCEL" : (!deviceRow.modelData.paired ? "P  PAIR" : (deviceRow.modelData.connected ? "ENTER  DROP" : "ENTER  LINK"))
-                            color: deviceRow.modelData.pairing || !deviceRow.modelData.paired ? panel.theme.warning : panel.theme.roleColor("connectivity")
-                            font.family: panel.runtime.fontMono
-                            font.pixelSize: panel.theme.fontSize(8)
-                            font.weight: Font.DemiBold
+                        KeyHint {
+                            anchors.right: parent.right
+                            runtime: panel.runtime
+                            theme: panel.theme
+                            compact: true
+                            shortcut: deviceRow.modelData.pairing || !deviceRow.modelData.paired ? "P" : "ENTER"
+                            label: deviceRow.modelData.pairing ? "Cancel" : !deviceRow.modelData.paired ? "Pair" : deviceRow.modelData.connected ? "Drop" : "Link"
                         }
 
                         Text {
