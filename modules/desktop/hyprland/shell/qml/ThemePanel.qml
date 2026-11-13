@@ -361,7 +361,7 @@ Item {
                 verticalCenter: parent.verticalCenter
             }
             visible: searchField.text.length === 0 && !searchField.activeFocus
-            text: "/  Search themes"
+            text: "Search themes"
             color: panel.theme.textMuted
             font.family: panel.runtime.fontMono
             font.pixelSize: panel.theme.fontSize(11)
