@@ -139,6 +139,9 @@ FocusScope {
     readonly property bool trayMenuOpen: trayMenu.open
     readonly property int trayMenuItemCount: trayMenu.itemCount
     readonly property bool networkOpen: networkPanel.open
+    readonly property bool networkPasswordPending: networkPanel.open && networkPanel.passwordPrompt
+    readonly property bool recordingDeletePending: recordingsPanel.open && recordingsPanel.deletePending.length > 0
+    readonly property bool detailSearchFocused: (themePanel.open && themePanel.panel && themePanel.panel.searching) || (wallpaperPanel.open && wallpaperPanel.panel && wallpaperPanel.panel.searching)
     readonly property bool bluetoothOpen: bluetoothPanel.open
     readonly property bool themeOpen: themePanel.open
     readonly property bool themeOperationRunning: themePanel.open && themePanel.operationRunning

@@ -30,8 +30,10 @@ test("Escape label follows the actual focus owner", () => {
   const controls = source("SystemContent.qml");
   assert.match(
     host,
-    /escapeHintLabel: systemContent && \(systemContent\.resetConfirmPending \|\| systemContent\.sessionConfirmationPending\) \? "Cancel"/,
+    /confirmationPending: !!systemContent && \(systemContent\.resetConfirmPending \|\| systemContent\.sessionConfirmationPending \|\| systemContent\.networkPasswordPending \|\| systemContent\.recordingDeletePending\)/,
   );
+  assert.match(host, /escapeHintLabel: confirmationPending \? "Cancel"/);
+  assert.match(host, /systemContent\.detailSearchFocused\) \? "Exit search"/);
   assert.match(
     host,
     /helpVisible \|\| detailVisible \|\| \(systemContent && \(systemContent\.audioChooserOpen \|\| systemContent\.selectedSlider\.length > 0\)\) \|\| \(activityContent && activityContent\.replyEditing\) \? "Back" : "Close"/,
@@ -39,6 +41,14 @@ test("Escape label follows the actual focus owner", () => {
   assert.match(
     controls,
     /readonly property bool audioChooserOpen: audioDeck\.deviceChooserOpen/,
+  );
+  assert.match(
+    controls,
+    /networkPasswordPending: networkPanel\.open && networkPanel\.passwordPrompt/,
+  );
+  assert.match(
+    controls,
+    /recordingDeletePending: recordingsPanel\.open && recordingsPanel\.deletePending\.length > 0/,
   );
   assert.match(
     controls,
