@@ -10,6 +10,8 @@ After applying automatic fixes, run the complete formatter/linter pipeline again
 
 For manual changes, build the assembled documentation source and rendered book, check links/navigation, and inspect representative output.
 
+The baseline must be independent of remote builders: native `nix flake check` and cross-platform `nix flake check --no-build --all-systems` must be evaluable on both supported macOS and Linux development hosts without requiring remote builders to be configured. Cross-system evaluation must not accidentally demand a foreign-architecture build. Distinguish this portability check from actual platform-specific compilation and runtime verification.
+
 ## Evidence by change type
 
 - **Behavior-preserving refactor:** compare evaluated configurations and relevant system derivations before and after.

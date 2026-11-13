@@ -20,11 +20,13 @@ Use narrow, explained exceptions for external API naming contracts, intentionall
 
 ## Commands and scripts
 
+Physical script placement follows [file ownership](repository-structure.md#file-ownership-and-placement). Source files are located by semantic ownership; Nix wrappers, flake outputs, and runtime units reference or package them without duplicating the implementation. In particular, a script used by only one feature does not become a repository-wide command simply because that feature is composed through `flake.nix`.
+
 - Prefer small, readable, directly runnable commands over opaque wrappers.
 - Use native module options for shell settings when possible.
-- Keep feature-specific logic with its owner; use `scripts/` for broadly reusable repository commands.
-- Declare executable runtime dependencies rather than depending on an interactive user's shell.
-- Design repeatable operations to be safe when run again. Separate dry-run/reporting paths from destructive actions where appropriate.
+- Keep feature-specific logic with its owner; use root `scripts/` for repository-wide commands and helpers that genuinely cross owners.
+- Declare executable runtime dependencies and interpreter requirements rather than depending on an interactive user's shell or `$PATH`.
+- Prefer supported native tools and protocols before writing glue. Keep operations safe to repeat; separate dry-run/reporting paths from destructive actions where appropriate.
 - Preserve observable CLI behavior and help text when refactoring command implementation.
 
 Test commands under the environments in which they will run. Avoid introducing another layer of tooling unless it removes real repetition or complexity.

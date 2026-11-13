@@ -11,7 +11,7 @@ A source is unsuitable when it lacks required functionality, is stale, fails to 
 
 ## Package ownership
 
-Put independent package definitions, patches, and source pins under `overlays/<package>/default.nix`, registered in `overlays/default.nix`. Keep an ordinary package's derivation with its overlay rather than adding a redundant file or registry. Extract reusable builders into `lib/` only when genuinely shared.
+Put independent package definitions and source pins under `overlays/<package>/default.nix`, registered in `overlays/default.nix`. Store downstream patch files in root `patches/<package>/` and reference them from the package definition. Keep an ordinary package's derivation with its overlay rather than adding a redundant file or registry. Extract reusable builders into `lib/` only when genuinely shared.
 
 Consumers use `pkgs.<name>` and own service settings, application behavior, and platform enablement. Small launch wrappers and generated configuration need not become independent packages.
 
@@ -26,12 +26,14 @@ Prefer a narrow override of the existing nixpkgs derivation over replacing it. A
 - If nixpkgs cannot provide the required functionality, use the upstream flake, official binary, or source-build fallback in that order.
 - Document the technical reason and upstream resolution condition beside an exception. Remove the overlay once the stock package passes the required checks.
 
+A permanent customization and a temporary compatibility fix may coexist in one overlay. Give each a clear technical reason and keep the temporary fix independently removable without discarding the intentional customization. Do not add a second metadata flag or registry to distinguish them when the purpose and upstream exit condition can be stated at the owning definition.
+
 Do not preserve a fork or compatibility pin merely because it already exists.
 
 ## Update policy
 
 Stock nixpkgs packages and patches to stock derivations follow the nixpkgs lock update. Packages sourced from flake inputs follow those locked inputs, without a separate source-version pin. Downstream dependency hashes are refreshed independently of source revisions when an override is necessary. Independently packaged source or binary releases use immutable versions and hashes, with standard updating where possible; resolve mutable release metadata during updates rather than evaluation.
 
-A flake input follows its lockfile independently of `passthru.autoUpdate`. Declare `passthru.autoUpdate = true` for package-owned release or dependency hashes that are safe to refresh routinely, or `false` when they require explicit selection. Omit the metadata when there is no separately maintained package update. Keep update policy with package metadata, not in host-specific lists or another version database.
+A flake input follows its lockfile independently of `passthru.autoUpdate`. Do not confuse package update eligibility with whether an overlay is intentional or temporary. Declare `passthru.autoUpdate = true` for package-owned release or dependency hashes that are safe to refresh routinely, or `false` when they require explicit selection. Omit the metadata when there is no separately maintained package update. Set `passthru.autoUpdate = false` for packages with downstream patches; patch application and compatibility must be reviewed before updating them. Keep update policy with package metadata, not in host-specific lists or another version database.
 
 Updates must fail without replacing a working lock or pin. Validate a proposed replacement on relevant architectures, including launch behavior or patch application where needed. Compatibility exceptions are removed only after the normal package is verified.
