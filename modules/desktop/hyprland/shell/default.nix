@@ -671,6 +671,16 @@ in
           hubNext = navigationKey "workspace.next";
           statusInspect = navigationKey "status.inspect";
           microphoneMute = navigationKey "audio.microphoneMute";
+          passthruExit =
+            let
+              binding = lib.findFirst (
+                entry: entry.id == "keyboard.passthruExit" && entry.submap == "passthru"
+              ) null keybindings;
+            in
+            if binding == null then
+              throw "Missing canonical passthrough exit shortcut"
+            else
+              renderShortcut binding;
         };
         inherit shortcuts;
 

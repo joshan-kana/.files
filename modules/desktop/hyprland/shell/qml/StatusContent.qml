@@ -43,7 +43,7 @@ Item {
                     font.weight: Font.Bold
                 }
                 Text {
-                    text: content.keyboard.pending ? "Reading keyboard state…" : content.keyboard.stale ? "Keyboard state unavailable or stale" : "Current device and interaction state"
+                    text: content.keyboard.pending ? "Reading keyboard state…" : content.keyboard.stale ? "Keyboard state unavailable or stale" : content.keyboard.deviceName + " · Current device and interaction state"
                     color: content.theme.textMuted
                     font.family: content.runtime.fontMono
                     font.pixelSize: content.theme.fontSize(10)

@@ -260,11 +260,16 @@ ShellRoot {
         runtime: runtime
     }
 
+    InteractionModeState {
+        id: interactionMode
+    }
+
     OsdState {
         id: osd
         system: system
         brightness: brightness
         keyboard: keyboard
+        interactionMode: interactionMode
         screens: screens
         runtime: runtime
     }
@@ -506,7 +511,7 @@ ShellRoot {
         barVisible: appearance.barVisible
         hubVisible: expansionState.hasCurrent
         hubBounds: expansionHost.frameBounds
-        modeName: resizeOverlay.open ? "Resize window" : "Normal"
+        modeName: interactionMode.passthroughActive ? "Passthrough" : resizeOverlay.open ? "Resize window" : "Normal"
         onCloseRequested: statusPeek.open = false
     }
 
@@ -1293,6 +1298,10 @@ ShellRoot {
 
         function resizeModeOpen(): bool {
             return resizeOverlay.open;
+        }
+
+        function activeInputMode(): string {
+            return interactionMode.submap;
         }
 
         function toggleCheatsheet(): void {

@@ -156,6 +156,25 @@ test("active resize owns local inspection and reports observed geometry", () => 
   );
 });
 
+test("inspection and repeated feedback preserve measured geometry and screen", () => {
+  const peek = read("StatusPeek.qml");
+  const status = read("StatusContent.qml");
+  const osd = read("OsdState.qml");
+  assert.match(
+    peek,
+    /implicitHeight: Math\.min\(Math\.max\(1, \(screen \? screen\.height : 700\) - theme\.panelTopOffset \* 2\), Math\.max\(1, statusContent\.implicitHeight\)\)/,
+  );
+  assert.match(peek, /StatusContent \{\s*id: statusContent/);
+  assert.match(
+    status,
+    /content\.keyboard\.deviceName \+ " · Current device and interaction state"/,
+  );
+  assert.match(
+    osd,
+    /if \(!visible \|\| !activeScreen\)\s*activeScreen = screens\.focusedScreen/,
+  );
+});
+
 test("OSD and modes use the shared upper frame anchor without overlapping", () => {
   const osd = read("OsdPopup.qml");
   const shell = read("shell.qml");
@@ -172,4 +191,39 @@ test("OSD and modes use the shared upper frame anchor without overlapping", () =
   );
   assert.match(frame, /\[args\[9\], args\[10\], args\[11\]\]/);
   assert.match(read("StatusPeek.qml"), /frameEnabled && !hubVisible/);
+});
+
+test("compositor input modes have a canonical exit and persistent semantic feedback", () => {
+  const state = read("InteractionModeState.qml");
+  const osd = read("OsdState.qml");
+  const popup = read("OsdPopup.qml");
+  const shell = read("shell.qml");
+  const repo = path.join(__dirname, "../modules/desktop/hyprland");
+  const compositor = fs.readFileSync(path.join(repo, "default.nix"), "utf8");
+  const map = fs.readFileSync(path.join(repo, "keybindings.nix"), "utf8");
+  const runtime = fs.readFileSync(path.join(repo, "shell/default.nix"), "utf8");
+  assert.match(state, /if \(event\.name !== "submap"\)/);
+  assert.match(
+    state,
+    /readonly property bool passthroughActive: submap === "passthru"/,
+  );
+  assert.match(osd, /root\.show\("mode", "Passthrough mode", 0, false\)/);
+  assert.match(osd, /if \(root\.interactionMode\.passthroughActive\)\s*return/);
+  assert.match(osd, /if \(kindName === "mode"\)\s*hideTimer\.stop\(\)/);
+  assert.match(
+    popup,
+    /shortcut: popup\.runtime\.shortcutHint\("passthruExit"\)/,
+  );
+  assert.match(popup, /popup\.osd\.kind === "mode" \? "ACTIVE"/);
+  assert.match(
+    compositor,
+    /passthru\.settings\.bind = map renderBinding passthruKeybindings/,
+  );
+  assert.doesNotMatch(compositor, /resize\.settings\.bind/);
+  assert.match(map, /id = "keyboard\.passthruExit"/);
+  assert.match(
+    runtime,
+    /entry\.id == "keyboard\.passthruExit" && entry\.submap == "passthru"/,
+  );
+  assert.match(shell, /function activeInputMode\(\): string/);
 });

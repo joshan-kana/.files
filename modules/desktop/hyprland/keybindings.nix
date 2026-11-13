@@ -714,8 +714,18 @@ in
   })
   (mk {
     keys = "Escape";
+    id = "keyboard.passthruEnter";
     action = dispatcher ''hl.dsp.submap("passthru")'';
     section = "SYSTEM";
     description = "Enter passthrough mode";
+  })
+  (mk {
+    keys = "SHIFT + Escape";
+    submap = "passthru";
+    id = "keyboard.passthruExit";
+    action = dispatcher ''hl.dsp.submap("reset")'';
+    section = "SYSTEM";
+    description = "Exit passthrough mode";
+    cheatsheet = false;
   })
 ]

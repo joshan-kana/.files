@@ -47,7 +47,7 @@ PanelWindow {
     mask: surfaceLifecycle.inputRegion
     color: "transparent"
     implicitWidth: Math.max(1, Math.min(370, (screen ? screen.width : 370) - (frameConnected ? theme.frameThickness : theme.panelSideOffset) * 2))
-    implicitHeight: 76
+    implicitHeight: osd.kind === "mode" ? 95 : 76
     exclusionMode: ExclusionMode.Ignore
 
     // Keyboard feedback and interactive modes share a consistent top anchor.
@@ -158,7 +158,7 @@ PanelWindow {
 
                 Text {
                     id: valueText
-                    text: popup.keyboardMode ? FeedbackSemantics.stateLabel(popup.osd.keyboardState) : popup.osd.muted ? "MUTED" : popup.osd.value + "%"
+                    text: popup.osd.kind === "mode" ? "ACTIVE" : popup.keyboardMode ? FeedbackSemantics.stateLabel(popup.osd.keyboardState) : popup.osd.muted ? "MUTED" : popup.osd.value + "%"
                     color: popup.theme.textStrong
                     font.family: popup.runtime.fontMono
                     font.pixelSize: popup.theme.fontSize(12)
@@ -166,8 +166,21 @@ PanelWindow {
                 }
             }
 
+            KeyHint {
+                visible: popup.osd.kind === "mode"
+                anchors {
+                    bottom: parent.bottom
+                    horizontalCenter: parent.horizontalCenter
+                }
+                runtime: popup.runtime
+                theme: popup.theme
+                shortcut: popup.runtime.shortcutHint("passthruExit")
+                label: "Exit passthrough"
+                compact: true
+            }
+
             Rectangle {
-                visible: !popup.keyboardMode
+                visible: !popup.keyboardMode && popup.osd.kind !== "mode"
                 anchors {
                     right: parent.right
                     bottom: parent.bottom
