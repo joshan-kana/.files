@@ -8,7 +8,6 @@ QtObject {
     required property ScreenRouter screenRouter
     required property AmbientBar ambientBar
     required property ShellExpansionState expansionState
-    // The detail can also be opened from Controls, not only the Super+Y shortcut.
     property bool themePanelOpen: false
     property bool sessionPanelOpen: false
     property bool resourcesPanelOpen: false

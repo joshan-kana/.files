@@ -157,3 +157,44 @@ test("constrained secondary output capacity does not reduce primary capacity", (
     ["visible", "visible", "visible"],
   );
 });
+
+test("newest popup is displayed at the first and highest visible slot", () => {
+  const queue = ["first", "second"];
+  queue.unshift("third");
+  const next = layout(queue.map((name) => ({ ...sample(0), name })));
+  assert.deepEqual(queue, ["third", "first", "second"]);
+  assert.deepEqual(
+    next.map((entry) => entry.slot),
+    [0, 1, 2],
+  );
+  const popupSource = fs.readFileSync(
+    path.join(
+      __dirname,
+      "../modules/desktop/hyprland/shell/qml/NotificationPopup.qml",
+    ),
+    "utf8",
+  );
+  const stateSource = fs.readFileSync(
+    path.join(
+      __dirname,
+      "../modules/desktop/hyprland/shell/qml/NotificationState.qml",
+    ),
+    "utf8",
+  );
+  const centerSource = fs.readFileSync(
+    path.join(
+      __dirname,
+      "../modules/desktop/hyprland/shell/qml/NotificationContent.qml",
+    ),
+    "utf8",
+  );
+  assert.match(stateSource, /popups\.insert\(0, \{/);
+  assert.match(
+    popupSource,
+    /y: slot \* \(popup\.cardHeight \+ popup\.cardGap\)/,
+  );
+  assert.match(
+    centerSource,
+    /readonly property var items: \[\.\.\.\(notificationState\.history \|\| \[\]\)\]\.reverse\(\)/,
+  );
+});

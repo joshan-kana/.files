@@ -102,7 +102,7 @@ PanelWindow {
     readonly property MediaContent mediaContent: expansionState.currentName === "media" ? loadedContent as MediaContent : null
     property bool otherHelpOpen: false
     readonly property bool helpVisible: systemContent ? systemContent.helpOpen : (mediaContent ? mediaContent.helpOpen : otherHelpOpen)
-    readonly property bool tabShortcutsEnabled: expansionState.hasCurrent && !detailVisible && !helpVisible && !(systemContent && (systemContent.resetConfirmPending || systemContent.audioChooserOpen)) && !(activityContent && activityContent.replyEditing)
+    readonly property bool tabShortcutsEnabled: expansionState.hasCurrent && !helpVisible && !(systemContent && (systemContent.resetConfirmPending || systemContent.sessionConfirmationPending || systemContent.networkPasswordPending || systemContent.recordingDeletePending || systemContent.detailSearchFocused || systemContent.audioChooserOpen)) && !(activityContent && activityContent.replyEditing)
     readonly property bool confirmationPending: !!systemContent && (systemContent.resetConfirmPending || systemContent.sessionConfirmationPending || systemContent.networkPasswordPending || systemContent.recordingDeletePending)
     readonly property string escapeHintLabel: confirmationPending ? "Cancel" : (systemContent && systemContent.detailSearchFocused) ? "Exit search" : helpVisible || detailVisible || (systemContent && (systemContent.audioChooserOpen || systemContent.selectedSlider.length > 0)) || (activityContent && activityContent.replyEditing) ? "Back" : "Close"
     // Hub scrolling is a fallback only for views without their own paging
@@ -567,19 +567,19 @@ PanelWindow {
         onActivated: host.pageContent(-1)
     }
 
-    // I/O cycle the three hub destinations; nested detail views keep their
-    // own text and action shortcuts (including I for network details and O for clips).
+    // Tab navigation keeps the same direction and hint as workspace navigation.
+    // Nested details remain navigable unless an editor or confirmation owns input.
     Shortcut {
-        sequence: "I"
+        sequence: host.runtime.shortcutHint("hubPrevious")
         context: Qt.ApplicationShortcut
-        enabled: host.tabShortcutsEnabled
+        enabled: host.tabShortcutsEnabled && host.runtime.shortcutHint("hubPrevious").length > 0
         onActivated: host.cycleTab(-1)
     }
 
     Shortcut {
-        sequence: "O"
+        sequence: host.runtime.shortcutHint("hubNext")
         context: Qt.ApplicationShortcut
-        enabled: host.tabShortcutsEnabled
+        enabled: host.tabShortcutsEnabled && host.runtime.shortcutHint("hubNext").length > 0
         onActivated: host.cycleTab(1)
     }
 
@@ -892,14 +892,14 @@ PanelWindow {
                 Repeater {
                     model: (host.tabShortcutsEnabled ? [
                             {
-                                shortcut: "I",
+                                shortcut: host.runtime.shortcutHint("hubPrevious"),
                                 label: "Previous"
                             },
                             {
-                                shortcut: "O",
+                                shortcut: host.runtime.shortcutHint("hubNext"),
                                 label: "Next"
                             }
-                        ] : []).concat([
+                        ].filter(item => item.shortcut.length > 0) : []).concat([
                         {
                             shortcut: "ESC",
                             label: host.escapeHintLabel
