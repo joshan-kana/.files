@@ -12,6 +12,8 @@ Item {
     required property BrightnessState brightness
     required property RecordingState recording
     property string modeName: "Normal"
+    signal refreshRequested
+    signal closeRequested
 
     implicitWidth: Math.max(340, theme.controlsDetailWidth - theme.spacing4 * 2)
     implicitHeight: heading.implicitHeight + stateGrid.implicitHeight + footer.implicitHeight + theme.spacing4 * 4
@@ -34,8 +36,11 @@ Item {
                 font.pixelSize: content.theme.fontSize(23)
             }
             Column {
+                width: Math.max(1, heading.width - content.theme.fontSize(23) - 2 * 44 - heading.spacing * 3)
                 spacing: content.theme.spacing1
                 Text {
+                    width: parent.width
+                    elide: Text.ElideRight
                     text: "System status"
                     color: content.theme.textStrong
                     font.family: content.runtime.fontMono
@@ -43,11 +48,37 @@ Item {
                     font.weight: Font.Bold
                 }
                 Text {
+                    width: parent.width
+                    elide: Text.ElideRight
                     text: content.keyboard.pending ? "Reading keyboard state…" : content.keyboard.stale ? "Keyboard state unavailable or stale" : content.keyboard.deviceName + " · Current device and interaction state"
                     color: content.theme.textMuted
                     font.family: content.runtime.fontMono
                     font.pixelSize: content.theme.fontSize(10)
                 }
+            }
+            ShellAction {
+                width: 44
+                height: 40
+                anchors.verticalCenter: parent.verticalCenter
+                runtime: content.runtime
+                theme: content.theme
+                motion: content.motion
+                iconOnly: true
+                icon: "󰑐"
+                title: "Refresh current status"
+                onActivated: content.refreshRequested()
+            }
+            ShellAction {
+                width: 44
+                height: 40
+                anchors.verticalCenter: parent.verticalCenter
+                runtime: content.runtime
+                theme: content.theme
+                motion: content.motion
+                iconOnly: true
+                icon: "󰅖"
+                title: "Close status"
+                onActivated: content.closeRequested()
             }
         }
 
@@ -62,18 +93,18 @@ Item {
                 model: [
                     {
                         label: "Caps Lock",
-                        glyph: FeedbackSemantics.symbol("keyboard", false, 0, content.keyboard.capsState),
-                        value: content.keyboard.description(content.keyboard.capsState)
+                        glyph: FeedbackSemantics.symbol("keyboard", false, 0, content.keyboard.stale ? "unknown" : content.keyboard.capsState),
+                        value: content.keyboard.stale ? "Stale" : content.keyboard.description(content.keyboard.capsState)
                     },
                     {
                         label: "Num Lock",
-                        glyph: FeedbackSemantics.symbol("keyboard", false, 0, content.keyboard.numState),
-                        value: content.keyboard.description(content.keyboard.numState)
+                        glyph: FeedbackSemantics.symbol("keyboard", false, 0, content.keyboard.stale ? "unknown" : content.keyboard.numState),
+                        value: content.keyboard.stale ? "Stale" : content.keyboard.description(content.keyboard.numState)
                     },
                     {
                         label: "Keyboard layout",
                         glyph: "󰌌",
-                        value: content.keyboard.layoutName
+                        value: content.keyboard.stale ? "Stale" : content.keyboard.layoutName
                     },
                     {
                         label: "Microphone",
@@ -96,7 +127,7 @@ Item {
                         value: content.modeName
                     },
                     {
-                        label: "Screen capture",
+                        label: "Shell recording",
                         glyph: FeedbackSemantics.symbol("recording", false, 0, ""),
                         value: content.recording.capturing ? "Recording" : content.recording.finalising ? "Finalising" : "Inactive"
                     }
