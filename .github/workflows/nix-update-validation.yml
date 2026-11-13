@@ -52,10 +52,25 @@ jobs:
               echo 'Metadata path requires explicit store registration:'
               cat "$scratch/stderr"
             fi
-            registered="$(nix store add-path --name source "$source")"
-            nix-store --realise --add-root "$scratch/flake-$revision/source" "$registered"
-            test -f "$registered/flake.nix"
-            test -L "$scratch/flake-$revision/source"
-            nix path-info "$registered" >/dev/null
+            if [[ ! -e "$source" ]]; then
+              echo 'Metadata source is lazy; trying Nix-native materialisation mechanisms'
+              nix flake archive --json "$scratch/repo" || true
+              test ! -e "$source" || echo 'flake archive materialised the source'
+              nix eval --raw --impure --expr "(builtins.getFlake \"path:$scratch/repo\").outPath" || true
+              test ! -e "$source" || echo 'getFlake materialised the source'
+              nix flake archive --json --to local "$scratch/repo" || true
+              test ! -e "$source" || echo 'archive --to local materialised the source'
+            fi
+            if [[ -e "$source" ]]; then
+              registered="$(nix store add-path --name source "$source")"
+              nix-store --realise --add-root "$scratch/flake-$revision/source" "$registered"
+              test -f "$registered/flake.nix"
+              test -L "$scratch/flake-$revision/source"
+              nix path-info "$registered" >/dev/null
+              echo 'Materialised, registered, and rooted source successfully'
+            else
+              echo 'No Nix-native source materialisation method produced a physical path' >&2
+              exit 1
+            fi
           done
           echo 'Root command passed for dirty Git revisions'
