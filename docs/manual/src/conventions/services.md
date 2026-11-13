@@ -10,6 +10,8 @@ Enabled mandatory functionality must fail clearly when prerequisites are absent.
 
 Keep service-specific definitions and backup declarations with the application. Keep genuinely shared storage, networking, and authentication infrastructure in their respective scopes.
 
+Keep scheduling and dependency supervision in the native service manager when available. Use native units, timers, paths, and readiness dependencies rather than hiding a second background supervisor inside a shell script. Prefer event-driven signals to redundant periodic checks; bound retries when a required external service can appear after startup.
+
 ## State and permissions
 
 Prefer declarative service users/groups, systemd-managed directories, and tmpfiles to repeated imperative startup repairs. Use named service identities for persistent data rather than hard-coded numeric IDs. Account for persistent identity databases in recovery when identities depend on them.
