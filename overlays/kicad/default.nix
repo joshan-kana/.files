@@ -1,8 +1,8 @@
 _:
 let
   release = {
-    version = "10.0.7";
-    hash = "sha256-+8J0GbhBqaKosUO1h1qHuL2UP/z0h9U8eKj7bSTFnic=";
+    version = "10.0.8";
+    hash = "sha256-UB0+KTOjhfGDNJdGn1UyZmLffl1AQBI5gmxA1vpYPxY=";
   };
 in
 {

@@ -5,9 +5,13 @@ _: {
     ./bottles
     ./brave
     ./comin
+    ./cargo-bundle
+    ./chromadb
+    ./codex
     ./kitty
     ./configarr
     ./cosmic-noir-icons
+    ./crush
     ./gh-dash
     ./hypr-persist
     ./gimp
@@ -45,6 +49,7 @@ _: {
     ./open-webui-desktop
     ./open-webui-computer
     ./python-matter-server
+    ./primp
     ./prusaslicer
     ./qmk-toolbox
     ./reaper

@@ -3,7 +3,7 @@ _: {
     (
       _final: prev:
       let
-        version = "2.83.2";
+        version = "2.91.0";
         homepage = "https://neodisk.app";
         license = prev.lib.licenses.gpl3Only;
       in
@@ -11,7 +11,7 @@ _: {
         neodisk = import ../../lib/mac-app.nix { inherit prev; } {
           release = {
             inherit version;
-            hash = "sha256-70EpqemxTJDCI0BFRgc9OIThCuWVWIiOr/QZd0+ljvc=";
+            hash = "sha256-Qha/UmyKOH3KtQToHlsZ9a45j523a9eJ9qutc7q86uU=";
           };
           pname = "neodisk";
           appName = "Neodisk.app";
@@ -43,11 +43,11 @@ _: {
               src = prev.fetchurl (
                 prev.lib.optionalAttrs (prev.stdenv.hostPlatform.system == "aarch64-linux") {
                   url = "https://github.com/tkslucas/Neodisk/releases/download/v${version}/neodisk-${version}-linux-aarch64.tar.gz";
-                  hash = "sha256-Ad2ClJoNzLeqfN73kHi+ah6Agl8KkUlluMVy30O1drQ=";
+                  hash = "sha256-P72tpfVhJh9yOP4UwWeaAe6kYE4pi33F+QZ2z+2BLys=";
                 }
                 // prev.lib.optionalAttrs (prev.stdenv.hostPlatform.system == "x86_64-linux") {
                   url = "https://github.com/tkslucas/Neodisk/releases/download/v${version}/neodisk-${version}-linux-x86_64.tar.gz";
-                  hash = "sha256-L4LUIZ7MLGoho6aWsdgo2zPFGv1DEJpFoSe/nS/nsHk=";
+                  hash = "sha256-qo9eL61TjvaQ1zKGI8Qolk3Dj5eJ5W/5q6P2QLFBX/A=";
                 }
               );
               sourceRoot = ".";

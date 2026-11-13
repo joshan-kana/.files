@@ -16,11 +16,11 @@ _: {
               unzip,
             }:
             let
-              version = "0.0.19";
+              version = "0.0.20";
               hashes = {
-                aarch64-darwin = "sha256-IldgWEVjoa1u5yWFvAAbrjSnFB1zJGoRfO7ShAkFkMw=";
-                aarch64-linux = "sha256-7dAWZ9Rrzr+ojdF9kr21YVhnaKfeNBC4s8g5e1J/1uk=";
-                x86_64-linux = "sha256-pDvq5vCFBaG2dRBX0CeXuqcKiO9/nrXf0DpVtrKRFq0=";
+                aarch64-darwin = "sha256-j7ain9d3uGejo3m/MmQVfev2HLX0h8B6DcrqHFtuZnA=";
+                aarch64-linux = "sha256-zd0wpcfVzSEsadW97sBgpFQgHZW/XEN/Cy6cPp+AQ0Q=";
+                x86_64-linux = "sha256-BfTSEc5Bz7aanFINqq0YjID2HY5uLbIE4g7+pQ1HTTw=";
               };
               system = stdenvNoCC.hostPlatform.system;
               asset =
