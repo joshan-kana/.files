@@ -8,6 +8,7 @@ MouseArea {
     required property Motion motion
 
     property bool disabled: false
+    property bool keyboardFocusable: false
     property bool selected: false
     property bool manualHover: false
     property bool manualPress: false
@@ -91,7 +92,15 @@ MouseArea {
     anchors.fill: parent
     enabled: !disabled
     hoverEnabled: true
+    activeFocusOnTab: keyboardFocusable && !disabled
     cursorShape: disabled ? Qt.ArrowCursor : Qt.PointingHandCursor
+
+    Keys.onPressed: event => {
+        if (keyboardFocusable && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space)) {
+            activated(event);
+            event.accepted = true;
+        }
+    }
 
     onClicked: event => activated(event)
     // A quick physical click can finish between two rendered frames. Preserve
@@ -209,5 +218,15 @@ MouseArea {
                 path: hoverSurface.fillPathData
             }
         }
+    }
+
+    SquircleSurface {
+        anchors.fill: parent
+        visible: root.keyboardFocusable && root.activeFocus
+        cornerRadius: root.cornerRadius
+        exponent: root.exponent
+        fillColor: "transparent"
+        borderColor: root.theme.accent
+        borderWidth: root.theme.borderFocus
     }
 }

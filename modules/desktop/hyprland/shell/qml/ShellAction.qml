@@ -222,6 +222,10 @@ Item {
         motion: root.motion
         disabled: !root.enabled
         selected: root.active
+        keyboardFocusable: !root.iconOnly || root.iconHint
+        Accessible.role: Accessible.Button
+        Accessible.name: root.title.length > 0 ? root.title : "Activate control"
+        Accessible.onPressAction: root.activated()
         stateColor: root.active ? root.activeColor : root.theme.textStrong
         cornerRadius: root.compact ? theme.radiusSmall : theme.radiusMedium
         onActivated: root.activated()

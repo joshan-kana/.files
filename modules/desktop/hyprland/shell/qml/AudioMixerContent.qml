@@ -13,7 +13,7 @@ FocusScope {
     property bool compact: false
     property bool active: false
     property int selectedIndex: 0
-    property var selectedNode: null
+    property int selectedNodeId: -1
     property string selectedKind: "output"
     readonly property var streams: system.audioApplicationStreams.concat(system.audioCaptureStreams)
     readonly property var targets: [
@@ -35,7 +35,7 @@ FocusScope {
             })))
     readonly property int microphoneIndex: 1
     readonly property bool deviceChooserOpen: outputDevice.chooserOpen || inputDevice.chooserOpen
-    readonly property int selectedStreamIndex: selectedTarget?.kind === "stream" ? streams.indexOf(selectedTarget.node) : -1
+    readonly property int selectedStreamIndex: selectedTarget?.kind === "stream" ? streams.findIndex(node => node.id === selectedTarget.node.id) : -1
     readonly property var selectedTarget: targets[Math.max(0, Math.min(selectedIndex, targets.length - 1))] || null
 
     signal closeRequested
@@ -50,12 +50,12 @@ FocusScope {
     function selectIndex(index: int): void {
         selectedIndex = Math.max(0, Math.min(index, Math.max(0, targets.length - 1)));
         const target = targets[selectedIndex];
-        selectedNode = target?.node || null;
+        selectedNodeId = target?.node ? target.node.id : -1;
         selectedKind = target?.kind || "output";
     }
 
     onTargetsChanged: {
-        const index = selectedNode ? targets.findIndex(target => target.node === selectedNode) : targets.findIndex(target => target.kind === selectedKind);
+        const index = selectedNodeId >= 0 ? targets.findIndex(target => target.node && target.node.id === selectedNodeId) : targets.findIndex(target => target.kind === selectedKind);
         selectIndex(index >= 0 ? index : 0);
     }
 
@@ -86,7 +86,7 @@ FocusScope {
         const node = streams[index];
         if (!node)
             return;
-        const target = targets.findIndex(candidate => candidate.kind === "stream" && candidate.node === node);
+        const target = targets.findIndex(candidate => candidate.kind === "stream" && candidate.node.id === node.id);
         if (target >= 0)
             selectIndex(target);
     }

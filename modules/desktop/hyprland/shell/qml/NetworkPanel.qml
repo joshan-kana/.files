@@ -355,7 +355,7 @@ Item {
     readonly property bool passwordPrompt: pendingNetwork !== null
 
     readonly property real bodyHeight: detailView ? Math.min(448, Math.max(252, detailPending ? 448 : detailRows.length * 60 + 16)) : savedView ? Math.min(430, Math.max(185, savedProfiles.length * 76)) : system.wifiAvailable && system.wifiEnabled ? Math.min(430, Math.max(185, networks.length * 96)) : emptyState.implicitHeight + panel.theme.spacing3 + panel.theme.spacing4
-    implicitHeight: header.height + panel.theme.spacing4 + bodyHeight + panel.theme.spacing3 + footer.implicitHeight
+    implicitHeight: header.height + statusBanner.implicitHeight + panel.theme.spacing4 * 2 + bodyHeight + panel.theme.spacing3 + footer.implicitHeight
     visible: open
 
     function selectedNetwork(): var {
@@ -550,11 +550,27 @@ Item {
         detail: panel.detailView ? panel.detailName + " · " + panel.detailType : panel.savedView ? panel.savedProfiles.length + " NetworkManager profiles · VPN / Wi-Fi" : panel.system.networkConnected ? panel.system.networkName : "No active network"
     }
 
+    PanelStatus {
+        id: statusBanner
+        anchors {
+            top: header.bottom
+            left: parent.left
+            right: parent.right
+            topMargin: panel.theme.spacing2
+        }
+        runtime: panel.runtime
+        theme: panel.theme
+        motion: panel.motion
+        message: panel.statusText
+        idleMessage: "Browse available connections"
+        phase: panel.statusError ? "error" : panel.actionUuid.length > 0 || panel.detailPending ? "busy" : "idle"
+    }
+
     Item {
         id: body
 
         anchors {
-            top: header.bottom
+            top: statusBanner.bottom
             right: parent.right
             bottom: footer.top
             left: parent.left
@@ -772,13 +788,34 @@ Item {
                             font.pixelSize: panel.theme.fontSize(9)
                         }
                     }
-                    Text {
+                    Item {
                         id: statusLabel
                         anchors.verticalCenter: parent.verticalCenter
-                        text: panel.actionUuid === profileRow.modelData.uuid ? "WORKING" : !profileRow.modelData.supported ? "DETAILS ONLY" : profileRow.modelData.connected ? "ENTER / DROP" : "ENTER / JOIN"
-                        color: panel.actionUuid === profileRow.modelData.uuid ? panel.theme.warning : profileRow.modelData.connected ? panel.theme.positive : panel.theme.textMuted
-                        font.family: panel.runtime.fontMono
-                        font.pixelSize: panel.theme.fontSize(9)
+                        width: 135
+                        height: Math.max(profileAction.implicitHeight, pendingLabel.implicitHeight)
+
+                        KeyHint {
+                            id: profileAction
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            visible: panel.actionUuid !== profileRow.modelData.uuid && profileRow.modelData.supported
+                            runtime: panel.runtime
+                            theme: panel.theme
+                            compact: true
+                            shortcut: "ENTER"
+                            label: profileRow.modelData.connected ? "Drop" : "Join"
+                        }
+
+                        Text {
+                            id: pendingLabel
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            visible: panel.actionUuid === profileRow.modelData.uuid || !profileRow.modelData.supported
+                            text: panel.actionUuid === profileRow.modelData.uuid ? "WORKING" : "DETAILS ONLY"
+                            color: panel.actionUuid === profileRow.modelData.uuid ? panel.theme.warning : panel.theme.textMuted
+                            font.family: panel.runtime.fontMono
+                            font.pixelSize: panel.theme.fontSize(9)
+                        }
                     }
                 }
             }
@@ -972,7 +1009,7 @@ Item {
             anchors.centerIn: parent
             visible: !panel.detailView && !panel.savedView && panel.system.wifiAvailable && !panel.system.wifiEnabled && !panel.passwordPrompt
             width: parent.width
-            text: panel.system.wifiHardwareEnabled ? "WI-FI RADIO DISABLED // PRESS W" : "WI-FI DISABLED BY HARDWARE"
+            text: panel.system.wifiHardwareEnabled ? "Wi-Fi radio disabled" : "Wi-Fi disabled by hardware"
             horizontalAlignment: Text.AlignHCenter
             color: panel.system.wifiHardwareEnabled ? panel.theme.warning : panel.theme.critical
             font.family: panel.runtime.fontMono
@@ -990,19 +1027,6 @@ Item {
             left: parent.left
         }
         spacing: panel.theme.spacing2
-
-        Text {
-            width: parent.width
-            visible: panel.statusText.length > 0
-            text: panel.statusText
-            horizontalAlignment: Text.AlignHCenter
-            color: panel.theme.readableRoleColor(panel.statusError ? "critical" : "connectivity")
-            font.family: panel.runtime.fontMono
-            font.pixelSize: panel.theme.fontSize(8)
-            font.weight: Font.DemiBold
-            font.letterSpacing: 0.8
-            elide: Text.ElideRight
-        }
 
         Row {
             width: parent.width

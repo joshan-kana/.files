@@ -44,7 +44,7 @@ Item {
         }
     }
 
-    implicitHeight: header.height + panel.theme.spacing4 * 3 + searchSurface.height + panel.theme.spacing3 + Math.min(505, Math.max(280, Math.ceil(themes.length / Math.max(1, themeList.columnCount)) * themeList.cellHeight)) + footer.implicitHeight
+    implicitHeight: header.height + panel.theme.spacing4 * 3 + searchSurface.height + operationBanner.implicitHeight + panel.theme.spacing3 * 2 + Math.min(505, Math.max(280, Math.ceil(themes.length / Math.max(1, themeList.columnCount)) * themeList.cellHeight)) + footer.implicitHeight
     visible: open
     onFilteredThemesChanged: selectedIndex = Math.max(0, Math.min(selectedIndex, filteredThemes.length - 1))
 
@@ -368,10 +368,31 @@ Item {
         }
     }
 
+    PanelStatus {
+        id: operationBanner
+        anchors {
+            top: searchSurface.bottom
+            left: parent.left
+            right: parent.right
+            topMargin: panel.theme.spacing2
+        }
+        runtime: panel.runtime
+        theme: panel.theme
+        motion: panel.motion
+        message: panel.statusText
+        detail: panel.operationRunning || panel.operationPhase === "failed" ? panel.operationLog.split("\n").slice(-1)[0] : ""
+        idleMessage: "Choose a theme to preview or apply"
+        phase: panel.operationRunning ? "busy" : panel.statusText.length === 0 ? "idle" : panel.statusError || panel.operationPhase === "failed" ? "error" : panel.operationPhase === "cancelled" ? "warning" : panel.operationPhase === "completed" ? "success" : "idle"
+        cancellable: panel.operationRunning && (panel.operationPhase === "building" || panel.operationPhase === "preparing")
+        cancelShortcut: "X"
+        cancelLabel: "Cancel build"
+        onCancelRequested: panel.cancelOperation()
+    }
+
     GridView {
         id: themeList
         anchors {
-            top: searchSurface.bottom
+            top: operationBanner.bottom
             right: parent.right
             bottom: footer.top
             left: parent.left
@@ -716,63 +737,6 @@ Item {
                     label: "Apply"
                 }
             ]
-        }
-
-        TextMetrics {
-            id: cancelLabelMetrics
-            font.family: panel.runtime.fontMono
-            font.pixelSize: panel.theme.fontSize(10)
-            font.weight: Font.DemiBold
-            text: "Cancel build"
-        }
-
-        Row {
-            width: parent.width
-            visible: panel.statusText.length > 0 || panel.operationRunning
-            spacing: panel.theme.spacing2
-
-            Text {
-                id: operationStatus
-                width: Math.max(1, parent.width - (cancelButton.visible ? cancelButton.width + parent.spacing : 0))
-                anchors.verticalCenter: parent.verticalCenter
-                text: panel.statusText
-                color: panel.statusError ? panel.theme.readableRoleColor("critical") : panel.operationRunning ? panel.theme.accent : panel.operationPhase === "cancelled" ? panel.theme.warning : panel.theme.readableRoleColor("positive")
-                font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontKeyHint
-                font.weight: Font.DemiBold
-                wrapMode: Text.WrapAtWordBoundaryOrAnywhere
-                maximumLineCount: 2
-                elide: Text.ElideRight
-                textFormat: Text.PlainText
-            }
-
-            ShellAction {
-                id: cancelButton
-                width: Math.max(180, cancelLabelMetrics.advanceWidth + panel.theme.spacing3 * 2 + panel.theme.spacing2 * 2 + panel.theme.fontSize(15) + panel.theme.keycapHeight)
-                height: 36
-                visible: panel.operationRunning && (panel.operationPhase === "building" || panel.operationPhase === "preparing")
-                runtime: panel.runtime
-                theme: panel.theme
-                motion: panel.motion
-                compact: true
-                horizontalCompact: true
-                title: "Cancel build"
-                icon: "󰜺"
-                shortcut: "X"
-                onActivated: panel.cancelOperation()
-            }
-        }
-        Text {
-            width: parent.width
-            visible: panel.operationRunning || panel.operationPhase === "failed"
-            text: panel.operationLog
-            maximumLineCount: 3
-            elide: Text.ElideLeft
-            wrapMode: Text.Wrap
-            textFormat: Text.PlainText
-            color: panel.theme.textMuted
-            font.family: panel.runtime.fontMono
-            font.pixelSize: panel.theme.fontSize(9)
         }
     }
 }

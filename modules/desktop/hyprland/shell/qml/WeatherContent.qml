@@ -237,10 +237,30 @@ FocusScope {
         }
 
         Text {
-            text: panel.weather.status || ("Updated " + panel.weather.updatedAt + " · J/K days · C calendar · R refresh")
+            text: panel.weather.status || ("Updated " + panel.weather.updatedAt)
             color: panel.theme.textMuted
             font.family: panel.runtime.fontMono
             font.pixelSize: panel.theme.fontSize(11)
+        }
+
+        KeyHintStrip {
+            width: parent.width
+            runtime: panel.runtime
+            theme: panel.theme
+            hints: [
+                {
+                    shortcut: "J/K",
+                    label: "Days"
+                },
+                {
+                    shortcut: "C",
+                    label: "Calendar"
+                },
+                {
+                    shortcut: "R",
+                    label: "Refresh"
+                }
+            ]
         }
     }
 }

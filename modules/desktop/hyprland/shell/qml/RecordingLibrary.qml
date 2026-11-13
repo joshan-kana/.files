@@ -25,7 +25,7 @@ Item {
     readonly property var selectedEntry: entries.length > 0 ? entries[Math.max(0, Math.min(selectedIndex, entries.length - 1))] : null
     readonly property bool isBusy: listProcess.running || actionProcess.running
 
-    implicitHeight: 128 + theme.spacing4 * 2 + 392 + footer.implicitHeight
+    implicitHeight: 128 + statusBanner.implicitHeight + theme.spacing4 * 3 + 392 + footer.implicitHeight
     visible: open
 
     function formatBytes(value: real): string {
@@ -248,10 +248,26 @@ Item {
         detail: library.entries.length + (library.entries.length === 1 ? " saved image or video" : " saved images and videos")
     }
 
+    PanelStatus {
+        id: statusBanner
+        anchors {
+            top: hero.bottom
+            left: parent.left
+            right: parent.right
+            topMargin: library.theme.spacing2
+        }
+        runtime: library.runtime
+        theme: library.theme
+        motion: library.motion
+        message: library.statusText
+        idleMessage: "Choose a capture to open or share"
+        phase: library.statusError ? "error" : library.deletePending.length > 0 ? "warning" : library.isBusy || library.editorRequestRunning ? "busy" : "idle"
+    }
+
     Row {
         id: panes
         anchors {
-            top: hero.bottom
+            top: statusBanner.bottom
             left: parent.left
             right: parent.right
             bottom: footer.top
@@ -461,16 +477,6 @@ Item {
             bottom: parent.bottom
         }
         spacing: library.theme.spacing2
-        Text {
-            visible: library.statusText.length > 0
-            width: parent.width
-            text: library.statusText
-            color: library.deletePending.length > 0 ? library.theme.readableRoleColor("warning") : library.statusError ? library.theme.readableRoleColor("critical") : library.theme.readableRoleColor("capture")
-            font.family: library.runtime.fontMono
-            font.pixelSize: library.theme.fontSize(10)
-            horizontalAlignment: Text.AlignHCenter
-            elide: Text.ElideRight
-        }
         KeyHintStrip {
             width: parent.width
             runtime: library.runtime
