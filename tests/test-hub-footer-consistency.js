@@ -140,10 +140,10 @@ test("detail navigation has one global Escape hint and locally owned movement hi
     assert.match(gallery, /shortcut: "\/",\s*label: "Search"/);
   }
   assert.match(wallpaper, /event\.key === Qt\.Key_Escape/);
-  assert.match(
-    source("KeyHintStrip.qml"),
-    /x: Math\.max\(0, \(strip\.width - childrenRect\.width\) \/ 2\)/,
-  );
+  const strip = source("KeyHintStrip.qml");
+  assert.match(strip, /model: strip\.wrappedRows/);
+  assert.match(strip, /anchors\.horizontalCenter: parent\.horizontalCenter/);
+  assert.match(strip, /occupied \+ strip\.groupSpacing \+ width > limit/);
 });
 
 test("footer background retains physical clearance even when content is taller than the clipped surface", () => {

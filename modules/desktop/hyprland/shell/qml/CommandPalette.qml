@@ -1653,6 +1653,7 @@ Item {
                 }
 
                 Text {
+                    id: resultCount
                     text: palette.copyFeedback || displayedModel.values.length + (palette.actionMode ? " ACTIONS" : " RESULTS")
                     color: theme.textMuted
                     font.family: runtime.fontMono
@@ -1660,18 +1661,54 @@ Item {
                     font.letterSpacing: 1.2
                 }
 
-                Item {
-                    width: parent.width - parent.children[0].width - hints.width
-                    height: 1
-                }
-
-                Text {
-                    id: hints
-                    text: palette.actionMode ? "J/K SELECT  ·  ↵ EXECUTE  ·  ESC BACK" : search.activeFocus ? "TYPE TO SEARCH  ·  TAB NAV  ·  ALT+↵ ACTIONS  ·  ⇧ESC CLOSE" : "J/K SELECT  ·  U/D PAGE  ·  ALT+↵ ACTIONS  ·  ESC BACK"
-                    color: theme.textMuted
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(10)
-                    font.letterSpacing: 0.7
+                KeyHintStrip {
+                    width: Math.max(1, parent.width - resultCount.implicitWidth - theme.spacing2)
+                    runtime: palette.runtime
+                    theme: palette.theme
+                    hints: palette.actionMode ? [
+                        {
+                            shortcut: "J/K",
+                            label: "Select"
+                        },
+                        {
+                            shortcut: "ENTER",
+                            label: "Execute"
+                        },
+                        {
+                            shortcut: "ESC",
+                            label: "Back"
+                        }
+                    ] : search.activeFocus ? [
+                        {
+                            shortcut: "TAB",
+                            label: "Navigate"
+                        },
+                        {
+                            shortcut: "ALT+ENTER",
+                            label: "Actions"
+                        },
+                        {
+                            shortcut: "SHIFT+ESC",
+                            label: "Close"
+                        }
+                    ] : [
+                        {
+                            shortcut: "J/K",
+                            label: "Select"
+                        },
+                        {
+                            shortcut: "U/D",
+                            label: "Page"
+                        },
+                        {
+                            shortcut: "ALT+ENTER",
+                            label: "Actions"
+                        },
+                        {
+                            shortcut: "ESC",
+                            label: "Back"
+                        }
+                    ]
                 }
             }
         }
