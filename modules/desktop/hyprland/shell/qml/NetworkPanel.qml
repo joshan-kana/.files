@@ -644,15 +644,34 @@ Item {
                         }
                     }
 
-                    Text {
+                    Item {
                         width: 100
+                        height: Math.max(networkActionHint.implicitHeight, networkStateLabel.implicitHeight)
                         anchors.verticalCenter: parent.verticalCenter
-                        horizontalAlignment: Text.AlignRight
-                        text: networkRow.modelData.stateChanging ? ConnectionState.toString(networkRow.modelData.state).toUpperCase() : (networkRow.modelData.connected ? "ENTER // DROP" : "ENTER // JOIN")
-                        color: networkRow.modelData.stateChanging ? panel.theme.warning : panel.theme.readableRoleColor("connectivity")
-                        font.family: panel.runtime.fontMono
-                        font.pixelSize: panel.theme.fontSize(8)
-                        font.weight: Font.DemiBold
+
+                        KeyHint {
+                            id: networkActionHint
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            visible: !networkRow.modelData.stateChanging
+                            runtime: panel.runtime
+                            theme: panel.theme
+                            compact: true
+                            shortcut: "ENTER"
+                            label: networkRow.modelData.connected ? "Drop" : "Join"
+                        }
+
+                        Text {
+                            id: networkStateLabel
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            visible: networkRow.modelData.stateChanging
+                            text: visible ? ConnectionState.toString(networkRow.modelData.state).toUpperCase() : ""
+                            color: panel.theme.warning
+                            font.family: panel.runtime.fontMono
+                            font.pixelSize: panel.theme.fontSize(8)
+                            font.weight: Font.DemiBold
+                        }
                     }
                 }
 

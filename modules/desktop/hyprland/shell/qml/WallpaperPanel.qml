@@ -334,7 +334,7 @@ Item {
                 width: Math.max(1, parent.width - outputButton.width - panel.theme.spacing4 * 2)
                 elide: Text.ElideRight
                 visible: searchField.text.length === 0 && !searchField.activeFocus
-                text: "/  Search wallpapers"
+                text: "Search wallpapers"
                 color: panel.theme.textMuted
                 font.family: panel.runtime.fontMono
                 font.pixelSize: panel.theme.fontSize(11)
