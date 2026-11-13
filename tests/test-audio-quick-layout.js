@@ -78,10 +78,10 @@ test("the same virtualised stream control handles every playback and capture cli
 test("stream selection stays with the node across reordering and services share one action owner", () => {
   const mixer = qml("AudioMixerContent.qml");
   const controls = qml("SystemContent.qml");
-  assert.match(mixer, /property var selectedNode: null/);
+  assert.match(mixer, /property int selectedNodeId: -1/);
   assert.match(
     mixer,
-    /selectedNode \? targets\.findIndex\(target => target\.node === selectedNode\)/,
+    /selectedNodeId >= 0 \? targets\.findIndex\(target => target\.node && target\.node\.id === selectedNodeId\)/,
   );
   assert.match(mixer, /onTargetsChanged: \{/);
   assert.match(mixer, /function moveAudioSelection\(delta: int\)/);

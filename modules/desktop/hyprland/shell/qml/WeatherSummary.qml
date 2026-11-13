@@ -10,6 +10,7 @@ ShellSurface {
     implicitHeight: theme.textScale >= 1.5 ? 238 : 202
     surfaceLayer: ShellSurface.Group
     luminous: true
+    hovered: forecastHit.pointerHovered || forecastHit.activeFocus
     luminousColor: theme.textStrong
     lightIntensity: 1.35
     fillColor: theme.blend(theme.groupBase, theme.roleColor("weather"), theme.dark ? 0.15 : 0.08)
@@ -82,30 +83,16 @@ ShellSurface {
         }
     }
 
-    MouseArea {
+    StateLayer {
         id: forecastHit
-        anchors.fill: parent
-        activeFocusOnTab: true
-        cursorShape: Qt.PointingHandCursor
+        theme: summary.theme
+        motion: summary.motion
+        keyboardFocusable: true
+        cornerRadius: summary.cornerRadius
+        stateColor: summary.theme.roleColor("weather")
         Accessible.role: Accessible.Button
         Accessible.name: "Open detailed weather forecast"
         Accessible.onPressAction: summary.forecastRequested()
-        onClicked: summary.forecastRequested()
-        Keys.onPressed: event => {
-            if (event.key === Qt.Key_Enter || event.key === Qt.Key_Return || event.key === Qt.Key_Space) {
-                summary.forecastRequested();
-                event.accepted = true;
-            }
-        }
-    }
-
-    SquircleSurface {
-        anchors.fill: parent
-        visible: forecastHit.activeFocus
-        cornerRadius: summary.cornerRadius
-        exponent: summary.theme.squircleExponent
-        fillColor: "transparent"
-        borderColor: summary.theme.accent
-        borderWidth: summary.theme.borderFocus
+        onActivated: summary.forecastRequested()
     }
 }

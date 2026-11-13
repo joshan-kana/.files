@@ -42,48 +42,39 @@ test("a stale queued expansion cannot reopen a closing or replaced hub", () => {
   );
 });
 
-test("theme progress has one status owner and an untruncated cancel action", () => {
+test("Theme progress uses the shared header status and one cancel owner", () => {
   const source = qml("ThemePanel.qml");
+  const shared = qml("PanelStatus.qml");
   const footer = source.slice(source.indexOf("id: footer"));
   assert.match(source, /preparing: "PREPARING"/);
   assert.match(source, /building: "BUILDING"/);
   assert.match(source, /activating: "APPLYING"/);
-  const statusRow = footer.indexOf(
-    "Row {",
-    footer.indexOf("id: cancelLabelMetrics"),
-  );
-  const statusLabel = footer.indexOf("id: operationStatus", statusRow);
-  const cancelControl = footer.indexOf("id: cancelButton", statusRow);
-  assert.ok(
-    statusRow >= 0 && statusLabel > statusRow && cancelControl > statusLabel,
-  );
-  assert.match(
+  assert.match(source, /PanelStatus \{\s*id: operationBanner/);
+  assert.match(source, /top: searchSurface\.bottom/);
+  assert.match(source, /top: operationBanner\.bottom/);
+  assert.match(source, /message: panel\.statusText/);
+  assert.match(source, /cancelShortcut: "X"/);
+  assert.match(source, /onCancelRequested: panel\.cancelOperation\(\)/);
+  assert.doesNotMatch(
     footer,
-    /visible: panel\.statusText\.length > 0 \|\| panel\.operationRunning/,
+    /id: operationStatus|id: cancelButton|text: panel\.statusText/,
   );
-  assert.match(footer, /text: panel\.statusText/);
-  assert.match(footer, /font\.pixelSize: panel\.theme\.fontKeyHint/);
-  assert.match(footer, /wrapMode: Text\.WrapAtWordBoundaryOrAnywhere/);
-  assert.match(
-    footer,
-    /width: Math\.max\(1, parent\.width - \(cancelButton\.visible/,
-  );
-  assert.doesNotMatch(footer, /horizontalAlignment: Text\.AlignRight/);
-  assert.doesNotMatch(footer, /font\.pixelSize: panel\.theme\.fontSize\(8\)/);
-  assert.equal((footer.match(/text: panel\.statusText/g) || []).length, 1);
-  assert.doesNotMatch(footer, /panel\.operationPhase\.toUpperCase\(\)/);
-  assert.match(footer, /id: cancelLabelMetrics/);
-  assert.match(
-    footer,
-    /width: Math\.max\(180, cancelLabelMetrics\.advanceWidth/,
-  );
-  assert.match(footer, /title: "Cancel build"/);
-  assert.match(footer, /icon: "󰜺"/);
-  assert.match(
-    footer,
-    /visible: panel\.operationRunning && \(panel\.operationPhase === "building" \|\| panel\.operationPhase === "preparing"\)/,
-  );
-  assert.doesNotMatch(footer, /title:.*"Activating"/);
+  assert.match(shared, /readonly property string symbol: phase === "busy"/);
+  assert.match(shared, /cancelAction/);
+  for (const panel of [
+    "WallpaperPanel.qml",
+    "NetworkPanel.qml",
+    "BluetoothPanel.qml",
+    "RecordingLibrary.qml",
+  ]) {
+    const surface = qml(panel);
+    assert.match(surface, /PanelStatus \{\s*id: statusBanner/);
+    assert.match(surface, /message: (?:panel|library)\.statusText/);
+    assert.doesNotMatch(
+      surface.slice(surface.indexOf("id: footer")),
+      /text: (?:panel|library)\.statusText/,
+    );
+  }
 });
 
 test("Theme search uses filtered gallery items and the shared search field", () => {

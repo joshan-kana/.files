@@ -25,7 +25,7 @@ Item {
     readonly property bool adapterAvailable: system.bluetoothAvailable
 
     readonly property real bodyHeight: adapterAvailable && adapter.enabled ? Math.min(440, Math.max(196, devices.length * 100)) : emptyState.implicitHeight + panel.theme.spacing3 + panel.theme.spacing4
-    implicitHeight: header.height + panel.theme.spacing4 + bodyHeight + panel.theme.spacing3 + footer.implicitHeight
+    implicitHeight: header.height + statusBanner.implicitHeight + panel.theme.spacing4 * 2 + bodyHeight + panel.theme.spacing3 + footer.implicitHeight
     visible: open
 
     Timer {
@@ -236,9 +236,25 @@ Item {
         detail: !panel.adapterAvailable ? "No adapter available" : panel.system.bluetoothEnabled ? panel.system.bluetoothConnectedCount + " connected · " + (panel.system.bluetoothDiscovering ? "Scanning…" : "Scan idle") : "Radio disabled"
     }
 
-    Item {
+    PanelStatus {
+        id: statusBanner
         anchors {
             top: header.bottom
+            left: parent.left
+            right: parent.right
+            topMargin: panel.theme.spacing2
+        }
+        runtime: panel.runtime
+        theme: panel.theme
+        motion: panel.motion
+        message: panel.statusText
+        idleMessage: "Select a device or scan"
+        phase: panel.statusError ? "error" : panel.forgetAddress.length > 0 ? "warning" : panel.statusText.startsWith("CONNECTING") || panel.statusText.startsWith("DISCONNECTING") || panel.statusText.startsWith("PAIRING") ? "busy" : "idle"
+    }
+
+    Item {
+        anchors {
+            top: statusBanner.bottom
             right: parent.right
             bottom: footer.top
             left: parent.left
@@ -400,7 +416,7 @@ Item {
             anchors.centerIn: parent
             visible: panel.adapterAvailable && !panel.system.bluetoothEnabled
             width: parent.width
-            text: "Bluetooth is off · press B to enable"
+            text: "Bluetooth radio is off"
             horizontalAlignment: Text.AlignHCenter
             color: panel.theme.readableRoleColor("warning")
             font.family: panel.runtime.fontMono
@@ -412,7 +428,7 @@ Item {
             anchors.centerIn: parent
             visible: panel.adapterAvailable && panel.system.bluetoothEnabled && panel.devices.length === 0
             width: parent.width
-            text: panel.system.bluetoothDiscovering ? "SCANNING // NO DEVICES YET" : "NO DEVICES // PRESS SHIFT+D TO SCAN"
+            text: panel.system.bluetoothDiscovering ? "Scanning for devices…" : "No devices found"
             horizontalAlignment: Text.AlignHCenter
             color: panel.theme.textMuted
             font.family: panel.runtime.fontMono
@@ -430,19 +446,6 @@ Item {
             left: parent.left
         }
         spacing: panel.theme.spacing2
-
-        Text {
-            width: parent.width
-            visible: panel.statusText.length > 0
-            text: panel.statusText
-            horizontalAlignment: Text.AlignRight
-            color: panel.theme.readableRoleColor(panel.statusError ? "critical" : (panel.forgetAddress.length > 0 ? "warning" : "connectivity"))
-            font.family: panel.runtime.fontMono
-            font.pixelSize: panel.theme.fontSize(8)
-            font.weight: Font.DemiBold
-            font.letterSpacing: 0.6
-            elide: Text.ElideRight
-        }
 
         KeyHintStrip {
             width: parent.width

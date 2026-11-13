@@ -610,10 +610,26 @@ Item {
                         width: parent.width
                         runtime: panel.runtime
                         theme: panel.theme
-                        text: panel.copyFeedback.length > 0 ? panel.copyFeedback : "ENTER COPY · J/K NAVIGATE"
+                        text: panel.copyFeedback
                         color: panel.copyFeedback === "COPY FAILED" ? panel.theme.readableRoleColor("critical") : panel.theme.textMuted
                         font.pixelSize: panel.theme.fontSize(10)
                         elide: Text.ElideRight
+                    }
+
+                    KeyHintStrip {
+                        width: parent.width
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        hints: [
+                            {
+                                shortcut: "ENTER",
+                                label: "Copy"
+                            },
+                            {
+                                shortcut: "J/K",
+                                label: "Navigate"
+                            }
+                        ]
                     }
                 }
             }
