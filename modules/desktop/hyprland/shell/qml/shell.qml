@@ -1283,6 +1283,18 @@ ShellRoot {
     IpcHandler {
         target: "desktop"
 
+        function toggleStatusInspection(): void {
+            root.toggleStatusInspection();
+        }
+
+        function statusInspectionOpen(): bool {
+            return statusPeek.open;
+        }
+
+        function resizeModeOpen(): bool {
+            return resizeOverlay.open;
+        }
+
         function toggleCheatsheet(): void {
             actions.toggleCheatsheet();
         }
