@@ -1,8 +1,8 @@
 # Command palette
 
-The Hyprland shell's `Super+Space` palette searches installed applications, registered desktop actions, live windows and workspaces, local indexed files, browser bookmarks, saved snippets, and Quicklinks. Arithmetic and unit conversions work directly in Unified search.
+The Hyprland shell's unified palette searches installed applications, registered desktop actions, live windows and workspaces, local indexed files, browser bookmarks, saved snippets, and Quicklinks. Arithmetic and unit conversions work directly in Unified search.
 
-The native Quickshell palette remains the only launcher. `Alt+1` through `Alt+4` select its existing Unified, Apps, Actions, and Emoji scopes. `Tab` changes between typing and list navigation; `Alt+Enter` reveals contextual actions for the selected result. The dedicated clipboard-history picker remains separate.
+The native Quickshell palette remains the only launcher. Its scope shortcuts select Unified, Apps, Actions and Emoji; the text/list navigation and contextual-action controls have separate keyboard modes. The dedicated clipboard-history picker remains separate. Compositor-level bindings are declared in `modules/desktop/hyprland/keybindings.nix` and are presented by the generated shortcut registry, rather than duplicated in this document.
 
 ## Hub navigation
 

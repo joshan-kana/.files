@@ -1083,7 +1083,7 @@ Item {
                 horizontalCompact: true
                 icon: panel.detailView ? "󰅌" : "󰋼"
                 title: panel.detailView ? "Back" : "Details"
-                shortcut: "I"
+                shortcut: "V"
                 active: panel.detailView
                 onActivated: panel.toggleDetailView()
             }

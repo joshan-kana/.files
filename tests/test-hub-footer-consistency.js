@@ -11,10 +11,13 @@ const source = (name) =>
 
 test("shared footer always shows Escape and Shift+Escape, including details", () => {
   const host = source("ShellExpansionHost.qml");
+  assert.match(host, /model: \(host\.tabShortcutsEnabled \? \[/);
   assert.match(
     host,
-    /model: \(host\.tabShortcutsEnabled \? \[[\s\S]*?\] : \[\]\)\.concat\(\[[\s\S]*?shortcut: "ESC",[\s\S]*?label: host\.escapeHintLabel[\s\S]*?shortcut: "SHIFT\+ESC",[\s\S]*?label: "Close all"/,
+    /\.filter\(item => item\.shortcut\.length > 0\) : \[\]\)\.concat\(\[/,
   );
+  assert.match(host, /shortcut: "ESC",\s*label: host\.escapeHintLabel/);
+  assert.match(host, /shortcut: "SHIFT\+ESC",\s*label: "Close all"/);
   assert.doesNotMatch(
     host,
     /host\.detailVisible \? \[\] : \[[\s\S]*?shortcut: "ESC"/,
@@ -60,21 +63,40 @@ test("Escape label follows the actual focus owner", () => {
   );
 });
 
-test("tab hints are only shown when their I/O shortcuts actually work", () => {
+test("nested panels share canonical I/O navigation and preserve text-entry ownership", () => {
   const host = source("ShellExpansionHost.qml");
+  const controls = source("SystemContent.qml");
+  const network = source("NetworkPanel.qml");
+  const runtime = source("RuntimeConfig.qml");
   assert.match(
     host,
-    /tabShortcutsEnabled: expansionState\.hasCurrent && !detailVisible && !helpVisible && !\(systemContent && \(systemContent\.resetConfirmPending \|\| systemContent\.audioChooserOpen\)\)/,
+    /tabShortcutsEnabled: expansionState\.hasCurrent && !helpVisible/,
   );
-  assert.equal(
-    (host.match(/enabled: host\.tabShortcutsEnabled/g) || []).length,
-    2,
+  assert.doesNotMatch(host, /tabShortcutsEnabled:.*!detailVisible/);
+  for (const guard of [
+    "detailSearchFocused",
+    "networkPasswordPending",
+    "recordingDeletePending",
+    "sessionConfirmationPending",
+    "audioChooserOpen",
+  ]) {
+    assert.match(host, new RegExp("tabShortcutsEnabled:.*" + guard));
+  }
+  assert.match(host, /sequence: host\.runtime\.shortcutHint\("hubPrevious"\)/);
+  assert.match(host, /sequence: host\.runtime\.shortcutHint\("hubNext"\)/);
+  assert.match(host, /shortcut: host\.runtime\.shortcutHint\("hubPrevious"\)/);
+  assert.match(host, /shortcut: host\.runtime\.shortcutHint\("hubNext"\)/);
+  assert.match(runtime, /function shortcutHint\(id\)/);
+  assert.doesNotMatch(host, /sequence: "[IO]"/);
+  assert.doesNotMatch(
+    controls,
+    /event\.key === Qt\.Key_O\) \{\s*recordingsPanel\.invoke\("openSelected"\)/,
   );
-  assert.match(host, /model: \(host\.tabShortcutsEnabled \? \[/);
   assert.match(
-    host,
-    /tabShortcutsEnabled:.*!\(activityContent && activityContent\.replyEditing\)/,
+    controls,
+    /event\.key === Qt\.Key_V\) \{\s*networkPanel\.invoke\("toggleDetailView"\)/,
   );
+  assert.match(network, /shortcut: "V"\s*active: panel\.detailView/);
 });
 
 test("footer inset and panel height agree for both measured and live geometry", () => {
