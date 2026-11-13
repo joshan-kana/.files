@@ -156,7 +156,6 @@ in
             flags
           ];
         };
-        modBind = keys: dispatcher: bind (mod keys) dispatcher;
         exec = command: ''hl.dsp.exec_cmd("${command}")'';
         keybindings = import ./keybindings.nix {
           inherit terminal;
@@ -164,7 +163,7 @@ in
         };
         globalKeybindings = lib.filter (binding: binding.submap == null) keybindings;
         launcherKeybindings = lib.filter (binding: binding.submap == "launcher") keybindings;
-        resizeKeybindings = lib.filter (binding: binding.submap == "resize") keybindings;
+        passthruKeybindings = lib.filter (binding: binding.submap == "passthru") keybindings;
         actionDispatcher =
           action:
           if action.type == "exec" then
@@ -396,10 +395,7 @@ in
 
         submaps = {
           launcher.settings.bind = map renderBinding launcherKeybindings;
-          resize.settings.bind = map renderBinding resizeKeybindings;
-          passthru.settings.bind = [
-            (modBind "SHIFT + Escape" ''hl.dsp.submap("reset")'')
-          ];
+          passthru.settings.bind = map renderBinding passthruKeybindings;
         };
 
         # nwg-displays writes ~/.config/hypr/monitors.lua for Hyprland 0.55+.

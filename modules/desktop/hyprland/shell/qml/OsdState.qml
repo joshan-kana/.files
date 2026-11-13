@@ -15,10 +15,11 @@ QtObject {
     property int value: 0
     property bool muted: false
     required property KeyboardState keyboard
+    required property InteractionModeState interactionMode
     required property ScreenRouter screens
     property var activeScreen: null
     property var deferredFeedback: null
-    readonly property int currentPriority: kind === "microphone" ? 2 : kind === "keyboard" ? 1 : 0
+    readonly property int currentPriority: kind === "mode" ? 3 : kind === "microphone" ? 2 : kind === "keyboard" ? 1 : 0
 
     property Connections keyboardConnections: Connections {
         target: root.keyboard
@@ -31,6 +32,23 @@ QtObject {
         }
     }
     property string keyboardState: "unknown"
+    property Connections modeConnections: Connections {
+        target: root.interactionMode
+        function onPassthroughActiveChanged(): void {
+            if (root.interactionMode.passthroughActive) {
+                root.activeScreen = root.screens.focusedScreen;
+                root.show("mode", "Passthrough mode", 0, false);
+            } else if (root.kind === "mode") {
+                root.hideTimer.stop();
+                root.visible = false;
+                if (root.deferredFeedback) {
+                    const deferred = root.deferredFeedback;
+                    root.deferredFeedback = null;
+                    root.show(deferred.kind, deferred.label, deferred.value, deferred.muted);
+                }
+            }
+        }
+    }
     function refreshKeyboardLocks(kind: string): void {
         if (kind === "caps" || kind === "num")
             keyboard.refresh(kind);
@@ -47,6 +65,8 @@ QtObject {
         interval: 900
         repeat: false
         onTriggered: {
+            if (root.interactionMode.passthroughActive)
+                return;
             root.visible = false;
             if (root.deferredFeedback) {
                 const deferred = root.deferredFeedback;
@@ -92,7 +112,16 @@ QtObject {
     }
 
     function show(kindName: string, text: string, amount: int, isMuted: bool): void {
-        const incomingPriority = kindName === "microphone" ? 2 : kindName === "keyboard" ? 1 : 0;
+        if (interactionMode.passthroughActive && kindName !== "mode") {
+            deferredFeedback = {
+                kind: kindName,
+                label: text,
+                value: amount,
+                muted: isMuted
+            };
+            return;
+        }
+        const incomingPriority = kindName === "mode" ? 3 : kindName === "microphone" ? 2 : kindName === "keyboard" ? 1 : 0;
         if (visible && kindName !== kind && incomingPriority < currentPriority) {
             deferredFeedback = {
                 kind: kindName,
@@ -104,11 +133,15 @@ QtObject {
         }
         kind = kindName;
         label = text;
-        activeScreen = screens.focusedScreen;
+        if (!visible || !activeScreen)
+            activeScreen = screens.focusedScreen;
         value = Math.max(0, Math.min(100, amount));
         muted = isMuted;
         visible = true;
-        hideTimer.restart();
+        if (kindName === "mode")
+            hideTimer.stop();
+        else
+            hideTimer.restart();
     }
 
     function showAudio(): void {
