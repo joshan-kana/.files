@@ -46,7 +46,7 @@ PanelWindow {
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
     implicitWidth: Math.max(1, Math.min(600, (screen ? screen.width : 600) - theme.panelSideOffset * 2))
-    implicitHeight: Math.min(490, Math.max(1, (screen ? screen.height : 700) - theme.panelTopOffset * 2))
+    implicitHeight: Math.min(Math.max(1, (screen ? screen.height : 700) - theme.panelTopOffset * 2), Math.max(1, statusContent.implicitHeight))
     readonly property real topOffset: frameConnected ? (barVisible ? theme.barInsetTop : theme.frameThickness) : theme.panelTopOffset
     anchors.top: true
     margins.top: hubVisible && hubBounds.visible && hubBounds.y + hubBounds.height + implicitHeight + theme.spacing3 < (screen ? screen.height : 1000) ? hubBounds.y + hubBounds.height + theme.spacing3 : topOffset
@@ -113,6 +113,7 @@ PanelWindow {
             borderColor: peek.theme.subtleBorder
         }
         StatusContent {
+            id: statusContent
             anchors.fill: parent
             runtime: peek.runtime
             theme: peek.theme
