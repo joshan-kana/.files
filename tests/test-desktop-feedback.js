@@ -227,6 +227,25 @@ test("stale keyboard readbacks remain visibly stale, and frame attachments exit 
   );
 });
 
+test("fullscreen interactive surfaces rise above fullscreen clients while keeping normal top-level attachment", () => {
+  for (const surface of [
+    "StatusPeek.qml",
+    "OsdPopup.qml",
+    "ResizeOverlay.qml",
+  ]) {
+    const qml = read(surface);
+    assert.match(
+      qml,
+      /readonly property bool screenFullscreen: Hyprland\.monitorFor\(screen\)/,
+    );
+    assert.match(
+      qml,
+      /WlrLayershell\.layer: screenFullscreen \? WlrLayer\.Overlay : WlrLayer\.Top/,
+    );
+    assert.match(qml, /readonly property bool frameConnected: frameEnabled &&/);
+  }
+});
+
 test("compositor input modes have a canonical exit and persistent semantic feedback", () => {
   const state = read("InteractionModeState.qml");
   const osd = read("OsdState.qml");
