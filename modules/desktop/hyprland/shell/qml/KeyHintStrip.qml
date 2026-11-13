@@ -17,7 +17,13 @@ Item {
     // the visible hints. Estimating widths from string lengths drifts when
     // font scale, symbols or modifier chords change.
     Item {
-        visible: false
+        // Keep measure delegates instantiated and logically visible; make
+        // only the measurement container transparent and non-interactive.
+        // Hiding its parent makes Qt report every child as invisible.
+        opacity: 0
+        enabled: false
+        width: 0
+        height: 0
         Repeater {
             id: measuredHints
             model: strip.hints
@@ -42,7 +48,7 @@ Item {
         const count = measuredHints.count;
         for (let i = 0; i < count; i++) {
             const hint = measuredHints.itemAt(i);
-            if (!hint || !hint.visible)
+            if (!hint || strip.hints[i].visible === false)
                 continue;
             const width = hint.implicitWidth;
             if (entries.length > 0 && occupied + strip.groupSpacing + width > limit) {
