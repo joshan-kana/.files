@@ -131,6 +131,21 @@ test("inspection is reachable through canonical shortcut, palette and status isl
   assert.match(island, /acceptedButtons: Qt\.LeftButton \| Qt\.RightButton/);
   assert.match(peek, /keyboard\.refresh\("inspect"\)/);
   assert.match(peek, /WlrKeyboardFocus\.OnDemand/);
+  const content = read("StatusContent.qml");
+  assert.match(
+    content,
+    /title: "Refresh current status"[\s\S]*?onActivated: content\.refreshRequested\(\)/,
+  );
+  assert.match(
+    content,
+    /title: "Close status"[\s\S]*?onActivated: content\.closeRequested\(\)/,
+  );
+  assert.match(
+    peek,
+    /onRefreshRequested: \{[\s\S]*?keyboard\.refresh\("inspect"\)/,
+  );
+  assert.match(content, /label: "Shell recording"/);
+  assert.match(content, /label: "Microphone"/);
   assert.doesNotMatch(
     peek,
     /toggleWifi|setVolume|setPercent|toggleMuted|toggleIdle/,
@@ -191,6 +206,25 @@ test("OSD and modes use the shared upper frame anchor without overlapping", () =
   );
   assert.match(frame, /\[args\[9\], args\[10\], args\[11\]\]/);
   assert.match(read("StatusPeek.qml"), /frameEnabled && !hubVisible/);
+});
+
+test("stale keyboard readbacks remain visibly stale, and frame attachments exit smoothly", () => {
+  const osd = read("OsdState.qml");
+  const status = read("StatusContent.qml");
+  for (const surface of ["StatusPeek.qml", "OsdPopup.qml"])
+    assert.match(
+      read(surface),
+      /visible: frameConnected && attachmentProgress > 0\.001/,
+    );
+  assert.match(osd, /root\.keyboard\.stale \? "unknown"/);
+  assert.match(
+    status,
+    /value: content\.keyboard\.stale \? "Stale" : content\.keyboard\.description/,
+  );
+  assert.match(
+    status,
+    /value: content\.keyboard\.stale \? "Stale" : content\.keyboard\.layoutName/,
+  );
 });
 
 test("compositor input modes have a canonical exit and persistent semantic feedback", () => {

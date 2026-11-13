@@ -30,7 +30,7 @@ PanelWindow {
             y: margins.top,
             width: width,
             height: height * attachmentProgress,
-            visible: frameConnected && exposedNow && attachmentProgress > 0.001
+            visible: frameConnected && attachmentProgress > 0.001
         })
 
     property bool closing: false

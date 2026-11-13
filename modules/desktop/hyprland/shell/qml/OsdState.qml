@@ -26,7 +26,7 @@ QtObject {
         function onRefreshed(reason: string): void {
             if (reason !== "caps" && reason !== "num" || !root.ready)
                 return;
-            const state = reason === "caps" ? root.keyboard.capsState : root.keyboard.numState;
+            const state = root.keyboard.stale ? "unknown" : reason === "caps" ? root.keyboard.capsState : root.keyboard.numState;
             root.keyboardState = state;
             root.show("keyboard", reason === "caps" ? "Caps Lock" : "Num Lock", state === "on" ? 100 : 0, false);
         }
