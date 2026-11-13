@@ -33,3 +33,57 @@
 +                    result = run([*args, url], check=False)
 +                    if result.returncode == 0:
 +                        return json.loads(result.stdout)["hash"]
+--- a/nix_update/options.py
++++ b/nix_update/options.py
+@@ -2,6 +2,7 @@
+ 
+ import json
+ import subprocess
++import tempfile
+ from dataclasses import dataclass, field
+ from enum import Enum, auto
+ from pathlib import Path
+@@ -9,6 +10,10 @@
+ 
+ from .errors import AttributePathError
+ from .version.version import VersionPreference
++
++# Retain source roots until the updater exits. Keeping them outside Options also
++# preserves deepcopy support when updating packages with subpackages.
++_FLAKE_SOURCE_ROOTS: list[tempfile.TemporaryDirectory[str]] = []
+ 
+ 
+ class ParseState(Enum):
+@@ -121,11 +126,29 @@
+             return None
+ 
+         flake_dir = _metadata_flake_dir(metadata)
+-        if flake_dir:
+-            return str(Path(path) / flake_dir)
+     except (subprocess.CalledProcessError, json.JSONDecodeError):
+         return None
+-    return path
++
++    # Pin the copied flake across subsequent evaluator processes and store GC.
++    root = tempfile.TemporaryDirectory(prefix="nix-update-flake-")
++    try:
++        subprocess.run(
++            [
++                "nix-store",
++                "--realise",
++                "--add-root",
++                str(Path(root.name) / "source"),
++                path,
++            ],
++            check=True,
++            capture_output=True,
++            text=True,
++        )
++    except subprocess.CalledProcessError:
++        root.cleanup()
++        raise
++    _FLAKE_SOURCE_ROOTS.append(root)
++    return str(Path(path) / flake_dir) if flake_dir else path
+ 
+ 
+ @dataclass
