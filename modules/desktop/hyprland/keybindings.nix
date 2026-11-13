@@ -461,6 +461,13 @@ in
   })
 
   (mk {
+    keys = "SHIFT + Z";
+    id = "status.inspect";
+    action = global "linux-desktop:status-peek";
+    section = "SYSTEM";
+    description = "Inspect current system and input state";
+  })
+  (mk {
     keys = "Caps_Lock";
     mainMod = false;
     id = "keyboard.capsLock";
@@ -478,6 +485,22 @@ in
     flags.non_consuming = true;
     section = "KEYBOARD";
     description = "Report compositor Num Lock state";
+    cheatsheet = false;
+  })
+  (mk {
+    keys = "ALT + M";
+    id = "audio.microphoneMute";
+    action = global "linux-desktop:microphone-mute";
+    section = "AUDIO & MEDIA";
+    description = "Toggle default microphone mute";
+  })
+  (mk {
+    keys = "XF86AudioMicMute";
+    mainMod = false;
+    id = "audio.microphoneMuteHardware";
+    action = global "linux-desktop:microphone-mute";
+    section = "AUDIO & MEDIA";
+    description = "Toggle default microphone mute from hardware key";
     cheatsheet = false;
   })
   (mk {

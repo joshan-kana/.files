@@ -14,42 +14,26 @@ QtObject {
     property string label: ""
     property int value: 0
     property bool muted: false
-    property bool keyboardLocked: false
-    property string keyboardKind: ""
-    property string requestedKeyboardKind: ""
+    required property KeyboardState keyboard
+    required property ScreenRouter screens
+    property var activeScreen: null
+    property var deferredFeedback: null
+    readonly property int currentPriority: kind === "microphone" ? 2 : kind === "keyboard" ? 1 : 0
 
-    property StdioCollector keyboardOutput: StdioCollector {}
-    property Process keyboardQuery: Process {
-        stdout: root.keyboardOutput
-        onExited: (exitCode, exitStatus) => {
-            if (exitCode !== 0 || !root.ready)
+    property Connections keyboardConnections: Connections {
+        target: root.keyboard
+        function onRefreshed(reason: string): void {
+            if (reason !== "caps" && reason !== "num" || !root.ready)
                 return;
-            let devices;
-            try {
-                devices = JSON.parse(root.keyboardOutput.text);
-            } catch (error) {
-                return;
-            }
-            const keyboards = devices.keyboards || [];
-            const keyboard = keyboards.find(device => device.main && device.name !== "power-button") || keyboards.find(device => device.name !== "power-button");
-            if (!keyboard)
-                return;
-            const kind = root.requestedKeyboardKind;
-            const locked = kind === "caps" ? keyboard.capsLock : keyboard.numLock;
-            if (typeof locked !== "boolean")
-                return;
-            root.keyboardLocked = locked;
-            root.keyboardKind = kind;
-            root.show("keyboard", kind === "caps" ? "CAPS LOCK" : "NUM LOCK", locked ? 100 : 0, false);
+            const state = reason === "caps" ? root.keyboard.capsState : root.keyboard.numState;
+            root.keyboardState = state;
+            root.show("keyboard", reason === "caps" ? "Caps Lock" : "Num Lock", state === "on" ? 100 : 0, false);
         }
     }
-
+    property string keyboardState: "unknown"
     function refreshKeyboardLocks(kind: string): void {
-        if (kind !== "caps" && kind !== "num")
-            return;
-        requestedKeyboardKind = kind;
-        if (runtime.hyprctl.length > 0 && !keyboardQuery.running)
-            keyboardQuery.exec([runtime.hyprctl, "-j", "devices"]);
+        if (kind === "caps" || kind === "num")
+            keyboard.refresh(kind);
     }
 
     property Timer startupGate: Timer {
@@ -62,7 +46,14 @@ QtObject {
     property Timer hideTimer: Timer {
         interval: 900
         repeat: false
-        onTriggered: root.visible = false
+        onTriggered: {
+            root.visible = false;
+            if (root.deferredFeedback) {
+                const deferred = root.deferredFeedback;
+                root.deferredFeedback = null;
+                root.show(deferred.kind, deferred.label, deferred.value, deferred.muted);
+            }
+        }
     }
 
     property Connections audioConnections: Connections {
@@ -79,6 +70,18 @@ QtObject {
         }
     }
 
+    property Connections microphoneConnections: Connections {
+        target: root.system
+        function onMicrophoneVolumePercentChanged(): void {
+            if (root.ready && root.system.microphoneAvailable)
+                root.showMicrophone();
+        }
+        function onMicrophoneMutedChanged(): void {
+            if (root.ready && root.system.microphoneAvailable)
+                root.showMicrophone();
+        }
+    }
+
     property Connections brightnessConnections: Connections {
         target: root.brightness
 
@@ -89,8 +92,19 @@ QtObject {
     }
 
     function show(kindName: string, text: string, amount: int, isMuted: bool): void {
+        const incomingPriority = kindName === "microphone" ? 2 : kindName === "keyboard" ? 1 : 0;
+        if (visible && kindName !== kind && incomingPriority < currentPriority) {
+            deferredFeedback = {
+                kind: kindName,
+                label: text,
+                value: amount,
+                muted: isMuted
+            };
+            return;
+        }
         kind = kindName;
         label = text;
+        activeScreen = screens.focusedScreen;
         value = Math.max(0, Math.min(100, amount));
         muted = isMuted;
         visible = true;
@@ -98,10 +112,16 @@ QtObject {
     }
 
     function showAudio(): void {
-        show("volume", system.muted ? "AUDIO // MUTED" : "VOLUME", system.volumePercent, system.muted);
+        show("volume", system.muted ? "Output muted" : "Output volume", system.volumePercent, system.muted);
+    }
+
+    function showMicrophone(): void {
+        if (!system.microphoneAvailable)
+            return;
+        show("microphone", system.microphoneMuted ? "Microphone muted" : "Microphone input", system.microphoneVolumePercent, system.microphoneMuted);
     }
 
     function showBrightness(): void {
-        show("brightness", "BRIGHTNESS", brightness.percent, false);
+        show("brightness", "Brightness", brightness.percent, false);
     }
 }

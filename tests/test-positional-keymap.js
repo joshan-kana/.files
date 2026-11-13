@@ -101,6 +101,7 @@ test("desktop destinations, capture, media, and workspace pairs have no old alia
     ["SUPER+O", "Next workspace"],
     ["SUPER+SHIFT+I", "Move window to previous workspace"],
     ["SUPER+SHIFT+O", "Move window to next workspace"],
+    ["SUPER+SHIFT+Z", "Inspect current system and input state"],
   ]);
   for (const [key, description] of expected)
     assert.equal(global.get(key), description, key);

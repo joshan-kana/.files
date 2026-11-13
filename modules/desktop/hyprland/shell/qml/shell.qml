@@ -31,6 +31,22 @@ ShellRoot {
     // Demand comes from the actual shared shell surfaces that can be seen.
     readonly property bool musicReactiveSurfaceVisible: musicReactiveEnabled && (desktopFrame.glassExposed || ambientBar.shown || expansionState.hasCurrent || expansionHost.closing || modalHost.contentVisible || notifications.popupVisible || osd.visible || osdPopup.closing || resizeOverlay.open || resizeOverlay.closing)
 
+    property var statusTargetScreen: null
+    property var resizeTargetScreen: null
+    function toggleStatusInspection(targetScreen: var = null): void {
+        if (resizeOverlay.open) {
+            resizeOverlay.inspectOpen = !resizeOverlay.inspectOpen;
+            if (resizeOverlay.inspectOpen)
+                keyboard.refresh("inspect");
+            return;
+        }
+        if (statusPeek.open) {
+            statusPeek.open = false;
+            return;
+        }
+        statusTargetScreen = targetScreen || screens.focusedScreen;
+        statusPeek.open = true;
+    }
     function toggleBar(): void {
         appearance.toggleBar();
     }
@@ -239,10 +255,17 @@ ShellRoot {
         runtime: runtime
     }
 
+    KeyboardState {
+        id: keyboard
+        runtime: runtime
+    }
+
     OsdState {
         id: osd
         system: system
         brightness: brightness
+        keyboard: keyboard
+        screens: screens
         runtime: runtime
     }
 
@@ -298,19 +321,22 @@ ShellRoot {
         osdScreen: osdPopup.screen
         resize: resizeOverlay.frameBounds
         resizeScreen: resizeOverlay.screen
+        inspection: statusPeek.frameBounds
+        inspectionScreen: statusPeek.screen
         busy: !!expansionHost.loadingOperationVisible
         busyScreen: expansionState.screen
     }
 
     AmbientBar {
         id: ambientBar
+        onSystemStatusRequested: screen => root.toggleStatusInspection(screen)
         // The expanding hub consumes the clock island throughout the whole
         // opening and closing transition, not only while Controls is active.
         // Let the clock join the frame while the hub finishes retracting.
-        controlsExpanded: expansionState.hasCurrent || (expansionHost.closing && expansionHost.clockReveal < 0.05) || resizeOverlay.open || resizeOverlay.closing
+        controlsExpanded: expansionState.hasCurrent || (expansionHost.closing && expansionHost.clockReveal < 0.05) || resizeOverlay.open || resizeOverlay.closing || statusPeek.open || (osd.visible && !osdPopup.suspended)
         hubBounds: expansionHost.frameBounds
         hubScreen: expansionHost.screen
-        clockReveal: resizeOverlay.open || resizeOverlay.closing ? 0 : expansionHost.clockReveal
+        clockReveal: resizeOverlay.open || resizeOverlay.closing || statusPeek.open || (osd.visible && !osdPopup.suspended) ? 0 : expansionHost.clockReveal
         shown: appearance.barVisible
         frameVisible: appearance.frameVisible
         runtime: runtime
@@ -441,7 +467,9 @@ ShellRoot {
 
     ResizeOverlay {
         id: resizeOverlay
-        screen: screens.focusedScreen
+        screen: root.resizeTargetScreen || screens.focusedScreen
+        keyboard: keyboard
+        system: system
         frameEnabled: appearance.frameVisible
         barVisible: appearance.barVisible
         runtime: runtime
@@ -464,10 +492,30 @@ ShellRoot {
         onCenterRequested: screen => actions.showNotifications(screen)
     }
 
+    StatusPeek {
+        id: statusPeek
+        screen: root.statusTargetScreen || screens.focusedScreen
+        runtime: runtime
+        theme: theme
+        motion: motion
+        system: system
+        keyboard: keyboard
+        brightness: brightness
+        recording: recording
+        frameEnabled: appearance.frameVisible
+        barVisible: appearance.barVisible
+        hubVisible: expansionState.hasCurrent
+        hubBounds: expansionHost.frameBounds
+        modeName: resizeOverlay.open ? "Resize window" : "Normal"
+        onCloseRequested: statusPeek.open = false
+    }
+
     OsdPopup {
         id: osdPopup
-        screen: screens.focusedScreen
+        screen: osd.activeScreen || screens.focusedScreen
         osd: osd
+        barVisible: appearance.barVisible
+        suspended: statusPeek.open || resizeOverlay.open || expansionState.hasCurrent
         runtime: runtime
         theme: theme
         motion: motion
@@ -485,6 +533,13 @@ ShellRoot {
         audioAvailable: system.audioAvailable
         brightnessAvailable: brightness.supported
         commands: [
+            {
+                id: "status.inspect",
+                name: "Inspect System Status",
+                description: "Current keyboard locks, input, output, brightness and active modes",
+                icon: "dialog-information",
+                keywords: ["status", "inspect", "caps lock", "num lock", "microphone", "input", "device", "mode"]
+            },
             {
                 id: "media.wallpaperSpectrum",
                 name: root.wallpaperSpectrumEnabled ? "Disable Wallpaper Spectrum" : "Enable Wallpaper Spectrum",
@@ -820,7 +875,12 @@ ShellRoot {
                 keywords: ["display", "backlight", "dimmer"]
             }
         ] : [])
-        onCommandTriggered: commandId => actions.invokeCommand(commandId)
+        onCommandTriggered: commandId => {
+            if (commandId === "status.inspect")
+                root.toggleStatusInspection();
+            else
+                actions.invokeCommand(commandId);
+        }
         onArgumentCommandTriggered: (commandId, argument) => {
             const percent = Number(argument);
             if (!Number.isInteger(percent) || percent < 0 || percent > 100)
@@ -1070,7 +1130,25 @@ ShellRoot {
         appid: "linux-desktop"
         name: "resize-mode"
         description: "Open keyboard-driven window resize controls"
-        onPressed: resizeOverlay.open = !resizeOverlay.open
+        onPressed: {
+            if (!resizeOverlay.open)
+                root.resizeTargetScreen = screens.focusedScreen;
+            resizeOverlay.open = !resizeOverlay.open;
+        }
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "microphone-mute"
+        description: "Toggle default microphone mute"
+        onPressed: system.toggleMicrophoneMute()
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "status-peek"
+        description: "Inspect current system status without changing it"
+        onPressed: root.toggleStatusInspection()
     }
 
     GlobalShortcut {

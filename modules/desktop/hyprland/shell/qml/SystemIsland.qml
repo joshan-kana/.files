@@ -15,6 +15,7 @@ Item {
     readonly property bool framePressed: statusPress.visualPressed
 
     signal activated
+    signal inspectRequested
     signal trayMenuRequested(int index)
 
     implicitWidth: statusRow.implicitWidth + theme.spacing4 * 2
@@ -148,7 +149,15 @@ Item {
             motion: island.motion
             cornerRadius: island.theme.radiusIsland
             exponent: Math.min(4, island.theme.squircleExponent)
-            onActivated: island.activated()
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            Accessible.role: Accessible.Button
+            Accessible.name: "Open system controls. Secondary action: inspect current status"
+            onActivated: event => {
+                if (event.button === Qt.RightButton)
+                    island.inspectRequested();
+                else
+                    island.activated();
+            }
             onWheel: event => {
                 if (event.angleDelta.y !== 0 && island.system.audioAvailable) {
                     island.system.adjustVolume((event.angleDelta.y > 0 ? 1 : -1) * 0.05);

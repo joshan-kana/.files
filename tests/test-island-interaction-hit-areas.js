@@ -92,7 +92,13 @@ test("a bar island with one action still forwards its shared contour state", () 
     bar,
     /SystemIsland \{\s+id: systemIsland[\s\S]*?onFrameHoverChanged: Qt\.callLater\(bar\.publishOrigins\)\s+onFramePressedChanged: bar\.publishOrigins\(\)/,
   );
-  assert.match(qml("SystemIsland.qml"), /onActivated: island\.activated\(\)/);
+  const status = qml("SystemIsland.qml");
+  assert.match(status, /acceptedButtons: Qt\.LeftButton \| Qt\.RightButton/);
+  assert.match(
+    status,
+    /if \(event\.button === Qt\.RightButton\)\s*island\.inspectRequested\(\)/,
+  );
+  assert.match(status, /else\s*island\.activated\(\)/);
 });
 
 test("occluded islands fade with continuous frame contour and no clickable ghost", () => {
