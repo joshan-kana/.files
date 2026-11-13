@@ -260,7 +260,7 @@ Item {
         theme: library.theme
         motion: library.motion
         message: library.statusText
-        idleMessage: "Choose a capture to open or share"
+        idleMessage: library.entries.length > 0 ? "Choose a capture to open or share" : "No saved captures"
         phase: library.statusError ? "error" : library.deletePending.length > 0 ? "warning" : library.isBusy || library.editorRequestRunning ? "busy" : "idle"
     }
 

@@ -248,7 +248,7 @@ Item {
         theme: panel.theme
         motion: panel.motion
         message: panel.statusText
-        idleMessage: "Select a device or scan"
+        idleMessage: !panel.adapterAvailable ? "Bluetooth adapter unavailable" : !panel.system.bluetoothEnabled ? "Bluetooth radio disabled" : panel.devices.length === 0 ? "Scanning for Bluetooth devices" : "Select a device or scan"
         phase: panel.statusError ? "error" : panel.forgetAddress.length > 0 ? "warning" : panel.statusText.startsWith("CONNECTING") || panel.statusText.startsWith("DISCONNECTING") || panel.statusText.startsWith("PAIRING") ? "busy" : "idle"
     }
 
@@ -454,31 +454,38 @@ Item {
             hints: [
                 {
                     shortcut: "J/K",
-                    label: "Select"
+                    label: "Select",
+                    visible: panel.adapterAvailable && panel.system.bluetoothEnabled && panel.devices.length > 0
                 },
                 {
                     shortcut: "ENTER",
-                    label: "Link"
+                    label: panel.selectedDevice()?.connected ? "Drop" : "Link",
+                    visible: panel.adapterAvailable && panel.system.bluetoothEnabled && panel.selectedDevice()?.paired === true
                 },
                 {
                     shortcut: "B",
-                    label: "Radio"
+                    label: "Radio",
+                    visible: panel.adapterAvailable
                 },
                 {
                     shortcut: "SHIFT+D",
-                    label: "Scan"
+                    label: "Scan",
+                    visible: panel.adapterAvailable && panel.system.bluetoothEnabled
                 },
                 {
                     shortcut: "P",
-                    label: "Pair"
+                    label: panel.selectedDevice()?.pairing ? "Cancel pairing" : "Pair",
+                    visible: panel.adapterAvailable && panel.system.bluetoothEnabled && panel.devices.length > 0
                 },
                 {
                     shortcut: "T",
-                    label: "Trust"
+                    label: panel.selectedDevice()?.trusted ? "Untrust" : "Trust",
+                    visible: panel.adapterAvailable && panel.system.bluetoothEnabled && panel.selectedDevice()?.paired === true
                 },
                 {
                     shortcut: "F",
-                    label: panel.forgetAddress.length > 0 ? "Confirm" : "Forget"
+                    label: panel.forgetAddress.length > 0 ? "Confirm" : "Forget",
+                    visible: panel.adapterAvailable && panel.system.bluetoothEnabled && panel.selectedDevice()?.paired === true
                 }
             ]
         }
