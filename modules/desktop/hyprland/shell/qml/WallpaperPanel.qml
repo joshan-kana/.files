@@ -68,7 +68,7 @@ Item {
 
     visible: open
     implicitWidth: 1120
-    implicitHeight: 760
+    implicitHeight: 770
 
     onOpenChanged: {
         if (open)
@@ -341,9 +341,20 @@ Item {
             }
         }
 
+        PanelStatus {
+            id: statusBanner
+            width: parent.width
+            runtime: panel.runtime
+            theme: panel.theme
+            motion: panel.motion
+            idleMessage: "Choose a wallpaper and display target"
+            message: panel.statusText
+            phase: !panel.outputAvailable || /fail|error|invalid|disconnected|could not/i.test(panel.statusText) ? "error" : panel.busy || panel.loading ? "busy" : /applied|restored/i.test(panel.statusText) ? "success" : "idle"
+        }
+
         Item {
             width: parent.width
-            height: 510
+            height: 465
 
             // The theme gallery's compact, scrollable card grid is a better
             // match for choosing from a library than a one-at-a-time carousel.
@@ -671,16 +682,6 @@ Item {
                     label: "Set"
                 }
             ]
-        }
-
-        Text {
-            text: panel.statusText
-            visible: text.length > 0
-            color: panel.theme.textMuted
-            font.family: panel.runtime.fontMono
-            font.pixelSize: panel.theme.fontSize(10)
-            elide: Text.ElideRight
-            width: parent.width
         }
     }
 }

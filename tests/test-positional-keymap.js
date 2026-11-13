@@ -233,7 +233,11 @@ test("Bluetooth scanning hints never advertise paging's plain D key", () => {
   const bluetooth = qml("BluetoothPanel.qml");
   const controls = qml("SystemContent.qml");
   assert.match(bluetooth, /shortcut: "SHIFT\+D",\s*label: "Scan"/);
-  assert.match(bluetooth, /NO DEVICES \/\/ PRESS SHIFT\+D TO SCAN/);
+  assert.match(
+    bluetooth,
+    /text: panel\.system\.bluetoothDiscovering \? "Scanning for devices…" : "No devices found"/,
+  );
+  assert.doesNotMatch(bluetooth, /NO DEVICES \/\/ PRESS SHIFT\+D TO SCAN/);
   assert.match(
     controls,
     /event\.key === Qt\.Key_D && \(event\.modifiers & Qt\.ShiftModifier\)\)\s*\{\s*bluetoothPanel\.invoke\("toggleDiscovery"\)/,
