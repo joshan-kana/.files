@@ -126,11 +126,11 @@
         "systems": "systems"
       },
       "locked": {
-        "lastModified": 1793974742,
-        "narHash": "sha256-aGuGUQMv2waFQe0x+Z+wCoi6qGsaNL6ELT0DVHI28RQ=",
+        "lastModified": 1794563146,
+        "narHash": "sha256-K38qD04MoVlFu0EDeobP+QQMOtX2BMlhOrg7rB4J2vM=",
         "owner": "raydak-labs",
         "repo": "configarr",
-        "rev": "deaeba18dcd6c8bb3e1736f23e51dce0c21659e0",
+        "rev": "ccbfdd396c231520815d32fccc0b1b01cccf8670",
         "type": "github"
       },
       "original": {
@@ -396,11 +396,11 @@
         "uv2nix": "uv2nix"
       },
       "locked": {
-        "lastModified": 1794561669,
-        "narHash": "sha256-QYpV2rtlJga8LHuquKJxsct54IZ/eHsmcjt2Eo4G7GA=",
+        "lastModified": 1794566314,
+        "narHash": "sha256-L2MtncCNwxaYi0LDZWuq096zKrmOpag7OUq56khUerU=",
         "owner": "NousResearch",
         "repo": "hermes-agent",
-        "rev": "b86af16f16328707c30ad82717da2ec33cc15968",
+        "rev": "936174a1e2f7344e446a5604097a744e95660356",
         "type": "github"
       },
       "original": {
@@ -883,11 +883,11 @@
     "schema-artifacts": {
       "flake": false,
       "locked": {
-        "lastModified": 1794219669,
-        "narHash": "sha256-NXw+nWqVoLsCaMLB0gQTtigusfxj9hzsvbyM/tXZ6u0=",
+        "lastModified": 1794568178,
+        "narHash": "sha256-B2IBJsWLLOynDs4pSHeyziAVDnQm7JPXIRwcjH6ZhNg=",
         "owner": "joshan-kana",
         "repo": ".files",
-        "rev": "38acbbef4de6a2b9b59a36069c52431791017880",
+        "rev": "c0413041ed51ec9bbcface9d394e251fdf935679",
         "type": "github"
       },
       "original": {
