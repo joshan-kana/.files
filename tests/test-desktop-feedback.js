@@ -73,11 +73,28 @@ test("all keyboard states and icons have distinct semantic outcomes", () => {
   );
 });
 
+test("QML functions use supported typed-argument syntax", () => {
+  for (const component of [
+    "KeyboardState.qml",
+    "StatusPeek.qml",
+    "StatusContent.qml",
+    "shell.qml",
+    "OsdState.qml",
+    "ResizeOverlay.qml",
+  ]) {
+    assert.doesNotMatch(
+      read(component),
+      /function\s+\w+\([^)]*:\s*\w+\s*=/,
+      `${component} must not combine typed arguments with defaults`,
+    );
+  }
+});
+
 test("keyboard readback is owned outside the transient OSD", () => {
   const state = read("KeyboardState.qml");
   const osd = read("OsdState.qml");
   assert.match(state, /KeyboardSemantics\.snapshot\(data\)/);
-  assert.match(state, /function refresh\(reason: string = "inspect"\)/);
+  assert.match(state, /function refresh\(reason: string\)/);
   assert.match(state, /query\.exec\(\[runtime\.hyprctl, "-j", "devices"\]\)/);
   assert.doesNotMatch(state, /dispatch\(|sendKey|toggleCaps|toggleNum/);
   assert.match(osd, /onRefreshed\(reason: string\)/);

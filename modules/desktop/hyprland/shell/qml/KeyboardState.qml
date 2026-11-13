@@ -60,7 +60,9 @@ QtObject {
         return true;
     }
 
-    function refresh(reason: string = "inspect"): void {
+    function refresh(reason: string): void {
+        if (!reason)
+            reason = "inspect";
         if (!queuedReasons.includes(reason))
             queuedReasons = [...queuedReasons, reason];
         beginQuery();
