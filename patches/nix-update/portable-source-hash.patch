@@ -48,13 +48,13 @@
  from .errors import AttributePathError
  from .version.version import VersionPreference
 +
-+# Retain source roots until the updater exits. Keeping them outside Options also
-+# preserves deepcopy support when updating packages with subpackages.
++# Hold copied local flake sources until the updater exits. Do not keep the
++# temporary roots inside package options, which can be deep-copied.
 +_FLAKE_SOURCE_ROOTS: list[tempfile.TemporaryDirectory[str]] = []
  
  
  class ParseState(Enum):
-@@ -121,11 +126,29 @@
+@@ -121,11 +126,38 @@
              return None
  
          flake_dir = _metadata_flake_dir(metadata)
@@ -64,26 +64,35 @@
          return None
 -    return path
 +
-+    # Pin the copied flake across subsequent evaluator processes and store GC.
++    # A metadata source can exist on disk but remain unregistered in the store.
++    # Register the already Git-filtered snapshot before assigning a GC root.
 +    root = tempfile.TemporaryDirectory(prefix="nix-update-flake-")
 +    try:
++        registered = subprocess.run(
++            ["nix", "store", "add-path", "--name", "source", path],
++            check=True,
++            capture_output=True,
++            text=True,
++        ).stdout.strip()
 +        subprocess.run(
 +            [
 +                "nix-store",
 +                "--realise",
 +                "--add-root",
 +                str(Path(root.name) / "source"),
-+                path,
++                registered,
 +            ],
 +            check=True,
 +            capture_output=True,
 +            text=True,
 +        )
-+    except subprocess.CalledProcessError:
++    except subprocess.CalledProcessError as error:
 +        root.cleanup()
-+        raise
++        detail = error.stderr.strip() if error.stderr else str(error)
++        msg = f"Cannot protect local flake source {path}: {detail}"
++        raise RuntimeError(msg) from error
 +    _FLAKE_SOURCE_ROOTS.append(root)
-+    return str(Path(path) / flake_dir) if flake_dir else path
++    return str(Path(registered) / flake_dir) if flake_dir else registered
  
  
  @dataclass

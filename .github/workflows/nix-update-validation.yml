@@ -46,12 +46,16 @@ jobs:
             mkdir -p "$scratch/flake-$revision"
             source="$(cd "$scratch/repo" && nix flake metadata --json | jq -r .path)"
             echo "revision=$revision source=$source"
-            if ! nix-store --realise --add-root "$scratch/flake-$revision/source" "$source" > "$scratch/stdout" 2> "$scratch/stderr"; then
-              cat "$scratch/stdout" "$scratch/stderr"
-              echo "GC-root command failed on fresh runner" >&2
-              exit 1
+            if nix-store --realise --add-root "$scratch/flake-$revision/unregistered" "$source" > "$scratch/stdout" 2> "$scratch/stderr"; then
+              echo 'Metadata path was already registered by Nix'
+            else
+              echo 'Metadata path requires explicit store registration:'
+              cat "$scratch/stderr"
             fi
-            test -f "$source/flake.nix"
+            registered="$(nix store add-path --name source "$source")"
+            nix-store --realise --add-root "$scratch/flake-$revision/source" "$registered"
+            test -f "$registered/flake.nix"
             test -L "$scratch/flake-$revision/source"
+            nix path-info "$registered" >/dev/null
           done
           echo 'Root command passed for dirty Git revisions'
