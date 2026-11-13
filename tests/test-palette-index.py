@@ -42,6 +42,12 @@ class PaletteIndexTests(unittest.TestCase):
             else:
                 os.environ[key] = value
 
+    def test_nix_store_and_ancestors_are_not_indexed(self):
+        """Never scan the store through its root, parent, or a nested path."""
+        roots = [Path("/"), Path("/nix"), Path("/nix/store"), Path("/nix/store/anything"), self.root]
+        with mock.patch.object(self.palette, "declared_roots", return_value=roots):
+            self.assertEqual(self.palette.search_roots(), [self.root])
+
     def test_exact_match_is_not_hidden_behind_256_weaker_results(self):
         """Never truncate exact matches before relevance ordering."""
         for i in range(300):
