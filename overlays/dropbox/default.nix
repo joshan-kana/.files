@@ -7,7 +7,7 @@ _: {
           pname = "dropbox";
           release = {
             version = "278.4.4020";
-            hash = "sha256-j4W2M/Q9vW2bSg2Y1xg/AJSsJJEiWGPycu3XQZNoJk0=";
+            hash = "sha256-NhE4US2fNnUW+lNiMNlvg49eZDuWE6nR0sanBoafRe0=";
           };
           appName = "Dropbox.app";
           homepage = "https://dropbox.com/";
