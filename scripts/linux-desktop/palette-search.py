@@ -62,10 +62,17 @@ def declared_roots():
 def search_roots():
     """Return existing safe search roots for local file discovery."""
     home = Path.home()
+    store = Path("/nix/store")
     result = [
         root
         for root in declared_roots()
-        if root.is_absolute() and root.is_dir() and not root.is_symlink() and root != home and not str(root).startswith("/nix/")
+        if root.is_absolute()
+        and root.is_dir()
+        and not root.is_symlink()
+        and root != home
+        and root != store
+        and root not in store.parents
+        and store not in root.parents
     ]
     return list(dict.fromkeys(result))
 
