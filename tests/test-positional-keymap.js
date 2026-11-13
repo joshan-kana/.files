@@ -248,6 +248,38 @@ test("Bluetooth scanning hints never advertise paging's plain D key", () => {
   );
 });
 
+test("Bluetooth shortcut hints reflect available hardware and selected device state", () => {
+  const bluetooth = qml("BluetoothPanel.qml");
+  assert.match(
+    bluetooth,
+    /idleMessage: !panel\.adapterAvailable \? "Bluetooth adapter unavailable"/,
+  );
+  assert.match(
+    bluetooth,
+    /shortcut: "B",\s*label: "Radio",\s*visible: panel\.adapterAvailable/,
+  );
+  assert.match(
+    bluetooth,
+    /shortcut: "SHIFT\+D",\s*label: "Scan",\s*visible: panel\.adapterAvailable && panel\.system\.bluetoothEnabled/,
+  );
+  assert.match(
+    bluetooth,
+    /shortcut: "ENTER",\s*label: panel\.selectedDevice\(\)\?\.connected \? "Drop" : "Link"/,
+  );
+  assert.match(
+    bluetooth,
+    /visible: panel\.adapterAvailable && panel\.system\.bluetoothEnabled && panel\.selectedDevice\(\)\?\.paired === true/,
+  );
+  assert.match(
+    bluetooth,
+    /label: panel\.selectedDevice\(\)\?\.trusted \? "Untrust" : "Trust"/,
+  );
+  assert.match(
+    qml("RecordingLibrary.qml"),
+    /idleMessage: library\.entries\.length > 0 \? "Choose a capture to open or share" : "No saved captures"/,
+  );
+});
+
 test("capture status messages and button hints agree that Enter confirms", () => {
   const source = qml("ScreenshotPicker.qml");
   assert.doesNotMatch(source, /SPACE TO (CONFIRM|RECORD|CAPTURE)/);
