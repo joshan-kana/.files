@@ -714,6 +714,23 @@ let
 
     - [Fleet](overview/fleet.md)
 
+    # Conventions
+
+    - [Conventions](conventions/index.md)
+      - [Repository structure](conventions/repository-structure.md)
+      - [Semantic scopes](conventions/semantic-scopes.md)
+      - [Nix modules](conventions/nix-modules.md)
+      - [Platforms](conventions/platforms.md)
+      - [Packaging](conventions/packages.md)
+      - [Services](conventions/services.md)
+      - [Networking and security](conventions/networking-and-security.md)
+      - [State and recovery](conventions/state-and-recovery.md)
+      - [Desktop and appearance](conventions/desktop-and-appearance.md)
+      - [Tooling](conventions/tooling.md)
+      - [Validation](conventions/validation.md)
+      - [Git and delivery](conventions/git-and-delivery.md)
+      - [Documentation](conventions/documentation.md)
+
     # Runbooks
 
     - [Common](runbooks/common/index.md)
