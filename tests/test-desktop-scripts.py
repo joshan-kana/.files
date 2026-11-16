@@ -56,6 +56,19 @@ class DesktopScriptTests(unittest.TestCase):
             timeout=8,
         )
 
+    def theme_runner(self, operation):
+        """Wrap the real theme script with strict shell settings and mock inputs."""
+        source = self.home / "theme.sh"
+        source.write_text(
+            "set -euo pipefail\n"
+            "configuredTheme=carbon\nrepoPath=/tmp/theme\n"
+            "themeFlakeRef=path:/tmp/theme\nmanifest=/tmp/unused\n"
+            "expectedUser=fixture\nconfigurationName=fixture\n"
+            f"operationDir={operation}\noperationUnit=linux-desktop-theme-apply.service\n" + THEME.read_text()
+        )
+        source.chmod(0o700)
+        return source
+
     def test_recording_start_acknowledges_service_owned_state(self):
         """Successful service admission is not merely a queued systemd job."""
         self.executable(
@@ -88,8 +101,8 @@ exit 1
         self.assertIn("picker.open = true;", picker)
         self.assertIn("RECORDING START FAILED", picker)
 
-    @unittest.skipUnless(shutil.which("flock"), "GNU flock is required for scope-lock integration")
-    def test_theme_cancellation_prevents_scoped_build(self):
+    @unittest.skipUnless(shutil.which("flock"), "GNU flock is required for operation-lock integration")
+    def test_theme_cancellation_prevents_worker_build(self):
         """Cancelled work may never re-enter the build or activation phase."""
         operation = self.state / "linux-desktop/theme-operation"
         operation.mkdir(parents=True)
@@ -98,21 +111,14 @@ exit 1
         marker = self.home / "nh-called"
         self.executable("nh", 'printf "%s\\n" "$*" >> "$NH_MARKER"\n')
         self.env["NH_MARKER"] = str(marker)
-        source = self.home / "theme.sh"
-        source.write_text(
-            "configuredTheme=carbon\nrepoPath=/tmp/theme\n"
-            "themeFlakeRef=path:/tmp/theme\nmanifest=/tmp/unused\n"
-            "expectedUser=fixture\nconfigurationName=fixture\n"
-            f"operationDir={operation}\noperationUnit=linux-desktop-theme-apply.scope\n" + THEME.read_text()
-        )
-        source.chmod(0o700)
+        source = self.theme_runner(operation)
         self.executable("jq", "exit 0\n")
-        result = self.run_script(source, "switch", "carbon", "--scoped")
+        result = self.run_script(source, "switch", "carbon", "--worker")
         self.assertEqual(result.returncode, 130, result.stderr)
         self.assertFalse(marker.exists())
         self.assertEqual((operation / "phase").read_text().strip(), "cancelled")
 
-    @unittest.skipUnless(shutil.which("flock"), "GNU flock is required for scope-lock integration")
+    @unittest.skipUnless(shutil.which("flock"), "GNU flock is required for operation-lock integration")
     def test_theme_cancellation_after_build_blocks_activation(self):
         """A cancelled builder cannot cross the activation boundary."""
         operation = self.state / "linux-desktop/theme-operation"
@@ -131,20 +137,70 @@ fi
         )
         self.executable("jq", "exit 0\n")
         self.env.update({"NH_MARKER": str(marker), "THEME_OPERATION_DIR": str(operation)})
-        source = self.home / "theme.sh"
-        source.write_text(
-            "configuredTheme=carbon\nrepoPath=/tmp/theme\n"
-            "themeFlakeRef=path:/tmp/theme\nmanifest=/tmp/unused\n"
-            "expectedUser=fixture\nconfigurationName=fixture\n"
-            f"operationDir={operation}\noperationUnit=linux-desktop-theme-apply.scope\n" + THEME.read_text()
-        )
-        source.chmod(0o700)
-        result = self.run_script(source, "switch", "carbon", "--scoped")
+        source = self.theme_runner(operation)
+        result = self.run_script(source, "switch", "carbon", "--worker")
         self.assertEqual(result.returncode, 130, result.stderr)
         calls = marker.read_text()
         self.assertIn("os build", calls)
         self.assertNotIn("os switch", calls)
         self.assertEqual((operation / "phase").read_text().strip(), "cancelled")
+
+    @unittest.skipUnless(shutil.which("flock"), "GNU flock is required for theme launch")
+    def test_theme_launcher_starts_independent_user_service(self):
+        """The chooser returns after systemd accepts an independent worker."""
+        operation = self.state / "linux-desktop/theme-operation"
+        self.executable("jq", "exit 0\n")
+        self.executable("systemctl", "exit 1\n")
+        arguments = self.home / "systemd-run-arguments"
+        self.env["SYSTEMD_RUN_ARGUMENTS"] = str(arguments)
+        self.executable("systemd-run", 'printf "%s\\n" "$@" > "$SYSTEMD_RUN_ARGUMENTS"\n')
+        source = self.theme_runner(operation)
+
+        result = self.run_script(source, "switch", "carbon")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((operation / "phase").read_text().strip(), "preparing")
+        invocation = arguments.read_text().splitlines()
+        self.assertIn("--user", invocation)
+        self.assertIn("--service-type=exec", invocation)
+        self.assertIn("--collect", invocation)
+        self.assertIn("--unit=linux-desktop-theme-apply", invocation)
+        self.assertNotIn("--scope", invocation)
+        self.assertEqual(invocation[-3:], ["switch", "carbon", "--worker"])
+
+    @unittest.skipUnless(shutil.which("flock"), "GNU flock is required for theme cancellation")
+    def test_theme_cancel_publishes_state_before_stopping_service(self):
+        """The worker observes cancellation before systemd stops its service."""
+        operation = self.state / "linux-desktop/theme-operation"
+        operation.mkdir(parents=True)
+        (operation / "phase").write_text("building\n")
+        self.executable(
+            "systemctl",
+            'test "$(cat "$THEME_OPERATION_DIR/phase")" = cancelled || exit 5\nprintf "%s\\n" "$*" > "$XDG_RUNTIME_DIR/stopped-unit"\n',
+        )
+        self.env["THEME_OPERATION_DIR"] = str(operation)
+        source = self.theme_runner(operation)
+
+        result = self.run_script(source, "cancel")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((operation / "phase").read_text().strip(), "cancelled")
+        self.assertEqual((self.runtime / "stopped-unit").read_text().strip(), "--user stop linux-desktop-theme-apply.service")
+
+    @unittest.skipUnless(shutil.which("flock"), "GNU flock is required for theme build")
+    def test_theme_failed_build_does_not_attempt_activation(self):
+        """A real build failure remains an error and never switches systems."""
+        operation = self.state / "linux-desktop/theme-operation"
+        operation.mkdir(parents=True)
+        (operation / "phase").write_text("preparing\n")
+        (operation / "output.log").touch()
+        self.executable("jq", "exit 0\n")
+        self.executable("nh", 'if [ "$2" = build ]; then exit 42; fi\ntouch "$NH_MARKER"\n')
+        self.env["NH_MARKER"] = str(self.home / "activated")
+        source = self.theme_runner(operation)
+
+        result = self.run_script(source, "switch", "carbon", "--worker")
+        self.assertEqual(result.returncode, 42)
+        self.assertEqual((operation / "phase").read_text().strip(), "failed")
+        self.assertFalse((self.home / "activated").exists())
 
     def test_browser_default_declaration_is_not_program_specific(self):
         """Bookmark navigation delegates to the XDG URL handler."""
