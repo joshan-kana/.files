@@ -42,7 +42,6 @@ _: {
     ./linear
     ./libreoffice
     ./notion
-    ./open-webui
     ./open-webui-desktop
     ./open-webui-computer
     ./python-matter-server
