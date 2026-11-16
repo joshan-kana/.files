@@ -1,4 +1,5 @@
 _: {
+  boot = import ./boot;
   identity = import ./identity.nix;
   privilege = import ./privilege.nix;
   privilegeSshAgent = import ./privilege-ssh-agent.nix;

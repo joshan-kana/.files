@@ -21,24 +21,16 @@
 
   imports = [
     inputs.spicetify-nix.nixosModules.spicetify
-    (moduleRegistry.profiles { }).desktop
   ];
 
   dotfiles = {
     rebuild.flags = "--impure";
+    scopes.system.boot.splash.enable = true;
   };
 
   hardware = import ./hardware.nix;
 
-  # Host boot policy. AppImage binfmt support is reusable and lives in its own
-  # semantic module below.
-  boot = {
-    loader = {
-      systemd-boot.enable = true;
-      efi.canTouchEfiVariables = true;
-    };
-    kernelPackages = pkgs.linuxPackages_latest;
-  };
+  boot.kernelPackages = pkgs.linuxPackages_latest;
 
   cli = extendScope moduleRegistry.cli {
     nvtop = _: {

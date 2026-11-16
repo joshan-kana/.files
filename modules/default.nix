@@ -59,5 +59,4 @@
   */
   backups = import ./backups;
 
-  profiles = import ./profiles;
 }

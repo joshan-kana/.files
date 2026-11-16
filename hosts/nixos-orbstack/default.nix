@@ -24,6 +24,7 @@
     paths.repoPath = "/Users/joshan/.files";
     services.ollama.url = "http://host.orb.internal:11434/v1";
     scopes = {
+      system.boot.loader.enable = false;
       networking = {
         mdns.enable = false;
         tailscaleClient.enable = false;
