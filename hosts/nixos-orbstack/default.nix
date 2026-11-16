@@ -16,6 +16,7 @@
     ;
 
   imports = [
+    ../../profiles/minimal.nix
     ./generated.nix
     "${modulesPath}/virtualisation/lxc-container.nix"
   ];
@@ -24,12 +25,12 @@
     paths.repoPath = "/Users/joshan/.files";
     services.ollama.url = "http://host.orb.internal:11434/v1";
     scopes = {
+      system.boot.loader.enable = false;
       networking = {
         mdns.enable = false;
         tailscaleClient.enable = false;
       };
       virtualisation = {
-        children.enable = false;
         vm.enable = true;
       };
       cli.codex.enable = false;
