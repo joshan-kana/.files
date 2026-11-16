@@ -630,7 +630,8 @@
       };
 
       systemd.tmpfiles.rules = [
-        "d ${storage.appData.root} 2770 root ${storage.appData.group.name} - -"
+        # Keep shared app storage writable by the group while protecting entries from other writers.
+        "d ${storage.appData.root} 3770 root ${storage.appData.group.name} - -"
         "a+ ${storage.appData.root} - - - - u:${primary.name}:rwx,g:${storage.appData.group.name}:rwx,d:u:${primary.name}:rwx,d:g:${storage.appData.group.name}:rwx"
         "a+ ${storage.dataRoot.path} - - - - u:${primary.name}:rwx,g:${storage.dataRoot.group.name}:rwx,d:u:${primary.name}:rwx,d:g:${storage.dataRoot.group.name}:rwx"
         "v ${storage.appData.root}/.snapshots 0750 root root - -"
