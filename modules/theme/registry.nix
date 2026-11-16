@@ -178,6 +178,51 @@ let
       };
     };
 
+    macos-dark = {
+      label = "macOS Dark";
+      colors = {
+        base00 = "1c1c1e";
+        base01 = "2c2c2e";
+        base02 = "3a3a3c";
+        base03 = "636366";
+        base04 = "aeaeb2";
+        base05 = "f2f2f7";
+        base06 = "ffffff";
+        base07 = "ffffff";
+        base08 = "ff453a";
+        base09 = "ff9f0a";
+        base0A = "ffd60a";
+        base0B = "30d158";
+        base0C = "64d2ff";
+        base0D = "0a84ff";
+        base0E = "bf5af2";
+        base0F = "ff375f";
+      };
+    };
+
+    macos-light = {
+      label = "macOS Light";
+      polarity = "light";
+      colors = {
+        base00 = "f5f5f7";
+        base01 = "e9e9ed";
+        base02 = "d6d6dc";
+        base03 = "77777f";
+        base04 = "5c5c64";
+        base05 = "242428";
+        base06 = "1d1d1f";
+        base07 = "111113";
+        base08 = "d92d20";
+        base09 = "b85d00";
+        base0A = "976500";
+        base0B = "248a3d";
+        base0C = "008c95";
+        base0D = "007aff";
+        base0E = "af52de";
+        base0F = "c5275f";
+      };
+    };
+
     neon = {
       label = "Neon";
       colors = {
