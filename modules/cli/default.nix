@@ -818,6 +818,14 @@ in
       environment.systemPackages = [ pkgs.systemd-manager-tui ];
     };
 
+  systemctl =
+    _:
+    lib.optionalAttrs isLinux {
+      home = _: {
+        home.shellAliases.s = "systemctl";
+      };
+    };
+
   xytz = _: {
     home = _: {
       home.packages = [ pkgs.xytz ];
