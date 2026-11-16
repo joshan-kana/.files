@@ -1,4 +1,14 @@
-{ inputs, ... }: {
+{
+  inputs,
+  lib,
+  system,
+  ...
+}:
+{
+  imports = lib.optionals (lib.systems.elaborate system).isLinux [
+    inputs.nix-openclaw.nixosModules.openclaw-gateway
+  ];
+
   nixpkgs.overlays = [
     (
       final: prev:

@@ -1,6 +1,5 @@
 {
   extendScope,
-  inputs,
   moduleRegistry,
   pkgs,
   ...
@@ -20,7 +19,6 @@
     ;
 
   imports = [
-    inputs.spicetify-nix.nixosModules.spicetify
     (moduleRegistry.profiles { }).desktop
   ];
 

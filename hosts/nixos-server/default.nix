@@ -1,7 +1,6 @@
 {
   editScope,
   extendScope,
-  inputs,
   moduleRegistry,
   ...
 }:
@@ -12,8 +11,6 @@
     ;
 
   imports = [
-    inputs.hermes-agent.nixosModules.default
-    inputs.nix-openclaw.nixosModules.openclaw-gateway
     ./options.nix
     ./hardware.nix
     (import ../../modules/virtualisation/containers/image-locking.nix {
@@ -118,7 +115,7 @@
         };
       })
       {
-        server = { config, inputs, ... }: {
+        server = { config, ... }: {
           boot.binfmt.emulatedSystems = [ "aarch64-linux" ];
 
           users.users.${config.dotfiles.users.primary.name} = {
@@ -127,10 +124,6 @@
             ];
             linger = true;
           };
-
-          home-manager.sharedModules = [
-            "${inputs.home-manager}/modules/programs/attic-client.nix"
-          ];
         };
       };
   networking =
