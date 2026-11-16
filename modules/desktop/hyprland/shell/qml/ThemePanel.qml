@@ -74,7 +74,7 @@ Item {
         }
     }
 
-    // Launch only; the scoped operation is owned and tracked by systemd.
+    // Launch only; the detached user service is owned and tracked by systemd.
     property StdioCollector switchErrors: StdioCollector {}
     property Process switchProcess: Process {
         stderr: panel.switchErrors
@@ -84,7 +84,7 @@ Item {
         }
     }
 
-    // The job is a systemd scope with persistent state/logs; the view only
+    // The job is a systemd user service with persistent state/logs; the view only
     // observes it, so shell restarts do not erase build progress or cancel it.
     property StdioCollector statusOutput: StdioCollector {}
     property StdioCollector logOutput: StdioCollector {}
@@ -125,7 +125,7 @@ Item {
         stdout: panel.logOutput
         onExited: (exitCode, exitStatus) => {
             if (exitCode === 0)
-                panel.operationLog = panel.logOutput.text.replace(/\x1b\[[0-9;]*[A-Za-z]/g, "").replace(/\r/g, "").trim();
+                panel.operationLog = panel.logOutput.text.replace(/\x1b\[[0-9;]*K/g, "\n").replace(/\x1b\[[0-9;]*[A-Za-z]/g, "").replace(/\r/g, "\n").trim();
         }
     }
     property Timer operationPoll: Timer {
