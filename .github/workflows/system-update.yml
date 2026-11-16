@@ -32,6 +32,7 @@ jobs:
     timeout-minutes: 60
     env:
       GH_TOKEN: ${{ github.token }}
+      GITHUB_TOKEN: ${{ github.token }}
       UPDATE_BRANCH: system-update
 
     steps:
