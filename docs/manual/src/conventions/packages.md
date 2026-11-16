@@ -29,6 +29,8 @@ Prefer a narrow override of the existing nixpkgs derivation over replacing it. A
 
 A package's `overlays/<package>/default.nix` owns its durable definition and customizations. Place temporary compatibility overrides in a sibling `overlays/<package>/temporary.nix`, composed **after** the durable overlay in the same `nixpkgs.overlays` list. Where several independent fixes need separate removal, use separate sibling Nix files with descriptive names. Keep downstream patch contents in root `patches/<package>/`.
 
+Prefer `overrideAttrs` for temporary derivation adjustments and update-policy changes. Use package-specific override mechanisms where necessary, preserving the package interfaces consumed by downstream modules and callers.
+
 Each temporary override must set `passthru.autoUpdate = false` on every affected package, preserving other `passthru` attributes. Applying it last takes precedence over any `passthru.autoUpdate = true` in the durable package definition. For package-set extensions, set the policy on the affected derivation rather than on the extension list. Do not add a separate lifecycle registry or upstream-fix metadata.
 
 A purely temporary package override can have a `default.nix` that only composes its sibling `temporary.nix`. Keep the entry in the central overlay registry until the whole override is no longer needed. Document the technical reason and removal condition beside the fix, without coupling it to a particular update run or issue. Preserve intentional customization independently of compatibility changes.
