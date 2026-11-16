@@ -12,6 +12,7 @@
     ;
 
   imports = [
+    ../../profiles/minimal.nix
     inputs.hermes-agent.nixosModules.default
     inputs.nix-openclaw.nixosModules.openclaw-gateway
     ./options.nix
@@ -24,18 +25,11 @@
   dotfiles = {
     scopes.networking.tailscaleClient.enable = false;
     scopes.virtualisation = {
-      children.enable = false;
       containers.enable = true;
       vm.enable = true;
     };
     scopes.cli = {
       systemCommands.vm.enable = false;
-      clipboard.enable = false;
-      mpv.enable = false;
-      ollama.enable = false;
-      cava.enable = false;
-      ncmpcpp.enable = false;
-      xytz.enable = false;
       stow.enable = false;
       killall.enable = false;
       xdgUtils.enable = false;

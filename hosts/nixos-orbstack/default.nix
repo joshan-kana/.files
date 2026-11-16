@@ -16,6 +16,7 @@
     ;
 
   imports = [
+    ../../profiles/minimal.nix
     ./generated.nix
     "${modulesPath}/virtualisation/lxc-container.nix"
   ];
@@ -30,7 +31,6 @@
         tailscaleClient.enable = false;
       };
       virtualisation = {
-        children.enable = false;
         vm.enable = true;
       };
       cli.codex.enable = false;
