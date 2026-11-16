@@ -3,5 +3,6 @@ _: {
     (_final: prev: {
       ncmpcpp = prev.ncmpcpp.override { visualizerSupport = true; };
     })
+    (import ./temporary.nix)
   ];
 }

@@ -16,6 +16,7 @@ _: {
     ./nixd
     ./nix-update
     ./ollama
+    ./paperless-ngx
     ./polkit
     ./nixos-options-doc
     ./tuicr

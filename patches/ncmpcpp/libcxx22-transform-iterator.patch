@@ -1,0 +1,128 @@
+Backport: ncmpcpp/ncmpcpp@10718bbfb69ad54d54324d3e4e86514815d4245c
+Fix libc++ 22 use of Boost transform iterator proxy references.
+
+diff --git a/src/Makefile.am b/src/Makefile.am
+index 02675227f..14daae2b2 100644
+--- a/src/Makefile.am
++++ b/src/Makefile.am
+@@ -96,6 +96,7 @@ noinst_HEADERS = \
+ 	utility/storage_kind.h \
+ 	utility/shared_resource.h \
+ 	utility/string.h \
++	utility/transform_iterator.h \
+ 	utility/type_conversions.h \
+ 	utility/wide_string.h \
+ 	bindings.h \
+diff --git a/src/curses/menu.h b/src/curses/menu.h
+index 717387165..21428d590 100644
+--- a/src/curses/menu.h
++++ b/src/curses/menu.h
+@@ -21,7 +21,6 @@
+ #ifndef NCMPCPP_MENU_H
+ #define NCMPCPP_MENU_H
+ 
+-#include <boost/iterator/transform_iterator.hpp>
+ #include <boost/range/detail/any_iterator.hpp>
+ #include <cassert>
+ #include <functional>
+@@ -33,6 +32,7 @@
+ #include "curses/strbuffer.h"
+ #include "curses/window.h"
+ #include "utility/const.h"
++#include "utility/transform_iterator.h"
+ 
+ namespace NC {
+ 
+@@ -242,19 +242,19 @@ struct Menu: Window, List
+ 	typedef std::reverse_iterator<Iterator> ReverseIterator;
+ 	typedef std::reverse_iterator<ConstIterator> ConstReverseIterator;
+ 
+-	typedef boost::transform_iterator<
++	typedef TransformIterator<
+ 		typename Item::template ExtractValue<Const::No>,
+ 		Iterator> ValueIterator;
+-	typedef boost::transform_iterator<
++	typedef TransformIterator<
+ 		typename Item::template ExtractValue<Const::Yes>,
+ 		ConstIterator> ConstValueIterator;
+ 	typedef std::reverse_iterator<ValueIterator> ReverseValueIterator;
+ 	typedef std::reverse_iterator<ConstValueIterator> ConstReverseValueIterator;
+ 	
+-	typedef boost::transform_iterator<
++	typedef TransformIterator<
+ 		typename Item::template ExtractProperties<Const::No>,
+ 		Iterator> PropertiesIterator;
+-	typedef boost::transform_iterator<
++	typedef TransformIterator<
+ 		typename Item::template ExtractProperties<Const::Yes>,
+ 		ConstIterator> ConstPropertiesIterator;
+ 
+diff --git a/src/utility/transform_iterator.h b/src/utility/transform_iterator.h
+new file mode 100644
+index 000000000..1c5dc33b0
+--- /dev/null
++++ b/src/utility/transform_iterator.h
+@@ -0,0 +1,63 @@
++/***************************************************************************
++ *   Copyright (C) 2008-2026 by Andrzej Rybczak                            *
++ *   andrzej@rybczak.net                                                   *
++ *                                                                         *
++ *   This program is free software; you can redistribute it and/or modify  *
++ *   it under the terms of the GNU General Public License as published by  *
++ *   the Free Software Foundation; either version 2 of the License, or     *
++ *   (at your option) any later version.                                   *
++ *                                                                         *
++ *   This program is distributed in the hope that it will be useful,       *
++ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
++ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
++ *   GNU General Public License for more details.                          *
++ *                                                                         *
++ *   You should have received a copy of the GNU General Public License     *
++ *   along with this program; if not, write to the                         *
++ *   Free Software Foundation, Inc.,                                       *
++ *   51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.              *
++ ***************************************************************************/
++
++#ifndef NCMPCPP_UTILITY_TRANSFORM_ITERATOR_H
++#define NCMPCPP_UTILITY_TRANSFORM_ITERATOR_H
++
++#include <boost/iterator/iterator_adaptor.hpp>
++#include <iterator>
++#include <type_traits>
++
++/// Like boost::transform_iterator, but operator[] returns the same reference
++/// as *(it + n) instead of a proxy object. boost::iterator_facade returns a
++/// proxy from operator[] for every non-POD value type. Template argument
++/// deduction fails on the proxy, so a comparator with a templated operator()
++/// doesn't compile with libc++ >= 22, which passes it[n] to the comparator in
++/// std::sort, see https://github.com/llvm/llvm-project/issues/223290.
++/// FunctionT must be default constructible and stateless.
++template <typename FunctionT, typename IteratorT>
++class TransformIterator : public boost::iterator_adaptor<
++	TransformIterator<FunctionT, IteratorT>,
++	IteratorT,
++	std::remove_reference_t<
++		std::invoke_result_t<const FunctionT &, typename std::iterator_traits<IteratorT>::reference>
++	>,
++	boost::use_default,
++	std::invoke_result_t<const FunctionT &, typename std::iterator_traits<IteratorT>::reference>
++>
++{
++	friend class boost::iterator_core_access;
++	typedef typename TransformIterator::iterator_adaptor_ Base;
++
++public:
++	TransformIterator() { }
++	explicit TransformIterator(IteratorT it) : Base(it) { }
++
++	typename Base::reference operator[](typename Base::difference_type n) const {
++		return *(*this + n);
++	}
++
++private:
++	typename Base::reference dereference() const {
++		return FunctionT()(*this->base());
++	}
++};
++
++#endif // NCMPCPP_UTILITY_TRANSFORM_ITERATOR_H
