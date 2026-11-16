@@ -49,6 +49,7 @@ _: {
     ./qmk-toolbox
     ./reaper
     ./squirreldisk
+    ./spicetify
     ./seerr
     ./vial
     ./determinate-nix
