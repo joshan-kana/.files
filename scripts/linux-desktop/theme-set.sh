@@ -8,9 +8,13 @@ set_phase() {
 
 finish_operation() {
   result=$?
+  # Cancellation is terminal even when a stopped worker exits successfully.
+  if [ "$(cat "$operationDir/phase" 2>/dev/null || :)" = cancelled ]; then
+    return
+  fi
   if [ "$result" -eq 0 ]; then
     set_phase completed
-  elif [ "$(cat "$operationDir/phase" 2>/dev/null || :)" != cancelled ]; then
+  else
     set_phase failed
   fi
 }
@@ -65,8 +69,8 @@ switch)
     printf 'Theme chooser is configured for user %s\n' "$expectedUser" >&2
     exit 1
   fi
-  if [ "${3:-}" != "--scoped" ]; then
-    # Serialize launch before a transient scope becomes visible.
+  if [ "${3:-}" != "--worker" ]; then
+    # Serialize launch before the transient service becomes visible.
     exec 8>"${XDG_RUNTIME_DIR:?}/linux-desktop-theme-switch.lock"
     if ! flock -n 8 || systemctl --user --quiet is-active "$operationUnit"; then
       printf 'A theme activation is already running.\n' >&2
@@ -81,7 +85,7 @@ switch)
     chmod 600 "$operationDir/output.log" "$operationDir/target"
     set_phase preparing
     flock -u 9
-    if ! systemd-run --user --scope --quiet --collect --unit=linux-desktop-theme-apply --description="Apply desktop theme $selected" -- "$0" switch "$selected" --scoped; then
+    if ! systemd-run --user --quiet --collect --service-type=exec --unit=linux-desktop-theme-apply --description="Apply desktop theme $selected" -- "$0" switch "$selected" --worker; then
       flock -x 9
       if [ "$(cat "$operationDir/phase" 2>/dev/null || :)" != cancelled ]; then
         set_phase failed

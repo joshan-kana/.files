@@ -499,7 +499,7 @@ in
                     expectedUser=${lib.escapeShellArg osConfig.dotfiles.users.primary.name}
                     configurationName=${lib.escapeShellArg configurationName}
                     operationDir="''${XDG_STATE_HOME:-$HOME/.local/state}/linux-desktop/theme-operation"
-                    operationUnit=linux-desktop-theme-apply.scope
+                    operationUnit=linux-desktop-theme-apply.service
                   ''
                   + builtins.readFile ../../scripts/linux-desktop/theme-set.sh;
                 };
