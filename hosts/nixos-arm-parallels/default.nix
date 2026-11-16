@@ -21,8 +21,9 @@
     ;
 
   imports = [
-    (moduleRegistry.profiles { }).desktop
   ];
+
+  dotfiles.scopes.system.boot.splash.enable = true;
 
   hardware = import ./hardware.nix;
 
@@ -54,10 +55,6 @@
 
   boot = {
     initrd.kernelModules = [ "virtio_gpu" ];
-    loader = {
-      systemd-boot.enable = true;
-      efi.canTouchEfiVariables = true;
-    };
     kernelPackages = pkgs.linuxPackages_latest;
   };
 

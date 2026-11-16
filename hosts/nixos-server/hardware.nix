@@ -29,15 +29,6 @@
     kernelModules = [ "kvm-intel" ];
     extraModulePackages = [ ];
 
-    loader = {
-      systemd-boot = {
-        enable = true;
-        configurationLimit = 10;
-      };
-      efi.canTouchEfiVariables = true;
-      timeout = lib.mkDefault 1;
-    };
-
     supportedFilesystems = [ "btrfs" ];
   };
 
