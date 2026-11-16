@@ -5,8 +5,8 @@ _: {
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
         raycast = import ../../lib/mac-app.nix { inherit prev; } {
           release = {
-            version = "2.11.1.0";
-            hash = "sha256-d34/vgje5B2IY5zLSccIk8Yfhfkttt3Jroaaj6ZTV1o=";
+            version = "2.12.1.0";
+            hash = "sha256-jTBkkcTHb8AxJwElSZYEHgD2tlh8ZnFMYy1k2/6egJY=";
           };
           pname = "raycast";
           appName = "Raycast.app";

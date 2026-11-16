@@ -10,8 +10,8 @@ _: {
             }
             {
               release = {
-                version = "7.84";
-                hash = "sha256-n2h69TSAoetSg5d+kIhFOfDnT0HoS6lTRV3H7NPUJTA=";
+                version = "7.86";
+                hash = "sha256-JZ8UDszZGbV9H69bKFGjXKB33ZmTynzF6yjW1Xt3eGY=";
               };
               pname = "reaper";
               appName = "REAPER.app";

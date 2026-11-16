@@ -6,8 +6,8 @@ _: {
         dropbox = import ../../lib/mac-app.nix { inherit prev; } {
           pname = "dropbox";
           release = {
-            version = "276.4.5325";
-            hash = "sha256-j4W2M/Q9vW2bSg2Y1xg/AJSsJJEiWGPycu3XQZNoJk0=";
+            version = "278.4.4020";
+            hash = "sha256-NhE4US2fNnUW+lNiMNlvg49eZDuWE6nR0sanBoafRe0=";
           };
           appName = "Dropbox.app";
           homepage = "https://dropbox.com/";

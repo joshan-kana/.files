@@ -10,8 +10,8 @@ _: {
             }
             {
               release = {
-                version = "7.41.1";
-                hash = "sha256-wUBajZ+ibKuNDSIQWfhIw5vs6wRJAmdT1QH6JhenLlA=";
+                version = "7.44.0";
+                hash = "sha256-U1QDpD7dvcuhZpUq5vOE3PjQanp1H5AzhPH/sELZY4c=";
               };
               pname = "notion-app";
               appName = "Notion.app";
