@@ -1,5 +1,5 @@
 {
-  description = "Theme-selectable NixOS configurations";
+  description = "Theme-selectable NixOS and Darwin configurations";
 
   outputs =
     { self }:
@@ -10,5 +10,6 @@
     in
     {
       nixosConfigurations = dotfiles.lib.themedNixosConfigurations;
+      darwinConfigurations = dotfiles.lib.themedDarwinConfigurations;
     };
 }
