@@ -27,6 +27,8 @@ Use native NixOS/Home Manager options inside semantic scopes. Shared behaviour b
 
 `docs` builds reference pages from evaluated Nix together with operational runbooks. Generated reference pages are build artifacts and are not committed.
 
+The [contributor conventions](docs/manual/src/conventions/index.md) are part of the manual.
+
 The cross-project operating handbook is included as the `docs/infrastructure-docs` submodule.
 
 ## Repository layout
