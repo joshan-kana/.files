@@ -24,9 +24,16 @@ Prefer a narrow override of the existing nixpkgs derivation over replacing it. A
 - For a broken nixpkgs revision, use a file-local, immutable `builtins.getFlake` reference to the latest known-good (or fixed) nixpkgs revision and select the target system's `legacyPackages`. Do not turn a temporary compatibility pin into a permanent flake input.
 - If the stock derivation only needs a newer source or a small fix, override the relevant attributes or apply a patch.
 - If nixpkgs cannot provide the required functionality, use the upstream flake, official binary, or source-build fallback in that order.
-- Document the technical reason and upstream resolution condition beside an exception. Remove the overlay once the stock package passes the required checks.
 
-A permanent customization and a temporary compatibility fix may coexist in one overlay. Give each a clear technical reason and keep the temporary fix independently removable without discarding the intentional customization. Do not add a second metadata flag or registry to distinguish them when the purpose and upstream exit condition can be stated at the owning definition.
+### Temporary compatibility overrides
+
+A package's `overlays/<package>/default.nix` owns its durable definition and customizations. Place temporary compatibility overrides in a sibling `overlays/<package>/temporary.nix`, composed **after** the durable overlay in the same `nixpkgs.overlays` list. Where several independent fixes need separate removal, use separate sibling Nix files with descriptive names. Keep downstream patch contents in root `patches/<package>/`.
+
+Each temporary override must set `passthru.autoUpdate = false` on every affected package, preserving other `passthru` attributes. Applying it last takes precedence over any `passthru.autoUpdate = true` in the durable package definition. For package-set extensions, set the policy on the affected derivation rather than on the extension list. Do not add a separate lifecycle registry or upstream-fix metadata.
+
+A purely temporary package override can have a `default.nix` that only composes its sibling `temporary.nix`. Keep the entry in the central overlay registry until the whole override is no longer needed. Document the technical reason and removal condition beside the fix, without coupling it to a particular update run or issue. Preserve intentional customization independently of compatibility changes.
+
+When the stock package or upstream source may have resolved the problem, remove only the temporary overlay and its import in an isolated change, then evaluate and build every affected platform and perform relevant runtime checks. Remove unreferenced downstream patches at the same time. The durable package's original `autoUpdate` setting applies again automatically, without a manual reset. If the package has no remaining customizations, remove its now-empty overlay registration and directory as well.
 
 Do not preserve a fork or compatibility pin merely because it already exists.
 
