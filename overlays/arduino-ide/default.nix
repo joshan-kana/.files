@@ -10,8 +10,8 @@ _: {
             }
             {
               release = {
-                version = "2.3.10";
-                hash = "sha256-iBGGDch4K2zWuwB26SFSVYSfQEsbnm84Bp/cT1xDZI4=";
+                version = "2.3.11";
+                hash = "sha256-vXDTbhJZQ4VcJzCMl3AtaacBcEF0Gm8SNzQwBCQ5C/c=";
               };
               pname = "arduino-ide";
               appName = "Arduino IDE.app";
