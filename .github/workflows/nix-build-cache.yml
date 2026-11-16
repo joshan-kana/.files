@@ -50,6 +50,7 @@ jobs:
         with:
           extra_nix_config: |
             accept-flake-config = true
+            access-tokens = github.com=${{ github.token }}
             experimental-features = nix-command flakes
 
       - name: Discover fleet
@@ -136,6 +137,9 @@ jobs:
 
       - name: Install Nix
         uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            access-tokens = github.com=${{ github.token }}
 
       - name: Join tailnet
         uses: tailscale/github-action@v4
