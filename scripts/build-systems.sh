@@ -19,4 +19,4 @@ if ((${#targets[@]} == 0)); then
   exit 1
 fi
 
-exec rom build "${targets[@]}" -- -L --no-link "$@"
+exec rom build "${targets[@]}" -- --keep-going -L --no-link "$@"
