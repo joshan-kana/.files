@@ -57,6 +57,7 @@ Column {
             runtime: root.runtime
             theme: root.theme
             hints: root.hints
+            trailing: true
         }
     }
 

@@ -167,7 +167,10 @@ test("detail navigation has one global Escape hint and locally owned movement hi
   assert.match(strip, /opacity: 0\s*enabled: false/);
   assert.match(strip, /if \(!hint \|\| strip\.hints\[i\]\.visible === false\)/);
   assert.doesNotMatch(strip, /visible: false\s*Repeater/);
-  assert.match(strip, /anchors\.horizontalCenter: parent\.horizontalCenter/);
+  assert.match(
+    strip,
+    /x: strip\.trailing \? Math\.max\(0, parent\.width - implicitWidth\)/,
+  );
   assert.match(strip, /occupied \+ strip\.groupSpacing \+ width > limit/);
 });
 
