@@ -1,95 +1,121 @@
 # Installation guide for `nixos-pi`
 
-`nixos-pi` uses a flashable ARM64 NixOS SD-card image. The image inherits the workstation profile, with Raspberry Pi firmware and a Btrfs root filesystem. The FAT firmware partition remains separate from the root filesystem. No NixOS installer ISO or target-side partitioning is required.
+This installation uses a flashable ARM64 NixOS SD-card image with a FAT firmware partition and a Btrfs root filesystem. The root partition grows to fill the microSD card on first boot.
 
-The image is built without credentials, provisioned on the installation computer, then flashed to the microSD card. Flashing **erases the entire selected card**. Keep existing card data safe before proceeding.
+## Target configuration
 
-## Current evaluated target
-
-The generated environment below is derived from `nixosConfigurations.nixos-pi`, including host identity, filesystems and secret paths. These values replace manually maintained paths and labels in the installation commands:
+Run the generated exports in the shell used to prepare the image:
 
 ```sh
 {{#include ../../generated/hosts/nixos-pi.sh}}
 ```
 
-To make this environment available to a shell outside the built manual, generate it from the current checkout:
-
-```sh
-nix build .#docs-source --out-link result-pi-docs
-source result-pi-docs/src/generated/hosts/nixos-pi.sh
-```
-
-The remaining commands assume that the environment is loaded. Rebuild it after changing the host configuration; do not reuse values from an older revision.
-
 ## Build the image
 
-A native `aarch64-linux` builder is required. On macOS, the configured OrbStack Linux builder can provide this; Linux ARM64 can build directly, while other systems need an ARM64 Linux builder or emulation.
+Build with an `aarch64-linux` builder. Native ARM64 Linux, a configured Linux remote builder, or the OrbStack NixOS builder on macOS can provide the required build environment.
+
+From the repository root:
 
 ```sh
 nix build .#nixos-pi-image --out-link result-pi
 IMAGE_DIR="$HOME/Downloads/$HOST_NAME"
 mkdir -p -m 0700 "$IMAGE_DIR"
 nix shell nixpkgs#zstd -c zstd -dc result-pi/sd-image/*.img.zst > "$IMAGE_DIR/system.img"
-cp result-pi-docs/src/generated/hosts/nixos-pi.sh "$IMAGE_DIR/host.sh"
 ```
 
-The built `.img.zst` and generated host configuration contain no secrets. The writable `system.img` is where credentials are provisioned; it must not be committed or uploaded.
+Keep the compressed Nix build output unchanged. Provision only the writable `system.img` copy.
 
-## Provision the root filesystem
+## Install credentials into the image
 
-Use Linux to mount the Btrfs partition **inside the writable image**. A Mac can run the supplied Linux script through OrbStack; on Windows use a Linux VM with access to the image. The script checks the evaluated root label and filesystem before writing, then installs only the supplied secret files at the evaluated runtime paths and unmounts the image. No credentials pass through a Nix derivation or the FAT firmware partition.
+The provisioning script runs on Linux. On macOS, use the OrbStack NixOS machine to operate on the same image file. The script mounts the root partition inside the writable image and copies credentials to their configured runtime locations, without passing them through the Nix store.
 
-Prepare a directory containing the secret files needed by this host, including the Git deployment key used by Comin. Keep service secrets from other hosts out of this directory. For encrypted secrets backups, prepare a second directory with the bootstrap files named by the evaluated `SECRETS_RCLONE_CONFIG` and `SECRETS_PASSWORD_FILE` paths.
-
-Choose the source directories once:
+Prepare a local directory containing only the credentials required by this host, including its Comin Git credential. If the host uses encrypted Restic backups, prepare a second directory with the bootstrap files named by `SECRETS_RCLONE_CONFIG` and `SECRETS_PASSWORD_FILE`.
 
 ```sh
-printf '%s' 'Directory containing Pi secrets: '
+printf '%s' 'Host secrets directory: '
 read -r PI_SECRETS_SOURCE
-printf 'Directory containing backup bootstrap files (blank to skip): '
+printf '%s' 'Backup bootstrap directory (leave empty if unavailable): '
 read -r PI_BACKUP_SOURCE
-```
 
-On **macOS with OrbStack**, execute the provisioning script in the Linux guest:
-
-```sh
-PI_ARGS=("$IMAGE_DIR/host.sh" "$IMAGE_DIR/system.img" "$PI_SECRETS_SOURCE")
+PI_ARGS=("$IMAGE_DIR/system.img" "$PI_SECRETS_SOURCE")
 if [ -n "$PI_BACKUP_SOURCE" ]; then
   PI_ARGS+=("$PI_BACKUP_SOURCE")
 fi
-orb -m nixos-orbstack -u root bash \
-  "$PWD/scripts/nixos-pi-provision-image.sh" "${PI_ARGS[@]}"
+
+PI_ENV=(
+  "ROOT_DEVICE=$ROOT_DEVICE"
+  "ROOT_FS=$ROOT_FS"
+  "PRIMARY_HOME=$PRIMARY_HOME"
+  "USER_SECRETS_DIR=$USER_SECRETS_DIR"
+  "SECRETS_RCLONE_CONFIG=$SECRETS_RCLONE_CONFIG"
+  "SECRETS_PASSWORD_FILE=$SECRETS_PASSWORD_FILE"
+)
 ```
 
-On **NixOS Linux**, run the same script through `run0`. Other Linux distributions can use their privileged execution tool (such as `sudo`) instead:
+On **macOS with OrbStack**:
 
 ```sh
-PI_ARGS=("$IMAGE_DIR/host.sh" "$IMAGE_DIR/system.img" "$PI_SECRETS_SOURCE")
-if [ -n "$PI_BACKUP_SOURCE" ]; then
-  PI_ARGS+=("$PI_BACKUP_SOURCE")
-fi
-run0 ./scripts/nixos-pi-provision-image.sh "${PI_ARGS[@]}"
+orb -m nixos-orbstack -u root env "${PI_ENV[@]}" \
+  bash "$(pwd -P)/scripts/nixos-pi-provision-image.sh" "${PI_ARGS[@]}"
 ```
 
-The image is now credential-bearing. Protect it on encrypted local storage, keep the SD card under your control, and dispose of the writable image after the card is flashed. Deleting data from an SD card does not securely erase previously written blocks.
+On **NixOS Linux**:
 
-## Flash the card
+```sh
+run0 env "${PI_ENV[@]}" \
+  bash ./scripts/nixos-pi-provision-image.sh "${PI_ARGS[@]}"
+```
 
-Use [Raspberry Pi Imager](https://www.raspberrypi.com/software/) on macOS, Linux or Windows. Choose **Use custom** and select the provisioned `system.img`, then verify the destination SD card before flashing. Do not apply Raspberry Pi OS customization. Safely eject the card afterward.
+On another Linux distribution, run the same command with its supported privilege elevation tool instead of `run0`. The provisioning script requires `losetup`, `blkid`, `mount`, `find`, `install`, `realpath` and standard GNU utilities. Install missing tools through the distribution's existing environment or `nix shell nixpkgs#util-linux nixpkgs#coreutils`.
 
-Alternatively, use a trusted whole-disk flashing tool on the host OS. Never flash just the root partition: the complete image includes the Pi firmware partition and bootloader.
+The provisioned image contains private credentials on an unencrypted filesystem. Keep it on trusted, encrypted local storage and delete it after successful flashing. Do not distribute the provisioned image.
+
+## Flash the microSD card
+
+Use [Raspberry Pi Imager](https://www.raspberrypi.com/software/) or [balenaEtcher](https://etcher.balena.io/) on macOS, Linux or Windows. Select **custom image**, choose `$IMAGE_DIR/system.img`, and confirm the destination device by model and capacity. Do not apply Raspberry Pi OS customization. Flashing overwrites the card's existing partitions and contents.
+
+For command-line flashing, inspect the removable devices first:
+
+```sh
+# Linux
+lsblk -o NAME,PATH,SIZE,MODEL,TRAN,RM,MOUNTPOINTS
+
+# macOS
+diskutil list external physical
+```
+
+On **Linux**, after unmounting any mounted partitions on the chosen card:
+
+```sh
+printf '%s' 'Whole-disk path for the microSD card: '
+read -r SD_DISK
+run0 dd if="$IMAGE_DIR/system.img" of="$SD_DISK" bs=4M status=progress conv=fsync
+sync
+```
+
+On **macOS**:
+
+```sh
+printf '%s' 'MicroSD disk (such as /dev/diskN): '
+read -r SD_DISK
+diskutil unmountDisk "$SD_DISK"
+sudo dd if="$IMAGE_DIR/system.img" of="/dev/r${SD_DISK#/dev/}" bs=4m
+diskutil eject "$SD_DISK"
+```
+
+**Verify `SD_DISK` before running `dd`.** It must name the entire removable card, not an individual partition or the computer's internal drive. Safely eject the card and insert it into the powered-off Pi.
 
 ## First boot
 
-Insert the SD card into the Pi and connect a keyboard, display and power. The image expands the root partition and Btrfs filesystem on first boot. Files installed under the evaluated user-secret path receive their normal ownership during system initialization.
+Connect a keyboard, monitor, network and power. The Btrfs root partition expands on first boot. The regular user and secret-directory ownership are initialized by NixOS.
 
-The normal workstation account policy applies. **Change the initial login password immediately on the local console**, before connecting the machine to an untrusted network:
+Change the initial workstation password at the local console before connecting to untrusted networks:
 
 ```sh
 passwd
 ```
 
-After networking is available, check the installed system and media stack:
+Check the system, deployer and desktop:
 
 ```sh
 hostname
@@ -100,7 +126,7 @@ systemctl status comin --no-pager
 systemctl status display-manager --no-pager
 ```
 
-Comin follows the approved branch after its Git key has been provisioned. Reload the generated environment before following the shared secrets-backup procedure on the Pi:
+Reload the generated host exports before verifying or initializing its secrets backup:
 
 ```sh
 {{#include ../../generated/hosts/nixos-pi.sh}}
@@ -108,4 +134,4 @@ Comin follows the approved branch after its Git key has been provisioned. Reload
 
 {{#include ../_shared/secrets-backup-first-boot.inc}}
 
-Check HDMI graphics, sound, MPV and Jellyfin playback on the physical Pi. ARM64 evaluation does not establish hardware decoder support or smooth playback for any given format. To recover the machine, regenerate the image from the reviewed configuration, provision a fresh writable copy using the required runtime secrets, and reflash the SD card.
+Test HDMI output and audio, MPV playback, and Jellyfin MPV Shim on the Pi. Video decoding and codec compatibility depend on the actual hardware and media. Reinstall by building a fresh image, provisioning it from the host's credential sources, and reflashing the card. Restore additional mutable data from its normal backups where applicable.
