@@ -59,7 +59,6 @@ _: {
     ./matrix-bridges
     ./neodisk
     ./ncmpcpp
-    ./mpv
     ./xytz
     ./openclaw
     ./openai-tunnel-client
