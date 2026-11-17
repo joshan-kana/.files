@@ -6,6 +6,37 @@ const path = require("node:path");
 const base = path.join(__dirname, "../modules/desktop/hyprland/shell/qml");
 const read = (name) => fs.readFileSync(path.join(base, name), "utf8");
 
+// Evaluate the QML layout expressions with varying widths, text scales and
+// tile counts so changes to the actual bindings cannot silently break wrapping.
+const tileLayout = (controls, width, textScale, count, spacing = 8) => {
+  const canvas = controls
+    .split("id: controlTiles")[1]
+    .split("QuickSettingChip {")[0];
+  const scope = {
+    root: { theme: { textScale } },
+    width,
+    spacing,
+    children: { length: count },
+  };
+  for (const property of [
+    "minimumTileWidth",
+    "capacity",
+    "rows",
+    "columns",
+    "cellWidth",
+  ]) {
+    const expression = canvas.match(
+      new RegExp(`readonly property (?:real|int) ${property}: ([^\n]+)`),
+    )?.[1];
+    assert.ok(expression, `missing QML tile layout binding ${property}`);
+    scope[property] = new Function(
+      ...Object.keys(scope),
+      `return (${expression});`,
+    )(...Object.values(scope));
+  }
+  return scope;
+};
+
 test("hover and press motion on shared Controls tiles stays inside the clipped viewport", () => {
   for (const name of [
     "QuickSettingChip.qml",
@@ -28,20 +59,25 @@ test("hover and press motion on shared Controls tiles stays inside the clipped v
   }
 });
 
-test("nine Controls visual modes form two consistent rows at normal desktop width", () => {
+test("Visual Modes and Quick Actions share one continuous 14-tile canvas", () => {
   const controls = read("SystemContent.qml");
-  assert.match(controls, /width < 450 \? 3 : 5/);
-  assert.match(controls, /const row = Math\.floor\(index \/ columns\)/);
-  assert.match(
-    controls,
-    /const itemsInRow = Math\.min\(columns, 9 - row \* columns\)/,
+  const tiles = controls
+    .split("id: controlTiles")[1]
+    .split("ShellSurface {")[0];
+  assert.equal(
+    (tiles.match(/width: controlTiles\.cellWidth/g) || []).length,
+    14,
   );
-  assert.match(
+  assert.equal((tiles.match(/QuickSettingChip \{/g) || []).length, 11);
+  assert.equal((tiles.match(/OpacitySetting \{/g) || []).length, 2);
+  assert.equal((tiles.match(/AdjustableSetting \{/g) || []).length, 1);
+  assert.match(controls, /id: quickActionsHeading/);
+  assert.match(controls, /text: "VISUAL MODES"/);
+  assert.match(controls, /text: "· QUICK ACTIONS"/);
+  assert.doesNotMatch(
     controls,
-    /return \(width - spacing \* \(itemsInRow - 1\)\) \/ itemsInRow/,
+    /id: (?:visualModeStrip|actionStrip|commandRight)/,
   );
-  assert.match(controls, /id: visualModeStrip/);
-  assert.match(controls, /visualModeStrip\.cellWidth\(8\)/);
 });
 
 test("night light uses inline, interactive slider with value and shared KeyHint", () => {
@@ -152,40 +188,34 @@ test("global Escape footer reflects slider-selection focus without adding widget
   );
 });
 
-test("the final Visual Modes row spans the full width with four tiles, not a phantom fifth", () => {
+test("tile rows adapt to panel width, text scale and added or removed actions", () => {
   const controls = read("SystemContent.qml");
-  const section = controls
-    .split("id: visualModeStrip")[1]
-    .split("ShellSurface {")[0];
-  const match = section.match(
-    /function cellWidth\(index: int\): real \{([\s\S]*?)\n\s+\}/,
-  );
-  assert.ok(match);
-  const cellWidth = new Function(
-    "index",
-    "columns",
-    "width",
-    "spacing",
-    match[1],
-  );
-  for (const columns of [1, 2, 3, 5]) {
-    const width = 670,
-      spacing = 8;
-    for (let row = 0; row < Math.ceil(9 / columns); row++) {
-      const first = row * columns;
-      const count = Math.min(columns, 9 - first);
-      const widths = Array.from({ length: count }, (_, j) =>
-        cellWidth(first + j, columns, width, spacing),
-      );
-      assert.ok(widths.every((v) => v > 0));
-      const used = widths.reduce((a, v) => a + v, 0) + (count - 1) * spacing;
-      assert.ok(
-        Math.abs(used - width) < 0.001,
-        `row ${row} of ${columns}-column layout must fill the strip`,
-      );
+  for (const width of [320, 420, 560, 860, 1120]) {
+    for (const scale of [1, 1.25, 1.5, 2]) {
+      for (const count of [1, 5, 9, 12, 13, 14, 15, 16, 17, 21, 22]) {
+        const layout = tileLayout(controls, width, scale, count);
+        assert.ok(layout.columns >= 1 && layout.columns <= layout.capacity);
+        assert.ok(layout.rows * layout.columns >= count);
+        assert.ok((layout.rows - 1) * layout.columns < count);
+        assert.ok(layout.cellWidth >= layout.minimumTileWidth - 0.01);
+        assert.ok(
+          layout.columns * layout.cellWidth + (layout.columns - 1) * 8 <=
+            width + 0.01,
+        );
+      }
     }
   }
-  assert.ok(cellWidth(5, 5, 670, 8) > cellWidth(0, 5, 670, 8));
+  for (const [width, scale, count, columns, rows] of [
+    [1120, 1, 14, 7, 2],
+    [1120, 1, 15, 5, 3],
+    [1120, 1, 16, 6, 3],
+    [1120, 1.5, 14, 5, 3],
+    [560, 1, 14, 3, 5],
+  ]) {
+    const layout = tileLayout(controls, width, scale, count);
+    assert.equal(layout.columns, columns);
+    assert.equal(layout.rows, rows);
+  }
 });
 
 test("one focused Controls handler owns forward and reverse slider traversal", () => {
@@ -273,16 +303,17 @@ test("modifier-only keys cannot clear slider selection across repeated Shift+Tab
   assert.doesNotMatch(host, /sequence: "Shift\+Tab"/);
 });
 
-test("Controls keeps a single responsive dashboard with existing dedicated details", () => {
+test("Controls keeps paired primary controls and one responsive canvas above audio/media", () => {
   const controls = read("SystemContent.qml");
   assert.match(controls, /id: commandMatrix/);
+  assert.match(controls, /id: tileCanvas/);
+  assert.match(controls, /id: controlTiles/);
   assert.match(controls, /id: mediaMatrix/);
-  assert.match(controls, /id: commandRight/);
-  assert.ok(
-    controls.includes(
-      "columns: width >= 860 && root.theme.textScale < 1.4 ? 2 : 1",
-    ),
+  assert.match(
+    controls,
+    /columns: width >= 860 && root.theme.textScale < 1.4 \? 2 : 1/,
   );
+  assert.match(controls, /height: root.dashboardBrightnessHeight/);
   assert.doesNotMatch(
     controls,
     /focusDirectory|focusGroup|controlsLayout|CONTROL SURFACE|ALL SYSTEMS/,
@@ -298,10 +329,9 @@ test("Controls preserves primary actions and shared audio/visual controls", () =
     "wallpaperButton",
     "sessionButton",
     "connectionTiles",
-    "actionStrip",
-    "visualModeStrip",
+    "tileCanvas",
+    "controlTiles",
     "audioDeck",
-    "commandRight",
     "trayItem",
     "brightnessHint",
   ])
@@ -358,28 +388,19 @@ test("The compact mixer uses content-driven height and does not delay rendering"
   assert.doesNotMatch(mixer, /shortcut: "ESC"/);
 });
 
-test("Dashboard hierarchy retains balanced two-row quick actions and bottom audio/media", () => {
+test("Dashboard hierarchy puts the shared tile canvas between top controls and media", () => {
   const controls = read("SystemContent.qml");
   const appearance = controls.indexOf("id: appearanceSection");
   const connectivity = controls.indexOf("id: connectionTiles");
-  const actions = controls.indexOf("id: actionStrip");
+  const tiles = controls.indexOf("id: controlTiles");
   const lower = controls.indexOf("id: mediaMatrix");
   const audio = controls.indexOf("id: audioSection");
   const media = controls.indexOf("ControlsMediaCard {");
   assert.ok(
-    appearance >= 0 && appearance < connectivity && connectivity < actions,
+    appearance >= 0 && appearance < connectivity && connectivity < tiles,
   );
-  assert.ok(actions < lower && lower < audio && audio < media);
-  assert.match(controls, /title: "Quick actions"/);
+  assert.ok(tiles < lower && lower < audio && audio < media);
   assert.match(controls, /title: "Connectivity"/);
-  assert.match(
-    controls,
-    /readonly property int columns: width < 440 \|\| root.theme.textScale >= 1\.5 \? 2 : 3/,
-  );
-  assert.match(
-    controls,
-    /const itemsInRow = Math\.min\(columns, 5 - row \* columns\)/,
-  );
   assert.match(
     controls,
     /height: Math.max\(implicitHeight, mediaCard.implicitHeight\)/,
@@ -426,17 +447,29 @@ test("Compact Media shares a live spectrum, controls and full Now Playing naviga
   );
 });
 
-test("Visual modes retain their two-row layout independently of Quick Actions", () => {
+test("Visual Modes and Quick Actions use the same calculated width and wrap", () => {
   const controls = read("SystemContent.qml");
   assert.match(
     controls,
-    /id: visualModeStrip[\s\S]*?readonly property int columns: width < 340[\s\S]*?width < 450 \? 3 : 5/,
+    /readonly property real minimumTileWidth: 140 \* root.theme.textScale/,
   );
   assert.match(
     controls,
-    /id: actionStrip[\s\S]*?readonly property int columns: width < 440 \|\| root.theme.textScale >= 1\.5 \? 2 : 3/,
+    /readonly property int capacity: Math.max\(1, Math.min\(7,/,
   );
-  assert.match(controls, /function cellWidth\(index: int\): real/);
+  assert.match(
+    controls,
+    /readonly property int rows: Math.max\(1, Math.ceil\(children.length \/ capacity\)\)/,
+  );
+  assert.match(
+    controls,
+    /readonly property int columns: Math.max\(1, Math.ceil\(children.length \/ rows\)\)/,
+  );
+  assert.match(controls, /readonly property real cellWidth:/);
+  assert.equal(
+    (controls.match(/width: controlTiles\.cellWidth/g) || []).length,
+    14,
+  );
 });
 
 test("Unavailable hardware remains visible with consistent messaging and disabled brightness", () => {
@@ -530,7 +563,7 @@ test("Controls sizes naturally without inflating tiles or forcing scroll hints",
   assert.match(controls, /spacing: root.theme.spacing3/);
   assert.match(controls, /dashboardTileHeight: 72/);
   assert.match(controls, /dashboardBrightnessHeight: 90/);
-  assert.match(controls, /dashboardConnectivityHeight: 84/);
+  assert.doesNotMatch(controls, /dashboardConnectivityHeight/);
   assert.match(
     controls,
     /height: Math.max\(implicitHeight, mediaCard.implicitHeight\)/,
@@ -590,71 +623,43 @@ test("Compact Audio keeps Output/Input without app rows and shows correct header
   assert.match(read("ShellSection.qml"), /id: headerHints/);
 });
 
-test("Resources and Captures occupy the second Quick Actions row", () => {
+test("Quick Actions retain their order and direct action handlers in the shared canvas", () => {
   const controls = read("SystemContent.qml");
-  const actions = controls.slice(
-    controls.indexOf("id: actionStrip"),
-    controls.indexOf("ShellSection {", controls.indexOf("id: actionStrip")),
-  );
-  assert.match(
-    actions,
-    /id: actionStrip[\s\S]*?columns: width < 440 \|\| root.theme.textScale >= 1\.5 \? 2 : 3/,
-  );
-  const tiles = [
-    ...actions.matchAll(
-      /QuickSettingChip \{\s*width: actionStrip\.cellWidth\((\d)\)/g,
-    ),
+  const tiles = controls
+    .split("id: controlTiles")[1]
+    .split("ShellSurface {")[0];
+  const actions = [
+    'title: root.notificationState.silent ? "Silent" : "Alerts"',
+    'title: root.system.idleInhibited ? "Stay awake" : "Idle allowed"',
+    'title: (root.powerProfile.available ? root.powerProfile.label(root.powerProfile.current) : "Power")',
+    'title: "Resources"',
+    'title: "Captures"',
   ];
-  assert.deepEqual(
-    tiles.map((tile) => Number(tile[1])),
-    [0, 1, 2, 3, 4],
-  );
-  assert.match(
-    actions,
-    /cellWidth\(1\)[\s\S]*?title: root\.system\.idleInhibited[\s\S]*?cellWidth\(2\)[\s\S]*?title: \(root\.powerProfile\.available/,
-  );
-  assert.match(
-    actions,
-    /cellWidth\(3\)[\s\S]*?title: "Resources"[\s\S]*?cellWidth\(4\)[\s\S]*?title: "Captures"/,
-  );
+  let previous = tiles.indexOf('title: root.resetRunning ? "Restoring…"');
+  for (const action of actions) {
+    const index = tiles.indexOf(action);
+    assert.ok(index > previous, action);
+    previous = index;
+  }
+  assert.match(tiles, /onActivated: root.openResources\(\)/);
+  assert.match(tiles, /onActivated: root.openRecordings\(\)/);
 });
 
-test("Quick Actions fill both rows without changing tile height", () => {
+test("all 14 tile heights remain fixed as the canvas is rebalanced", () => {
   const controls = read("SystemContent.qml");
-  const start = controls.indexOf("id: actionStrip");
-  const actions = controls.slice(
-    start,
-    controls.indexOf("ShellSection {", start),
+  const tiles = controls
+    .split("id: controlTiles")[1]
+    .split("ShellSurface {")[0];
+  assert.equal(
+    (tiles.match(/height: root.dashboardTileHeight/g) || []).length,
+    14,
   );
-  assert.match(
-    actions,
-    /width < 440 \|\| root.theme.textScale >= 1\.5 \? 2 : 3/,
-  );
-  const expression = actions.match(
-    /function cellWidth\(index: int\): real \{([\s\S]*?)\n\s+\}/,
-  );
-  assert.ok(expression);
-  const cellWidth = new Function(
-    "index",
-    "columns",
-    "width",
-    "spacing",
-    expression[1],
-  );
-  for (const columns of [2, 3]) {
-    for (let row = 0; row < Math.ceil(5 / columns); row++) {
-      const count = Math.min(columns, 5 - row * columns);
-      const widths = Array.from({ length: count }, (_, i) =>
-        cellWidth(row * columns + i, columns, 615, 8),
-      );
-      assert.ok(widths.every((value) => value > 0));
-      assert.ok(
-        Math.abs(widths.reduce((a, b) => a + b, 0) + (count - 1) * 8 - 615) <
-          0.01,
-      );
-    }
+  assert.match(controls, /readonly property int dashboardTileHeight: 72/);
+  for (const count of [13, 14, 15, 16, 20]) {
+    const layout = tileLayout(controls, 1120, 1, count);
+    assert.ok(layout.columns * 72 > 0);
+    assert.equal(layout.rows, Math.ceil(count / layout.capacity));
   }
-  assert.match(actions, /height: root.dashboardTileHeight/);
 });
 
 test("compact Media anchors artwork and player information above footer controls", () => {
