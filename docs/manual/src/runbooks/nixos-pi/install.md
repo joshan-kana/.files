@@ -1,6 +1,6 @@
 # Installation guide for `nixos-pi`
 
-This installation uses a flashable ARM64 NixOS SD-card image with a FAT firmware partition and a Btrfs root filesystem. The root partition grows to fill the microSD card on first boot.
+This installation uses a flashable ARM64 NixOS SD-card image with a FAT `/boot` partition containing the firmware, extlinux configuration, kernel and initrd, alongside a Btrfs root filesystem. The root partition grows to fill the microSD card on first boot.
 
 ## Target configuration
 

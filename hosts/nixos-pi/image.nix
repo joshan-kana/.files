@@ -12,6 +12,7 @@
   # Keep NixOS's SD-card firmware/U-Boot layout, but use Btrfs for the root
   # filesystem and resize it after extending the root partition at first boot.
   sdImage = {
+    firmwareSize = 512;
     rootVolumeLabel = "ROOT";
     rootFilesystemCreator = modulesPath + "/../lib/make-btrfs-fs.nix";
     expandOnBoot = false;
@@ -25,6 +26,12 @@
       dtoverlay=vc4-kms-v3d
       max_framebuffers=2
       EOF_CONFIG
+
+      ${config.boot.loader.generic-extlinux-compatible.populateCmd} -c ${config.system.build.toplevel} -d ./firmware
+    '';
+
+    postBuildCommands = ''
+      sfdisk --activate "$img" 1
     '';
   };
 

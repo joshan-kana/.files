@@ -25,14 +25,13 @@
       ];
     };
 
-    "/boot/firmware" = {
+    "/boot" = {
       device = "/dev/disk/by-label/FIRMWARE";
       fsType = "vfat";
-      options = [
-        "noauto"
-        "nofail"
-      ];
+      options = [ "umask=0077" ];
     };
+
+    "/boot/firmware".enable = lib.mkForce false;
   };
 
   zramSwap = {
