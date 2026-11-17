@@ -5,8 +5,8 @@ _: {
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
         libreoffice = import ../../lib/mac-app.nix { inherit prev; } {
           release = {
-            version = "26.8.0.3";
-            hash = "sha256-iFjYBY2k+GL0dVlIaBTmXvwnKU2mfF5LtWsAax7ln4k=";
+            version = "26.8.3.1";
+            hash = "sha256-3pQyA3leUFd4X2VRUGPi2162Cwu22OJTT+xZ5cxfuYg=";
           };
           pname = "libreoffice";
           appName = "LibreOffice.app";
