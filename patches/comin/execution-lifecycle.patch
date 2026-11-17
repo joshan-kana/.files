@@ -1,0 +1,413 @@
+diff --git a/internal/builder/builder.go b/internal/builder/builder.go
+index 3424bcc..ba4cbe4 100644
+--- a/internal/builder/builder.go
++++ b/internal/builder/builder.go
+@@ -35,17 +35,17 @@ const (
+ )
+ 
+ type Builder struct {
+-	store                *store.Store
+-	executor             executor.Executor
+-	broker               *broker.Broker
+-	hostname             string
+-	repositoryPath       string
+-	repositoryDir        string
+-	systemAttr           string
+-	submodules           bool
+-	evalTimeout          time.Duration
+-	buildTimeout         time.Duration
+-	buildAttemptsLimit   int
++	store                   *store.Store
++	executor                executor.Executor
++	broker                  *broker.Broker
++	hostname                string
++	repositoryPath          string
++	repositoryDir           string
++	systemAttr              string
++	submodules              bool
++	evalTimeout             time.Duration
++	buildTimeout            time.Duration
++	buildAttemptsLimit      int
+ 	buildRetryTimerDuration time.Duration
+ 
+ 	mu           sync.Mutex
+@@ -63,10 +63,10 @@ type Builder struct {
+ 	// BuildDone is used to be notified a build is finished. Be careful since only a single goroutine can listen it.
+ 	BuildDone chan string
+ 
+-	evaluator   Exec
++	evaluator   *Exec
+ 	evaluatorWg *sync.WaitGroup
+ 
+-	buildator   Exec
++	buildator   *Exec
+ 	buildatorWg *sync.WaitGroup
+ 
+ 	isSuspended bool
+@@ -74,9 +74,9 @@ type Builder struct {
+ 	postBuildCommand string
+ 
+ 	// Retry fields
+-	buildRetryAt   *timestamppb.Timestamp
+-	buildRetryTimer *time.Timer
+-	buildRetryCtx   context.Context
++	buildRetryAt     *timestamppb.Timestamp
++	buildRetryTimer  *time.Timer
++	buildRetryCtx    context.Context
+ 	buildRetryCancel context.CancelFunc
+ }
+ 
+@@ -85,24 +85,23 @@ func New(store *store.Store, executor executor.Executor, broker *broker.Broker,
+ 		repositoryPath, repositoryDir, systemAttr, hostname, submodules, evalTimeout.Seconds(), buildTimeout.Seconds(), buildAttemptsLimit, buildRetryTimer.Seconds(), postBuildCommand)
+ 
+ 	return &Builder{
+-		store:            store,
+-		executor:         executor,
+-		broker:           broker,
+-		repositoryPath:   repositoryPath,
+-		repositoryDir:    repositoryDir,
+-		systemAttr:       systemAttr,
+-		submodules:       submodules,
+-		hostname:         hostname,
+-		evalTimeout:      evalTimeout,
+-		buildTimeout:     buildTimeout,
+-		buildAttemptsLimit:   buildAttemptsLimit,
++		store:                   store,
++		executor:                executor,
++		broker:                  broker,
++		repositoryPath:          repositoryPath,
++		repositoryDir:           repositoryDir,
++		systemAttr:              systemAttr,
++		submodules:              submodules,
++		hostname:                hostname,
++		evalTimeout:             evalTimeout,
++		buildTimeout:            buildTimeout,
++		buildAttemptsLimit:      buildAttemptsLimit,
+ 		buildRetryTimerDuration: buildRetryTimer,
+-		postBuildCommand: postBuildCommand,
+-		EvaluationDone:   make(chan string, 1),
+-		BuildDone:        make(chan string, 1),
+-		evaluatorWg:      &sync.WaitGroup{},
+-		buildatorWg:      &sync.WaitGroup{},
+-
++		postBuildCommand:        postBuildCommand,
++		EvaluationDone:          make(chan string, 1),
++		BuildDone:               make(chan string, 1),
++		evaluatorWg:             &sync.WaitGroup{},
++		buildatorWg:             &sync.WaitGroup{},
+ 	}
+ }
+ 
+@@ -161,7 +160,12 @@ func (b *Builder) GetSystemAttr() string {
+ }
+ 
+ func (b *Builder) stopEval() {
+-	b.evaluator.Stop()
++	b.mu.Lock()
++	current := b.evaluator
++	b.mu.Unlock()
++	if current != nil {
++		current.Stop()
++	}
+ 	b.evaluatorWg.Wait()
+ 	b.isEvaluating.Store(false)
+ }
+@@ -173,7 +177,12 @@ func (b *Builder) stopEval() {
+ // generation is finished. This is however not a important issue since
+ // the builder will just rebuild the generation.
+ func (b *Builder) stopBuild() {
+-	b.buildator.Stop()
++	b.mu.Lock()
++	current := b.buildator
++	b.mu.Unlock()
++	if current != nil {
++		current.Stop()
++	}
+ 	b.buildatorWg.Wait()
+ 
+ 	b.mu.Lock()
+@@ -184,9 +193,11 @@ func (b *Builder) stopBuild() {
+ // Stop stops the evaluator and the builder is required and wait until
+ // they have been actually stopped.
+ func (b *Builder) Stop() {
++	// Cancel the pending automatic retry before stopping its current work.
++	// Otherwise its timer may start a new build while we preempt it.
++	b.cancelBuildRetry()
+ 	b.stopEval()
+ 	b.stopBuild()
+-	b.cancelBuildRetry()
+ 
+ 	b.mu.Lock()
+ 	defer b.mu.Unlock()
+@@ -196,6 +207,11 @@ func (b *Builder) Stop() {
+ func (b *Builder) cancelBuildRetry() {
+ 	b.mu.Lock()
+ 	defer b.mu.Unlock()
++	b.cancelBuildRetryLocked()
++}
++
++// cancelBuildRetryLocked must be called with the builder mutex held.
++func (b *Builder) cancelBuildRetryLocked() {
+ 	if b.buildRetryCancel != nil {
+ 		b.buildRetryCancel()
+ 		b.buildRetryCancel = nil
+@@ -211,6 +227,15 @@ func (b *Builder) cancelBuildRetry() {
+ func (b *Builder) scheduleBuildRetry(generationUuid string) {
+ 	b.mu.Lock()
+ 	defer b.mu.Unlock()
++	// A manually retried generation may already be building or built by
++	// the time the failed attempt reaches this scheduler.
++	if generationUuid != b.GenerationUuid || b.isBuilding.Load() {
++		return
++	}
++	generation, err := b.store.GenerationGet(generationUuid)
++	if err != nil || generation.BuildStatus != store.BuildFailed.String() {
++		return
++	}
+ 
+ 	// Cancel any existing retry (without locking again)
+ 	if b.buildRetryCancel != nil {
+@@ -223,9 +248,10 @@ func (b *Builder) scheduleBuildRetry(generationUuid string) {
+ 	}
+ 	b.buildRetryAt = nil
+ 
+-	// Set the retry time
+-	retryAt := time.Now().Add(b.buildRetryTimerDuration)
+-	b.buildRetryAt = timestamppb.New(retryAt)
++	// The timestamp doubles as the scheduled retry's identity. Ignore a
++	// callback from an earlier timer after replacement or cancellation.
++	retryAt := timestamppb.New(time.Now().Add(b.buildRetryTimerDuration))
++	b.buildRetryAt = retryAt
+ 
+ 	// Create context for the retry
+ 	b.buildRetryCtx, b.buildRetryCancel = context.WithCancel(context.Background())
+@@ -236,14 +262,15 @@ func (b *Builder) scheduleBuildRetry(generationUuid string) {
+ 		retryGenerationUuid := generationUuid
+ 		b.mu.Lock()
+ 		// Check if we still have a retry scheduled (might have been cancelled)
+-		if b.buildRetryAt != nil {
++		if b.buildRetryAt == retryAt && b.GenerationUuid == retryGenerationUuid {
+ 			logrus.Infof("builder: retrying build for generation %s after failure", retryGenerationUuid)
+ 			// The attempt number will be incremented by GenerationBuildStart
+ 			// Clear retry state and save context before unlocking
+ 			buildRetryCtx := b.buildRetryCtx
+ 			b.buildRetryAt = nil
+ 			b.buildRetryTimer = nil
+-			b.buildRetryCancel = nil
++			// Keep buildRetryCancel so Stop can cancel a retry even after
++			// its timer fired but before the pending build actually starts.
+ 			b.mu.Unlock()
+ 			// Submit the build for retry (outside the lock to avoid deadlock)
+ 			b.SubmitBuild(buildRetryCtx, retryGenerationUuid)
+@@ -309,15 +336,14 @@ func (b *Builder) Eval(ctx context.Context, generation *protobuf.Generation) err
+ 		stdout:   stdout,
+ 		stderr:   stderr,
+ 	}
+-	b.evaluator = NewExec(evaluator, b.evalTimeout)
++	exec := NewExec(evaluator, b.evalTimeout)
++	b.evaluator = &exec
+ 
+-	// This is to wait until the evaluator is stopped
+ 	b.evaluatorWg.Add(1)
+-	b.evaluator.Start(ctx)
+-
++	exec.Start(ctx)
+ 	go func() {
+ 		defer b.evaluatorWg.Done()
+-		b.evaluator.Wait()
++		exec.Wait()
+ 
+ 		// We close the writers to stop associated goroutines
+ 		_ = stdout.Close()
+@@ -330,7 +356,7 @@ func (b *Builder) Eval(ctx context.Context, generation *protobuf.Generation) err
+ 			evaluator.drvPath,
+ 			evaluator.outPath,
+ 			evaluator.machineId,
+-			b.evaluator.getErr(),
++			exec.getErr(),
+ 		); err != nil {
+ 			logrus.Errorf("builder: %s", err)
+ 		}
+@@ -401,12 +427,39 @@ func (b *Builder) Resume(ctx context.Context) error {
+ 	return nil
+ }
+ 
++// RetryBuild immediately retries the current failed build, cancelling a scheduled retry.
++func (b *Builder) RetryBuild(ctx context.Context) error {
++	b.mu.Lock()
++	defer b.mu.Unlock()
++	if b.isSuspended {
++		return fmt.Errorf("builder is suspended")
++	}
++	if b.isEvaluating.Load() || b.isBuilding.Load() {
++		return fmt.Errorf("builder is busy")
++	}
++	if b.GenerationUuid == "" {
++		return fmt.Errorf("no generation to retry")
++	}
++	generation, err := b.store.GenerationGet(b.GenerationUuid)
++	if err != nil {
++		return err
++	}
++	if generation.BuildStatus != store.BuildFailed.String() && generation.BuildStatus != store.BuildCanceled.String() {
++		return fmt.Errorf("current generation has no failed build")
++	}
++	b.cancelBuildRetryLocked()
++	return b.build(ctx, b.GenerationUuid)
++}
++
+ // SubmitBuild submits a generation for building. If the builder is
+ // suspended, the generation is only built once resumed, otherwise, it
+ // is built immediately.
+ func (b *Builder) SubmitBuild(ctx context.Context, generationUuid string) {
+ 	b.mu.Lock()
+ 	defer b.mu.Unlock()
++	if ctx.Err() != nil {
++		return
++	}
+ 
+ 	if b.isSuspended {
+ 		logrus.Infof("builder: build submitted for generation %s while the builder is suspended", generationUuid)
+@@ -450,21 +503,20 @@ func (b *Builder) build(ctx context.Context, generationUuid string) error {
+ 		stdout:    stdout,
+ 		stderr:    stderr,
+ 	}
+-	b.buildator = NewExec(buildator, b.buildTimeout)
++	exec := NewExec(buildator, b.buildTimeout)
++	b.buildator = &exec
+ 
+-	// This is to wait until the evaluator is stopped
+ 	b.buildatorWg.Add(1)
+-	b.buildator.Start(ctx)
+-
++	exec.Start(ctx)
+ 	go func() {
+ 		defer b.buildatorWg.Done()
+-		b.buildator.Wait()
++		exec.Wait()
+ 
+ 		// We close the writers to stop associated goroutines
+ 		_ = stdout.Close()
+ 		_ = stderr.Close()
+ 
+-		buildErr := b.buildator.getErr()
++		buildErr := exec.getErr()
+ 		b.mu.Lock()
+ 		err := b.store.GenerationBuildFinished(generationUuid, buildErr)
+ 		if err != nil {
+diff --git a/internal/builder/builder_test.go b/internal/builder/builder_test.go
+index 7300a4a..ac6cdf9 100644
+--- a/internal/builder/builder_test.go
++++ b/internal/builder/builder_test.go
+@@ -349,6 +349,7 @@ func TestBuilderRetryOnFailure(t *testing.T) {
+ 	// Create a mock that always fails builds
+ 	eMock := NewExecutorMock(false)
+ 	b := New(s, eMock, bk, "", "", "", "my-machine", false, 5*time.Second, 100*time.Millisecond, 0, 100*time.Millisecond, "")
++	t.Cleanup(b.Stop)
+ 	ctx := t.Context()
+ 
+ 	// Create and evaluate a generation
+@@ -394,7 +395,10 @@ func TestBuilderRetryCancelledOnNewEval(t *testing.T) {
+ 	assert.Nil(t, err)
+ 	// Create a mock that always fails builds
+ 	eMock := NewExecutorMock(false)
+-	b := New(s, eMock, bk, "", "", "", "my-machine", false, 5*time.Second, 100*time.Millisecond, 0, 100*time.Millisecond, "")
++	// Leave enough time to observe a scheduled retry and cancel it before
++	// the timer races the test's new evaluation on loaded CI machines.
++	b := New(s, eMock, bk, "", "", "", "my-machine", false, 5*time.Second, 100*time.Millisecond, 0, 2*time.Second, "")
++	t.Cleanup(b.Stop)
+ 	ctx := t.Context()
+ 
+ 	// Create and evaluate the first generation
+@@ -427,8 +431,14 @@ func TestBuilderRetryCancelledOnNewEval(t *testing.T) {
+ 
+ 	// Now submit a new evaluation - this should cancel the retry
+ 	generation2 := s.NewGeneration("", "", "", &protobuf.GitRepositoryStatus{SelectedCommitId: "commit-2"}, 0)
+-	_ = b.Eval(ctx, &generation2)
+-	eMock.evalDone <- struct{}{}
++	if err := b.Eval(ctx, &generation2); err != nil {
++		t.Fatalf("new evaluation failed: %s", err)
++	}
++	select {
++	case eMock.evalDone <- struct{}{}:
++	case <-time.After(2 * time.Second):
++		t.Fatal("new evaluation was not started")
++	}
+ 	gUUID2 := <-b.EvaluationDone
+ 
+ 	// Give the Eval time to cancel the retry
+@@ -550,3 +560,50 @@ func TestBuilderDoesNotRetryWhenCancelled(t *testing.T) {
+ 
+ 	assert.False(t, retryScheduled, "build retry should NOT be scheduled when build is cancelled, but it was")
+ }
++
++func TestManualBuildRetry(t *testing.T) {
++	temp := t.TempDir()
++	bk := broker.New()
++	bk.Start()
++	storage, err := store.New(bk, temp+"/state.json", temp+"/gcroots", 1, 1, 1)
++	assert.NoError(t, err)
++	mock := NewExecutorMock(false)
++	builder := New(storage, mock, bk, "", "", "", "host", false, 5*time.Second, 120*time.Millisecond, 3, 30*time.Second, "")
++	generation := storage.NewGeneration("", "", "", &protobuf.GitRepositoryStatus{}, 3)
++	assert.NoError(t, builder.Eval(context.Background(), &generation))
++	mock.evalDone <- struct{}{}
++	uuid := <-builder.EvaluationDone
++	builder.SubmitBuild(context.Background(), uuid)
++	select {
++	case <-builder.BuildDone:
++	case <-time.After(5 * time.Second):
++		t.Fatal("failed build did not finish")
++	}
++	assert.Eventually(t, func() bool {
++		g, e := storage.GenerationGet(uuid)
++		return e == nil && g.BuildStatus == store.BuildFailed.String()
++	}, time.Second, 10*time.Millisecond)
++	builder.mu.Lock()
++	builder.isSuspended = true
++	builder.mu.Unlock()
++	assert.ErrorContains(t, builder.RetryBuild(context.Background()), "suspended")
++	builder.mu.Lock()
++	builder.isSuspended = false
++	builder.mu.Unlock()
++	assert.NoError(t, builder.RetryBuild(context.Background()))
++	mock.buildDone <- struct{}{}
++	select {
++	case <-builder.BuildDone:
++	case <-time.After(5 * time.Second):
++		t.Fatal("manual build did not finish")
++	}
++	assert.Eventually(t, func() bool {
++		g, e := storage.GenerationGet(uuid)
++		return e == nil && g.BuildStatus == store.Built.String() && g.AttemptNumber == 2
++	}, time.Second, 10*time.Millisecond)
++	builder.mu.Lock()
++	pendingRetry := builder.buildRetryAt
++	builder.mu.Unlock()
++	assert.Nil(t, pendingRetry)
++	assert.ErrorContains(t, builder.RetryBuild(context.Background()), "no failed build")
++}
+diff --git a/internal/builder/exec.go b/internal/builder/exec.go
+index 8b4559e..8c81fd7 100644
+--- a/internal/builder/exec.go
++++ b/internal/builder/exec.go
+@@ -54,15 +54,14 @@ func (e *Exec) Start(ctx context.Context) {
+ 		}
+ 		e.started.Store(false)
+ 		e.finished.Store(true)
+-		select {
+-		case e.done <- struct{}{}:
+-		default:
+-		}
++		// Close instead of sending to an unbuffered channel: the waiter may
++		// arrive after execution finishes, and must still observe completion.
++		close(e.done)
+ 	}()
+ }
+ 
+ func (e *Exec) Wait() {
+-	if e.started.Load() {
++	if e.started.Load() || e.finished.Load() {
+ 		<-e.done
+ 	}
+ }

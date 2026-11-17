@@ -1,0 +1,87 @@
+diff --git a/internal/executor/utils.go b/internal/executor/utils.go
+index 08736e6..3514fa2 100644
+--- a/internal/executor/utils.go
++++ b/internal/executor/utils.go
+@@ -209,20 +209,19 @@ func cominUnitFileHash(systemAttr string) string {
+ 	return cominUnitFileHashLinux()
+ }
+ 
++// Read the installed unit file, not systemctl's cached copy. During a
++// NixOS switch systemd can still report the previously loaded unit.
+ func cominUnitFileHashLinux() string {
+-	logrus.Infof("nix: generating the comin.service unit file sha256: 'systemctl cat comin.service | sha256sum'")
+-	cmd := exec.Command("systemctl", "cat", "comin.service")
+-	var stdout bytes.Buffer
+-	cmd.Stdout = &stdout
+-	cmd.Stderr = os.Stderr
+-	if err := cmd.Run(); err != nil {
+-		logrus.Infof("nix: command 'systemctl cat comin.service' fails with '%s'", err)
++	return hashUnitFile("/etc/systemd/system/comin.service")
++}
++
++func hashUnitFile(path string) string {
++	unit, err := os.ReadFile(path)
++	if err != nil {
++		logrus.Warnf("nix: cannot read comin unit %s: %v", path, err)
+ 		return ""
+ 	}
+-	sum := sha256.Sum256(stdout.Bytes())
+-	hash := fmt.Sprintf("%x", sum)
+-	logrus.Infof("nix: the comin.service unit file sha256 is '%s'", hash)
+-	return hash
++	return fmt.Sprintf("%x", sha256.Sum256(unit))
+ }
+ 
+ func cominUnitFileHashDarwin() string {
+diff --git a/internal/executor/utils_test.go b/internal/executor/utils_test.go
+index 7130c4f..66d9756 100644
+--- a/internal/executor/utils_test.go
++++ b/internal/executor/utils_test.go
+@@ -4,6 +4,7 @@ import (
+ 	"bytes"
+ 	"context"
+ 	"os"
++	"path/filepath"
+ 	"testing"
+ 
+ 	"github.com/stretchr/testify/assert"
+@@ -269,3 +270,18 @@ func TestDeployFunctions(t *testing.T) {
+ 		})
+ 	}
+ }
++
++func TestUnitFileHashReadsUpdatedSymlink(t *testing.T) {
++	dir := t.TempDir()
++	first := filepath.Join(dir, "first.service")
++	second := filepath.Join(dir, "second.service")
++	link := filepath.Join(dir, "comin.service")
++	assert.NoError(t, os.WriteFile(first, []byte("ExecStart=/old/bin/comin"), 0644))
++	assert.NoError(t, os.WriteFile(second, []byte("ExecStart=/new/bin/comin"), 0644))
++	assert.NoError(t, os.Symlink(first, link))
++	before := hashUnitFile(link)
++	assert.NotEmpty(t, before)
++	assert.NoError(t, os.Remove(link))
++	assert.NoError(t, os.Symlink(second, link))
++	assert.NotEqual(t, before, hashUnitFile(link))
++}
+diff --git a/internal/manager/manager.go b/internal/manager/manager.go
+index 437fbdc..71a6116 100644
+--- a/internal/manager/manager.go
++++ b/internal/manager/manager.go
+@@ -9,6 +9,7 @@ import (
+ 	"context"
+ 	"fmt"
+ 	"os"
++	"runtime"
+ 	"sync"
+ 	"time"
+ 
+@@ -323,7 +324,7 @@ func (m *Manager) Run(ctx context.Context) {
+ 				e := &protobuf.Event_RebootRequired{Deployment: dpl}
+ 				m.broker.Publish(&protobuf.Event{Type: &protobuf.Event_RebootRequired_{RebootRequired: e}, CreatedAt: timestamppb.New(time.Now().UTC())})
+ 			}
+-			if dpl.RestartComin.GetValue() {
++			if dpl.RestartComin.GetValue() || (runtime.GOOS == "darwin" && dpl.Status == store.StatusToString(store.Done) && dpl.Operation == "switch") {
+ 				// TODO: stop contexts
+ 				logrus.Infof("manager: comin needs to be restarted")
+ 				logrus.Infof("manager: exiting comin to let the service manager restart it")

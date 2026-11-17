@@ -1,0 +1,904 @@
+diff --git a/cmd/watch.go b/cmd/watch.go
+index db47699..270c3b0 100644
+--- a/cmd/watch.go
++++ b/cmd/watch.go
+@@ -2,6 +2,7 @@ package cmd
+ 
+ import (
+ 	"context"
++	"errors"
+ 	"fmt"
+ 	"os"
+ 	"strings"
+@@ -13,6 +14,7 @@ import (
+ 	tea "github.com/charmbracelet/bubbletea"
+ 
+ 	"github.com/nlewo/comin/pkg/client"
++	"github.com/nlewo/comin/pkg/protobuf"
+ 	"github.com/nlewo/comin/pkg/tui"
+ 	"github.com/spf13/cobra"
+ )
+@@ -35,26 +37,28 @@ func tick() tea.Cmd {
+ 
+ type keyMap struct {
+ 	Fetch   key.Binding
++	Build   key.Binding
++	Deploy  key.Binding
++	Logs    key.Binding
++	History key.Binding
++	Confirm key.Binding
+ 	Suspend key.Binding
+ 	Quit    key.Binding
+ }
+ 
+-func (k keyMap) ShortHelp() []key.Binding {
+-	return []key.Binding{k.Fetch, k.Suspend, k.Quit}
+-}
+-
+-func (k keyMap) FullHelp() [][]key.Binding {
+-	return [][]key.Binding{{k.Fetch, k.Suspend, k.Quit}}
+-}
+-
+ var keys = keyMap{
+ 	Fetch: key.NewBinding(
+ 		key.WithKeys("f"),
+ 		key.WithHelp("f", "fetch"),
+ 	),
++	Build:   key.NewBinding(key.WithKeys("b"), key.WithHelp("b", "build")),
++	Deploy:  key.NewBinding(key.WithKeys("d"), key.WithHelp("d", "deploy")),
++	Logs:    key.NewBinding(key.WithKeys("l"), key.WithHelp("l", "logs")),
++	History: key.NewBinding(key.WithKeys("g"), key.WithHelp("g", "history")),
++	Confirm: key.NewBinding(key.WithKeys("c"), key.WithHelp("c", "confirm")),
+ 	Suspend: key.NewBinding(
+ 		key.WithKeys("s"),
+-		key.WithHelp("s", "suspend/resume"),
++		key.WithHelp("s", "suspend"),
+ 	),
+ 	Quit: key.NewBinding(
+ 		key.WithKeys("q", "ctrl+c"),
+@@ -63,11 +67,21 @@ var keys = keyMap{
+ }
+ 
+ type Model struct {
+-	manager tui.ManagerModel
+-	stream  chan client.Streamer
+-	client  *client.Client
+-	help    help.Model
+-	keys    keyMap
++	manager          tui.ManagerModel
++	stream           chan client.Streamer
++	client           *client.Client
++	help             help.Model
++	keys             keyMap
++	panel            string
++	logs             []logEntry
++	logOffset        int
++	historyOffset    int
++	recentLogsLoaded bool
++	notice           string
++	width            int
++	height           int
++	history          []*protobuf.Deployment
++	pendingAction    string
+ }
+ 
+ func consumeStream(m Model) func() tea.Msg {
+@@ -80,16 +94,103 @@ func (m Model) Init() tea.Cmd {
+ 	return tea.Batch(consumeStream(m), tick(), spinnerTick())
+ }
+ 
++type actionDone struct {
++	action string
++	err    error
++}
++
++type loadedLogs struct {
++	logs []logEntry
++	err  error
++}
++
++func runAction(name string, do func() error) tea.Cmd {
++	return func() tea.Msg { return actionDone{action: name, err: do()} }
++}
++
++// Prevent repeated keypresses from enqueuing overlapping mutations.
++func (m Model) startAction(name string, action func() error) (tea.Model, tea.Cmd) {
++	if m.pendingAction != "" {
++		return m, nil
++	}
++	m.pendingAction = name
++	m.notice = name + " requested…"
++	return m, runAction(name, action)
++}
++
++func (m Model) retryDeployment() error {
++	if m.client == nil {
++		return errors.New("not connected")
++	}
++	state, err := m.client.GetManagerState()
++	if err != nil {
++		return err
++	}
++	if state.GetDeployer().GetDeployment().GetStatus() != "failed" {
++		return errors.New("no failed deployment to retry")
++	}
++	return m.client.DeploymentLatestSubmit("")
++}
++
++func (m Model) confirmPending() error {
++	if m.client == nil {
++		return errors.New("not connected")
++	}
++	state, err := m.client.GetManagerState()
++	if err != nil {
++		return err
++	}
++	for _, item := range []struct {
++		kind      string
++		confirmer *protobuf.Confirmer
++	}{
++		{"build", state.BuildConfirmer}, {"deploy", state.DeployConfirmer},
++	} {
++		if item.confirmer != nil && item.confirmer.Submitted != "" && item.confirmer.Submitted != item.confirmer.Confirmed {
++			return m.client.Confirm(item.confirmer.Submitted, item.kind)
++		}
++	}
++	return errors.New("no pending confirmation")
++}
++
+ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+ 	switch msg := msg.(type) {
+ 	case client.Streamer:
+ 		if msg.Event != nil {
+ 			m.manager.ConnectionMsg = ""
+ 			tui.UpdateManager(&m.manager, msg.Event)
++			if state := msg.Event.GetManagerState(); state != nil && state.State != nil && state.State.Store != nil {
++				m.history = state.State.Store.Deployments
++			}
++			if line := msg.Event.GetLog().GetLine(); line != nil {
++				m.logs = appendLog(m.logs, logEntryFromStream(msg.Event, line))
++			}
++			if deploy := msg.Event.GetDeploymentFinishedType(); deploy != nil && deploy.Deployment != nil {
++				m.history = upsertDeployment(m.history, deploy.Deployment)
++			}
+ 		} else {
+ 			m.manager.ConnectionMsg = msg.FailureMsg
+ 		}
+ 		return m, consumeStream(m)
++	case actionDone:
++		m.pendingAction = ""
++		if msg.err != nil {
++			m.notice = msg.action + ": " + msg.err.Error()
++		} else {
++			m.notice = msg.action + " requested"
++		}
++		return m, nil
++	case loadedLogs:
++		m.recentLogsLoaded = true
++		if msg.err == nil {
++			m.logs = appendBounded(msg.logs, m.logs)
++		} else {
++			m.notice = "Could not read service logs: " + msg.err.Error()
++		}
++		return m, nil
++	case tea.WindowSizeMsg:
++		m.width, m.height = msg.Width, msg.Height
++		return m, nil
+ 	case tickMsg:
+ 		return m, tick()
+ 	case spinnerMsg:
+@@ -97,29 +198,92 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+ 		return m, spinnerTick()
+ 	case tea.KeyMsg:
+ 		switch {
++		case msg.String() == "esc" && m.panel != "":
++			m.panel = ""
++			return m, nil
++		case m.panel == "logs" && (msg.String() == "j" || msg.String() == "up" || msg.String() == "k" || msg.String() == "down" || msg.String() == "pgup" || msg.String() == "pgdown" || msg.String() == "home" || msg.String() == "end"):
++			m.logOffset = adjustOffset(m.logOffset, msg.String(), len(m.logs), m.logRows())
++			return m, nil
++		case m.panel == "history" && (msg.String() == "j" || msg.String() == "up" || msg.String() == "k" || msg.String() == "down" || msg.String() == "pgup" || msg.String() == "pgdown" || msg.String() == "home" || msg.String() == "end"):
++			m.historyOffset = adjustHistoryOffset(m.historyOffset, msg.String(), len(historyEntries(m.history)), m.logRows())
++			return m, nil
++		case key.Matches(msg, m.keys.Logs):
++			if m.panel == "logs" {
++				m.panel = ""
++			} else {
++				m.panel = "logs"
++			}
++			if m.panel == "logs" && !m.recentLogsLoaded {
++				return m, readServiceLogs
++			}
++			return m, nil
++		case key.Matches(msg, m.keys.History):
++			if m.panel == "history" {
++				m.panel = ""
++			} else {
++				m.panel = "history"
++			}
++			return m, nil
++		case key.Matches(msg, m.keys.Build):
++			if m.client == nil {
++				m.notice = "Not connected"
++				return m, nil
++			}
++			return m.startAction("build", m.client.Retry)
++		case key.Matches(msg, m.keys.Deploy):
++			if m.client == nil {
++				m.notice = "Not connected"
++				return m, nil
++			}
++			return m.startAction("deploy", m.retryDeployment)
++		case key.Matches(msg, m.keys.Confirm):
++			return m.startAction("confirmation", m.confirmPending)
+ 		case key.Matches(msg, m.keys.Quit):
+ 			return m, tea.Quit
+ 		case key.Matches(msg, m.keys.Fetch):
+-			if m.client != nil {
+-				m.client.Fetch()
++			if m.client == nil {
++				m.notice = "Not connected"
++				return m, nil
+ 			}
++			return m.startAction("fetch", m.client.Fetch)
+ 		case key.Matches(msg, m.keys.Suspend):
+-			if m.client != nil {
+-				if m.manager.IsSuspended {
+-					m.client.Resume() // nolint: errcheck
+-				} else {
+-					m.client.Suspend() // nolint: errcheck
+-				}
++			if m.client == nil {
++				m.notice = "Not connected"
++				return m, nil
++			}
++			if m.manager.IsSuspended {
++				return m.startAction("resume", m.client.Resume)
+ 			}
++			return m.startAction("suspend", m.client.Suspend)
+ 		}
+ 	}
+ 	return m, nil
+ }
+ 
++func (m Model) helpRow(bindings ...key.Binding) string {
++	parts := make([]string, 0, len(bindings))
++	for _, binding := range bindings {
++		help := binding.Help()
++		parts = append(parts, m.help.Styles.ShortKey.Render(help.Key)+" "+m.help.Styles.ShortDesc.Render(help.Desc))
++	}
++	return strings.Join(parts, " • ")
++}
++
+ func (m Model) View() string {
+ 	var b strings.Builder
+-	b.WriteString(m.manager.View())
+-	b.WriteString("\nHelp: " + m.help.View(m.keys) + "\n")
++	switch m.panel {
++	case "logs":
++		b.WriteString(m.logsView())
++	case "history":
++		b.WriteString(m.historyView())
++	default:
++		b.WriteString(m.manager.View())
++	}
++	if m.notice != "" {
++		b.WriteString("\n" + m.notice + "\n")
++	}
++	b.WriteString("\n" + m.helpRow(m.keys.Fetch, m.keys.Build, m.keys.Deploy, m.keys.Confirm))
++	b.WriteString("\n" + m.helpRow(m.keys.Suspend, m.keys.Logs, m.keys.History, m.keys.Quit) + "\n")
+ 	return b.String()
+ }
+ 
+diff --git a/cmd/watch_panels.go b/cmd/watch_panels.go
+new file mode 100644
+index 0000000..92d3515
+--- /dev/null
++++ b/cmd/watch_panels.go
+@@ -0,0 +1,312 @@
++package cmd
++
++import (
++	"context"
++	"fmt"
++	"os/exec"
++	"regexp"
++	"runtime"
++	"sort"
++	"strings"
++	"time"
++
++	lipgloss "charm.land/lipgloss/v2"
++	tea "github.com/charmbracelet/bubbletea"
++	"github.com/charmbracelet/x/ansi"
++	"github.com/nlewo/comin/pkg/protobuf"
++)
++
++// The log panel keeps a bounded, chronological window, including the recent
++// system service log and live events from Comin's existing gRPC stream.
++type logEntry struct {
++	when    string
++	stage   string
++	level   string
++	message string
++}
++
++const maxWatchLogs = 400
++
++var logrusLine = regexp.MustCompile(`time="([^"]+)" level=([a-z]+) msg="(.*)"`)
++
++func normalizeLogMessage(msg string) string {
++	msg = ansi.Strip(msg)
++	parts := strings.Split(msg, "\r")
++	msg = strings.TrimSpace(parts[len(parts)-1])
++	return strings.ReplaceAll(msg, "\t", "  ")
++}
++
++func appendLog(lines []logEntry, line logEntry) []logEntry {
++	if line.message == "" {
++		return lines
++	}
++	lines = append(lines, line)
++	if len(lines) > maxWatchLogs {
++		return lines[len(lines)-maxWatchLogs:]
++	}
++	return lines
++}
++
++func appendBounded(old, live []logEntry) []logEntry {
++	lines := append(old, live...)
++	if len(lines) > maxWatchLogs {
++		return lines[len(lines)-maxWatchLogs:]
++	}
++	return lines
++}
++
++func logEntryFromStream(event *protobuf.Event, line *protobuf.Event_Log_Line) logEntry {
++	when := time.Now().Format("15:04:05")
++	if event.CreatedAt != nil {
++		when = event.CreatedAt.AsTime().Local().Format("15:04:05")
++	}
++	level := "info"
++	if line.Source == "stderr" {
++		level = "stderr"
++	}
++	msg := normalizeLogMessage(line.Msg)
++	if strings.Contains(strings.ToLower(msg), "error") || strings.Contains(strings.ToLower(msg), "failed") {
++		level = "error"
++	}
++	return logEntry{when, event.GetLog().ObjectType, level, msg}
++}
++
++// A service log is also useful after a deployment: the gRPC event stream
++// cannot replay output emitted before the watcher connected.
++func readServiceLogs() tea.Msg {
++	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
++	defer cancel()
++	var command *exec.Cmd
++	if runtime.GOOS == "darwin" {
++		command = exec.CommandContext(ctx, "/usr/bin/tail", "-n", "300", "/var/log/comin.log")
++	} else {
++		command = exec.CommandContext(ctx, "journalctl", "-u", "comin.service", "-n", "300", "--no-pager", "-o", "short-iso")
++	}
++	output, err := command.Output()
++	if err != nil {
++		return loadedLogs{err: err}
++	}
++	result := make([]logEntry, 0, 300)
++	for _, raw := range strings.Split(string(output), "\n") {
++		line := normalizeLogMessage(raw)
++		if line == "" {
++			continue
++		}
++		result = appendLog(result, parseServiceLog(line))
++	}
++	return loadedLogs{logs: result}
++}
++
++func parseServiceLog(line string) logEntry {
++	entry := logEntry{stage: "service", level: "info", message: line}
++	if m := logrusLine.FindStringSubmatch(line); m != nil {
++		if stamp, err := time.Parse(time.RFC3339, m[1]); err == nil {
++			entry.when = stamp.Format("15:04:05")
++		}
++		entry.level = m[2]
++		entry.message = strings.ReplaceAll(m[3], `\"`, `"`)
++		switch {
++		case strings.HasPrefix(entry.message, "builder:"), strings.HasPrefix(entry.message, "nix: running 'nix"):
++			entry.stage = "build"
++		case strings.HasPrefix(entry.message, "deployer:"), strings.Contains(entry.message, "activating"):
++			entry.stage = "deploy"
++		case strings.HasPrefix(entry.message, "fetcher:"), strings.HasPrefix(entry.message, "repository:"):
++			entry.stage = "fetch"
++		}
++	} else {
++		if len(line) >= 19 && line[4] == '-' && line[10] == 'T' {
++			entry.when = line[11:19]
++		}
++		lower := strings.ToLower(line)
++		if strings.Contains(lower, "error") || strings.Contains(lower, "failed") {
++			entry.level = "error"
++		}
++		if strings.Contains(lower, "warning") {
++			entry.level = "warn"
++		}
++		if strings.Contains(lower, "building '") {
++			entry.stage = "build"
++		}
++		if strings.Contains(lower, "setting up ") {
++			entry.stage = "deploy"
++		}
++	}
++	entry.message = normalizeLogMessage(entry.message)
++	return entry
++}
++
++func (m Model) logRows() int {
++	if m.height <= 0 {
++		return 18
++	}
++	return max(6, m.height-8)
++}
++
++func adjustOffset(offset int, key string, count int, rows int) int {
++	switch key {
++	case "j", "down":
++		offset--
++	case "k", "up":
++		offset++
++	case "pgup":
++		offset += rows
++	case "pgdown":
++		offset -= rows
++	case "home":
++		offset = count
++	case "end":
++		offset = 0
++	}
++	return min(max(0, offset), max(0, count-rows))
++}
++
++func adjustHistoryOffset(offset int, key string, count int, rows int) int {
++	switch key {
++	case "j", "down":
++		offset++
++	case "k", "up":
++		offset--
++	case "pgup":
++		offset -= rows
++	case "pgdown":
++		offset += rows
++	case "home":
++		offset = 0
++	case "end":
++		offset = count
++	}
++	return min(max(0, offset), max(0, count-rows))
++}
++
++func upsertDeployment(items []*protobuf.Deployment, item *protobuf.Deployment) []*protobuf.Deployment {
++	if item == nil || item.Uuid == "" {
++		return items
++	}
++	for i, old := range items {
++		if old != nil && old.Uuid == item.Uuid {
++			items[i] = item
++			return items
++		}
++	}
++	items = append(items, item)
++	if len(items) > 100 {
++		items = items[len(items)-100:]
++	}
++	return items
++}
++
++func historyEntries(items []*protobuf.Deployment) []*protobuf.Deployment {
++	sorted := append([]*protobuf.Deployment(nil), items...)
++	sort.SliceStable(sorted, func(i, j int) bool {
++		if sorted[i] == nil {
++			return false
++		}
++		if sorted[j] == nil {
++			return true
++		}
++		if sorted[i].CreatedAt == nil {
++			return false
++		}
++		if sorted[j].CreatedAt == nil {
++			return true
++		}
++		return sorted[i].CreatedAt.AsTime().After(sorted[j].CreatedAt.AsTime())
++	})
++	entries := make([]*protobuf.Deployment, 0, len(sorted))
++	for _, d := range sorted {
++		if d == nil || d.Generation == nil || d.Generation.Source == nil || d.Generation.Source.GetGit() == nil || d.Generation.Source.GetGit().SelectedCommitId == "" {
++			continue
++		}
++		entries = append(entries, d)
++	}
++	return entries
++}
++
++func (m Model) logsView() string {
++	var b strings.Builder
++	b.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("6")).Render("COMIN · LOGS"))
++	b.WriteString(fmt.Sprintf("    %d recent lines", len(m.logs)))
++	if m.manager.ConnectionMsg != "" {
++		b.WriteString("    reconnecting…")
++	}
++	b.WriteString("\n")
++	b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("8")).Render("  Latest service output + live build/deploy logs"))
++	b.WriteString("\n\n")
++	rows := m.logRows()
++	start := max(0, len(m.logs)-rows-m.logOffset)
++	end := min(len(m.logs), start+rows)
++	width := m.width
++	if width < 30 {
++		width = 30
++	}
++	for _, line := range m.logs[start:end] {
++		stage := strings.ToUpper(line.stage)
++		if len(stage) > 7 {
++			stage = stage[:7]
++		}
++		stage = fmt.Sprintf("%-7s", stage)
++		detail := line.message
++		if detail == "" {
++			continue
++		}
++		detail = ansi.Truncate(detail, max(8, width-23), "…")
++		messageStyle := lipgloss.NewStyle()
++		switch line.level {
++		case "error", "fatal":
++			messageStyle = messageStyle.Foreground(lipgloss.Color("1"))
++		case "warn", "warning", "stderr":
++			messageStyle = messageStyle.Foreground(lipgloss.Color("3"))
++		}
++		b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("8")).Render(fmt.Sprintf("  %-8s", line.when)))
++		b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("6")).Render(stage + " "))
++		b.WriteString(messageStyle.Render(detail) + "\n")
++	}
++	if len(m.logs) == 0 {
++		b.WriteString("  No output yet. New output will appear here.\n")
++	}
++	if m.logOffset > 0 {
++		b.WriteString(fmt.Sprintf("\n  %d older lines above the live tail\n", m.logOffset))
++	}
++	b.WriteString("\n  j/k scroll · PgUp/PgDn · Home/End · l/Esc close")
++	return b.String()
++}
++
++func (m Model) historyView() string {
++	var b strings.Builder
++	b.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("6")).Render("COMIN · DEPLOYMENT HISTORY"))
++	b.WriteString("\n")
++	entries := historyEntries(m.history)
++	rows := m.logRows()
++	start := min(m.historyOffset, max(0, len(entries)-rows))
++	for _, d := range entries[start:min(len(entries), start+rows)] {
++		git := d.Generation.Source.GetGit()
++		status := d.Status
++		statusStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("2"))
++		if status == "failed" {
++			statusStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("1"))
++		}
++		if status == "running" {
++			statusStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
++		}
++		when := ""
++		if d.CreatedAt != nil {
++			when = d.CreatedAt.AsTime().Local().Format("Jan 02 15:04")
++		}
++		id := git.SelectedCommitId
++		if len(id) > 8 {
++			id = id[:8]
++		}
++		title := strings.Split(strings.TrimSpace(git.SelectedCommitMsg), "\n")[0]
++		if len(title) > 50 {
++			title = title[:49] + "…"
++		}
++		b.WriteString("\n  " + lipgloss.NewStyle().Foreground(lipgloss.Color("8")).Render(when) + "  ")
++		b.WriteString(statusStyle.Render(fmt.Sprintf("%-8s", status)))
++		b.WriteString(fmt.Sprintf("  %-6s  %s  %s", d.Operation, id, title))
++	}
++	if len(entries) == 0 {
++		b.WriteString("\n  No recorded deployments yet.")
++	}
++	b.WriteString("\n\n  j/k scroll · PgUp/PgDn · g/Esc close")
++	return b.String()
++}
+diff --git a/cmd/watch_panels_test.go b/cmd/watch_panels_test.go
+new file mode 100644
+index 0000000..d0018c5
+--- /dev/null
++++ b/cmd/watch_panels_test.go
+@@ -0,0 +1,133 @@
++package cmd
++
++import (
++	"github.com/charmbracelet/bubbles/help"
++	tea "github.com/charmbracelet/bubbletea"
++	"github.com/charmbracelet/x/ansi"
++	"github.com/nlewo/comin/pkg/protobuf"
++	"strings"
++	"testing"
++)
++
++func TestWatchLogFormatting(t *testing.T) {
++	entry := parseServiceLog(`time="2026-11-17T10:20:03+08:00" level=error msg="nix: build failed"`)
++	if entry.when != "10:20:03" || entry.level != "error" || entry.message != "nix: build failed" {
++		t.Fatalf("log format unexpected: %#v", entry)
++	}
++	if got := normalizeLogMessage("\x1b[31mproblem\x1b[0m\roverride"); got != "override" {
++		t.Fatalf("terminal control bytes not removed: %q", got)
++	}
++}
++
++func TestWatchLogWindowAndScrolling(t *testing.T) {
++	var logs []logEntry
++	for i := 0; i < maxWatchLogs+30; i++ {
++		logs = appendLog(logs, logEntry{message: "line"})
++	}
++	if len(logs) != maxWatchLogs {
++		t.Fatalf("unbounded log buffer: %d", len(logs))
++	}
++	if got := adjustOffset(0, "k", maxWatchLogs, 10); got != 1 {
++		t.Fatalf("scrolling up expected 1 got %d", got)
++	}
++	if got := adjustOffset(1, "end", maxWatchLogs, 10); got != 0 {
++		t.Fatalf("end expected tail got %d", got)
++	}
++	view := (Model{logs: logs, width: 85, height: 25, panel: "logs"}).logsView()
++	if !strings.Contains(view, "COMIN · LOGS") {
++		t.Fatal("logs panel heading missing")
++	}
++}
++
++func TestWatchHistoryScroll(t *testing.T) {
++	if got := adjustHistoryOffset(0, "j", 40, 10); got != 1 {
++		t.Fatalf("history j should move down: %d", got)
++	}
++	if got := adjustHistoryOffset(1, "k", 40, 10); got != 0 {
++		t.Fatalf("history k should move up: %d", got)
++	}
++}
++
++func TestWatchPanelKeys(t *testing.T) {
++	model := Model{keys: keys}
++	press := func(key rune) {
++		updated, _ := model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{key}})
++		model = updated.(Model)
++	}
++	press('l')
++	if model.panel != "logs" {
++		t.Fatal("l must open logs")
++	}
++	press('g')
++	if model.panel != "history" {
++		t.Fatal("g must open history")
++	}
++	press('g')
++	if model.panel != "" {
++		t.Fatal("g must close history")
++	}
++	press('b')
++	if model.notice != "Not connected" {
++		t.Fatalf("b offline feedback: %q", model.notice)
++	}
++	press('d')
++	if model.notice != "Not connected" {
++		t.Fatalf("d offline feedback: %q", model.notice)
++	}
++}
++
++func TestWatcherActionDebounce(t *testing.T) {
++	var calls int
++	model := Model{keys: keys}
++	for i := 0; i < 100; i++ {
++		updated, cmd := model.startAction("retry", func() error { calls++; return nil })
++		model = updated.(Model)
++		if cmd == nil {
++			t.Fatal("first request should submit")
++		}
++		blocked, cmd2 := model.startAction("retry", func() error { t.Fatal("duplicate action executed"); return nil })
++		if cmd2 != nil {
++			t.Fatal("duplicate request queued")
++		}
++		model = blocked.(Model)
++		msg := cmd()
++		after, _ := model.Update(msg)
++		model = after.(Model)
++		if model.pendingAction != "" {
++			t.Fatal("pending action not released")
++		}
++	}
++	if calls != 100 {
++		t.Fatalf("expected 100 completed calls; got %d", calls)
++	}
++}
++
++func TestWatcherPersistedHistoryDedup(t *testing.T) {
++	gen := &protobuf.Generation{Source: &protobuf.Source{Source: &protobuf.Source_Git{Git: &protobuf.Git{SelectedCommitId: "123456abcdef"}}}}
++	d := &protobuf.Deployment{Uuid: "d1", Generation: gen, Status: "running"}
++	list := upsertDeployment(nil, d)
++	d2 := &protobuf.Deployment{Uuid: "d1", Generation: gen, Status: "done"}
++	list = upsertDeployment(list, d2)
++	if len(list) != 1 || list[0].Status != "done" {
++		t.Fatalf("history duplicated instead of updated: %v", list)
++	}
++	list = upsertDeployment(list, &protobuf.Deployment{Uuid: "dummy"})
++	if got := len(historyEntries(list)); got != 1 {
++		t.Fatalf("unexpected history entries: %d", got)
++	}
++	if got := adjustHistoryOffset(0, "end", len(historyEntries(list)), 8); got != 0 {
++		t.Fatalf("history scroll beyond bounds: %d", got)
++	}
++}
++
++func TestWatchControlsHaveTwoShortRows(t *testing.T) {
++	m := Model{keys: keys, help: help.New()}
++	first := ansi.Strip(m.helpRow(keys.Fetch, keys.Build, keys.Deploy, keys.Confirm))
++	second := ansi.Strip(m.helpRow(keys.Suspend, keys.Logs, keys.History, keys.Quit))
++	if first != "f fetch • b build • d deploy • c confirm" {
++		t.Fatalf("unexpected primary control row: %q", first)
++	}
++	if second != "s suspend • l logs • g history • q quit" {
++		t.Fatalf("unexpected secondary control row: %q", second)
++	}
++}
+diff --git a/pkg/tui/tui.go b/pkg/tui/tui.go
+index 8ef6c51..68755b4 100644
+--- a/pkg/tui/tui.go
++++ b/pkg/tui/tui.go
+@@ -191,14 +191,6 @@ func (bm BuilderModel) View() string {
+ 				fmt.Sprintf(" %s\n", formatTime(g.BuildEndedAt.AsTime())))
+ 		}
+ 	}
+-	b.WriteString("  " + labelStyle.Render("Logs:") + "\n")
+-	start := 0
+-	if len(bm.LogLines) > 10 {
+-		start = len(bm.LogLines) - 10
+-	}
+-	for i := start; i < len(bm.LogLines); i++ {
+-		b.WriteString("    " + bm.LogLines[i] + "\n")
+-	}
+ 	return b.String()
+ }
+ 
+@@ -255,15 +247,6 @@ func (dm DeployerModel) View() string {
+ 				fmt.Sprintf(" %s\n", formatTime(d.EndedAt.AsTime())))
+ 		}
+ 	}
+-	// Deployer logs
+-	b.WriteString("  " + labelStyle.Render("Logs:") + "\n")
+-	start := 0
+-	if len(dm.LogLines) > 10 {
+-		start = len(dm.LogLines) - 10
+-	}
+-	for i := start; i < len(dm.LogLines); i++ {
+-		b.WriteString("    " + dm.LogLines[i] + "\n")
+-	}
+ 	return b.String()
+ }
+ 
+@@ -281,11 +264,11 @@ type ManagerModel struct {
+ func (mm ManagerModel) View() string {
+ 	var b strings.Builder
+ 
+-	if mm.ConnectionMsg != "" {
+-		b.WriteString(warnStyle.Render("Disconnected: "+mm.ConnectionMsg) + "\n")
+-		return b.String()
++	connected := mm.ConnectionMsg == ""
++	if !connected {
++		b.WriteString(warnStyle.Render("Reconnecting to Comin… displaying last known state") + "\n")
+ 	}
+-	b.WriteString(dimStyle.Render("Connected:       ") + boolToString(true) + "\n")
++	b.WriteString(dimStyle.Render("Connected:       ") + boolToString(connected) + "\n")
+ 	b.WriteString(dimStyle.Render("Hostname:        ") + mm.Hostname + "\n")
+ 	b.WriteString(labelStyle.Render("Suspended:       ") + boolToString(mm.IsSuspended) + "\n")
+ 	b.WriteString(labelStyle.Render("Reboot required: ") + boolToString(mm.NeedToReboot) + "\n")
+@@ -311,11 +294,34 @@ func UpdateManager(manager *ManagerModel, event *protobuf.Event) {
+ 			manager.Builder.IsBuilding = state.Builder.IsBuilding.GetValue()
+ 			manager.Builder.IsSuspended = state.Builder.IsSuspended.GetValue()
+ 			manager.Builder.Generation = state.Builder.Generation
++			if manager.Builder.Generation == nil && state.Store != nil {
++				for _, generation := range state.Store.Generations {
++					if generation == nil {
++						continue
++					}
++					if manager.Builder.Generation == nil || (generation.EvalStartedAt != nil && manager.Builder.Generation.EvalStartedAt != nil && generation.EvalStartedAt.AsTime().After(manager.Builder.Generation.EvalStartedAt.AsTime())) {
++						manager.Builder.Generation = generation
++					}
++				}
++			}
+ 		}
+ 		if state.Deployer != nil {
+ 			manager.Deployer.IsDeploying = state.Deployer.IsDeploying.GetValue()
+ 			manager.Deployer.IsSuspended = state.Deployer.IsSuspended.GetValue()
+ 			manager.Deployer.Deployment = state.Deployer.Deployment
++			if manager.Deployer.Deployment == nil && state.Store != nil {
++				for _, deployment := range state.Store.Deployments {
++					if deployment == nil || deployment.Generation == nil {
++						continue
++					}
++					if deployment.Generation.Source == nil || deployment.Generation.Source.GetGit() == nil {
++						continue
++					}
++					if manager.Deployer.Deployment == nil || (deployment.CreatedAt != nil && manager.Deployer.Deployment.CreatedAt != nil && deployment.CreatedAt.AsTime().After(manager.Deployer.Deployment.CreatedAt.AsTime())) {
++						manager.Deployer.Deployment = deployment
++					}
++				}
++			}
+ 		}
+ 		if state.Fetcher != nil {
+ 			manager.Fetcher.IsFetching = state.Fetcher.IsFetching.GetValue()
+@@ -352,23 +358,6 @@ func UpdateManager(manager *ManagerModel, event *protobuf.Event) {
+ 		manager.Deployer.IsSuspended = false
+ 	case *protobuf.Event_RebootRequired_:
+ 		manager.NeedToReboot = true
+-	case *protobuf.Event_Log_:
+-		if logLine := e.Log.GetLine(); logLine != nil {
+-			msg := logLine.GetMsg()
+-			objectType := e.Log.GetObjectType()
+-			// Append log line to the appropriate slice, keeping only last 10
+-			switch objectType {
+-			case "evaluation", "build":
+-				manager.Builder.LogLines = append(manager.Builder.LogLines, msg)
+-				if len(manager.Builder.LogLines) > 10 {
+-					manager.Builder.LogLines = manager.Builder.LogLines[len(manager.Builder.LogLines)-10:]
+-				}
+-			case "deployment":
+-				manager.Deployer.LogLines = append(manager.Deployer.LogLines, msg)
+-				if len(manager.Deployer.LogLines) > 10 {
+-					manager.Deployer.LogLines = manager.Deployer.LogLines[len(manager.Deployer.LogLines)-10:]
+-				}
+-			}
+-		}
++
+ 	}
+ }
+diff --git a/pkg/tui/tui_history_test.go b/pkg/tui/tui_history_test.go
+new file mode 100644
+index 0000000..7b9fc11
+--- /dev/null
++++ b/pkg/tui/tui_history_test.go
+@@ -0,0 +1,38 @@
++package tui
++
++import (
++	"testing"
++	"time"
++
++	"github.com/nlewo/comin/pkg/protobuf"
++	"google.golang.org/protobuf/types/known/timestamppb"
++)
++
++func TestRehydratePersistedGenerationAndDeployment(t *testing.T) {
++	gen := &protobuf.Generation{
++		Uuid:          "build-1",
++		EvalStatus:    "evaluated",
++		BuildStatus:   "built",
++		EvalStartedAt: timestamppb.New(time.Now()),
++		Source:        &protobuf.Source{Source: &protobuf.Source_Git{Git: &protobuf.Git{SelectedCommitId: "abcdef123456"}}},
++	}
++	deployment := &protobuf.Deployment{
++		Uuid: "deploy-1", Status: "done", Generation: gen,
++		CreatedAt: timestamppb.New(time.Now()),
++	}
++	event := &protobuf.Event{Type: &protobuf.Event_ManagerState_{ManagerState: &protobuf.Event_ManagerState{
++		State: &protobuf.State{
++			Builder:  &protobuf.Builder{Hostname: "example"},
++			Deployer: &protobuf.Deployer{},
++			Store:    &protobuf.Store{Generations: []*protobuf.Generation{gen}, Deployments: []*protobuf.Deployment{deployment}},
++		},
++	}}}
++	var model ManagerModel
++	UpdateManager(&model, event)
++	if model.Builder.Generation == nil || model.Builder.Generation.Uuid != gen.Uuid {
++		t.Fatal("saved build not restored after reconnection")
++	}
++	if model.Deployer.Deployment == nil || model.Deployer.Deployment.Uuid != deployment.Uuid {
++		t.Fatal("saved deployment not restored after reconnection")
++	}
++}

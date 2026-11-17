@@ -19,6 +19,7 @@ in
     enable = true;
     hostname = configurationOutputName;
     allowForcePush = true;
+    buildAttemptsLimit = 3;
 
     remotes = [
       {
@@ -35,6 +36,9 @@ in
         poller.period = 300;
       }
     ];
+  }
+  // lib.optionalAttrs isDarwin {
+    grpc.unix_socket_group = "staff";
   }
   // lib.optionalAttrs (configurationFlakeSubdirectory != null) {
     repositorySubdir = configurationFlakeSubdirectory;
@@ -121,4 +125,12 @@ in
         StandardErrorPath = "/var/log/comin-event-listener.log";
       };
     };
+}
+// lib.optionalAttrs isDarwin {
+  # The launchd command must be independent of package/config store paths;
+  # otherwise the daemon unloads itself during a Darwin switch.
+  launchd.daemons.comin = {
+    command = lib.mkForce "/nix/var/nix/profiles/system-profiles/comin/sw/bin/comin run --config /etc/comin/config.yaml";
+    serviceConfig.EnvironmentVariables.PATH = lib.mkForce "/run/current-system/sw/bin:/nix/var/nix/profiles/default/bin:/usr/bin:/bin";
+  };
 }

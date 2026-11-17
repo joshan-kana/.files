@@ -8,7 +8,8 @@
 
 let
   inherit (lib.systems.elaborate system) isDarwin isLinux;
-  upstream = builtins.getFlake "github:nlewo/comin/ed92afc48978fb15a2535ebd5c5f63b3010e3b78";
+  upstream = builtins.getFlake "github:nlewo/comin/51e20d80b237b405009ddeb8c19a648eb95737e0";
+  cominConfig = import "${upstream.outPath}/nix/comin-config.nix" { inherit config pkgs lib; };
 in
 {
   imports =
@@ -29,9 +30,15 @@ in
         comin = upstream.packages.${final.stdenv.hostPlatform.system}.comin.overrideAttrs (old: {
           version = "${old.version}-patched";
           __intentionallyOverridingVersion = true;
+          ldflags = [ "-X github.com/nlewo/comin/cmd.version=${old.version}-patched" ];
 
           patches = (old.patches or [ ]) ++ [
             ../../patches/comin/allow-force-push.patch
+            ../../patches/comin/execution-lifecycle.patch
+            ../../patches/comin/manual-retry.patch
+            ../../patches/comin/deployment-restart.patch
+            ../../patches/comin/stream-reconnect.patch
+            ../../patches/comin/watch-tui.patch
           ];
           passthru = (old.passthru or { }) // {
             autoUpdate = false;
@@ -46,6 +53,12 @@ in
     };
   }
   // lib.optionalAttrs isDarwin {
+    # Keep the launchd job definition stable across switches. Changing its
+    # plist during activation unloads the very Comin process running it.
+    # The daemon exits after a successful switch and launchd starts the new
+    # binary using the updated profile and config symlink.
+    environment.etc."comin/config.yaml".source = cominConfig.cominConfigYaml;
+
     # The upstream Comin module reads this option for its executable PATH.
     # With `nix.enable = false`, Determinate still owns the daemon.
     nix.package = lib.mkDefault pkgs.nix;
