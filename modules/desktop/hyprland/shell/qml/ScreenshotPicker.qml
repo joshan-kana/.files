@@ -564,7 +564,7 @@ Item {
                     }
                     ShellAction {
                         visible: picker.selectionMode !== "record"
-                        width: visible ? 108 : 0
+                        width: visible ? Math.max(136, picker.theme.fontSize(110)) : 0
                         height: 37
                         runtime: picker.runtime
                         theme: picker.theme
