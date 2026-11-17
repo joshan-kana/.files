@@ -609,23 +609,7 @@
         {
           docs = generatedDocs.book;
           docs-source = generatedDocs.docsSource;
-          nixos-pi-image = nixosPiImage.config.system.build.sdImage.overrideAttrs (old: {
-            # Nixpkgs's SD-image builder copies partitions in 512-byte blocks.
-            buildCommand =
-              assert lib.assertMsg
-                (lib.hasInfix "dd conv=notrunc if=$root_fs of=$img seek=$START count=$SECTORS" old.buildCommand)
-                "The SD-image copy logic changed upstream; review the Pi image optimization";
-              builtins.replaceStrings
-                [
-                  "dd conv=notrunc if=$root_fs of=$img seek=$START count=$SECTORS"
-                  "dd conv=notrunc if=firmware_part.img of=$img seek=$START count=$SECTORS"
-                ]
-                [
-                  "dd conv=notrunc if=$root_fs of=$img bs=4M seek=$((START * 512)) count=$((SECTORS * 512)) oflag=seek_bytes iflag=count_bytes"
-                  "dd conv=notrunc if=firmware_part.img of=$img bs=4M seek=$((START * 512)) count=$((SECTORS * 512)) oflag=seek_bytes iflag=count_bytes"
-                ]
-                old.buildCommand;
-          });
+          nixos-pi-image = nixosPiImage.config.system.build.sdImage;
         }
         // updatePackagesFor system
       );
