@@ -130,7 +130,7 @@ test("inspection is reachable through canonical shortcut, palette and status isl
   );
   assert.match(island, /acceptedButtons: Qt\.LeftButton \| Qt\.RightButton/);
   assert.match(peek, /keyboard\.refresh\("inspect"\)/);
-  assert.match(peek, /WlrKeyboardFocus\.OnDemand/);
+  assert.match(peek, /WlrKeyboardFocus\.Exclusive/);
   const content = read("StatusContent.qml");
   assert.match(
     content,
