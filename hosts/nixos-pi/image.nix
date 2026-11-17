@@ -20,6 +20,7 @@
     populateFirmwareCommands = lib.mkAfter ''
       mkdir -p firmware/overlays
       cp ${pkgs.raspberrypifw}/share/raspberrypi/boot/overlays/vc4-kms-v3d.dtbo firmware/overlays/
+      chmod u+w firmware/config.txt
       cat >> firmware/config.txt <<'EOF_CONFIG'
 
       [pi4]
