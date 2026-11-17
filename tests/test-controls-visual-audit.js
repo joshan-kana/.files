@@ -51,6 +51,10 @@ test("night light uses inline, interactive slider with value and shared KeyHint"
   assert.match(controls, /label: "Night Light"/);
   assert.match(
     controls,
+    /toggleShortcut: root\.runtime\.shellHint\("SystemContent\.nightLight"\)/,
+  );
+  assert.match(
+    controls,
     /valueText: root\.nightLight\.supported \? root\.nightLight\.temperature/,
   );
   assert.match(

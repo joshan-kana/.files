@@ -45,7 +45,11 @@ test("one declarative registry owns every local shortcut and its visible hint", 
   assert.ok(Object.keys(hints).length > 200);
   for (const name of files) {
     const s = fs.readFileSync(path.join(qmlDir, name), "utf8");
-    assert.doesNotMatch(s, /\bshortcut: "[^"\n]+"/, `${name}: literal keycap`);
+    assert.doesNotMatch(
+      s,
+      /\b(?:shortcut|toggleShortcut|cancelShortcut|keyHint): "[^"\n]+"/,
+      `${name}: literal keycap`,
+    );
     assert.doesNotMatch(
       s,
       /\bsequence: "[^"\n]+"/,
@@ -92,7 +96,7 @@ test("modifier changes, alternatives and special keys remain consistent", () => 
   const changed = {
     ...registry,
     overrides: {
-      controls: { Shift: "ALT", D: "M" },
+      controls: { Shift: "ALT", D: "M", X: "Z", T: "B" },
       palette: { Alt: "CTRL" },
       capture: { Slash: "Y" },
     },
@@ -106,6 +110,20 @@ test("modifier changes, alternatives and special keys remain consistent", () => 
     false,
   );
   assert.equal(f.hint(changed, "BluetoothPanel.scan"), "ALT+M");
+  assert.equal(
+    f.matchesHint(changed, "BluetoothPanel.scan", 77, Qt.AltModifier, Qt),
+    true,
+  );
+  assert.equal(
+    f.matchesHint(changed, "BluetoothPanel.scan", 77, Qt.ShiftModifier, Qt),
+    false,
+  );
+  assert.equal(
+    f.matchesHint(changed, "BluetoothPanel.scan", 68, Qt.AltModifier, Qt),
+    false,
+  );
+  assert.equal(f.hint(changed, "ThemePanel.cancel"), "Z");
+  assert.equal(f.hint(changed, "SystemContent.nightLight"), "B");
   assert.equal(f.hint(changed, "ThemePanel.search"), "/");
   assert.equal(f.hint(changed, "ScreenshotPicker.cancel"), "ESC");
   assert.equal(f.sequence(changed, "CommandPalette.apps"), "Ctrl+2");

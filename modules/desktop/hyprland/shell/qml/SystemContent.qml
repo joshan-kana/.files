@@ -1084,7 +1084,7 @@ FocusScope {
                             from: 2500
                             to: 6500
                             onValueRequested: value => root.nightLight.setTemperature(value)
-                            toggleShortcut: "T"
+                            toggleShortcut: root.runtime.shellHint("SystemContent.nightLight")
                             roleAccent: root.theme.roleColor("warmth")
                             active: root.nightLight.active
                             canToggle: root.nightLight.supported && !root.nightLight.busy
