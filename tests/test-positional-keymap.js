@@ -300,6 +300,15 @@ test("Bluetooth shortcut hints reflect available hardware and selected device st
   const bluetooth = qml("BluetoothPanel.qml");
   assert.match(
     bluetooth,
+    /"PAIR FIRST \/\/ PRESS " \+ runtime\.shellHint\("BluetoothPanel\.pair"\)/,
+  );
+  assert.match(
+    bluetooth,
+    /"CONFIRM FORGET \/\/ PRESS " \+ runtime\.shellHint\("BluetoothPanel\.forget"\)/,
+  );
+  assert.doesNotMatch(bluetooth, /PRESS [PF](?: AGAIN)?"/);
+  assert.match(
+    bluetooth,
     /idleMessage: !panel\.adapterAvailable \? "Bluetooth adapter unavailable"/,
   );
   assert.match(
