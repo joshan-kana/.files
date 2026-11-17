@@ -22,6 +22,7 @@ Item {
     readonly property var filteredThemes: themes.filter(entry => (entry.label || entry.name).toLowerCase().includes(searchText.toLowerCase()) || entry.name.toLowerCase().includes(searchText.toLowerCase()))
     readonly property bool searching: searchField.activeFocus
     onSearchTextChanged: {
+        selectionTouched = true;
         selectedIndex = 0;
         if (searchText.length === 0)
             selectCurrentTheme();
@@ -29,6 +30,7 @@ Item {
     property string defaultTheme: ""
     property string currentTheme: ""
     property int selectedIndex: 0
+    property bool selectionTouched: false
     property string statusText: ""
     property bool statusError: false
     property bool operationRunning: false
@@ -67,7 +69,8 @@ Item {
                 const parsed = JSON.parse(panel.registryOutput.text);
                 panel.defaultTheme = parsed.default || "";
                 panel.themes = parsed.themes || [];
-                panel.selectCurrentTheme();
+                if (!panel.selectionTouched)
+                    panel.selectCurrentTheme();
             } catch (error) {
                 panel.setError(error.toString(), "INVALID THEME REGISTRY");
             }
@@ -163,7 +166,8 @@ Item {
             }
 
             panel.currentTheme = panel.currentOutput.text.trim();
-            panel.selectCurrentTheme();
+            if (!panel.selectionTouched)
+                panel.selectCurrentTheme();
         }
     }
 
@@ -234,6 +238,8 @@ Item {
     }
 
     function openView(): void {
+        selectionTouched = false;
+        selectCurrentTheme();
         open = true;
         refreshOperation();
         // Keep the cached model and selected index stable across the morph.
@@ -266,6 +272,7 @@ Item {
     function moveSelection(delta: int): void {
         if (filteredThemes.length === 0)
             return;
+        selectionTouched = true;
         selectedIndex = Math.max(0, Math.min(filteredThemes.length - 1, selectedIndex + delta));
     }
 
@@ -280,6 +287,7 @@ Item {
         const selected = selectedTheme();
         if (!selected)
             return;
+        selectionTouched = true;
 
         if (selected.name === currentTheme) {
             statusText = "ALREADY ACTIVE // " + (selected.label || selected.name).toUpperCase();

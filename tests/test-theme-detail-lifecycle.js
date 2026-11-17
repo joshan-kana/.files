@@ -140,3 +140,44 @@ test("Theme search returns focus to the shared keyboard owner", () => {
     /ThemePanel \{[\s\S]*?onKeyboardRequested: keyboardFocus.forceActiveFocus\(\)/,
   );
 });
+
+test("Theme gallery keeps a user-selected target through asynchronous active-theme refreshes", () => {
+  const source = qml("ThemePanel.qml");
+  const registry = source.slice(
+    source.indexOf("property Process registryProcess"),
+    source.indexOf("property Process switchProcess"),
+  );
+  const current = source.slice(
+    source.indexOf("property Process currentProcess"),
+    source.indexOf("function setError"),
+  );
+  const open = source.slice(
+    source.indexOf("function openView"),
+    source.indexOf("function closeView"),
+  );
+  const navigate = source.slice(
+    source.indexOf("function moveSelection"),
+    source.indexOf("function moveGrid"),
+  );
+  const apply = source.slice(
+    source.indexOf("function activateSelected"),
+    source.indexOf("DetailHero {"),
+  );
+
+  assert.match(source, /property bool selectionTouched: false/);
+  assert.match(
+    registry,
+    /if \(!panel\.selectionTouched\)\s*panel\.selectCurrentTheme\(\)/,
+  );
+  assert.match(
+    current,
+    /panel\.currentTheme = panel\.currentOutput\.text\.trim\(\);\s*if \(!panel\.selectionTouched\)\s*panel\.selectCurrentTheme\(\)/,
+  );
+  assert.match(open, /selectionTouched = false;\s*selectCurrentTheme\(\)/);
+  assert.match(navigate, /selectionTouched = true;\s*selectedIndex/);
+  assert.match(
+    apply,
+    /selectionTouched = true;[\s\S]*?operationRunning = true/,
+  );
+  assert.match(source, /onSearchTextChanged: \{\s*selectionTouched = true/);
+});
