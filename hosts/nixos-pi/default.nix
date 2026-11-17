@@ -16,14 +16,12 @@ lib.recursiveUpdate (import ../../profiles/workstation.nix { inherit moduleRegis
   };
 
   dotfiles = {
-    defaults.browser = "firefox";
     scopes = {
       system.boot.loader.enable = false;
       virtualisation.enable = false;
 
       desktopApps = {
         waypipe.enable = false;
-        zed.enable = false;
         keymapp.enable = false;
         vial.enable = false;
         openclaw.enable = false;
@@ -33,10 +31,8 @@ lib.recursiveUpdate (import ../../profiles/workstation.nix { inherit moduleRegis
         githubDesktop.enable = false;
         pycharm.enable = false;
         libreoffice.enable = false;
-        sunshine.enable = false;
         ollama.enable = false;
         discord.enable = false;
-        dropbox.enable = false;
         onlyoffice.enable = false;
         beeperMatrixClient.enable = false;
         chatgpt.enable = false;
@@ -54,6 +50,16 @@ lib.recursiveUpdate (import ../../profiles/workstation.nix { inherit moduleRegis
     ssh = _: {
       users.users.${config.dotfiles.users.primary.name}.openssh.authorizedKeys.keys = [
         "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGMZdbT05P/naiv07J32DxHDOR5A1z8F9jijeBrDkXWV joshankana@gmail.com"
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBU9mnHy1HP+StbXl3HmTSpOVJ1VETv9DYWUj1YmzDKc chatgpt-shell-nixos-pi"
+      ];
+
+      systemd.tmpfiles.rules = [
+        "f+ /etc/elevation-authorized-key 0444 root root - ${
+          lib.concatStringsSep "\\n" [
+            "ssh-ed25519\\x20AAAAC3NzaC1lZDI1NTE5AAAAIEBfBg52XAZkpWk2cKNqvITRhsrnmEdz8yon5bpZZP/w\\x20joshan@nixos-pi-sudo"
+            "ssh-ed25519\\x20AAAAC3NzaC1lZDI1NTE5AAAAIMgQFxMmgs5HwY+l9twQBUEt672VOFrmgAnOKuoMuzz/\\x20nixos-pi-sudo"
+          ]
+        }\\n"
       ];
     };
   };
