@@ -110,6 +110,11 @@ test("slider keyboard workflow respects direct actions, detail Escape and global
   );
   assert.match(controls, /shortcut: "TAB"/);
   assert.match(
+    controls,
+    /hints: root\.selectedSlider\.length === 0 \? \[\s*\{\s*shortcut: "J\/K"/,
+  );
+  assert.match(read("ShellSection.qml"), /trailing: true/);
+  assert.match(
     opacity,
     /shortcut: setting\.keyboardSelected \? "H\/L" : setting\.shortcut/,
   );

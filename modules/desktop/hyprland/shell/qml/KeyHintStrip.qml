@@ -9,6 +9,7 @@ Item {
     required property Theme theme
     property var hints: []
     property bool compact: true
+    property bool trailing: false
     property int groupSpacing: theme.spacing2
 
     implicitHeight: hintRows.implicitHeight
@@ -73,7 +74,7 @@ Item {
             delegate: Row {
                 id: hintRow
                 required property var modelData
-                anchors.horizontalCenter: parent.horizontalCenter
+                x: strip.trailing ? Math.max(0, parent.width - implicitWidth) : (parent.width - implicitWidth) / 2
                 spacing: strip.groupSpacing
                 Repeater {
                     model: hintRow.modelData

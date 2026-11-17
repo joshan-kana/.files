@@ -1320,7 +1320,7 @@ FocusScope {
                     title: "Audio & levels"
                     emphasized: true
                     accentRole: "audio"
-                    hints: [
+                    hints: root.selectedSlider.length === 0 ? [
                         {
                             shortcut: "J/K",
                             label: "Select"
@@ -1329,7 +1329,7 @@ FocusScope {
                             shortcut: "H/L",
                             label: "Level"
                         }
-                    ]
+                    ] : []
 
                     AudioMixerContent {
                         id: audioDeck
