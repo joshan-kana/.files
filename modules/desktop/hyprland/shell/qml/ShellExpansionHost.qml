@@ -112,77 +112,77 @@ PanelWindow {
     readonly property string helpCaption: systemContent ? systemContent.helpTitle : mediaContent ? "Now Playing controls" : expansionState.currentName === "activity" ? "Activity controls" : expansionState.currentName === "weather" ? "Weather controls" : "Home controls"
     readonly property var otherHelpKeys: expansionState.currentName === "activity" ? [
         {
-            key: "J/K · ↑/↓",
+            key: host.runtime.shellHint("ShellExpansionHost.legend.navigate_notifications"),
             action: "Navigate notifications"
         },
         {
-            key: "H/L · ←/→",
+            key: host.runtime.shellHint("ShellExpansionHost.legend.select_a_notification_group"),
             action: "Select a notification group"
         },
         {
-            key: "E / ENTER",
+            key: host.runtime.shellHint("ShellExpansionHost.legend.expand_group_or_open_selected_notification"),
             action: "Expand group or open selected notification"
         },
         {
-            key: "M / SHIFT+M",
+            key: host.runtime.shellHint("ShellExpansionHost.legend.toggle_read_mark_all_read"),
             action: "Toggle read / mark all read"
         },
         {
-            key: "DEL / BACKSPACE",
+            key: host.runtime.shellHint("ShellExpansionHost.legend.dismiss_selected_notification"),
             action: "Dismiss selected notification"
         },
         {
-            key: "S / C",
+            key: host.runtime.shellHint("ShellExpansionHost.legend.toggle_silence_clear_history"),
             action: "Toggle silence / clear history"
         },
         {
-            key: "ESC",
+            key: host.runtime.shellHint("ShellExpansionHost.legend.esc"),
             action: activityContent && activityContent.replyEditing ? "Return to Activity" : "Close Activity"
         }
     ] : expansionState.currentName === "weather" ? [
         {
-            key: "H/L · J/K · ARROWS",
+            key: host.runtime.shellHint("ShellExpansionHost.legend.browse_forecast_days"),
             action: "Browse forecast days"
         },
         {
-            key: "R",
+            key: host.runtime.shellHint("ShellExpansionHost.legend.refresh_forecast"),
             action: "Refresh forecast"
         },
         {
-            key: "C / BACKSPACE",
+            key: host.runtime.shellHint("ShellExpansionHost.legend.return_to_calendar"),
             action: "Return to calendar"
         },
         {
-            key: "ESC",
+            key: host.runtime.shellHint("ShellExpansionHost.legend.close_weather"),
             action: "Close weather"
         }
     ] : [
         {
-            key: "J/K · ↑/↓ · PGUP/PGDN",
+            key: host.runtime.shellHint("ShellExpansionHost.legend.previous_next_month"),
             action: "Previous / next month"
         },
         {
-            key: "H/L · ←/→",
+            key: host.runtime.shellHint("ShellExpansionHost.legend.previous_next_day"),
             action: "Previous / next day"
         },
         {
-            key: "T",
+            key: host.runtime.shellHint("ShellExpansionHost.legend.go_to_today"),
             action: "Go to today"
         },
         {
-            key: "F / ENTER",
+            key: host.runtime.shellHint("ShellExpansionHost.legend.open_forecast"),
             action: "Open forecast"
         },
         {
-            key: "C",
+            key: host.runtime.shellHint("ShellExpansionHost.legend.choose_visible_calendars"),
             action: "Choose visible calendars"
         },
         {
-            key: "R",
+            key: host.runtime.shellHint("ShellExpansionHost.legend.refresh_agenda"),
             action: "Refresh agenda"
         },
         {
-            key: "ESC",
+            key: host.runtime.shellHint("ShellExpansionHost.legend.close_home"),
             action: "Close Home"
         }
     ]
@@ -475,28 +475,28 @@ PanelWindow {
     // Controls and Now Playing already consume '?' in their own focus scopes.
     // Give Home, Weather and Activity the same key and contextual overlay.
     Shortcut {
-        sequence: "?"
+        sequence: host.runtime.shellSequence("ShellExpansionHost.helpOpen")
         context: Qt.ApplicationShortcut
         enabled: host.expansionState.hasCurrent && !host.systemContent && !host.mediaContent && !(host.activityContent && host.activityContent.replyEditing)
         onActivated: host.toggleHelp()
     }
 
     Shortcut {
-        sequence: "Esc"
+        sequence: host.runtime.shellSequence("ShellExpansionHost.helpClose")
         context: Qt.ApplicationShortcut
         enabled: host.otherHelpOpen && !host.systemContent && !host.mediaContent
         onActivated: host.otherHelpOpen = false
     }
 
     Shortcut {
-        sequence: "J"
+        sequence: host.runtime.shellSequence("ShellExpansionHost.helpDown")
         context: Qt.ApplicationShortcut
         enabled: host.otherHelpOpen
         onActivated: scopedHelp.scrollHints(1)
     }
 
     Shortcut {
-        sequence: "K"
+        sequence: host.runtime.shellSequence("ShellExpansionHost.helpUp")
         context: Qt.ApplicationShortcut
         enabled: host.otherHelpOpen
         onActivated: scopedHelp.scrollHints(-1)
@@ -505,63 +505,63 @@ PanelWindow {
     // Home, Weather and Activity use the shared Help viewer rather than
     // their own key sink. Match the Controls and Now Playing scroll keys.
     Shortcut {
-        sequence: "Up"
+        sequence: host.runtime.shellSequence("ShellExpansionHost.helpArrowUp")
         context: Qt.ApplicationShortcut
         enabled: host.otherHelpOpen
         onActivated: scopedHelp.scrollHints(-1)
     }
 
     Shortcut {
-        sequence: "Down"
+        sequence: host.runtime.shellSequence("ShellExpansionHost.helpArrowDown")
         context: Qt.ApplicationShortcut
         enabled: host.otherHelpOpen
         onActivated: scopedHelp.scrollHints(1)
     }
 
     Shortcut {
-        sequence: "U"
+        sequence: host.runtime.shellSequence("ShellExpansionHost.helpPageUp")
         context: Qt.ApplicationShortcut
         enabled: host.otherHelpOpen
         onActivated: scopedHelp.scrollHints(-4)
     }
 
     Shortcut {
-        sequence: "D"
+        sequence: host.runtime.shellSequence("ShellExpansionHost.helpPageDown")
         context: Qt.ApplicationShortcut
         enabled: host.otherHelpOpen
         onActivated: scopedHelp.scrollHints(4)
     }
 
     Shortcut {
-        sequence: "PgUp"
+        sequence: host.runtime.shellSequence("ShellExpansionHost.helpPgUp")
         context: Qt.ApplicationShortcut
         enabled: host.otherHelpOpen
         onActivated: scopedHelp.scrollHints(-4)
     }
 
     Shortcut {
-        sequence: "PgDown"
+        sequence: host.runtime.shellSequence("ShellExpansionHost.helpPgDown")
         context: Qt.ApplicationShortcut
         enabled: host.otherHelpOpen
         onActivated: scopedHelp.scrollHints(4)
     }
 
     Shortcut {
-        sequence: "Shift+Esc"
+        sequence: host.runtime.shellSequence("ShellExpansionHost.closeAll")
         context: Qt.ApplicationShortcut
         enabled: host.expansionState.hasCurrent
         onActivated: host.expansionState.close()
     }
 
     Shortcut {
-        sequence: "PgDown"
+        sequence: host.runtime.shellSequence("ShellExpansionHost.pageDown")
         context: Qt.ApplicationShortcut
         enabled: host.hostPageShortcutsEnabled && contentViewport.contentHeight > contentViewport.height
         onActivated: host.pageContent(1)
     }
 
     Shortcut {
-        sequence: "PgUp"
+        sequence: host.runtime.shellSequence("ShellExpansionHost.pageUp")
         context: Qt.ApplicationShortcut
         enabled: host.hostPageShortcutsEnabled && contentViewport.contentHeight > contentViewport.height
         onActivated: host.pageContent(-1)
@@ -584,7 +584,7 @@ PanelWindow {
     }
 
     Shortcut {
-        sequence: "Shift+Q"
+        sequence: host.runtime.shellSequence("ShellExpansionHost.stopRecording")
         context: Qt.ApplicationShortcut
         enabled: host.expansionState.hasCurrent && host.recordingState.capturing
         onActivated: host.recordingStopRequested()
@@ -593,14 +593,14 @@ PanelWindow {
     // The Controls root keeps U/D half-page navigation as well as PageUp/Down.
     // Never intercept D in the captures detail, where it requests deletion.
     Shortcut {
-        sequence: "U"
+        sequence: host.runtime.shellSequence("ShellExpansionHost.controlsPageUp")
         context: Qt.ApplicationShortcut
         enabled: host.expansionState.currentName === "system" && !host.detailVisible && !host.helpVisible && contentViewport.contentHeight > contentViewport.height
         onActivated: host.pageContent(-1)
     }
 
     Shortcut {
-        sequence: "D"
+        sequence: host.runtime.shellSequence("ShellExpansionHost.controlsPageDown")
         context: Qt.ApplicationShortcut
         enabled: host.expansionState.currentName === "system" && !host.detailVisible && !host.helpVisible && contentViewport.contentHeight > contentViewport.height
         onActivated: host.pageContent(1)
@@ -901,11 +901,11 @@ PanelWindow {
                             }
                         ].filter(item => item.shortcut.length > 0) : []).concat([
                         {
-                            shortcut: "ESC",
+                            shortcut: host.runtime.shellHint("ShellExpansionHost.back"),
                             label: host.escapeHintLabel
                         },
                         {
-                            shortcut: "SHIFT+ESC",
+                            shortcut: host.runtime.shellHint("ShellExpansionHost.closeAll"),
                             label: "Close all"
                         }
                     ])
@@ -928,14 +928,14 @@ PanelWindow {
                 KeyChord {
                     visible: host.expansionState.currentName === "system" && !host.detailVisible
                     anchors.verticalCenter: parent.verticalCenter
-                    shortcut: "U/D"
+                    shortcut: host.runtime.shellHint("ShellExpansionHost.scroll")
                     fontFamily: host.runtime.fontMono
                     textColor: host.theme.textStrong
                     fontSize: host.theme.fontKeyHint
                 }
                 KeyChord {
                     anchors.verticalCenter: parent.verticalCenter
-                    shortcut: "PGUP/PGDN"
+                    shortcut: host.runtime.shellHint("ShellExpansionHost.page")
                     fontFamily: host.runtime.fontMono
                     textColor: host.theme.textStrong
                     fontSize: host.theme.fontKeyHint

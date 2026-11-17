@@ -185,7 +185,7 @@ Scope {
                         compact: true
                         horizontalCompact: true
                         title: "IDENTITY"
-                        shortcut: "I"
+                        shortcut: auth.runtime.shellHint("PolkitDialog.identity")
                         onActivated: auth.switchIdentity()
                     }
                 }
@@ -224,13 +224,13 @@ Scope {
                         echoMode: auth.flow && auth.flow.responseVisible ? TextInput.Normal : TextInput.Password
                         inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
                         Keys.onPressed: event => {
-                            if (event.key === Qt.Key_Escape) {
+                            if (event.key === auth.runtime.shellKeyCode("polkit", "Escape")) {
                                 auth.cancel();
                                 event.accepted = true;
-                            } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                            } else if (event.key === auth.runtime.shellKeyCode("polkit", "Return") || event.key === auth.runtime.shellKeyCode("polkit", "Enter")) {
                                 auth.submit();
                                 event.accepted = true;
-                            } else if (event.key === Qt.Key_I && (event.modifiers & Qt.ControlModifier)) {
+                            } else if (event.key === auth.runtime.shellKeyCode("polkit", "I") && (auth.runtime.shellModifier("polkit", "Control", event.modifiers))) {
                                 auth.switchIdentity();
                                 event.accepted = true;
                             }
@@ -272,7 +272,7 @@ Scope {
                         horizontalCompact: true
                         icon: "󰅖"
                         title: "CANCEL"
-                        shortcut: "ESC"
+                        shortcut: auth.runtime.shellHint("PolkitDialog.cancel")
                         onActivated: auth.cancel()
                     }
                     ShellAction {
@@ -285,7 +285,7 @@ Scope {
                         horizontalCompact: true
                         icon: "󰄬"
                         title: auth.submitting ? "VERIFYING" : "AUTHORIZE"
-                        shortcut: "ENTER"
+                        shortcut: auth.runtime.shellHint("PolkitDialog.authorize")
                         enabled: !!auth.flow && auth.flow.isResponseRequired && !auth.submitting
                         active: true
                         activeColor: auth.theme.warning

@@ -162,7 +162,7 @@ ShellSurface {
                 iconHint: true
                 icon: "󰒝"
                 title: card.media.shuffled ? "Shuffle on" : "Shuffle off"
-                shortcut: "Z"
+                shortcut: card.runtime.shellHint("ControlsMediaCard.shuffle")
                 active: card.media.shuffled
                 enabled: card.media.shuffleAvailable
                 onActivated: card.media.toggleShuffle()
@@ -195,7 +195,7 @@ ShellSurface {
                 iconHint: true
                 icon: card.media.repeatState === 1 ? "󰑘" : "󰑖"
                 title: "Repeat " + card.media.repeatLabel
-                shortcut: "B"
+                shortcut: card.runtime.shellHint("ControlsMediaCard.repeat")
                 active: card.media.repeatState !== 0
                 enabled: card.media.repeatAvailable
                 onActivated: card.media.toggleRepeat()

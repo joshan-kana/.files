@@ -274,7 +274,7 @@ Item {
                         horizontalCompact: true
                         icon: panel.showCores ? "󰥔" : "󰍛"
                         title: panel.showCores ? "HISTORY" : "CORES"
-                        shortcut: "C"
+                        shortcut: panel.runtime.shellHint("ResourceDashboard.toggleCores")
                         onActivated: panel.toggleCoreView()
                     }
                 }
@@ -372,11 +372,11 @@ Item {
             theme: panel.theme
             hints: [
                 {
-                    shortcut: "C",
+                    shortcut: panel.runtime.shellHint("ResourceDashboard.toggleCoresHint"),
                     label: "Cores/history"
                 },
                 {
-                    shortcut: "R",
+                    shortcut: panel.runtime.shellHint("ResourceDashboard.refresh"),
                     label: "Refresh"
                 }
             ]

@@ -96,7 +96,7 @@ Item {
                     active: channel.muted
                     activeColor: channel.theme.warning
                     enabled: channel.available
-                    shortcut: channel.selected ? "M" : ""
+                    shortcut: channel.selected ? channel.runtime.shellHint("AudioStreamControl.mute") : ""
                     onActivated: {
                         channel.selectedRequested();
                         channel.system.toggleStreamMute(channel.stream);

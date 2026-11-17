@@ -683,6 +683,7 @@ in
               renderShortcut binding;
         };
         inherit shortcuts;
+        shellBindings = import ./keybindings.nix;
 
         tools = {
           bluetoothctl = lib.getExe' pkgs.bluez "bluetoothctl";
