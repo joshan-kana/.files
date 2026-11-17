@@ -12,6 +12,7 @@
   # Keep NixOS's SD-card firmware/U-Boot layout, but use Btrfs for the root
   # filesystem and resize it after extending the root partition at first boot.
   sdImage = {
+    rootVolumeLabel = "ROOT";
     rootFilesystemCreator = modulesPath + "/../lib/make-btrfs-fs.nix";
     expandOnBoot = false;
 
@@ -49,9 +50,10 @@
     script = ''
       root_part=$(${lib.getExe' pkgs.util-linux "findmnt"} -n -o SOURCE /)
       device=$(${lib.getExe' pkgs.util-linux "lsblk"} -npo PKNAME "$root_part")
-      # The generated SD image always has firmware as partition 1 and root as 2.
-      printf ',+,\n' | ${lib.getExe' pkgs.util-linux "sfdisk"} -N 2 --no-reread "$device"
-      ${lib.getExe' pkgs.util-linux "partx"} -u -n 2 "$device"
+      partition=$(${lib.getExe' pkgs.util-linux "lsblk"} -nro PARTN "$root_part")
+      test -n "$partition"
+      printf ',+,\n' | ${lib.getExe' pkgs.util-linux "sfdisk"} -N "$partition" --no-reread "$device"
+      ${lib.getExe' pkgs.util-linux "partx"} -u -n "$partition" "$device"
       ${lib.getExe' pkgs.btrfs-progs "btrfs"} filesystem resize max /
     '';
   };
