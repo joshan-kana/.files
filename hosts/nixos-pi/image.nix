@@ -1,0 +1,58 @@
+{
+  config,
+  lib,
+  modulesPath,
+  pkgs,
+  ...
+}:
+
+{
+  imports = [ "${modulesPath}/installer/sd-card/sd-image-aarch64.nix" ];
+
+  # Keep NixOS's SD-card firmware/U-Boot layout, but use Btrfs for the root
+  # filesystem and resize it after extending the root partition at first boot.
+  sdImage = {
+    rootFilesystemCreator = modulesPath + "/../lib/make-btrfs-fs.nix";
+    expandOnBoot = false;
+
+    populateFirmwareCommands = lib.mkAfter ''
+      mkdir -p firmware/overlays
+      cp ${pkgs.raspberrypifw}/share/raspberrypi/boot/overlays/vc4-kms-v3d.dtbo firmware/overlays/
+      cat >> firmware/config.txt <<'EOF_CONFIG'
+
+      [pi4]
+      dtoverlay=vc4-kms-v3d
+      max_framebuffers=2
+      EOF_CONFIG
+    '';
+  };
+
+  systemd.services.expand-root-partition = {
+    description = "Expand Raspberry Pi Btrfs root partition on first boot";
+    wantedBy = [ "sysinit.target" ];
+    unitConfig = {
+      DefaultDependencies = false;
+      ConditionPathExists = config.sdImage.nixPathRegistrationFile;
+    };
+    before = [
+      "sysinit.target"
+      "shutdown.target"
+      "register-nix-paths.service"
+    ];
+    after = [ "local-fs.target" ];
+    conflicts = [ "shutdown.target" ];
+    restartIfChanged = false;
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+    };
+    script = ''
+      root_part=$(${lib.getExe' pkgs.util-linux "findmnt"} -n -o SOURCE /)
+      device=$(${lib.getExe' pkgs.util-linux "lsblk"} -npo PKNAME "$root_part")
+      # The generated SD image always has firmware as partition 1 and root as 2.
+      printf ',+,\n' | ${lib.getExe' pkgs.util-linux "sfdisk"} -N 2 --no-reread "$device"
+      ${lib.getExe' pkgs.util-linux "partx"} -u -n 2 "$device"
+      ${lib.getExe' pkgs.btrfs-progs "btrfs"} filesystem resize max /
+    '';
+  };
+}
