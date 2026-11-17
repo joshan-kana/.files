@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import Quickshell
 
 FocusScope {
     id: panel
@@ -13,6 +14,11 @@ FocusScope {
 
     signal closeRequested
     signal calendarRequested
+
+    SystemClock {
+        id: clock
+        precision: SystemClock.Minutes
+    }
 
     implicitWidth: 612
     implicitHeight: content.implicitHeight
@@ -71,7 +77,7 @@ FocusScope {
                 }
 
                 Text {
-                    text: Qt.formatDate(new Date(), "dddd, d MMMM")
+                    text: Qt.formatDateTime(clock.date, "dddd, d MMMM")
                     color: panel.theme.textStrong
                     font.family: panel.runtime.fontMono
                     font.pixelSize: panel.theme.fontPanelTitle

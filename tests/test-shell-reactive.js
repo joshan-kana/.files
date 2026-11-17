@@ -214,3 +214,13 @@ test("surface curves remain cubic, and only ordinary hover may use a radial ligh
   );
   assert.doesNotMatch(surface, /musicGlow|lightSpread: musicActive/);
 });
+
+test("Weather date follows the live system clock across midnight", () => {
+  const weather = qml("WeatherContent.qml");
+  assert.match(
+    weather,
+    /SystemClock \{\s*id: clock\s*precision: SystemClock\.Minutes/,
+  );
+  assert.match(weather, /Qt\.formatDateTime\(clock\.date, "dddd, d MMMM"\)/);
+  assert.doesNotMatch(weather, /Qt\.formatDate\(new Date\(\)/);
+});

@@ -615,6 +615,10 @@
       scope = "controls";
       template = "F";
     };
+    "SystemContent.nightLight" = {
+      scope = "controls";
+      template = "T";
+    };
     "SystemContent.powerProfile" = {
       scope = "controls";
       template = "V";
@@ -682,6 +686,10 @@
     "ThemePanel.apply" = {
       scope = "controls";
       template = "ENTER";
+    };
+    "ThemePanel.cancel" = {
+      scope = "controls";
+      template = "X";
     };
     "ThemePanel.columns" = {
       scope = "controls";
