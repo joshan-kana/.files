@@ -28,9 +28,9 @@ in
     nixpkgs.overlays = [
       (final: _prev: {
         comin = upstream.packages.${final.stdenv.hostPlatform.system}.comin.overrideAttrs (old: {
-          version = "${old.version}-git.20261112-patched";
+          version = "${old.version}-patched";
           __intentionallyOverridingVersion = true;
-          ldflags = [ "-X github.com/nlewo/comin/cmd.version=${old.version}-git.20261112-patched" ];
+          ldflags = [ "-X github.com/nlewo/comin/cmd.version=${old.version}-patched" ];
 
           patches = (old.patches or [ ]) ++ [
             ../../patches/comin/allow-force-push.patch

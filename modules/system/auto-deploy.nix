@@ -20,7 +20,6 @@ in
     hostname = configurationOutputName;
     allowForcePush = true;
     buildAttemptsLimit = 3;
-    grpc.unix_socket_group = if isDarwin then "staff" else "users";
 
     remotes = [
       {
@@ -37,6 +36,9 @@ in
         poller.period = 300;
       }
     ];
+  }
+  // lib.optionalAttrs isDarwin {
+    grpc.unix_socket_group = "staff";
   }
   // lib.optionalAttrs (configurationFlakeSubdirectory != null) {
     repositorySubdir = configurationFlakeSubdirectory;
