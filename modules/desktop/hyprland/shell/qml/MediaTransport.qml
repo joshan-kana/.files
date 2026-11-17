@@ -23,35 +23,35 @@ Item {
             model: [
                 {
                     label: "Previous track",
-                    hint: ",",
+                    hint: root.runtime.shellHint("MediaTransport.previous"),
                     enabled: root.media.canGoPrevious,
                     action: "previous",
                     glyph: "󰒮"
                 },
                 {
                     label: "Seek backward " + root.media.seekSeconds + " seconds",
-                    hint: root.compact ? "SHIFT+H" : "H",
+                    hint: root.compact ? root.runtime.shellHint("MediaTransport.backCompact") : root.runtime.shellHint("MediaTransport.back"),
                     enabled: root.media.seekable,
                     action: "back",
                     glyph: "󰒫"
                 },
                 {
                     label: root.media.playing ? "Pause playback" : "Resume playback",
-                    hint: "Space",
+                    hint: root.runtime.shellHint("MediaTransport.play"),
                     enabled: root.media.canTogglePlaying,
                     action: "play",
                     glyph: root.media.playing ? "󰏤" : "󰐊"
                 },
                 {
                     label: "Seek forward " + root.media.seekSeconds + " seconds",
-                    hint: root.compact ? "SHIFT+L" : "L",
+                    hint: root.compact ? root.runtime.shellHint("MediaTransport.forwardCompact") : root.runtime.shellHint("MediaTransport.forward"),
                     enabled: root.media.seekable,
                     action: "forward",
                     glyph: "󰒬"
                 },
                 {
                     label: "Next track",
-                    hint: ".",
+                    hint: root.runtime.shellHint("MediaTransport.next"),
                     enabled: root.media.canGoNext,
                     action: "next",
                     glyph: "󰒭"

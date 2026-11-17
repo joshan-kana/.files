@@ -191,11 +191,11 @@ Item {
             theme: content.theme
             hints: [
                 {
-                    shortcut: "R",
+                    shortcut: content.runtime.shellHint("StatusContent.refresh"),
                     label: "Refresh"
                 },
                 {
-                    shortcut: "ESC",
+                    shortcut: content.runtime.shellHint("StatusContent.close"),
                     label: "Close"
                 }
             ]

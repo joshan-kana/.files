@@ -160,7 +160,10 @@ test("active resize owns local inspection and reports observed geometry", () => 
     /if \(resizeOverlay\.open\) \{\s*resizeOverlay\.inspectOpen = !resizeOverlay\.inspectOpen/,
   );
   assert.match(resize, /WlrKeyboardFocus\.Exclusive/);
-  assert.match(resize, /event\.key === Qt\.Key_S/);
+  assert.match(
+    resize,
+    /event\.key === overlay\.runtime\.shellKeyCode\("resize", "S"\)/,
+  );
   assert.match(resize, /keyboard\.refresh\("inspect"\)/);
   assert.match(resize, /"-j", "activewindow"/);
   assert.match(resize, /window\.size\[0\]/);

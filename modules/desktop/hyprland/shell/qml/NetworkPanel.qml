@@ -673,7 +673,7 @@ Item {
                             runtime: panel.runtime
                             theme: panel.theme
                             compact: true
-                            shortcut: "ENTER"
+                            shortcut: panel.runtime.shellHint("NetworkPanel.connectNetwork")
                             label: networkRow.modelData.connected ? "Drop" : "Join"
                         }
 
@@ -802,7 +802,7 @@ Item {
                             runtime: panel.runtime
                             theme: panel.theme
                             compact: true
-                            shortcut: "ENTER"
+                            shortcut: panel.runtime.shellHint("NetworkPanel.connectProfile")
                             label: profileRow.modelData.connected ? "Drop" : "Join"
                         }
 
@@ -951,10 +951,10 @@ Item {
                     onTextEdited: panel.password = text
 
                     Keys.onPressed: event => {
-                        if (event.key === Qt.Key_Escape) {
+                        if (event.key === panel.runtime.shellKeyCode("controls", "Escape")) {
                             panel.cancelPassword();
                             event.accepted = true;
-                        } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                        } else if (event.key === panel.runtime.shellKeyCode("controls", "Return") || event.key === panel.runtime.shellKeyCode("controls", "Enter")) {
                             panel.submitPassword();
                             event.accepted = true;
                         }
@@ -977,11 +977,11 @@ Item {
                 theme: panel.theme
                 hints: [
                     {
-                        shortcut: "ENTER",
+                        shortcut: panel.runtime.shellHint("NetworkPanel.passwordSubmit"),
                         label: "Connect"
                     },
                     {
-                        shortcut: "ESC",
+                        shortcut: panel.runtime.shellHint("NetworkPanel.passwordCancel"),
                         label: "Cancel"
                     }
                 ]
@@ -1037,37 +1037,37 @@ Item {
                 theme: panel.theme
                 hints: [
                     {
-                        shortcut: "J/K",
+                        shortcut: panel.runtime.shellHint("NetworkPanel.select"),
                         label: "Select",
                         visible: !panel.detailView && (panel.savedView || panel.system.wifiAvailable)
                     },
                     {
-                        shortcut: "ENTER",
+                        shortcut: panel.runtime.shellHint("NetworkPanel.connect"),
                         label: "Connect",
                         visible: !panel.detailView && (panel.savedView || panel.system.wifiAvailable)
                     },
                     {
-                        shortcut: "W",
+                        shortcut: panel.runtime.shellHint("NetworkPanel.toggleWifi"),
                         label: "Wi-Fi",
                         visible: !panel.detailView && !panel.savedView && panel.system.wifiAvailable
                     },
                     {
-                        shortcut: "P",
+                        shortcut: panel.runtime.shellHint("NetworkPanel.saved"),
                         label: panel.savedView ? "Scan" : "Saved",
                         visible: !panel.detailView
                     },
                     {
-                        shortcut: "R",
+                        shortcut: panel.runtime.shellHint("NetworkPanel.refresh"),
                         label: "Refresh",
                         visible: panel.savedView || panel.detailView
                     },
                     {
-                        shortcut: "J/K",
+                        shortcut: panel.runtime.shellHint("NetworkPanel.listScroll"),
                         label: "Scroll",
                         visible: panel.detailView
                     },
                     {
-                        shortcut: "A",
+                        shortcut: panel.runtime.shellHint("NetworkPanel.advanced"),
                         label: "Advanced"
                     }
                 ]
@@ -1083,7 +1083,7 @@ Item {
                 horizontalCompact: true
                 icon: panel.detailView ? "󰅌" : "󰋼"
                 title: panel.detailView ? "Back" : "Details"
-                shortcut: "V"
+                shortcut: panel.runtime.shellHint("NetworkPanel.detail")
                 active: panel.detailView
                 onActivated: panel.toggleDetailView()
             }

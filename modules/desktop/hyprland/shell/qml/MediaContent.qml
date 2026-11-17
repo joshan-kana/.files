@@ -20,43 +20,43 @@ FocusScope {
     property real scrubFraction: 0
     readonly property var helpBindings: [
         {
-            key: "SPACE",
+            key: content.runtime.shellHint("MediaContent.legend.seek_1"),
             action: media.playing ? "Pause playback" : "Play"
         },
         {
-            key: "H/L · ←/→",
+            key: content.runtime.shellHint("MediaContent.legend.seek"),
             action: "Seek " + media.seekSeconds + " seconds"
         },
         {
-            key: "- / +",
+            key: content.runtime.shellHint("MediaContent.legend.seek_interval"),
             action: "Seek interval · " + media.seekSeconds + "s"
         },
         {
-            key: ", / .",
+            key: content.runtime.shellHint("MediaContent.legend.previous_next_track"),
             action: "Previous / next track"
         },
         {
-            key: "V",
+            key: content.runtime.shellHint("MediaContent.legend.switch_visualizer"),
             action: "Switch visualizer"
         },
         {
-            key: "Y",
+            key: content.runtime.shellHint("MediaContent.legend.overlay_local_synchronised_lyrics_lrc"),
             action: "Overlay local synchronised lyrics (.lrc)"
         },
         {
-            key: "S",
+            key: content.runtime.shellHint("MediaContent.legend.s"),
             action: media.shuffleAvailable ? "Toggle shuffle" : "Shuffle unsupported by player"
         },
         {
-            key: "R",
+            key: content.runtime.shellHint("MediaContent.legend.r"),
             action: media.repeatAvailable ? "Cycle repeat Off / All / One" : "Repeat unsupported by player"
         },
         {
-            key: "P",
+            key: content.runtime.shellHint("MediaContent.legend.cycle_connected_media_players"),
             action: "Cycle connected media players"
         },
         {
-            key: "ESC",
+            key: content.runtime.shellHint("MediaContent.legend.esc"),
             action: content.returnToControls ? "Back to Controls" : "Close now playing"
         }
     ]
@@ -454,7 +454,7 @@ FocusScope {
                     icon: "󰒝"
                     title: content.media.shuffled ? "SHUFFLE ON" : "SHUFFLE OFF"
                     visible: content.media.available
-                    shortcut: "S"
+                    shortcut: content.runtime.shellHint("MediaContent.shuffle")
                     active: content.media.shuffled
                     enabled: content.media.shuffleAvailable
                     onActivated: content.media.toggleShuffle()
@@ -473,7 +473,7 @@ FocusScope {
                     icon: content.media.repeatState === 1 ? "󰑘" : "󰑖"
                     title: "REPEAT " + content.media.repeatLabel
                     visible: content.media.available
-                    shortcut: "R"
+                    shortcut: content.runtime.shellHint("MediaContent.repeat")
                     active: content.media.repeatState !== 0
                     enabled: content.media.repeatAvailable
                     onActivated: content.media.toggleRepeat()
@@ -497,7 +497,7 @@ FocusScope {
                     activeColor: content.theme.roleColor("media")
                     icon: "󰎄"
                     title: content.media.available ? "PLAYER " + (content.media.selectedPlayerIndex + 1) + "/" + content.media.playerCount : "NO PLAYER"
-                    shortcut: "P"
+                    shortcut: content.runtime.shellHint("MediaContent.player")
                     active: content.media.playerCount > 1
                     enabled: content.media.playerCount > 1
                     onActivated: content.media.cyclePlayer()
@@ -523,7 +523,7 @@ FocusScope {
                 compact: true
                 horizontalCompact: true
                 title: content.visualizerMode.toUpperCase()
-                shortcut: "V"
+                shortcut: content.runtime.shellHint("MediaContent.visualizer")
                 active: true
                 onActivated: content.toggleVisualizer()
             }
@@ -537,7 +537,7 @@ FocusScope {
                 compact: true
                 horizontalCompact: true
                 title: "LYRICS"
-                shortcut: "Y"
+                shortcut: content.runtime.shellHint("MediaContent.lyrics")
                 active: content.lyricsVisible
                 onActivated: content.toggleLyrics()
             }
@@ -551,7 +551,7 @@ FocusScope {
                 compact: true
                 horizontalCompact: true
                 title: "Shorter"
-                shortcut: "-"
+                shortcut: content.runtime.shellHint("MediaContent.shorter")
                 enabled: content.media.seekSeconds > 5
                 onActivated: content.media.adjustSeekStep(-1)
             }
@@ -574,7 +574,7 @@ FocusScope {
                 compact: true
                 horizontalCompact: true
                 title: "Longer"
-                shortcut: "+"
+                shortcut: content.runtime.shellHint("MediaContent.longer")
                 enabled: content.media.seekSeconds < 60
                 onActivated: content.media.adjustSeekStep(1)
             }
@@ -586,22 +586,22 @@ FocusScope {
             focus: content.engaged
 
             Keys.onPressed: event => {
-                const helpKey = event.key === Qt.Key_Question || (event.key === Qt.Key_Slash && (event.modifiers & Qt.ShiftModifier));
+                const helpKey = event.key === content.runtime.shellKeyCode("media", "Question") || (event.key === content.runtime.shellKeyCode("media", "Slash") && (content.runtime.shellModifier("media", "Shift", event.modifiers)));
 
                 if (content.helpOpen) {
-                    if (helpKey || event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
+                    if (helpKey || event.key === content.runtime.shellKeyCode("media", "Escape") || event.key === content.runtime.shellKeyCode("media", "Backspace")) {
                         content.helpOpen = false;
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_J || event.key === Qt.Key_Down) {
+                    } else if (event.key === content.runtime.shellKeyCode("media", "J") || event.key === content.runtime.shellKeyCode("media", "Down")) {
                         content.helpScrollRequested(1);
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_K || event.key === Qt.Key_Up) {
+                    } else if (event.key === content.runtime.shellKeyCode("media", "K") || event.key === content.runtime.shellKeyCode("media", "Up")) {
                         content.helpScrollRequested(-1);
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_D || event.key === Qt.Key_PageDown) {
+                    } else if (event.key === content.runtime.shellKeyCode("media", "D") || event.key === content.runtime.shellKeyCode("media", "PageDown")) {
                         content.helpScrollRequested(4);
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_U || event.key === Qt.Key_PageUp) {
+                    } else if (event.key === content.runtime.shellKeyCode("media", "U") || event.key === content.runtime.shellKeyCode("media", "PageUp")) {
                         content.helpScrollRequested(-4);
                         event.accepted = true;
                     }
@@ -611,43 +611,43 @@ FocusScope {
                 if (helpKey) {
                     content.helpOpen = true;
                     event.accepted = true;
-                } else if (event.key === Qt.Key_Escape) {
+                } else if (event.key === content.runtime.shellKeyCode("media", "Escape")) {
                     content.closeRequested();
                     event.accepted = true;
-                } else if (event.key === Qt.Key_Space) {
+                } else if (event.key === content.runtime.shellKeyCode("media", "Space")) {
                     content.media.togglePlaying();
                     event.accepted = true;
-                } else if (event.key === Qt.Key_V) {
+                } else if (event.key === content.runtime.shellKeyCode("media", "V")) {
                     content.toggleVisualizer();
                     event.accepted = true;
-                } else if (event.key === Qt.Key_Y) {
+                } else if (event.key === content.runtime.shellKeyCode("media", "Y")) {
                     content.toggleLyrics();
                     event.accepted = true;
-                } else if (event.key === Qt.Key_S) {
+                } else if (event.key === content.runtime.shellKeyCode("media", "S")) {
                     content.media.toggleShuffle();
                     event.accepted = true;
-                } else if (event.key === Qt.Key_R) {
+                } else if (event.key === content.runtime.shellKeyCode("media", "R")) {
                     content.media.toggleRepeat();
                     event.accepted = true;
-                } else if (event.key === Qt.Key_P) {
+                } else if (event.key === content.runtime.shellKeyCode("media", "P")) {
                     content.media.cyclePlayer();
                     event.accepted = true;
-                } else if (event.key === Qt.Key_Minus || event.key === Qt.Key_Underscore) {
+                } else if (event.key === content.runtime.shellKeyCode("media", "Minus") || event.key === content.runtime.shellKeyCode("media", "Underscore")) {
                     content.media.adjustSeekStep(-1);
                     event.accepted = true;
-                } else if (event.key === Qt.Key_Plus || event.key === Qt.Key_Equal) {
+                } else if (event.key === content.runtime.shellKeyCode("media", "Plus") || event.key === content.runtime.shellKeyCode("media", "Equal")) {
                     content.media.adjustSeekStep(1);
                     event.accepted = true;
-                } else if ((event.key === Qt.Key_Left || event.key === Qt.Key_H)) {
+                } else if ((event.key === content.runtime.shellKeyCode("media", "Left") || event.key === content.runtime.shellKeyCode("media", "H"))) {
                     content.media.seekStep(-1);
                     event.accepted = true;
-                } else if ((event.key === Qt.Key_Right || event.key === Qt.Key_L)) {
+                } else if ((event.key === content.runtime.shellKeyCode("media", "Right") || event.key === content.runtime.shellKeyCode("media", "L"))) {
                     content.media.seekStep(1);
                     event.accepted = true;
-                } else if (event.key === Qt.Key_Comma) {
+                } else if (event.key === content.runtime.shellKeyCode("media", "Comma")) {
                     content.media.previous();
                     event.accepted = true;
-                } else if (event.key === Qt.Key_Period) {
+                } else if (event.key === content.runtime.shellKeyCode("media", "Period")) {
                     content.media.next();
                     event.accepted = true;
                 }

@@ -142,7 +142,7 @@ Item {
 
                 Text {
                     width: parent.width
-                    text: help.keyboardScroll ? "J/K scroll · U/D page · ?/Esc return" : "? or Esc to return"
+                    text: help.keyboardScroll ? help.runtime.shellHint("ShellExpansionHost.helpDown") + "/" + help.runtime.shellHint("ShellExpansionHost.helpUp") + " scroll · " + help.runtime.shellHint("ShellExpansionHost.helpPageUp") + "/" + help.runtime.shellHint("ShellExpansionHost.helpPageDown") + " page · " + help.runtime.shellHint("HubTabs.help") + "/" + help.runtime.shellHint("ShellExpansionHost.back") + " return" : help.runtime.shellHint("HubTabs.help") + " or " + help.runtime.shellHint("ShellExpansionHost.back") + " to return"
                     horizontalAlignment: Text.AlignRight
                     color: help.theme.textMuted
                     font.family: help.runtime.fontMono

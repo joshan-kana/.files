@@ -65,7 +65,7 @@ test("night light uses inline, interactive slider with value and shared KeyHint"
   assert.match(tile, /KeyHint \{/);
   assert.match(
     tile,
-    /shortcut: setting\.keyboardSelected \? "H\/L" : setting\.toggleShortcut/,
+    /shortcut: setting\.keyboardSelected \? setting\.runtime\.shellHint\("AdjustableSetting.level"\) : setting\.toggleShortcut/,
   );
   assert.equal((tile.match(/KeyHint \{/g) || []).length, 1);
   assert.match(state, /function setTemperature\(target: real\)/);
@@ -101,22 +101,25 @@ test("slider keyboard workflow respects direct actions, detail Escape and global
   assert.match(controls, /function adjustSlider\(direction: int\)/);
   assert.match(
     controls,
-    /root\.cycleSlider\(event\.key === Qt\.Key_Backtab \|\| shifted \? -1 : 1\)/,
+    /root\.cycleSlider\(event\.key === root\.runtime\.shellKeyCode\("controls", "Backtab"\) \|\| shifted \? -1 : 1\)/,
   );
   assert.match(controls, /root\.selectedSlider = ""/);
   assert.match(
     controls,
-    /if \(event\.key === Qt\.Key_Escape\) \{\s*root\.navigateBack\(\);/,
+    /if \(event\.key === root\.runtime\.shellKeyCode\("controls", "Escape"\)\) \{\s*root\.navigateBack\(\);/,
   );
-  assert.match(controls, /shortcut: "TAB"/);
   assert.match(
     controls,
-    /hints: root\.selectedSlider\.length === 0 \? \[\s*\{\s*shortcut: "J\/K"/,
+    /shortcut: root\.runtime\.shellHint\("SystemContent.tabSelect"\)/,
+  );
+  assert.match(
+    controls,
+    /hints: root\.selectedSlider\.length === 0 \? \[\s*\{\s*shortcut: root\.runtime\.shellHint\("SystemContent.audioSelect"\)/,
   );
   assert.match(read("ShellSection.qml"), /trailing: true/);
   assert.match(
     opacity,
-    /shortcut: setting\.keyboardSelected \? "H\/L" : setting\.shortcut/,
+    /shortcut: setting\.keyboardSelected \? setting\.runtime\.shellHint\("OpacitySetting.level"\) : setting\.shortcut/,
   );
   assert.match(slider, /signal valueRequested\(real value\)/);
   assert.match(slider, /signal interactionStarted\(real value\)/);
@@ -139,7 +142,10 @@ test("global Escape footer reflects slider-selection focus without adding widget
     controls,
     /onSliderActivated: root\.selectSlider\("nightLight"\)/,
   );
-  assert.match(host, /shortcut: "ESC"[\s\S]*?label: host\.escapeHintLabel/);
+  assert.match(
+    host,
+    /shortcut: host\.runtime\.shellHint\("ShellExpansionHost.back"\)[\s\S]*?label: host\.escapeHintLabel/,
+  );
 });
 
 test("the final Visual Modes row spans the full width with four tiles, not a phantom fifth", () => {
@@ -184,11 +190,11 @@ test("one focused Controls handler owns forward and reverse slider traversal", (
   assert.match(controls, /Keys.onShortcutOverride: event =>/);
   assert.match(
     controls,
-    /event.key === Qt.Key_Tab \|\| event.key === Qt.Key_Backtab/,
+    /event\.key === root\.runtime\.shellKeyCode\("controls", "Tab"\) \|\| event\.key === root\.runtime\.shellKeyCode\("controls", "Backtab"\)/,
   );
   assert.match(
     controls,
-    /root\.cycleSlider\(event.key === Qt.Key_Backtab \|\| shifted \? -1 : 1\)/,
+    /root\.cycleSlider\(event\.key === root\.runtime\.shellKeyCode\("controls", "Backtab"\) \|\| shifted \? -1 : 1\)/,
   );
   assert.match(controls, /keyboardFocus\.forceActiveFocus\(\)/);
   assert.doesNotMatch(host, /sequence: "Shift\+Tab"/);
@@ -245,12 +251,14 @@ test("modifier-only keys cannot clear slider selection across repeated Shift+Tab
     .split("if (root.selectedSlider.length > 0)")[0];
   assert.match(
     keyCode,
-    /event.key === Qt.Key_Shift \|\| event.key === Qt.Key_Control/,
+    /event\.key === root\.runtime\.shellKeyCode\("controls", "Shift"\) \|\| event\.key === root\.runtime\.shellKeyCode\("controls", "Control"\)/,
   );
   assert.match(keyCode, /event.accepted = true;\s*return;/);
-  const shiftGuard = keyCode.indexOf("event.key === Qt.Key_Shift");
+  const shiftGuard = keyCode.indexOf(
+    'event.key === root.runtime.shellKeyCode("controls", "Shift")',
+  );
   const backtab = keyCode.indexOf(
-    "root.cycleSlider(event.key === Qt.Key_Backtab || shifted ? -1 : 1)",
+    'root.cycleSlider(event.key === root.runtime.shellKeyCode("controls", "Backtab") || shifted ? -1 : 1)',
   );
   const selectionReset = controls.indexOf(
     'root.selectedSlider = ""',
@@ -310,12 +318,21 @@ test("Controls preserves primary actions and shared audio/visual controls", () =
 
 test("Dashboard controls retain direct keys and no additional focus navigation mode", () => {
   const controls = read("SystemContent.qml");
-  assert.match(controls, /shortcut: "Q"\s+onActivated: root.openTheme\(\)/);
-  assert.match(controls, /shortcut: "E"\s+onActivated: root.openSession\(\)/);
-  assert.match(controls, /event.key === Qt.Key_Q\)\s*\{\s*root.openTheme\(\)/);
   assert.match(
     controls,
-    /event.key === Qt.Key_E\)\s*\{\s*root.openSession\(\)/,
+    /shortcut: root\.runtime\.shellHint\("SystemContent.themes"\)\s+onActivated: root.openTheme\(\)/,
+  );
+  assert.match(
+    controls,
+    /shortcut: root\.runtime\.shellHint\("SystemContent.session"\)\s+onActivated: root.openSession\(\)/,
+  );
+  assert.match(
+    controls,
+    /event\.key === root\.runtime\.shellKeyCode\("controls", "Q"\)\)\s*\{\s*root.openTheme\(\)/,
+  );
+  assert.match(
+    controls,
+    /event\.key === root\.runtime\.shellKeyCode\("controls", "E"\)\)\s*\{\s*root.openSession\(\)/,
   );
   assert.doesNotMatch(controls, /toggleControlsLayout|moveFocusGroup|Shift\+I/);
   assert.match(controls, /audioDeck.deviceChooserOpen/);
@@ -391,11 +408,11 @@ test("Compact Media shares a live spectrum, controls and full Now Playing naviga
   assert.match(card, /barCount: 24/);
   assert.match(
     card,
-    /shortcut: "Z"[\s\S]*?onActivated: card.media.toggleShuffle\(\)/,
+    /shortcut: card\.runtime\.shellHint\("ControlsMediaCard.shuffle"\)[\s\S]*?onActivated: card.media.toggleShuffle\(\)/,
   );
   assert.match(
     card,
-    /shortcut: "B"[\s\S]*?onActivated: card.media.toggleRepeat\(\)/,
+    /shortcut: card\.runtime\.shellHint\("ControlsMediaCard.repeat"\)[\s\S]*?onActivated: card.media.toggleRepeat\(\)/,
   );
   assert.match(card, /onActivated: card.fullRequested\(\)/);
   assert.doesNotMatch(card, /id: fullPlayer|lyrics/);
@@ -530,7 +547,7 @@ test("Compact Audio and Media backgrounds open full views while child actions re
   assert.doesNotMatch(media, /id: fullPlayer|title: "Now Playing"/);
   assert.match(
     controls,
-    /shifted && event.key === Qt.Key_M\)\s*\{\s*root.openMixer\(\)/,
+    /shifted && event\.key === root\.runtime\.shellKeyCode\("controls", "M"\)\)\s*\{\s*root\.openMixer\(\)/,
   );
   assert.doesNotMatch(
     controls.slice(
@@ -562,8 +579,8 @@ test("Compact Audio keeps Output/Input without app rows and shows correct header
   ])
     assert.ok(device.includes(fragment), fragment);
   for (const fragment of [
-    /shortcut: "J\/K",\s*label: "Select"/,
-    /shortcut: "H\/L",\s*label: "Level"/,
+    /shortcut: root\.runtime\.shellHint\("SystemContent.audioSelect"\),\s*label: "Select"/,
+    /shortcut: root\.runtime\.shellHint\("SystemContent.audioAdjust"\),\s*label: "Level"/,
   ])
     assert.match(controls, fragment);
   assert.match(read("ShellSection.qml"), /id: headerHints/);
@@ -697,21 +714,27 @@ test("slider mode retains Tab, J/K selection and H/L edits without duplicate leg
   const controls = read("SystemContent.qml");
   const opacity = read("OpacitySetting.qml");
   const night = read("AdjustableSetting.qml");
-  assert.match(controls, /id: sliderNavigationHint[\s\S]*?shortcut: "J\/K"/);
-  assert.match(controls, /event.key === Qt.Key_K \|\| event.key === Qt.Key_Up/);
   assert.match(
     controls,
-    /event.key === Qt.Key_J \|\| event.key === Qt.Key_Down/,
+    /id: sliderNavigationHint[\s\S]*?shortcut: root\.runtime\.shellHint\("SystemContent.rowSelect"\)/,
+  );
+  assert.match(
+    controls,
+    /event\.key === root\.runtime\.shellKeyCode\("controls", "K"\) \|\| event\.key === root\.runtime\.shellKeyCode\("controls", "Up"\)/,
+  );
+  assert.match(
+    controls,
+    /event\.key === root\.runtime\.shellKeyCode\("controls", "J"\) \|\| event\.key === root\.runtime\.shellKeyCode\("controls", "Down"\)/,
   );
   assert.match(controls, /root.adjustSlider\(-1\)/);
   assert.match(controls, /root.adjustSlider\(1\)/);
   assert.match(
     opacity,
-    /shortcut: setting.keyboardSelected \? "H\/L" : setting.shortcut/,
+    /shortcut: setting\.keyboardSelected \? setting\.runtime\.shellHint\("OpacitySetting.level"\) : setting\.shortcut/,
   );
   assert.match(
     night,
-    /shortcut: setting.keyboardSelected \? "H\/L" : setting.toggleShortcut/,
+    /shortcut: setting\.keyboardSelected \? setting\.runtime\.shellHint\("AdjustableSetting.level"\) : setting\.toggleShortcut/,
   );
   for (const tile of [opacity, night]) {
     assert.equal((tile.match(/TileKeyHint \{/g) || []).length, 1);

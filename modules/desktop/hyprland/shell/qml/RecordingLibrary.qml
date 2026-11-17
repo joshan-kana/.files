@@ -420,7 +420,7 @@ Item {
                         compact: true
                         horizontalCompact: true
                         title: "Open"
-                        shortcut: "ENTER"
+                        shortcut: library.runtime.shellHint("RecordingLibrary.open")
                         enabled: !!library.selectedEntry && !library.isBusy
                         onActivated: library.openSelected()
                     }
@@ -433,7 +433,7 @@ Item {
                         compact: true
                         horizontalCompact: true
                         title: library.selectedEntry && library.selectedEntry.isImage ? "Markup" : "Trim"
-                        shortcut: "E"
+                        shortcut: library.runtime.shellHint("RecordingLibrary.edit")
                         enabled: !!library.selectedEntry && !library.isBusy
                         onActivated: library.editSelected()
                     }
@@ -446,7 +446,7 @@ Item {
                         compact: true
                         horizontalCompact: true
                         title: "Copy"
-                        shortcut: "C"
+                        shortcut: library.runtime.shellHint("RecordingLibrary.copy")
                         enabled: !!library.selectedEntry && library.selectedEntry.isImage && !library.isBusy
                         onActivated: library.copySelected()
                     }
@@ -459,7 +459,7 @@ Item {
                         compact: true
                         horizontalCompact: true
                         title: library.selectedEntry && library.deletePending === library.selectedEntry.name ? "Confirm" : "Trash"
-                        shortcut: "D"
+                        shortcut: library.runtime.shellHint("RecordingLibrary.delete")
                         enabled: !!library.selectedEntry && !library.isBusy
                         active: !!library.selectedEntry && library.deletePending === library.selectedEntry.name
                         onActivated: library.requestDelete()
@@ -483,15 +483,15 @@ Item {
             theme: library.theme
             hints: [
                 {
-                    shortcut: "J/K",
+                    shortcut: library.runtime.shellHint("RecordingLibrary.choose"),
                     label: "Choose"
                 },
                 {
-                    shortcut: "U/D",
+                    shortcut: library.runtime.shellHint("RecordingLibrary.page"),
                     label: "Page"
                 },
                 {
-                    shortcut: "R",
+                    shortcut: library.runtime.shellHint("RecordingLibrary.refresh"),
                     label: "Refresh"
                 }
             ]

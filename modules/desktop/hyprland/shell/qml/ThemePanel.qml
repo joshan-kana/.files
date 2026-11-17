@@ -351,10 +351,10 @@ Item {
             font.pixelSize: panel.theme.fontSize(12)
             focus: false
             Keys.onPressed: event => {
-                if (event.key === Qt.Key_Escape) {
+                if (event.key === panel.runtime.shellKeyCode("controls", "Escape")) {
                     panel.leaveSearch();
                     event.accepted = true;
-                } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                } else if (event.key === panel.runtime.shellKeyCode("controls", "Return") || event.key === panel.runtime.shellKeyCode("controls", "Enter")) {
                     panel.activateSelected();
                     panel.leaveSearch();
                     event.accepted = true;
@@ -725,23 +725,23 @@ Item {
             theme: panel.theme
             hints: [
                 {
-                    shortcut: "H/L",
+                    shortcut: panel.runtime.shellHint("ThemePanel.columns"),
                     label: "Columns"
                 },
                 {
-                    shortcut: "J/K",
+                    shortcut: panel.runtime.shellHint("ThemePanel.rows"),
                     label: "Rows"
                 },
                 {
-                    shortcut: "U/D",
+                    shortcut: panel.runtime.shellHint("ThemePanel.page"),
                     label: "Page"
                 },
                 {
-                    shortcut: "/",
+                    shortcut: panel.runtime.shellHint("ThemePanel.search"),
                     label: "Search"
                 },
                 {
-                    shortcut: "ENTER",
+                    shortcut: panel.runtime.shellHint("ThemePanel.apply"),
                     label: "Apply"
                 }
             ]

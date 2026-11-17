@@ -60,7 +60,7 @@ ShellSurface {
                 runtime: summary.theme.runtime
                 theme: summary.theme
                 compact: true
-                shortcut: "F"
+                shortcut: summary.theme.runtime.shellHint("WeatherSummary.forecast")
                 label: "Forecast"
             }
         }

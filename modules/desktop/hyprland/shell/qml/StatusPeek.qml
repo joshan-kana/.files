@@ -94,10 +94,10 @@ PanelWindow {
             }
         }
         Keys.onPressed: event => {
-            if (event.key === Qt.Key_Escape || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+            if (event.key === peek.runtime.shellKeyCode("status", "Escape") || event.key === peek.runtime.shellKeyCode("status", "Return") || event.key === peek.runtime.shellKeyCode("status", "Enter")) {
                 peek.closeRequested();
                 event.accepted = true;
-            } else if (event.key === Qt.Key_R) {
+            } else if (event.key === peek.runtime.shellKeyCode("status", "R")) {
                 statusContent.refreshRequested();
                 event.accepted = true;
             }

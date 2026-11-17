@@ -28,7 +28,7 @@ test("root tray Escape returns to Controls without dismissing the entire hub", (
 test("Shift+Esc remains the global close-all command", () => {
   assert.match(
     qml("ShellExpansionHost.qml"),
-    /sequence: "Shift\+Esc"[\s\S]*?onActivated: host\.expansionState\.close\(\)/,
+    /sequence: host\.runtime\.shellSequence\("ShellExpansionHost.closeAll"\)[\s\S]*?onActivated: host\.expansionState\.close\(\)/,
   );
 });
 

@@ -180,24 +180,32 @@ test("Session uses animated shared tile hints and physical QWE/ASD action positi
     "utf8",
   );
 
-  for (const [id, key] of [
-    ["lock", "Q"],
-    ["suspend", "W"],
-    ["logout", "E"],
-    ["reboot", "A"],
-    ["poweroff", "S"],
-    ["restore", "D"],
+  for (const [id, action] of [
+    ["lock", "lock"],
+    ["suspend", "suspend"],
+    ["logout", "logout"],
+    ["reboot", "reboot"],
+    ["poweroff", "shutdown"],
+    ["restore", "restoreWindows"],
   ])
-    assert.match(session, new RegExp(`id: "${id}",\\s*shortcut: "${key}"`));
+    assert.match(
+      session,
+      new RegExp(
+        `id: "${id}",[\\s\\S]*?binding: "SessionPanel\\.${action}"[\\s\\S]*?shortcut: panel\\.runtime\\.shellHint\\("SessionPanel\\.${action}"\\)`,
+      ),
+    );
   assert.match(session, /shortcut: modelData\.shortcut/);
-  assert.match(session, /function activateShortcut\(key: int\): bool \{/);
   assert.match(
     session,
-    /entries\.findIndex\(entry => entry\.shortcut === shortcut\)/,
+    /function activateShortcut\(key: int, modifiers: int\): bool \{/,
+  );
+  assert.match(
+    session,
+    /entries\.findIndex\(entry => runtime\.shellMatchesHint\(entry\.binding, key, modifiers\)\)/,
   );
   assert.match(
     content,
-    /sessionPanel\.invoke\("activateShortcut", event\.key\) === true/,
+    /sessionPanel\.invoke\("activateShortcut", event\.key, event\.modifiers\) === true/,
   );
   assert.match(content, /key: sessionPanel\.actionShortcutLegend/);
   assert.match(session, /actionShortcutLegend: entries\.slice\(0, 3\)/);
@@ -241,11 +249,11 @@ test("Session uses animated shared tile hints and physical QWE/ASD action positi
   assert.match(session, /Item \{\s*id: hintRegion\s*width: buttonGrid\.width/);
   assert.match(
     session,
-    /KeyHint \{\s*id: moveHint[\s\S]*?shortcut: "HJKL"\s*label: "Move"/,
+    /KeyHint \{\s*id: moveHint[\s\S]*?shortcut: panel\.runtime\.shellHint\("SessionPanel.move"\)\s*label: "Move"/,
   );
   assert.match(
     session,
-    /KeyHint \{\s*id: actionHint[\s\S]*?shortcut: "ENTER"\s*label: panel\.armedAction\.length > 0 \? "Confirm" : "Activate"/,
+    /KeyHint \{\s*id: actionHint[\s\S]*?shortcut: panel\.runtime\.shellHint\("SessionPanel.confirm"\)\s*label: panel\.armedAction\.length > 0 \? "Confirm" : "Activate"/,
   );
 });
 

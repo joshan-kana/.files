@@ -129,36 +129,36 @@ FocusScope {
             return false;
         const picker = outputDevice.chooserOpen ? outputDevice : inputDevice.chooserOpen ? inputDevice : null;
         if (picker) {
-            if (key === Qt.Key_Escape || key === Qt.Key_Backspace || key === Qt.Key_D) {
+            if (key === mixer.runtime.shellKeyCode("mixer", "Escape") || key === mixer.runtime.shellKeyCode("mixer", "Backspace") || key === mixer.runtime.shellKeyCode("mixer", "D")) {
                 picker.chooserOpen = false;
-            } else if (key === Qt.Key_J || key === Qt.Key_Down) {
+            } else if (key === mixer.runtime.shellKeyCode("mixer", "J") || key === mixer.runtime.shellKeyCode("mixer", "Down")) {
                 picker.moveDeviceSelection(1);
-            } else if (key === Qt.Key_K || key === Qt.Key_Up) {
+            } else if (key === mixer.runtime.shellKeyCode("mixer", "K") || key === mixer.runtime.shellKeyCode("mixer", "Up")) {
                 picker.moveDeviceSelection(-1);
-            } else if (key === Qt.Key_Return || key === Qt.Key_Enter) {
+            } else if (key === mixer.runtime.shellKeyCode("mixer", "Return") || key === mixer.runtime.shellKeyCode("mixer", "Enter")) {
                 picker.selectDevice(picker.chooserIndex);
             } else {
                 return false;
             }
             return true;
         }
-        if (key === Qt.Key_Escape && !compact)
+        if (key === mixer.runtime.shellKeyCode("mixer", "Escape") && !compact)
             closeRequested();
-        else if (key === Qt.Key_Up || key === Qt.Key_K || key === Qt.Key_Down || key === Qt.Key_J || (!compact && (key === Qt.Key_Tab || key === Qt.Key_Backtab))) {
-            const backwards = key === Qt.Key_Up || key === Qt.Key_K || key === Qt.Key_Backtab || (key === Qt.Key_Tab && (modifiers & Qt.ShiftModifier));
+        else if (key === mixer.runtime.shellKeyCode("mixer", "Up") || key === mixer.runtime.shellKeyCode("mixer", "K") || key === mixer.runtime.shellKeyCode("mixer", "Down") || key === mixer.runtime.shellKeyCode("mixer", "J") || (!compact && (key === mixer.runtime.shellKeyCode("mixer", "Tab") || key === mixer.runtime.shellKeyCode("mixer", "Backtab")))) {
+            const backwards = key === mixer.runtime.shellKeyCode("mixer", "Up") || key === mixer.runtime.shellKeyCode("mixer", "K") || key === mixer.runtime.shellKeyCode("mixer", "Backtab") || (key === mixer.runtime.shellKeyCode("mixer", "Tab") && (mixer.runtime.shellModifier("mixer", "Shift", modifiers)));
             moveAudioSelection(backwards ? -1 : 1);
-        } else if (!compact && (key === Qt.Key_U || key === Qt.Key_PageUp || key === Qt.Key_D || key === Qt.Key_PageDown)) {
+        } else if (!compact && (key === mixer.runtime.shellKeyCode("mixer", "U") || key === mixer.runtime.shellKeyCode("mixer", "PageUp") || key === mixer.runtime.shellKeyCode("mixer", "D") || key === mixer.runtime.shellKeyCode("mixer", "PageDown"))) {
             const rows = Math.max(1, Math.floor(list.height / (compact ? 72 : 106)));
-            selectIndex(Math.max(0, Math.min(targets.length - 1, selectedIndex + ((key === Qt.Key_D || key === Qt.Key_PageDown) ? rows : -rows))));
-        } else if (key === Qt.Key_Left || key === Qt.Key_H) {
+            selectIndex(Math.max(0, Math.min(targets.length - 1, selectedIndex + ((key === mixer.runtime.shellKeyCode("mixer", "D") || key === mixer.runtime.shellKeyCode("mixer", "PageDown")) ? rows : -rows))));
+        } else if (key === mixer.runtime.shellKeyCode("mixer", "Left") || key === mixer.runtime.shellKeyCode("mixer", "H")) {
             adjustSelected(-0.05);
-        } else if (key === Qt.Key_Right || key === Qt.Key_L) {
+        } else if (key === mixer.runtime.shellKeyCode("mixer", "Right") || key === mixer.runtime.shellKeyCode("mixer", "L")) {
             adjustSelected(0.05);
-        } else if (key === Qt.Key_M || (!compact && (key === Qt.Key_Return || key === Qt.Key_Enter))) {
+        } else if (key === mixer.runtime.shellKeyCode("mixer", "M") || (!compact && (key === mixer.runtime.shellKeyCode("mixer", "Return") || key === mixer.runtime.shellKeyCode("mixer", "Enter")))) {
             toggleSelectedMute();
-        } else if (key === Qt.Key_P) {
+        } else if (key === mixer.runtime.shellKeyCode("mixer", "P")) {
             toggleSelectedDeviceChooser();
-        } else if (key === Qt.Key_X) {
+        } else if (key === mixer.runtime.shellKeyCode("mixer", "X")) {
             system.toggleMicrophoneMute();
         } else {
             return false;
@@ -387,11 +387,11 @@ FocusScope {
             theme: mixer.theme
             hints: [
                 {
-                    shortcut: "J/K",
+                    shortcut: mixer.runtime.shellHint("AudioMixerContent.select"),
                     label: "Select"
                 },
                 {
-                    shortcut: "H/L",
+                    shortcut: mixer.runtime.shellHint("AudioMixerContent.level"),
                     label: "Level"
                 }
             ]

@@ -363,19 +363,19 @@ Item {
                         }
 
                         Keys.onPressed: event => {
-                            if (event.key === Qt.Key_Tab) {
+                            if (event.key === panel.runtime.shellKeyCode("clipboard", "Tab")) {
                                 list.forceActiveFocus();
                                 event.accepted = true;
-                            } else if (event.key === Qt.Key_Escape) {
+                            } else if (event.key === panel.runtime.shellKeyCode("clipboard", "Escape")) {
                                 panel.hide();
                                 event.accepted = true;
-                            } else if (event.key === Qt.Key_Down) {
+                            } else if (event.key === panel.runtime.shellKeyCode("clipboard", "Down")) {
                                 panel.selectedIndex = Math.min(panel.filteredEntries.length - 1, panel.selectedIndex + 1);
                                 event.accepted = true;
-                            } else if (event.key === Qt.Key_Up) {
+                            } else if (event.key === panel.runtime.shellKeyCode("clipboard", "Up")) {
                                 panel.selectedIndex = Math.max(0, panel.selectedIndex - 1);
                                 event.accepted = true;
-                            } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                            } else if (event.key === panel.runtime.shellKeyCode("clipboard", "Return") || event.key === panel.runtime.shellKeyCode("clipboard", "Enter")) {
                                 panel.activateSelected();
                                 event.accepted = true;
                             }
@@ -405,19 +405,19 @@ Item {
 
                 Keys.priority: Keys.BeforeItem
                 Keys.onPressed: event => {
-                    if (event.key === Qt.Key_Tab || event.key === Qt.Key_I || event.key === Qt.Key_Slash) {
+                    if (event.key === panel.runtime.shellKeyCode("clipboard", "Tab") || event.key === panel.runtime.shellKeyCode("clipboard", "I") || event.key === panel.runtime.shellKeyCode("clipboard", "Slash")) {
                         search.forceActiveFocus();
-                    } else if (event.key === Qt.Key_Escape) {
+                    } else if (event.key === panel.runtime.shellKeyCode("clipboard", "Escape")) {
                         panel.hide();
-                    } else if (event.key === Qt.Key_Down || event.key === Qt.Key_J) {
+                    } else if (event.key === panel.runtime.shellKeyCode("clipboard", "Down") || event.key === panel.runtime.shellKeyCode("clipboard", "J")) {
                         panel.selectedIndex = Math.min(panel.filteredEntries.length - 1, panel.selectedIndex + 1);
-                    } else if (event.key === Qt.Key_Up || event.key === Qt.Key_K) {
+                    } else if (event.key === panel.runtime.shellKeyCode("clipboard", "Up") || event.key === panel.runtime.shellKeyCode("clipboard", "K")) {
                         panel.selectedIndex = Math.max(0, panel.selectedIndex - 1);
-                    } else if (event.key === Qt.Key_U || event.key === Qt.Key_PageUp || event.key === Qt.Key_D || event.key === Qt.Key_PageDown) {
+                    } else if (event.key === panel.runtime.shellKeyCode("clipboard", "U") || event.key === panel.runtime.shellKeyCode("clipboard", "PageUp") || event.key === panel.runtime.shellKeyCode("clipboard", "D") || event.key === panel.runtime.shellKeyCode("clipboard", "PageDown")) {
                         const rowHeight = list.currentItem ? list.currentItem.height + list.spacing : 62;
                         const rows = Math.max(1, Math.floor(list.height / Math.max(1, rowHeight) / 2));
-                        panel.selectedIndex = Math.max(0, Math.min(panel.filteredEntries.length - 1, panel.selectedIndex + ((event.key === Qt.Key_D || event.key === Qt.Key_PageDown) ? rows : -rows)));
-                    } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                        panel.selectedIndex = Math.max(0, Math.min(panel.filteredEntries.length - 1, panel.selectedIndex + ((event.key === panel.runtime.shellKeyCode("clipboard", "D") || event.key === panel.runtime.shellKeyCode("clipboard", "PageDown")) ? rows : -rows)));
+                    } else if (event.key === panel.runtime.shellKeyCode("clipboard", "Return") || event.key === panel.runtime.shellKeyCode("clipboard", "Enter")) {
                         panel.activateSelected();
                     } else {
                         return;
@@ -622,11 +622,11 @@ Item {
                         theme: panel.theme
                         hints: [
                             {
-                                shortcut: "ENTER",
+                                shortcut: panel.runtime.shellHint("ClipboardPanel.copySearch"),
                                 label: "Copy"
                             },
                             {
-                                shortcut: "J/K",
+                                shortcut: panel.runtime.shellHint("ClipboardPanel.navigateSearch"),
                                 label: "Navigate"
                             }
                         ]
@@ -662,20 +662,20 @@ Item {
                 theme: panel.theme
                 hints: [
                     {
-                        shortcut: search.activeFocus ? "TAB" : "J/K",
+                        shortcut: search.activeFocus ? panel.runtime.shellHint("ClipboardPanel.focusSearch") : panel.runtime.shellHint("ClipboardPanel.navigateSearch"),
                         label: search.activeFocus ? "Navigate" : "Move"
                     },
                     {
-                        shortcut: "U/D · PGUP/PGDN",
+                        shortcut: panel.runtime.shellHint("ClipboardPanel.halfPage"),
                         label: "Half page",
                         visible: !search.activeFocus
                     },
                     {
-                        shortcut: "ENTER",
+                        shortcut: panel.runtime.shellHint("ClipboardPanel.copy"),
                         label: "Copy"
                     },
                     {
-                        shortcut: "ESC",
+                        shortcut: panel.runtime.shellHint("ClipboardPanel.close"),
                         label: "Close"
                     }
                 ]

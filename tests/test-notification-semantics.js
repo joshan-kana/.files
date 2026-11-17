@@ -98,19 +98,19 @@ test("notification direct actions own their canonical on-control keyhints", () =
   const content = qml("NotificationContent.qml");
   assert.match(
     card,
-    /iconHint: true\s+inlineIconHint: true\s+shortcut: card\.selected \? "M" : ""/,
+    /iconHint: true\s+inlineIconHint: true\s+shortcut: card\.selected \? card\.runtime\.shellHint\("NotificationCard.mark"\) : ""/,
   );
   assert.match(
     card,
-    /iconHint: true\s+inlineIconHint: true\s+shortcut: card\.selected \? "R" : ""/,
+    /iconHint: true\s+inlineIconHint: true\s+shortcut: card\.selected \? card\.runtime\.shellHint\("NotificationCard.reply"\) : ""/,
   );
   assert.match(
     card,
-    /iconHint: true\s+inlineIconHint: true\s+shortcut: card\.selected \? "DEL" : ""/,
+    /iconHint: true\s+inlineIconHint: true\s+shortcut: card\.selected \? card\.runtime\.shellHint\("NotificationCard.dismiss"\) : ""/,
   );
   assert.match(
     card,
-    /shortcut: card\.selected && index < 9 \? String\(index \+ 1\) : ""/,
+    /shortcut: card\.selected && index < 9 \? card\.runtime\.shellNumberHint\("activity", index\) : ""/,
   );
   assert.match(card, /onActivated: card\.replyFocusRequested\(\)/);
   assert.match(card, /visible: card\.safeActions\.length > 0/);
@@ -125,7 +125,10 @@ test("notification direct actions own their canonical on-control keyhints", () =
     content.indexOf("id: list"),
   );
   assert.doesNotMatch(footer, /shortcut: "(?:M|R|DEL|[1-9])"/);
-  assert.match(footer, /shortcut: "J\/K/);
+  assert.match(
+    footer,
+    /shortcut: center\.runtime\.shellHint\("NotificationContent.navigate"\)/,
+  );
 });
 
 test("Escape has one shared owner and describes reply editing accurately", () => {
@@ -137,7 +140,10 @@ test("Escape has one shared owner and describes reply editing accurately", () =>
     center.indexOf("id: list"),
   );
   assert.doesNotMatch(footer, /shortcut: "ESC"/);
-  assert.match(host, /shortcut: "ESC",\s+label: host\.escapeHintLabel/);
+  assert.match(
+    host,
+    /shortcut: host\.runtime\.shellHint\("ShellExpansionHost.back"\),\s+label: host\.escapeHintLabel/,
+  );
   assert.match(host, /activityContent && activityContent\.replyEditing/);
   assert.match(
     host,
@@ -152,7 +158,10 @@ test("Escape has one shared owner and describes reply editing accurately", () =>
     card,
     /onActiveFocusChanged: card\.replyFocusChanged\(activeFocus\)/,
   );
-  assert.match(card, /Keys\.onEscapePressed: \{\s+card\.replyFinished\(\);/);
+  assert.match(
+    card,
+    /event\.key === card\.runtime\.shellKeyCode\("activity", "Escape"\)\) \{\s+card\.replyFinished\(\);/,
+  );
 });
 
 test("new notification groups do not move the selected action or steal reply focus", () => {

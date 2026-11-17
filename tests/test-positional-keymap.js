@@ -157,16 +157,32 @@ test("HJKL and arrow-key navigation both remain available in widgets", () => {
   ]) {
     const source = qml(name);
     for (const key of ["H", "J", "K", "L", "Left", "Right", "Up", "Down"])
-      assert.match(source, new RegExp(`Qt\\.Key_${key}\\b`), `${name}: ${key}`);
+      assert.match(
+        source,
+        new RegExp(`shellKeyCode\\("[^"]+", "${key}"\\)`),
+        `${name}: ${key}`,
+      );
   }
 });
 
 test("U/D paging and PageUp/PageDown survive throughout Controls and list views", () => {
   const host = qml("ShellExpansionHost.qml");
-  assert.match(host, /sequence: "U"/);
-  assert.match(host, /sequence: "D"/);
-  assert.match(host, /sequence: "PgUp"/);
-  assert.match(host, /sequence: "PgDown"/);
+  assert.match(
+    host,
+    /sequence: host\.runtime\.shellSequence\("ShellExpansionHost.controlsPageUp"\)/,
+  );
+  assert.match(
+    host,
+    /sequence: host\.runtime\.shellSequence\("ShellExpansionHost.controlsPageDown"\)/,
+  );
+  assert.match(
+    host,
+    /sequence: host\.runtime\.shellSequence\("ShellExpansionHost.pageUp"\)/,
+  );
+  assert.match(
+    host,
+    /sequence: host\.runtime\.shellSequence\("ShellExpansionHost.pageDown"\)/,
+  );
   assert.match(host, /!host\.detailVisible/);
   assert.match(host, /!host\.helpVisible/);
   assert.match(host, /hostPageShortcutsEnabled/);
@@ -180,17 +196,21 @@ test("U/D paging and PageUp/PageDown survive throughout Controls and list views"
   ]) {
     const source = qml(name);
     for (const key of ["U", "D", "PageUp", "PageDown"])
-      assert.match(source, new RegExp(`Qt\\.Key_${key}\\b`), `${name}: ${key}`);
+      assert.match(
+        source,
+        new RegExp(`shellKeyCode\\("[^"]+", "${key}"\\)`),
+        `${name}: ${key}`,
+      );
   }
 
   const controls = qml("SystemContent.qml");
   assert.match(
     controls,
-    /event\.key === Qt\.Key_D\)\s*\{\s*recordingsPanel\.invoke\("requestDelete"\)/,
+    /event\.key === root\.runtime\.shellKeyCode\("controls", "D"\)\)\s*\{\s*recordingsPanel\.invoke\("requestDelete"\)/,
   );
   assert.match(
     controls,
-    /event\.key === Qt\.Key_PageDown \|\| \(event\.key === Qt\.Key_D && \(event\.modifiers & Qt\.ShiftModifier\)\)/,
+    /event\.key === root\.runtime\.shellKeyCode\("controls", "PageDown"\) \|\| \(event\.key === root\.runtime\.shellKeyCode\("controls", "D"\) && \(root\.runtime\.shellModifier\("controls", "Shift", event\.modifiers\)\)\)/,
   );
 });
 
@@ -198,14 +218,20 @@ test("capture confirmation uses Enter, never Space", () => {
   const source = qml("ScreenshotPicker.qml");
   assert.match(
     source,
-    /event\.key === Qt\.Key_Return \|\| event\.key === Qt\.Key_Enter\)\s*\{\s*picker\.capture\(""/,
+    /event\.key === picker\.runtime\.shellKeyCode\("capture", "Return"\) \|\| event\.key === picker\.runtime\.shellKeyCode\("capture", "Enter"\)\)\s*\{\s*picker\.capture\(""/,
   );
   assert.doesNotMatch(
     source,
-    /event\.key === Qt\.Key_Space\)\s*\{\s*picker\.capture\(""/,
+    /event\.key === picker\.runtime\.shellKeyCode\("capture", "Space"\)\)\s*\{\s*picker\.capture\(""/,
   );
-  assert.match(source, /shortcut: "ENTER"/);
-  assert.match(source, /event\.key === Qt\.Key_E\)/);
+  assert.match(
+    source,
+    /shortcut: picker\.runtime\.shellHint\("ScreenshotPicker.capture"\)/,
+  );
+  assert.match(
+    source,
+    /event\.key === picker\.runtime\.shellKeyCode\("capture", "E"\)\)/,
+  );
 });
 
 test("Compact Media advertises the direct Now Playing key and shares its destination", () => {
@@ -213,13 +239,13 @@ test("Compact Media advertises the direct Now Playing key and shares its destina
   const card = qml("ControlsMediaCard.qml");
   assert.match(
     controls,
-    /event.key === Qt.Key_N\)\s*\{\s*root.mediaRequested\(\)/,
+    /event\.key === root\.runtime\.shellKeyCode\("controls", "N"\)\)\s*\{\s*root\.mediaRequested\(\)/,
   );
   assert.match(card, /onActivated: card.fullRequested\(\)/);
   assert.match(controls, /onFullRequested: root.mediaRequested\(\)/);
   assert.match(
     controls,
-    /event.key === Qt.Key_N\)\s*\{\s*root.mediaRequested\(\)/,
+    /event\.key === root\.runtime\.shellKeyCode\("controls", "N"\)\)\s*\{\s*root\.mediaRequested\(\)/,
   );
 });
 
@@ -229,18 +255,21 @@ test("mixer and device hints match the shared Controls keyboard dispatcher", () 
   const controls = qml("SystemContent.qml");
   assert.match(
     controls,
-    /shifted && event.key === Qt.Key_M\)\s*\{\s*root.openMixer\(\)/,
+    /shifted && event\.key === root\.runtime\.shellKeyCode\("controls", "M"\)\)\s*\{\s*root\.openMixer\(\)/,
   );
   assert.match(mixer, /onActivated: mixer.expandRequested\(\)/);
   assert.doesNotMatch(mixer, /id: expandAction/);
-  assert.match(device, /shortcut: deviceControl\.selected \? "P" : "⌄"/);
   assert.match(
-    controls,
-    /shifted && event\.key === Qt\.Key_M\)\s*\{\s*root\.openMixer\(\)/,
+    device,
+    /shortcut: deviceControl\.selected \? deviceControl\.runtime\.shellHint\("AudioDeviceControl.chooser"\) : "⌄"/,
   );
   assert.match(
     controls,
-    /event\.key === Qt\.Key_P\)\s*\{\s*root\.toggleSelectedAudioDeviceChooser\(\)/,
+    /shifted && event\.key === root\.runtime\.shellKeyCode\("controls", "M"\)\)\s*\{\s*root\.openMixer\(\)/,
+  );
+  assert.match(
+    controls,
+    /event\.key === root\.runtime\.shellKeyCode\("controls", "P"\)\)\s*\{\s*root\.toggleSelectedAudioDeviceChooser\(\)/,
   );
   assert.match(controls, /if \(audioDeck\.deviceChooserOpen\) \{/);
 });
@@ -248,7 +277,10 @@ test("mixer and device hints match the shared Controls keyboard dispatcher", () 
 test("Bluetooth scanning hints never advertise paging's plain D key", () => {
   const bluetooth = qml("BluetoothPanel.qml");
   const controls = qml("SystemContent.qml");
-  assert.match(bluetooth, /shortcut: "SHIFT\+D",\s*label: "Scan"/);
+  assert.match(
+    bluetooth,
+    /shortcut: panel\.runtime\.shellHint\("BluetoothPanel.scan"\),\s*label: "Scan"/,
+  );
   assert.match(
     bluetooth,
     /text: panel\.system\.bluetoothDiscovering \? "Scanning for devices…" : "No devices found"/,
@@ -256,11 +288,11 @@ test("Bluetooth scanning hints never advertise paging's plain D key", () => {
   assert.doesNotMatch(bluetooth, /NO DEVICES \/\/ PRESS SHIFT\+D TO SCAN/);
   assert.match(
     controls,
-    /event\.key === Qt\.Key_D && \(event\.modifiers & Qt\.ShiftModifier\)\)\s*\{\s*bluetoothPanel\.invoke\("toggleDiscovery"\)/,
+    /event\.key === root\.runtime\.shellKeyCode\("controls", "D"\) && \(root\.runtime\.shellModifier\("controls", "Shift", event\.modifiers\)\)\)\s*\{\s*bluetoothPanel\.invoke\("toggleDiscovery"\)/,
   );
   assert.match(
     controls,
-    /event\.key === Qt\.Key_D && !\(event\.modifiers & Qt\.ShiftModifier\)/,
+    /event\.key === root\.runtime\.shellKeyCode\("controls", "D"\) && !\(root\.runtime\.shellModifier\("controls", "Shift", event\.modifiers\)\)/,
   );
 });
 
@@ -272,15 +304,15 @@ test("Bluetooth shortcut hints reflect available hardware and selected device st
   );
   assert.match(
     bluetooth,
-    /shortcut: "B",\s*label: "Radio",\s*visible: panel\.adapterAvailable/,
+    /shortcut: panel\.runtime\.shellHint\("BluetoothPanel.radio"\),\s*label: "Radio",\s*visible: panel\.adapterAvailable/,
   );
   assert.match(
     bluetooth,
-    /shortcut: "SHIFT\+D",\s*label: "Scan",\s*visible: panel\.adapterAvailable && panel\.system\.bluetoothEnabled/,
+    /shortcut: panel\.runtime\.shellHint\("BluetoothPanel.scan"\),\s*label: "Scan",\s*visible: panel\.adapterAvailable && panel\.system\.bluetoothEnabled/,
   );
   assert.match(
     bluetooth,
-    /shortcut: "ENTER",\s*label: panel\.selectedDevice\(\)\?\.connected \? "Drop" : "Link"/,
+    /shortcut: panel\.runtime\.shellHint\("BluetoothPanel.activate"\),\s*label: panel\.selectedDevice\(\)\?\.connected \? "Drop" : "Link"/,
   );
   assert.match(
     bluetooth,
@@ -299,9 +331,21 @@ test("Bluetooth shortcut hints reflect available hardware and selected device st
 test("capture status messages and button hints agree that Enter confirms", () => {
   const source = qml("ScreenshotPicker.qml");
   assert.doesNotMatch(source, /SPACE TO (CONFIRM|RECORD|CAPTURE)/);
-  assert.match(source, /ENTER TO CONFIRM/);
-  assert.match(source, /ENTER TO RECORD/);
-  assert.match(source, /ENTER TO CAPTURE/);
-  assert.match(source, /shortcut: "ENTER"/);
+  assert.match(
+    source,
+    /picker\.runtime\.shellHint\("ScreenshotPicker\.capture"\) \+ " TO CONFIRM"/,
+  );
+  assert.match(
+    source,
+    /picker\.runtime\.shellHint\("ScreenshotPicker\.capture"\) \+ " TO RECORD"/,
+  );
+  assert.match(
+    source,
+    /picker\.runtime\.shellHint\("ScreenshotPicker\.capture"\) \+ " TO CAPTURE"/,
+  );
+  assert.match(
+    source,
+    /shortcut: picker\.runtime\.shellHint\("ScreenshotPicker.capture"\)/,
+  );
   assert.match(source, /picker\.capture\(""/);
 });

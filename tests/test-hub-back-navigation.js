@@ -17,7 +17,10 @@ test("the hub has one persistent Back action opposite contextual Help", () => {
   assert.match(tabs, /id: backButton[\s\S]*?anchors\.left: parent\.left/);
   assert.match(tabs, /id: helpButton[\s\S]*?anchors\.right: parent\.right/);
   assert.match(tabs, /track[\s\S]*?anchors\.left: backButton\.right/);
-  assert.match(tabs, /Accessible\.name: root\.backLabel \+ " \(Esc\)"/);
+  assert.match(
+    tabs,
+    /Accessible\.name: root\.backLabel \+ " \(" \+ root\.runtime\.shellHint\("ShellExpansionHost.back"\) \+ "\)"/,
+  );
   assert.match(tabs, /onActivated: root\.backRequested\(\)/);
   assert.match(host, /backLabel: host\.escapeHintLabel/);
   assert.match(host, /onBackRequested: host\.navigateBack\(\)/);
@@ -37,7 +40,7 @@ test("Escape and Back share the same Controls cancellation priorities", () => {
   const system = qml("SystemContent.qml");
   const keyHandler = system.indexOf("Keys.onPressed: event =>");
   const escapeHandler = system.indexOf(
-    "if (event.key === Qt.Key_Escape)",
+    'if (event.key === root.runtime.shellKeyCode("controls", "Escape"))',
     keyHandler,
   );
 

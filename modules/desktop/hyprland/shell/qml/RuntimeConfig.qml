@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "ShellKeybindings.js" as ShellKeybindings
 
 QtObject {
     id: root
@@ -72,6 +73,7 @@ QtObject {
     readonly property var keybindings: root.configData.keybindings
     readonly property var shortcuts: root.configData.shortcuts
     readonly property var shortcutHints: root.configData.shortcutHints
+    readonly property var shellBindings: root.configData.shellBindings
     readonly property var paletteQuicklinks: root.configData.palette.quicklinks
     readonly property var paletteSnippets: root.configData.palette.snippets
     readonly property var appearanceDefaults: root.configData.appearance
@@ -89,6 +91,36 @@ QtObject {
     function shortcutHint(id) {
         const value = shortcutHints ? shortcutHints[id] : undefined;
         return value === undefined || value === null ? "" : String(value);
+    }
+
+    // The action's declared slot owns both keyboard matching and its hint.
+    // Scope overrides may change a panel without modifying other shell views.
+    function shellKeyCode(scope: string, slot: string): int {
+        return ShellKeybindings.keyCode(shellBindings, scope, slot, Qt);
+    }
+
+    function shellModifier(scope: string, slot: string, modifiers: int): bool {
+        return ShellKeybindings.modifier(shellBindings, scope, slot, modifiers, Qt);
+    }
+
+    function shellHint(action: string): string {
+        return ShellKeybindings.hint(shellBindings, action);
+    }
+
+    function shellSequence(action: string): string {
+        return ShellKeybindings.sequence(shellBindings, action);
+    }
+
+    function shellMatchesHint(action: string, key: int, modifiers: int): bool {
+        return ShellKeybindings.matchesHint(shellBindings, action, key, modifiers, Qt);
+    }
+
+    function shellNumberIndex(scope: string, key: int, count: int): int {
+        return ShellKeybindings.numberIndex(shellBindings, scope, key, count, Qt);
+    }
+
+    function shellNumberHint(scope: string, index: int): string {
+        return ShellKeybindings.numberHint(shellBindings, scope, index);
     }
 
     property FileView themeFile: FileView {
@@ -260,6 +292,11 @@ QtObject {
             property var keybindings: []
             property var shortcuts: ({})
             property var shortcutHints: ({})
+            property var shellBindings: ({
+                    base: ({}),
+                    overrides: ({}),
+                    hints: ({})
+                })
         }
     }
 }
