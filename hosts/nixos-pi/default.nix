@@ -15,31 +15,46 @@ lib.recursiveUpdate (import ../../profiles/workstation.nix { inherit moduleRegis
     generic-extlinux-compatible.enable = true;
   };
 
-  dotfiles.scopes.system.boot.loader.enable = false;
+  dotfiles = {
+    defaults.browser = "firefox";
+    scopes = {
+      system.boot.loader.enable = false;
+      virtualisation.enable = false;
+
+      desktopApps = {
+        waypipe.enable = false;
+        zed.enable = false;
+        keymapp.enable = false;
+        vial.enable = false;
+        openclaw.enable = false;
+        openWebui.enable = false;
+        thunderbird.enable = false;
+        obsidian.enable = false;
+        githubDesktop.enable = false;
+        pycharm.enable = false;
+        libreoffice.enable = false;
+        sunshine.enable = false;
+        ollama.enable = false;
+        discord.enable = false;
+        dropbox.enable = false;
+        onlyoffice.enable = false;
+        beeperMatrixClient.enable = false;
+        chatgpt.enable = false;
+        bambuStudio.enable = false;
+        prusaSlicer.enable = false;
+        orcaSlicerNightly.enable = false;
+        gimp.enable = false;
+        inkscape.enable = false;
+        krita.enable = false;
+      };
+    };
+  };
 
   networking = editScope moduleRegistry.networking {
     ssh = _: {
       users.users.${config.dotfiles.users.primary.name}.openssh.authorizedKeys.keys = [
         "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGMZdbT05P/naiv07J32DxHDOR5A1z8F9jijeBrDkXWV joshankana@gmail.com"
       ];
-    };
-  };
-
-  backups = editScope moduleRegistry.backups {
-    secrets = { config, lib, ... }: {
-      # The offline image has no user database. Set ownership once NixOS has
-      # created the primary user, without assuming an allocation-specific UID.
-      system.activationScripts.piSecretOwnership = {
-        deps = [ "users" ];
-        text = ''
-          if [ -d ${lib.escapeShellArg "${config.dotfiles.users.primary.homeRoot}/${config.dotfiles.users.primary.name}"} ]; then
-            chown ${lib.escapeShellArg config.dotfiles.users.primary.name}:users ${lib.escapeShellArg "${config.dotfiles.users.primary.homeRoot}/${config.dotfiles.users.primary.name}"}
-          fi
-          if [ -d ${lib.escapeShellArg config.dotfiles.secretsDir} ]; then
-            chown -R ${lib.escapeShellArg config.dotfiles.users.primary.name}:users ${lib.escapeShellArg config.dotfiles.secretsDir}
-          fi
-        '';
-      };
     };
   };
 }

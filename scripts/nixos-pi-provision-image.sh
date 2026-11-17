@@ -3,23 +3,15 @@ set -euo pipefail
 umask 077
 
 usage() {
-  echo "Usage: $0 HOST_ENV.sh IMAGE.img SECRETS_DIR [BACKUP_CREDENTIALS_DIR]" >&2
+  echo "Usage: $0 IMAGE.img SECRETS_DIR [BACKUP_CREDENTIALS_DIR]" >&2
   exit 2
 }
 
-(($# == 3 || $# == 4)) || usage
+(($# == 2 || $# == 3)) || usage
 ((EUID == 0)) || {
   echo 'Run this command as root on Linux.' >&2
   exit 1
 }
-
-[[ -r $1 ]] || {
-  echo 'Missing generated host environment.' >&2
-  exit 1
-}
-# This file is produced by the repository's evaluated runbook generator.
-# shellcheck source=/dev/null
-source "$1"
 
 for variable in ROOT_DEVICE ROOT_FS PRIMARY_HOME USER_SECRETS_DIR SECRETS_RCLONE_CONFIG SECRETS_PASSWORD_FILE; do
   [[ -n ${!variable:-} ]] || {
@@ -34,9 +26,9 @@ for directory in PRIMARY_HOME USER_SECRETS_DIR SECRETS_RCLONE_CONFIG SECRETS_PAS
   }
 done
 
-image=$(realpath -- "$2")
-secrets=$(realpath -- "$3")
-backup=${4:+$(realpath -- "$4")}
+image=$(realpath -- "$1")
+secrets=$(realpath -- "$2")
+backup=${3:+$(realpath -- "$3")}
 
 [[ -f $image && -w $image && $image != /nix/store/* ]] || {
   echo 'Use a writable .img copy outside the Nix store.' >&2
@@ -88,8 +80,6 @@ done
 mount -t "$ROOT_FS" "$root_partition" "$mount_dir"
 mounted=true
 
-# Home ownership is set by the host's declarative tmpfiles policy when the
-# primary user is created. No UID needs to be pinned or guessed at image time.
 install -d -m 0700 "$mount_dir$PRIMARY_HOME"
 install -d -m 0700 "$mount_dir$USER_SECRETS_DIR"
 cp -LR -- "$secrets/." "$mount_dir$USER_SECRETS_DIR/"

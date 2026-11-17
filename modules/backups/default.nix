@@ -171,6 +171,7 @@ in
       # Ensure the primary-user secret directory exists with private user ownership and permissions.
       systemd.tmpfiles.rules = [
         "d ${config.dotfiles.secretsDir} 0700 ${primary.name} users - -"
+        "Z ${config.dotfiles.secretsDir} - ${primary.name} users - -"
       ];
     };
 }
