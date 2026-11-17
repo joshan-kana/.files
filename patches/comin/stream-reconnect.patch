@@ -1,0 +1,302 @@
+diff --git a/internal/server/server.go b/internal/server/server.go
+index 8399fc6..84ce372 100644
+--- a/internal/server/server.go
++++ b/internal/server/server.go
+@@ -32,23 +32,24 @@ type cominServer struct {
+ 
+ func (s *cominServer) Events(_ *emptypb.Empty, stream grpc.ServerStreamingServer[protobuf.Event]) error {
+ 	logrus.Infof("server: start to stream events")
+-
+ 	subscriber := s.broker.Subscribe("server-events")
++	defer s.broker.Unsubscribe(subscriber)
+ 	state := s.manager.GetState()
+ 	stateEvent := &protobuf.Event{Type: &protobuf.Event_ManagerState_{ManagerState: &protobuf.Event_ManagerState{State: state}}, CreatedAt: timestamppb.New(time.Now().UTC())}
+ 	if err := stream.Send(stateEvent); err != nil {
+-		logrus.Infof("server: failed to send stream: %s", err)
+-		s.broker.Unsubscribe(subscriber)
+ 		return err
+ 	}
+-
+ 	for {
+-
+-		event := <-subscriber
+-		if err := stream.Send(event); err != nil {
+-			logrus.Infof("server: failed to send stream: %s", err)
+-			s.broker.Unsubscribe(subscriber)
+-			return err
++		select {
++		case <-stream.Context().Done():
++			return stream.Context().Err()
++		case event, ok := <-subscriber:
++			if !ok {
++				return nil
++			}
++			if err := stream.Send(event); err != nil {
++				return err
++			}
+ 		}
+ 	}
+ }
+diff --git a/pkg/client/client.go b/pkg/client/client.go
+index c4e1034..75b2847 100644
+--- a/pkg/client/client.go
++++ b/pkg/client/client.go
+@@ -39,7 +39,9 @@ func (c Client) Close() {
+ }
+ 
+ func (c Client) GetManagerState() (state *protobuf.State, err error) {
+-	return c.cominClient.GetState(context.Background(), &emptypb.Empty{})
++	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
++	defer cancel()
++	return c.cominClient.GetState(ctx, &emptypb.Empty{})
+ }
+ 
+ type Streamer struct {
+@@ -50,49 +52,73 @@ type Streamer struct {
+ func (c Client) Stream(ctx context.Context) (ch chan Streamer) {
+ 	ch = make(chan Streamer)
+ 	go func() {
+-		for {
++		defer close(ch)
++		emit := func(item Streamer) bool {
++			select {
++			case ch <- item:
++				return true
++			case <-ctx.Done():
++				return false
++			}
++		}
++		for ctx.Err() == nil {
+ 			events, err := c.cominClient.Events(ctx, &emptypb.Empty{})
+ 			if err != nil {
+-				reason := fmt.Sprintf("failed to connect to the stream: %s", err)
+-				logrus.Debug(reason)
+-				ch <- Streamer{FailureMsg: reason}
+-				time.Sleep(time.Second)
+-				continue
+-			}
+-			for {
+-				event, err := events.Recv()
+-				if err == io.EOF {
+-					reason := fmt.Sprintf("server closed stream: %s", err)
+-					logrus.Debug(reason)
+-					ch <- Streamer{FailureMsg: reason}
+-					break
++				if !emit(Streamer{FailureMsg: fmt.Sprintf("connection lost: %s", err)}) {
++					return
+ 				}
+-				if err != nil {
+-					reason := fmt.Sprintf("failed to receive from the stream: %s", err)
+-					logrus.Debug(reason)
+-					ch <- Streamer{FailureMsg: reason}
+-					break
++			} else {
++				for ctx.Err() == nil {
++					event, err := events.Recv()
++					if err != nil {
++						if err != io.EOF && ctx.Err() == nil {
++							if !emit(Streamer{FailureMsg: fmt.Sprintf("stream disconnected: %s", err)}) {
++								return
++							}
++						} else if err == io.EOF && ctx.Err() == nil {
++							if !emit(Streamer{FailureMsg: "server closed the stream"}) {
++								return
++							}
++						}
++						break
++					}
++					if !emit(Streamer{Event: event}) {
++						return
++					}
+ 				}
+-				ch <- Streamer{Event: event}
++			}
++			select {
++			case <-ctx.Done():
++				return
++			case <-time.After(time.Second):
+ 			}
+ 		}
+ 	}()
+ 	return ch
+ }
+ 
+-func (c Client) Fetch() {
+-	c.cominClient.Fetch(context.Background(), &emptypb.Empty{}) // nolint: errcheck
++func (c Client) Fetch() error {
++	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
++	defer cancel()
++	_, err := c.cominClient.Fetch(ctx, &emptypb.Empty{})
++	return err
+ }
+ func (c Client) Suspend() error {
+-	_, err := c.cominClient.Suspend(context.Background(), &emptypb.Empty{})
++	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
++	defer cancel()
++	_, err := c.cominClient.Suspend(ctx, &emptypb.Empty{})
+ 	return err
+ }
+ func (c Client) Resume() error {
+-	_, err := c.cominClient.Resume(context.Background(), &emptypb.Empty{})
++	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
++	defer cancel()
++	_, err := c.cominClient.Resume(ctx, &emptypb.Empty{})
+ 	return err
+ }
+ func (c Client) DeploymentLatestSubmit(operation string) error {
+-	_, err := c.cominClient.DeploymentLatestSubmit(context.Background(), &protobuf.Operation{OperationSubmitted: operation})
++	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
++	defer cancel()
++	_, err := c.cominClient.DeploymentLatestSubmit(ctx, &protobuf.Operation{OperationSubmitted: operation})
+ 	return err
+ }
+ 
+@@ -104,7 +130,9 @@ func (c Client) Retry() error {
+ }
+ 
+ func (c Client) Confirm(generationUUID, for_ string) error {
+-	_, err := c.cominClient.Confirm(context.Background(), &protobuf.ConfirmRequest{
++	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
++	defer cancel()
++	_, err := c.cominClient.Confirm(ctx, &protobuf.ConfirmRequest{
+ 		GenerationUuid: generationUUID, For: for_})
+ 	return err
+ }
+diff --git a/pkg/client/client_integration_test.go b/pkg/client/client_integration_test.go
+new file mode 100644
+index 0000000..615a926
+--- /dev/null
++++ b/pkg/client/client_integration_test.go
+@@ -0,0 +1,132 @@
++package client
++
++import (
++	"context"
++	"net"
++	"path/filepath"
++	"sync/atomic"
++	"testing"
++	"time"
++
++	"github.com/nlewo/comin/pkg/protobuf"
++	"google.golang.org/grpc"
++	"google.golang.org/protobuf/types/known/emptypb"
++)
++
++type stubServer struct {
++	protobuf.UnimplementedCominServer
++	hostname    string
++	retries     atomic.Int32
++	deployments atomic.Int32
++	fetches     atomic.Int32
++}
++
++func (s *stubServer) Events(_ *emptypb.Empty, stream grpc.ServerStreamingServer[protobuf.Event]) error {
++	event := &protobuf.Event{Type: &protobuf.Event_ManagerState_{ManagerState: &protobuf.Event_ManagerState{State: &protobuf.State{Builder: &protobuf.Builder{Hostname: s.hostname}}}}}
++	if err := stream.Send(event); err != nil {
++		return err
++	}
++	<-stream.Context().Done()
++	return nil
++}
++func (s *stubServer) Retry(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
++	s.retries.Add(1)
++	return &emptypb.Empty{}, nil
++}
++func (s *stubServer) DeploymentLatestSubmit(context.Context, *protobuf.Operation) (*emptypb.Empty, error) {
++	s.deployments.Add(1)
++	return &emptypb.Empty{}, nil
++}
++func (s *stubServer) Fetch(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
++	s.fetches.Add(1)
++	return &emptypb.Empty{}, nil
++}
++
++func runStub(t *testing.T, path, name string) (*grpc.Server, *stubServer) {
++	t.Helper()
++	l, err := net.Listen("unix", path)
++	if err != nil {
++		t.Fatal(err)
++	}
++	svc := &stubServer{hostname: name}
++	server := grpc.NewServer()
++	protobuf.RegisterCominServer(server, svc)
++	go func() { _ = server.Serve(l) }()
++	return server, svc
++}
++func nextHost(t *testing.T, channel <-chan Streamer, name string) {
++	t.Helper()
++	timer := time.NewTimer(12 * time.Second)
++	defer timer.Stop()
++	for {
++		select {
++		case <-timer.C:
++			t.Fatalf("never recovered connection to %s", name)
++		case update, ok := <-channel:
++			if !ok {
++				t.Fatalf("stream closed before %s", name)
++			}
++			if update.Event == nil || update.Event.GetManagerState() == nil {
++				continue
++			}
++			state := update.Event.GetManagerState().State
++			if state != nil && state.Builder != nil && state.Builder.Hostname == name {
++				return
++			}
++		}
++	}
++}
++func TestStreamReconnectAcrossDaemonRestarts(t *testing.T) {
++	path := filepath.Join(t.TempDir(), "comin.sock")
++	server, _ := runStub(t, path, "first")
++	c, err := New(ClientOpts{UnixSocketPath: path})
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer c.Close()
++	ctx, cancel := context.WithCancel(context.Background())
++	channel := c.Stream(ctx)
++	nextHost(t, channel, "first")
++	for i := 0; i < 8; i++ {
++		server.Stop()
++		// ResetConnectBackoff is only needed to make the stress test fast;
++		// the normal client also reconnects with gRPC's backoff.
++		c.conn.ResetConnectBackoff()
++		name := time.Now().Format("150405.000000")
++		server, _ = runStub(t, path, name)
++		nextHost(t, channel, name)
++	}
++	server.Stop()
++	cancel()
++	select {
++	case _, ok := <-channel:
++		if ok {
++			for range channel {
++			}
++		}
++	case <-time.After(2 * time.Second):
++		t.Fatal("stream goroutine did not stop on context cancellation")
++	}
++}
++func TestControlsUseNewRPCMethods(t *testing.T) {
++	path := filepath.Join(t.TempDir(), "comin.sock")
++	server, svc := runStub(t, path, "test")
++	defer server.Stop()
++	c, err := New(ClientOpts{UnixSocketPath: path})
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer c.Close()
++	if err := c.Fetch(); err != nil {
++		t.Fatal(err)
++	}
++	if err := c.Retry(); err != nil {
++		t.Fatal(err)
++	}
++	if err := c.DeploymentLatestSubmit(""); err != nil {
++		t.Fatal(err)
++	}
++	if svc.fetches.Load() != 1 || svc.retries.Load() != 1 || svc.deployments.Load() != 1 {
++		t.Fatalf("missing RPC calls fetch=%d retry=%d deploy=%d", svc.fetches.Load(), svc.retries.Load(), svc.deployments.Load())
++	}
++}

@@ -1,0 +1,21 @@
+diff --git a/internal/manager/manager.go b/internal/manager/manager.go
+index 8f7026b..9d86479 100644
+--- a/internal/manager/manager.go
++++ b/internal/manager/manager.go
+@@ -9,6 +9,7 @@ import (
+ 	"context"
+ 	"fmt"
+ 	"os"
++	"runtime"
+ 	"sync"
+ 	"time"
+ 
+@@ -325,7 +326,7 @@ func (m *Manager) Run(ctx context.Context) {
+ 				e := &protobuf.Event_RebootRequired{Deployment: dpl}
+ 				m.broker.Publish(&protobuf.Event{Type: &protobuf.Event_RebootRequired_{RebootRequired: e}, CreatedAt: timestamppb.New(time.Now().UTC())})
+ 			}
+-			if dpl.RestartComin.GetValue() {
++			if dpl.RestartComin.GetValue() || (runtime.GOOS == "darwin" && dpl.Status == store.StatusToString(store.Done) && dpl.Operation == "switch") {
+ 				// TODO: stop contexts
+ 				logrus.Infof("manager: comin needs to be restarted")
+ 				logrus.Infof("manager: exiting comin to let the service manager restart it")

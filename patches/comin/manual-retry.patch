@@ -1,0 +1,321 @@
+diff --git a/internal/manager/manager.go b/internal/manager/manager.go
+index b37c200..8f7026b 100644
+--- a/internal/manager/manager.go
++++ b/internal/manager/manager.go
+@@ -9,6 +9,7 @@ import (
+ 	"context"
+ 	"fmt"
+ 	"os"
++	"sync"
+ 	"time"
+ 
+ 	"github.com/nlewo/comin/internal/broker"
+@@ -38,6 +39,8 @@ type Manager struct {
+ 	stateResultCh  chan *protobuf.State
+ 
+ 	needToReboot bool
++	runContext   context.Context
++	runContextMu sync.RWMutex
+ 
+ 	prometheus      prometheus.Prometheus
+ 	storage         *store.Store
+@@ -54,7 +57,7 @@ type Manager struct {
+ 	isSuspended bool
+ 
+ 	// Store the last fetched repository state to detect updates
+-	lastFetchedCommitId string
++	lastFetchedCommitId        string
+ 	lastFetchedBranchIsTesting *wrapperspb.BoolValue
+ 
+ 	broker       *broker.Broker
+@@ -139,6 +142,40 @@ func (m *Manager) DeploymentLatestSubmit(operation string) error {
+ 	return nil
+ }
+ 
++// Retry restarts an unsuccessful generation through the normal build/deploy pipeline.
++func (m *Manager) Retry(_ context.Context) error {
++	// gRPC request contexts end when the RPC returns; builds and evaluations
++	// must instead use the daemon's lifetime context.
++	m.runContextMu.RLock()
++	ctx := m.runContext
++	m.runContextMu.RUnlock()
++	if ctx == nil {
++		return fmt.Errorf("manager is not running")
++	}
++	b := m.Builder.State()
++	if b.IsSuspended.GetValue() || m.isSuspended {
++		return fmt.Errorf("comin is suspended")
++	}
++	if b.IsEvaluating.GetValue() || b.IsBuilding.GetValue() {
++		return fmt.Errorf("builder is busy")
++	}
++	if b.Generation == nil {
++		return fmt.Errorf("no generation to retry")
++	}
++	generation := b.Generation
++	if generation.Source == nil || generation.Source.GetGit() == nil {
++		return fmt.Errorf("the current generation is not a Git generation")
++	}
++	current := m.Fetcher.GetState().GetGitRepositoryStatus()
++	if current == nil || current.SelectedCommitId != generation.Source.GetGit().SelectedCommitId {
++		return fmt.Errorf("the selected revision has changed; fetch again")
++	}
++	if generation.EvalStatus == store.EvalFailed.String() {
++		return m.Builder.Eval(ctx, generation)
++	}
++	return m.Builder.RetryBuild(ctx)
++}
++
+ func (m *Manager) Suspend() error {
+ 	if m.isSuspended {
+ 		return fmt.Errorf("the manager is already suspended")
+@@ -178,7 +215,7 @@ func (m *Manager) FetchAndBuild(ctx context.Context) {
+ 					// Check if the repository has been updated by comparing with last fetched state
+ 					updated := m.lastFetchedCommitId != rs.SelectedCommitId ||
+ 						(m.lastFetchedBranchIsTesting != nil && rs.SelectedBranchIsTesting != nil &&
+-						m.lastFetchedBranchIsTesting.GetValue() != rs.SelectedBranchIsTesting.GetValue())
++							m.lastFetchedBranchIsTesting.GetValue() != rs.SelectedBranchIsTesting.GetValue())
+ 					if !updated {
+ 						continue
+ 					}
+@@ -266,6 +303,9 @@ func (m *Manager) getOperationFromConfigurationOperations(remote, branch string)
+ }
+ 
+ func (m *Manager) Run(ctx context.Context) {
++	m.runContextMu.Lock()
++	m.runContext = ctx
++	m.runContextMu.Unlock()
+ 	logrus.Infof("manager: starting with machineId=%s", m.machineId)
+ 	lastDpl := m.deployer.State().Deployment
+ 	if lastDpl != nil {
+diff --git a/internal/server/server.go b/internal/server/server.go
+index de2b096..8399fc6 100644
+--- a/internal/server/server.go
++++ b/internal/server/server.go
+@@ -80,6 +80,13 @@ func (s *cominServer) DeploymentLatestSubmit(ctx context.Context, operation *pro
+ 	return nil, err
+ }
+ 
++func (s *cominServer) Retry(ctx context.Context, _ *emptypb.Empty) (*emptypb.Empty, error) {
++	if err := s.manager.Retry(ctx); err != nil {
++		return nil, status.Error(codes.FailedPrecondition, err.Error())
++	}
++	return &emptypb.Empty{}, nil
++}
++
+ func (s *cominServer) Suspend(ctx context.Context, empty *emptypb.Empty) (*emptypb.Empty, error) {
+ 	err := s.manager.Suspend()
+ 	if err != nil {
+diff --git a/internal/store/generation.go b/internal/store/generation.go
+index eed874a..dee32f2 100644
+--- a/internal/store/generation.go
++++ b/internal/store/generation.go
+@@ -123,7 +123,7 @@ func (s *Store) NewGeneration(hostname, repositoryDir, systemAttr string, rs *pr
+ 	}
+ 
+ 	g = protobuf.Generation{
+-		Uuid:   uuid.New().String(),
++		Uuid: uuid.New().String(),
+ 		Source: &protobuf.Source{
+ 			Source: &protobuf.Source_Git{
+ 				Git: &protobuf.Git{
+@@ -142,9 +142,9 @@ func (s *Store) NewGeneration(hostname, repositoryDir, systemAttr string, rs *pr
+ 				},
+ 			},
+ 		},
+-		EvalStatus:   EvalInit.String(),
+-		BuildStatus: BuildInit.String(),
+-		AttemptNumber: 0,
++		EvalStatus:         EvalInit.String(),
++		BuildStatus:        BuildInit.String(),
++		AttemptNumber:      0,
+ 		BuildAttemptsLimit: int32(buildAttemptsLimit),
+ 	}
+ 	s.persisted.Generations = append(s.persisted.Generations, &g)
+@@ -222,6 +222,7 @@ func (s *Store) GenerationEvalStarted(uuid string) error {
+ 	}
+ 	g.EvalStartedAt = timestamppb.New(time.Now().UTC())
+ 	g.EvalStatus = Evaluating.String()
++	g.EvalErr = ""
+ 
+ 	s.lastEvalStarted = g
+ 	s.generationsGC()
+@@ -266,6 +267,7 @@ func (s *Store) GenerationBuildStart(uuid, reason string) error {
+ 	}
+ 	g.BuildStartedAt = timestamppb.New(time.Now().UTC())
+ 	g.BuildStatus = Building.String()
++	g.BuildErr = ""
+ 	g.BuildReason = reason
+ 	g.AttemptNumber++
+ 	s.lastBuildStarted = g
+diff --git a/pkg/client/client.go b/pkg/client/client.go
+index 13de0d2..c4e1034 100644
+--- a/pkg/client/client.go
++++ b/pkg/client/client.go
+@@ -96,6 +96,13 @@ func (c Client) DeploymentLatestSubmit(operation string) error {
+ 	return err
+ }
+ 
++func (c Client) Retry() error {
++	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
++	defer cancel()
++	_, err := c.cominClient.Retry(ctx, &emptypb.Empty{})
++	return err
++}
++
+ func (c Client) Confirm(generationUUID, for_ string) error {
+ 	_, err := c.cominClient.Confirm(context.Background(), &protobuf.ConfirmRequest{
+ 		GenerationUuid: generationUUID, For: for_})
+diff --git a/pkg/protobuf/services.pb.go b/pkg/protobuf/services.pb.go
+index 06fb5a7..5ddf3a6 100644
+--- a/pkg/protobuf/services.pb.go
++++ b/pkg/protobuf/services.pb.go
+@@ -3144,7 +3144,7 @@ const file_pkg_protobuf_services_proto_rawDesc = "" +
+ 	"\x1edeployment_boot_entry_capacity\x18\t \x01(\x05R\x1bdeploymentBootEntryCapacity\x12D\n" +
+ 	"\x1edeployment_successful_capacity\x18\n" +
+ 	" \x01(\x05R\x1cdeploymentSuccessfulCapacity\x126\n" +
+-	"\x17deployment_any_capacity\x18\v \x01(\x05R\x15deploymentAnyCapacity2\xaf\x03\n" +
++	"\x17deployment_any_capacity\x18\v \x01(\x05R\x15deploymentAnyCapacity2\xea\x03\n" +
+ 	"\x05Comin\x125\n" +
+ 	"\bGetState\x12\x16.google.protobuf.Empty\x1a\x0f.protobuf.State\"\x00\x129\n" +
+ 	"\x05Fetch\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\"\x00\x12;\n" +
+@@ -3152,7 +3152,8 @@ const file_pkg_protobuf_services_proto_rawDesc = "" +
+ 	"\x06Resume\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\"\x00\x12=\n" +
+ 	"\aConfirm\x12\x18.protobuf.ConfirmRequest\x1a\x16.google.protobuf.Empty\"\x00\x123\n" +
+ 	"\x06Events\x12\x16.google.protobuf.Empty\x1a\x0f.protobuf.Event0\x01\x12G\n" +
+-	"\x16DeploymentLatestSubmit\x12\x13.protobuf.Operation\x1a\x16.google.protobuf.Empty\"\x00B*Z#github.com/nlewo/comin/pkg/protobuf\x92\x03\x02\b\x02b\beditionsp\xe8\a"
++	"\x16DeploymentLatestSubmit\x12\x13.protobuf.Operation\x1a\x16.google.protobuf.Empty\"\x00\x129\n" +
++	"\x05Retry\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\"\x00B*Z#github.com/nlewo/comin/pkg/protobuf\x92\x03\x02\b\x02b\beditionsp\xe8\a"
+ 
+ var (
+ 	file_pkg_protobuf_services_proto_rawDescOnce sync.Once
+@@ -3293,15 +3294,17 @@ var file_pkg_protobuf_services_proto_depIdxs = []int32{
+ 	2,  // 80: protobuf.Comin.Confirm:input_type -> protobuf.ConfirmRequest
+ 	39, // 81: protobuf.Comin.Events:input_type -> google.protobuf.Empty
+ 	0,  // 82: protobuf.Comin.DeploymentLatestSubmit:input_type -> protobuf.Operation
+-	7,  // 83: protobuf.Comin.GetState:output_type -> protobuf.State
+-	39, // 84: protobuf.Comin.Fetch:output_type -> google.protobuf.Empty
+-	39, // 85: protobuf.Comin.Suspend:output_type -> google.protobuf.Empty
+-	39, // 86: protobuf.Comin.Resume:output_type -> google.protobuf.Empty
+-	39, // 87: protobuf.Comin.Confirm:output_type -> google.protobuf.Empty
+-	1,  // 88: protobuf.Comin.Events:output_type -> protobuf.Event
+-	39, // 89: protobuf.Comin.DeploymentLatestSubmit:output_type -> google.protobuf.Empty
+-	83, // [83:90] is the sub-list for method output_type
+-	76, // [76:83] is the sub-list for method input_type
++	39, // 83: protobuf.Comin.Retry:input_type -> google.protobuf.Empty
++	7,  // 84: protobuf.Comin.GetState:output_type -> protobuf.State
++	39, // 85: protobuf.Comin.Fetch:output_type -> google.protobuf.Empty
++	39, // 86: protobuf.Comin.Suspend:output_type -> google.protobuf.Empty
++	39, // 87: protobuf.Comin.Resume:output_type -> google.protobuf.Empty
++	39, // 88: protobuf.Comin.Confirm:output_type -> google.protobuf.Empty
++	1,  // 89: protobuf.Comin.Events:output_type -> protobuf.Event
++	39, // 90: protobuf.Comin.DeploymentLatestSubmit:output_type -> google.protobuf.Empty
++	39, // 91: protobuf.Comin.Retry:output_type -> google.protobuf.Empty
++	84, // [84:92] is the sub-list for method output_type
++	76, // [76:84] is the sub-list for method input_type
+ 	76, // [76:76] is the sub-list for extension type_name
+ 	76, // [76:76] is the sub-list for extension extendee
+ 	0,  // [0:76] is the sub-list for field type_name
+diff --git a/pkg/protobuf/services.proto b/pkg/protobuf/services.proto
+index 91f46cd..89ec4fc 100644
+--- a/pkg/protobuf/services.proto
++++ b/pkg/protobuf/services.proto
+@@ -20,6 +20,7 @@ service Comin {
+   rpc Confirm(ConfirmRequest) returns (google.protobuf.Empty) {}
+   rpc Events(google.protobuf.Empty) returns (stream Event);
+   rpc DeploymentLatestSubmit(Operation) returns (google.protobuf.Empty) {}
++  rpc Retry(google.protobuf.Empty) returns (google.protobuf.Empty) {}
+ }
+ 
+ message Operation {
+diff --git a/pkg/protobuf/services_grpc.pb.go b/pkg/protobuf/services_grpc.pb.go
+index 58aab3f..82afa74 100644
+--- a/pkg/protobuf/services_grpc.pb.go
++++ b/pkg/protobuf/services_grpc.pb.go
+@@ -30,6 +30,7 @@ const (
+ 	Comin_Confirm_FullMethodName                = "/protobuf.Comin/Confirm"
+ 	Comin_Events_FullMethodName                 = "/protobuf.Comin/Events"
+ 	Comin_DeploymentLatestSubmit_FullMethodName = "/protobuf.Comin/DeploymentLatestSubmit"
++	Comin_Retry_FullMethodName                  = "/protobuf.Comin/Retry"
+ )
+ 
+ // CominClient is the client API for Comin service.
+@@ -43,6 +44,7 @@ type CominClient interface {
+ 	Confirm(ctx context.Context, in *ConfirmRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+ 	Events(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Event], error)
+ 	DeploymentLatestSubmit(ctx context.Context, in *Operation, opts ...grpc.CallOption) (*emptypb.Empty, error)
++	Retry(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
+ }
+ 
+ type cominClient struct {
+@@ -132,6 +134,16 @@ func (c *cominClient) DeploymentLatestSubmit(ctx context.Context, in *Operation,
+ 	return out, nil
+ }
+ 
++func (c *cominClient) Retry(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
++	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
++	out := new(emptypb.Empty)
++	err := c.cc.Invoke(ctx, Comin_Retry_FullMethodName, in, out, cOpts...)
++	if err != nil {
++		return nil, err
++	}
++	return out, nil
++}
++
+ // CominServer is the server API for Comin service.
+ // All implementations must embed UnimplementedCominServer
+ // for forward compatibility.
+@@ -143,6 +155,7 @@ type CominServer interface {
+ 	Confirm(context.Context, *ConfirmRequest) (*emptypb.Empty, error)
+ 	Events(*emptypb.Empty, grpc.ServerStreamingServer[Event]) error
+ 	DeploymentLatestSubmit(context.Context, *Operation) (*emptypb.Empty, error)
++	Retry(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+ 	mustEmbedUnimplementedCominServer()
+ }
+ 
+@@ -174,6 +187,9 @@ func (UnimplementedCominServer) Events(*emptypb.Empty, grpc.ServerStreamingServe
+ func (UnimplementedCominServer) DeploymentLatestSubmit(context.Context, *Operation) (*emptypb.Empty, error) {
+ 	return nil, status.Error(codes.Unimplemented, "method DeploymentLatestSubmit not implemented")
+ }
++func (UnimplementedCominServer) Retry(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
++	return nil, status.Error(codes.Unimplemented, "method Retry not implemented")
++}
+ func (UnimplementedCominServer) mustEmbedUnimplementedCominServer() {}
+ func (UnimplementedCominServer) testEmbeddedByValue()               {}
+ 
+@@ -314,6 +330,24 @@ func _Comin_DeploymentLatestSubmit_Handler(srv interface{}, ctx context.Context,
+ 	return interceptor(ctx, in, info, handler)
+ }
+ 
++func _Comin_Retry_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
++	in := new(emptypb.Empty)
++	if err := dec(in); err != nil {
++		return nil, err
++	}
++	if interceptor == nil {
++		return srv.(CominServer).Retry(ctx, in)
++	}
++	info := &grpc.UnaryServerInfo{
++		Server:     srv,
++		FullMethod: Comin_Retry_FullMethodName,
++	}
++	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
++		return srv.(CominServer).Retry(ctx, req.(*emptypb.Empty))
++	}
++	return interceptor(ctx, in, info, handler)
++}
++
+ // Comin_ServiceDesc is the grpc.ServiceDesc for Comin service.
+ // It's only intended for direct use with grpc.RegisterService,
+ // and not to be introspected or modified (even as a copy)
+@@ -345,6 +379,10 @@ var Comin_ServiceDesc = grpc.ServiceDesc{
+ 			MethodName: "DeploymentLatestSubmit",
+ 			Handler:    _Comin_DeploymentLatestSubmit_Handler,
+ 		},
++		{
++			MethodName: "Retry",
++			Handler:    _Comin_Retry_Handler,
++		},
+ 	},
+ 	Streams: []grpc.StreamDesc{
+ 		{
