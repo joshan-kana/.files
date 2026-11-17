@@ -53,7 +53,10 @@ test("Theme progress uses the shared header status and one cancel owner", () => 
   assert.match(source, /top: searchSurface\.bottom/);
   assert.match(source, /top: operationBanner\.bottom/);
   assert.match(source, /message: panel\.statusText/);
-  assert.match(source, /cancelShortcut: "X"/);
+  assert.match(
+    source,
+    /cancelShortcut: panel\.runtime\.shellHint\("ThemePanel\.cancel"\)/,
+  );
   assert.match(source, /onCancelRequested: panel\.cancelOperation\(\)/);
   assert.doesNotMatch(
     footer,

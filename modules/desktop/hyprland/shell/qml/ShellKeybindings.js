@@ -172,7 +172,14 @@ function matchesHint(registry, action, key, modifiers, qt) {
         SHIFT: qt.ShiftModifier,
         ALT: qt.AltModifier,
         CTRL: qt.ControlModifier,
-      }[name] ?? 0),
+        SUPER: qt.MetaModifier,
+      }[
+        assigned(
+          registry,
+          entry.scope,
+          { SHIFT: "Shift", ALT: "Alt", CTRL: "Control" }[name],
+        ).toUpperCase()
+      ] ?? 0),
     0,
   );
   return (

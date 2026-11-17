@@ -392,7 +392,7 @@ Item {
         idleMessage: "Choose a theme to preview or apply"
         phase: panel.operationRunning ? "busy" : panel.statusText.length === 0 ? "idle" : panel.statusError || panel.operationPhase === "failed" ? "error" : panel.operationPhase === "cancelled" ? "warning" : panel.operationPhase === "completed" ? "success" : "idle"
         cancellable: panel.operationRunning && (panel.operationPhase === "building" || panel.operationPhase === "preparing")
-        cancelShortcut: "X"
+        cancelShortcut: panel.runtime.shellHint("ThemePanel.cancel")
         cancelLabel: "Cancel build"
         onCancelRequested: panel.cancelOperation()
     }
