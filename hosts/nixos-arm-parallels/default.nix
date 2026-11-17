@@ -8,23 +8,7 @@
   ...
 }:
 
-{
-  inherit (moduleRegistry)
-    backups
-    nix
-    theme
-    cli
-    networking
-    appimage
-    audio
-    virtualisation
-    desktop
-    ;
-
-  imports = [
-    (moduleRegistry.profiles { }).desktop
-  ];
-
+lib.recursiveUpdate (import ../../profiles/workstation.nix { inherit moduleRegistry; }) {
   hardware = import ./hardware.nix;
 
   system = extendScope moduleRegistry.system {
@@ -55,10 +39,6 @@
 
   boot = {
     initrd.kernelModules = [ "virtio_gpu" ];
-    loader = {
-      systemd-boot.enable = true;
-      efi.canTouchEfiVariables = true;
-    };
     kernelPackages = pkgs.linuxPackages_latest;
   };
 
