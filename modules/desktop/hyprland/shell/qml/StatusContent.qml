@@ -133,6 +133,7 @@ Item {
                     }
                 ]
                 delegate: ShellSurface {
+                    id: statusTile
                     required property var modelData
                     width: stateGrid.tileWidth
                     height: content.theme.fontSize(53)
@@ -144,13 +145,13 @@ Item {
                     borderWidth: content.theme.borderThin
                     borderColor: content.theme.subtleBorder
                     Accessible.role: Accessible.StaticText
-                    Accessible.name: modelData.label + ": " + modelData.value
+                    Accessible.name: statusTile.modelData.label + ": " + statusTile.modelData.value
                     Row {
                         anchors.centerIn: parent
                         width: parent.width - content.theme.spacing3 * 2
                         spacing: content.theme.spacing2
                         Text {
-                            text: modelData.glyph
+                            text: statusTile.modelData.glyph
                             width: content.theme.fontSize(23)
                             font.family: "Symbols Nerd Font"
                             font.pixelSize: content.theme.fontSize(19)
@@ -163,7 +164,7 @@ Item {
                             spacing: content.theme.spacing1
                             Text {
                                 width: parent.width
-                                text: modelData.label
+                                text: statusTile.modelData.label
                                 color: content.theme.textMuted
                                 font.family: content.runtime.fontMono
                                 font.pixelSize: content.theme.fontSize(10)
@@ -171,7 +172,7 @@ Item {
                             }
                             Text {
                                 width: parent.width
-                                text: modelData.value
+                                text: statusTile.modelData.value
                                 color: content.theme.textStrong
                                 font.family: content.runtime.fontMono
                                 font.pixelSize: content.theme.fontSize(12)
