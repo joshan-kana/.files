@@ -1,17 +1,13 @@
 {
   editScope,
   extendScope,
+  lib,
   moduleRegistry,
   ...
 }:
 
-{
-  inherit (moduleRegistry)
-    theme
-    ;
-
+lib.recursiveUpdate (import ../../profiles/minimal.nix { inherit lib moduleRegistry; }) {
   imports = [
-    ../../profiles/minimal.nix
     ./options.nix
     ./hardware.nix
     (import ../../modules/virtualisation/containers/image-locking.nix {

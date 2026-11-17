@@ -1,6 +1,16 @@
-{ lib, ... }:
+{ lib, moduleRegistry }:
 
 {
+  inherit (moduleRegistry)
+    system
+    nix
+    theme
+    cli
+    networking
+    virtualisation
+    backups
+    ;
+
   dotfiles.scopes = {
     cli = {
       mpv.enable = lib.mkDefault false;
@@ -15,6 +25,7 @@
       tio.enable = lib.mkDefault false;
       ollama.enable = lib.mkDefault false;
     };
+    system.boot.splash.enable = lib.mkDefault false;
     virtualisation.children.enable = lib.mkDefault false;
   };
 }

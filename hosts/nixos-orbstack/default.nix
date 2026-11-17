@@ -6,17 +6,8 @@
   ...
 }:
 
-{
-  inherit (moduleRegistry)
-    system
-    backups
-    theme
-    cli
-    virtualisation
-    ;
-
+lib.recursiveUpdate (import ../../profiles/minimal.nix { inherit lib moduleRegistry; }) {
   imports = [
-    ../../profiles/minimal.nix
     ./generated.nix
     "${modulesPath}/virtualisation/lxc-container.nix"
   ];

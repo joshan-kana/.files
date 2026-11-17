@@ -1,8 +1,6 @@
 { lib, system, ... }:
 
 {
-  enable = false;
-
   config = lib.optionalAttrs (lib.systems.elaborate system).isLinux {
     boot = {
       plymouth.enable = true;
