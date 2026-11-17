@@ -126,6 +126,43 @@ systemctl status comin --no-pager
 systemctl status display-manager --no-pager
 ```
 
+## Remote administration
+
+Verify the Pi's SSH host-key fingerprint at its console:
+
+```sh
+ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
+```
+
+On the Mac, connect using the `nixos-pi` SSH host profile. Confirm that the fingerprint shown on the first connection matches the Pi's console. The profile forwards the Mac SSH agent and loads the Pi's separate elevation key:
+
+```sh
+ssh-add --apple-use-keychain ~/.ssh/nixos-pi-sudo
+ssh nixos-pi 'run0 -n id -u'
+```
+
+A successful `run0` verification prints `0` without requesting a password.
+
+The ChatGPT shell gateway on `nixos-server` uses its own SSH login and elevation keys. Once the Pi is reachable, load the generated host exports in a server terminal and check its presented host key before trusting it:
+
+```sh
+{{#include ../../generated/hosts/nixos-pi.sh}}
+```
+
+```sh
+ssh-keyscan -t ed25519 "$HOST_NAME.home" 2>/dev/null | ssh-keygen -lf -
+```
+
+Compare that fingerprint with the console output, then add the verified host key to the gateway account's known-hosts file:
+
+```sh
+ssh-keyscan -H -t ed25519 "$HOST_NAME.home" 2>/dev/null >> ~/.ssh/known_hosts
+```
+
+The remote target becomes accessible through ChatGPT Shell Access after the server has deployed the configuration containing that target and its SSH keys. Keep the Pi reachable by its configured LAN hostname.
+
+## Secrets backup
+
 Reload the generated host exports before verifying or initializing its secrets backup:
 
 ```sh
