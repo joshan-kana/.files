@@ -104,10 +104,12 @@ Item {
             id: cancelAction
             anchors.verticalCenter: parent.verticalCenter
             visible: status.cancellable
-            width: visible ? Math.max(110, status.theme.fontSize(86)) : 0
+            width: visible ? Math.max(72, status.theme.fontSize(55)) : 0
             height: 34
             compact: true
-            horizontalCompact: true
+            iconOnly: true
+            iconHint: true
+            inlineIconHint: true
             runtime: status.runtime
             theme: status.theme
             motion: status.motion
