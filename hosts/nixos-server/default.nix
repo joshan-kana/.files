@@ -437,6 +437,43 @@ lib.recursiveUpdate (import ../../profiles/minimal.nix { inherit lib moduleRegis
               };
             };
 
+            # When an ephemeral node is removed remotely, tailscaled can keep
+            # reporting Running while map polls fail with 404 indefinitely.
+            # Reauthenticate only for this explicit error, not a WAN outage.
+            systemd.services.tailscaled-recover = {
+              description = "Recover a deleted Tailscale ephemeral node";
+              after = [
+                "tailscaled.service"
+                "multi-user.target"
+              ];
+              serviceConfig.Type = "oneshot";
+              script = ''
+                if ! ${config.services.tailscale.package}/bin/tailscale status --json 2>/dev/null |
+                  ${pkgs.jq}/bin/jq -e '.BackendState == "Running" and .Self.Online == false' >/dev/null; then
+                  exit 0
+                fi
+
+                if ! ${pkgs.systemd}/bin/journalctl -u tailscaled.service --since '2 minutes ago' -o cat --no-pager |
+                  ${pkgs.gnugrep}/bin/grep -Fq 'initial fetch failed 404: node not found'; then
+                  exit 0
+                fi
+
+                ${config.services.tailscale.package}/bin/tailscale up --force-reauth --timeout=30s \
+                  --auth-key="$(cat ${config.services.tailscale.authKeyFile})?ephemeral=true&preauthorized=true" \
+                  ${lib.escapeShellArgs config.services.tailscale.extraUpFlags}
+              '';
+            };
+
+            systemd.timers.tailscaled-recover = {
+              description = "Check for deleted Tailscale ephemeral nodes";
+              wantedBy = [ "timers.target" ];
+              timerConfig = {
+                OnBootSec = "30s";
+                OnUnitActiveSec = "1m";
+                AccuracySec = "5s";
+              };
+            };
+
             calendarSync =
               { config, ... }:
               let
