@@ -12,7 +12,10 @@ lib.recursiveUpdate (import ../../profiles/workstation.nix { inherit moduleRegis
   # The Pi boots through firmware/U-Boot instead of an EFI boot manager.
   boot.loader = {
     grub.enable = false;
-    generic-extlinux-compatible.enable = true;
+    generic-extlinux-compatible = {
+      enable = true;
+      configurationLimit = 5;
+    };
   };
 
   dotfiles = {
