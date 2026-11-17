@@ -151,7 +151,7 @@ Item {
         }
 
         if (!device.paired) {
-            statusText = "PAIR FIRST // PRESS P";
+            statusText = "PAIR FIRST // PRESS " + runtime.shellHint("BluetoothPanel.pair");
             statusError = true;
             return;
         }
@@ -212,7 +212,7 @@ Item {
         }
 
         forgetAddress = device.address;
-        statusText = "CONFIRM FORGET // PRESS F AGAIN";
+        statusText = "CONFIRM FORGET // PRESS " + runtime.shellHint("BluetoothPanel.forget") + " AGAIN";
         statusError = false;
         forgetTimer.restart();
     }

@@ -316,3 +316,15 @@ test("QML runtime defaults match the native Nix shell option declarations", () =
     );
   }
 });
+
+test("parameter confirmation text follows the palette shortcut registry", () => {
+  const palette = read("qml/CommandPalette.qml");
+  assert.match(
+    palette,
+    /"Press " \+ palette\.runtime\.shellHint\("CommandPalette\.confirm"\)/,
+  );
+  assert.doesNotMatch(
+    palette,
+    /Press Enter again to confirm|Enter confirms clipboard sharing/,
+  );
+});
