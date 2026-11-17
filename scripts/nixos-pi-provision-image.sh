@@ -3,37 +3,54 @@ set -euo pipefail
 umask 077
 
 usage() {
-  echo "Usage: $0 IMAGE.img PI_SECRETS_DIR [BACKUP_CREDENTIALS_DIR]" >&2
+  echo "Usage: $0 HOST_ENV.sh IMAGE.img SECRETS_DIR [BACKUP_CREDENTIALS_DIR]" >&2
   exit 2
 }
 
-(($# == 2 || $# == 3)) || usage
+(($# == 3 || $# == 4)) || usage
 ((EUID == 0)) || {
-  echo 'Run as root on an ARM64 or x86_64 Linux machine.' >&2
+  echo 'Run this command as root on Linux.' >&2
   exit 1
 }
 
-for command in losetup mount umount blkid install mkpasswd realpath; do
-  command -v "$command" >/dev/null || {
-    echo "Missing program: $command" >&2
+[[ -r $1 ]] || {
+  echo 'Missing generated host environment.' >&2
+  exit 1
+}
+# This file is produced by the repository's evaluated runbook generator.
+# shellcheck source=/dev/null
+source "$1"
+
+for variable in ROOT_DEVICE ROOT_FS PRIMARY_HOME USER_SECRETS_DIR SECRETS_RCLONE_CONFIG SECRETS_PASSWORD_FILE; do
+  [[ -n ${!variable:-} ]] || {
+    echo "Missing generated value: $variable" >&2
+    exit 1
+  }
+done
+for directory in PRIMARY_HOME USER_SECRETS_DIR SECRETS_RCLONE_CONFIG SECRETS_PASSWORD_FILE; do
+  [[ ${!directory} == /* && ${!directory} != *'/../'* && ${!directory} != *'/./'* ]] || {
+    echo "Invalid generated path: $directory" >&2
     exit 1
   }
 done
 
-image=$(realpath -- "$1")
-secrets=$(realpath -- "$2")
-backup=${3:+$(realpath -- "$3")}
+image=$(realpath -- "$2")
+secrets=$(realpath -- "$3")
+backup=${4:+$(realpath -- "$4")}
 
 [[ -f $image && -w $image && $image != /nix/store/* ]] || {
   echo 'Use a writable .img copy outside the Nix store.' >&2
   exit 1
 }
-[[ -f $secrets/comin-github ]] || {
-  echo 'The Pi secrets directory must contain comin-github.' >&2
+[[ -d $secrets && -n $(find "$secrets" -type f -print -quit) ]] || {
+  echo 'The host secrets source must contain at least one regular file.' >&2
   exit 1
 }
-if [[ -n $backup && (! -f $backup/rclone.conf || ! -f $backup/secrets-restic-password) ]]; then
-  echo 'Backup credentials must include rclone.conf and secrets-restic-password.' >&2
+if [[ -n $backup && (
+  ! -f $backup/$(basename "$SECRETS_RCLONE_CONFIG") ||
+  ! -f $backup/$(basename "$SECRETS_PASSWORD_FILE")) ]] \
+  ; then
+  echo 'Missing required backup bootstrap credentials.' >&2
   exit 1
 fi
 
@@ -52,40 +69,39 @@ cleanup() {
 trap cleanup EXIT
 
 loop_device=$(losetup --find --show --partscan -- "$image")
-root_partition="${loop_device}p2"
+root_partition=
 for ((attempt = 0; attempt < 30; attempt++)); do
-  [[ -b $root_partition ]] && break
+  for candidate in "${loop_device}"p*; do
+    [[ -b $candidate ]] || continue
+    if [[ $(blkid -s LABEL -o value "$candidate") == "${ROOT_DEVICE##*/}" ]]; then
+      root_partition=$candidate
+      break 2
+    fi
+  done
   sleep 0.2
 done
-[[ -b $root_partition ]] || {
-  echo 'Root partition device is unavailable.' >&2
-  exit 1
-}
-[[ $(blkid -s LABEL -o value "$root_partition") == NIXOS_SD &&
-$(blkid -s TYPE -o value "$root_partition") == btrfs ]] || {
-  echo 'Expected NIXOS_SD Btrfs as the second partition; refusing to modify image.' >&2
+[[ -n $root_partition && $(blkid -s TYPE -o value "$root_partition") == "$ROOT_FS" ]] || {
+  echo 'Unexpected root partition label or filesystem; refusing to modify image.' >&2
   exit 1
 }
 
-mount -t btrfs "$root_partition" "$mount_dir"
+mount -t "$ROOT_FS" "$root_partition" "$mount_dir"
 mounted=true
 
-install -d -m 0700 -o 1000 -g 100 "$mount_dir/home/joshan/.secrets"
-cp -LR -- "$secrets/." "$mount_dir/home/joshan/.secrets/"
-chown -R 1000:100 "$mount_dir/home/joshan/.secrets"
-find "$mount_dir/home/joshan/.secrets" -type d -exec chmod 0700 {} +
-find "$mount_dir/home/joshan/.secrets" -type f -exec chmod 0600 {} +
+# Home ownership is set by the host's declarative tmpfiles policy when the
+# primary user is created. No UID needs to be pinned or guessed at image time.
+install -d -m 0700 "$mount_dir$PRIMARY_HOME"
+install -d -m 0700 "$mount_dir$USER_SECRETS_DIR"
+cp -LR -- "$secrets/." "$mount_dir$USER_SECRETS_DIR/"
+find "$mount_dir$USER_SECRETS_DIR" -type d -exec chmod 0700 {} +
+find "$mount_dir$USER_SECRETS_DIR" -type f -exec chmod 0600 {} +
 
 if [[ -n $backup ]]; then
-  install -d -m 0700 "$mount_dir/var/lib/backup-credentials"
-  install -m 0600 "$backup/rclone.conf" "$mount_dir/var/lib/backup-credentials/rclone.conf"
-  install -m 0600 "$backup/secrets-restic-password" "$mount_dir/var/lib/backup-credentials/secrets-restic-password"
+  install -d -m 0700 "$(dirname "$mount_dir$SECRETS_RCLONE_CONFIG")"
+  install -d -m 0700 "$(dirname "$mount_dir$SECRETS_PASSWORD_FILE")"
+  install -m 0600 "$backup/$(basename "$SECRETS_RCLONE_CONFIG")" "$mount_dir$SECRETS_RCLONE_CONFIG"
+  install -m 0600 "$backup/$(basename "$SECRETS_PASSWORD_FILE")" "$mount_dir$SECRETS_PASSWORD_FILE"
 fi
 
-install -d -m 0700 "$mount_dir/var/lib/nixos-pi"
-# mkpasswd prompts interactively and writes only a salted hash, never plaintext.
-mkpasswd -m sha-512 >"$mount_dir/var/lib/nixos-pi/password-hash"
-chmod 0600 "$mount_dir/var/lib/nixos-pi/password-hash"
-
 sync
-printf '%s\n' 'Provisioned Btrfs image at the final runtime paths.'
+printf '%s\n' 'Credentials copied to their evaluated runtime paths.'

@@ -1,5 +1,6 @@
 {
   config,
+  editScope,
   lib,
   moduleRegistry,
   ...
@@ -8,79 +9,37 @@
 lib.recursiveUpdate (import ../../profiles/workstation.nix { inherit moduleRegistry; }) {
   hardware = import ./hardware.nix;
 
+  # The Pi boots through firmware/U-Boot instead of an EFI boot manager.
   boot.loader = {
     grub.enable = false;
     generic-extlinux-compatible.enable = true;
   };
 
-  dotfiles.defaults.browser = "firefox";
+  dotfiles.scopes.system.boot.loader.enable = false;
 
-  dotfiles.scopes = {
-    # Raspberry Pi firmware and U-Boot use extlinux, not an EFI boot manager.
-    system.boot.loader.enable = false;
-
-    # This is a media workstation, not a VM or container host.
-    virtualisation.enable = false;
-
-    # Keep the Hyprland desktop but omit the second full desktop environment.
-    desktop.plasma.enable = false;
-
-    cli = {
-      codex.enable = false;
-      crush.enable = false;
-      devbox.enable = false;
-      esptool.enable = false;
-      ollama.enable = false;
-      tio.enable = false;
-    };
-
-    # Avoid heavyweight development, background services, and x86-only apps.
-    desktopApps = {
-      alacritty.enable = false;
-      ghostty.enable = false;
-      coolRetroTerm.enable = false;
-      chromium.enable = false;
-      googleChrome.enable = false;
-      waypipe.enable = false;
-      zed.enable = false;
-      keymapp.enable = false;
-      vial.enable = false;
-      openclaw.enable = false;
-      openWebui.enable = false;
-      brave.enable = false;
-      zen.enable = false;
-      warp.enable = false;
-      mullvad.enable = false;
-      thunderbird.enable = false;
-      obsidian.enable = false;
-      githubDesktop.enable = false;
-      vscode.enable = false;
-      pycharm.enable = false;
-      libreoffice.enable = false;
-      sunshine.enable = false;
-      ollama.enable = false;
-      discord.enable = false;
-      dropbox.enable = false;
-      onlyoffice.enable = false;
-      beeperMatrixClient.enable = false;
-      chatgpt.enable = false;
-      bambuStudio.enable = false;
-      prusaSlicer.enable = false;
-      orcaSlicerNightly.enable = false;
-      gimp.enable = false;
-      inkscape.enable = false;
-      krita.enable = false;
+  networking = editScope moduleRegistry.networking {
+    ssh = _: {
+      users.users.${config.dotfiles.users.primary.name}.openssh.authorizedKeys.keys = [
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGMZdbT05P/naiv07J32DxHDOR5A1z8F9jijeBrDkXWV joshankana@gmail.com"
+      ];
     };
   };
 
-  # The offline provisioning step writes the hash to the Btrfs root image,
-  # outside Git and the Nix store.
-  users.users.${config.dotfiles.users.primary.name} = {
-    initialPassword = lib.mkForce null;
-    hashedPasswordFile = "/var/lib/nixos-pi/password-hash";
-    uid = 1000;
-    openssh.authorizedKeys.keyFiles = [ ./authorized-key.pub ];
+  backups = editScope moduleRegistry.backups {
+    secrets = { config, lib, ... }: {
+      # The offline image has no user database. Set ownership once NixOS has
+      # created the primary user, without assuming an allocation-specific UID.
+      system.activationScripts.piSecretOwnership = {
+        deps = [ "users" ];
+        text = ''
+          if [ -d ${lib.escapeShellArg "${config.dotfiles.users.primary.homeRoot}/${config.dotfiles.users.primary.name}"} ]; then
+            chown ${lib.escapeShellArg config.dotfiles.users.primary.name}:users ${lib.escapeShellArg "${config.dotfiles.users.primary.homeRoot}/${config.dotfiles.users.primary.name}"}
+          fi
+          if [ -d ${lib.escapeShellArg config.dotfiles.secretsDir} ]; then
+            chown -R ${lib.escapeShellArg config.dotfiles.users.primary.name}:users ${lib.escapeShellArg config.dotfiles.secretsDir}
+          fi
+        '';
+      };
+    };
   };
-
-  services.openssh.settings.PermitRootLogin = "no";
 }

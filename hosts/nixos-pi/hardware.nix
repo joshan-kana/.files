@@ -17,7 +17,7 @@
   # The SD image has a FAT firmware partition and a Btrfs root filesystem.
   fileSystems = {
     "/" = {
-      device = "/dev/disk/by-label/NIXOS_SD";
+      device = "/dev/disk/by-label/ROOT";
       fsType = lib.mkForce "btrfs";
       options = [
         "compress=zstd"
