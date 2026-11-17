@@ -1,5 +1,5 @@
 diff --git a/cmd/watch.go b/cmd/watch.go
-index db47699..79219c8 100644
+index db47699..270c3b0 100644
 --- a/cmd/watch.go
 +++ b/cmd/watch.go
 @@ -2,6 +2,7 @@ package cmd
@@ -18,7 +18,7 @@ index db47699..79219c8 100644
  	"github.com/nlewo/comin/pkg/tui"
  	"github.com/spf13/cobra"
  )
-@@ -35,16 +37,21 @@ func tick() tea.Cmd {
+@@ -35,26 +37,28 @@ func tick() tea.Cmd {
  
  type keyMap struct {
  	Fetch   key.Binding
@@ -31,30 +31,32 @@ index db47699..79219c8 100644
  	Quit    key.Binding
  }
  
- func (k keyMap) ShortHelp() []key.Binding {
+-func (k keyMap) ShortHelp() []key.Binding {
 -	return []key.Binding{k.Fetch, k.Suspend, k.Quit}
-+	return []key.Binding{k.Fetch, k.Build, k.Deploy, k.Suspend, k.Logs, k.History, k.Confirm, k.Quit}
- }
- 
- func (k keyMap) FullHelp() [][]key.Binding {
+-}
+-
+-func (k keyMap) FullHelp() [][]key.Binding {
 -	return [][]key.Binding{{k.Fetch, k.Suspend, k.Quit}}
-+	return [][]key.Binding{{k.Fetch, k.Build, k.Deploy, k.Suspend, k.Logs, k.History, k.Confirm, k.Quit}}
- }
- 
+-}
+-
  var keys = keyMap{
-@@ -52,6 +59,11 @@ var keys = keyMap{
+ 	Fetch: key.NewBinding(
  		key.WithKeys("f"),
  		key.WithHelp("f", "fetch"),
  	),
-+	Build:   key.NewBinding(key.WithKeys("b"), key.WithHelp("b", "retry build")),
-+	Deploy:  key.NewBinding(key.WithKeys("d"), key.WithHelp("d", "redeploy")),
++	Build:   key.NewBinding(key.WithKeys("b"), key.WithHelp("b", "build")),
++	Deploy:  key.NewBinding(key.WithKeys("d"), key.WithHelp("d", "deploy")),
 +	Logs:    key.NewBinding(key.WithKeys("l"), key.WithHelp("l", "logs")),
 +	History: key.NewBinding(key.WithKeys("g"), key.WithHelp("g", "history")),
 +	Confirm: key.NewBinding(key.WithKeys("c"), key.WithHelp("c", "confirm")),
  	Suspend: key.NewBinding(
  		key.WithKeys("s"),
- 		key.WithHelp("s", "suspend/resume"),
-@@ -63,11 +75,21 @@ var keys = keyMap{
+-		key.WithHelp("s", "suspend/resume"),
++		key.WithHelp("s", "suspend"),
+ 	),
+ 	Quit: key.NewBinding(
+ 		key.WithKeys("q", "ctrl+c"),
+@@ -63,11 +67,21 @@ var keys = keyMap{
  }
  
  type Model struct {
@@ -81,7 +83,7 @@ index db47699..79219c8 100644
  }
  
  func consumeStream(m Model) func() tea.Msg {
-@@ -80,16 +102,89 @@ func (m Model) Init() tea.Cmd {
+@@ -80,16 +94,103 @@ func (m Model) Init() tea.Cmd {
  	return tea.Batch(consumeStream(m), tick(), spinnerTick())
  }
  
@@ -107,6 +109,20 @@ index db47699..79219c8 100644
 +	m.pendingAction = name
 +	m.notice = name + " requested…"
 +	return m, runAction(name, action)
++}
++
++func (m Model) retryDeployment() error {
++	if m.client == nil {
++		return errors.New("not connected")
++	}
++	state, err := m.client.GetManagerState()
++	if err != nil {
++		return err
++	}
++	if state.GetDeployer().GetDeployment().GetStatus() != "failed" {
++		return errors.New("no failed deployment to retry")
++	}
++	return m.client.DeploymentLatestSubmit("")
 +}
 +
 +func (m Model) confirmPending() error {
@@ -171,7 +187,7 @@ index db47699..79219c8 100644
  	case tickMsg:
  		return m, tick()
  	case spinnerMsg:
-@@ -97,20 +192,63 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -97,29 +198,92 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  		return m, spinnerTick()
  	case tea.KeyMsg:
  		switch {
@@ -206,13 +222,13 @@ index db47699..79219c8 100644
 +				m.notice = "Not connected"
 +				return m, nil
 +			}
-+			return m.startAction("retry", m.client.Retry)
++			return m.startAction("build", m.client.Retry)
 +		case key.Matches(msg, m.keys.Deploy):
 +			if m.client == nil {
 +				m.notice = "Not connected"
 +				return m, nil
 +			}
-+			return m.startAction("redeploy", func() error { return m.client.DeploymentLatestSubmit("") })
++			return m.startAction("deploy", m.retryDeployment)
 +		case key.Matches(msg, m.keys.Confirm):
 +			return m.startAction("confirmation", m.confirmPending)
  		case key.Matches(msg, m.keys.Quit):
@@ -235,16 +251,25 @@ index db47699..79219c8 100644
 +			if m.client == nil {
 +				m.notice = "Not connected"
 +				return m, nil
- 			}
++			}
 +			if m.manager.IsSuspended {
 +				return m.startAction("resume", m.client.Resume)
-+			}
+ 			}
 +			return m.startAction("suspend", m.client.Suspend)
  		}
  	}
  	return m, nil
-@@ -118,8 +256,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+ }
  
++func (m Model) helpRow(bindings ...key.Binding) string {
++	parts := make([]string, 0, len(bindings))
++	for _, binding := range bindings {
++		help := binding.Help()
++		parts = append(parts, m.help.Styles.ShortKey.Render(help.Key)+" "+m.help.Styles.ShortDesc.Render(help.Desc))
++	}
++	return strings.Join(parts, " • ")
++}
++
  func (m Model) View() string {
  	var b strings.Builder
 -	b.WriteString(m.manager.View())
@@ -260,7 +285,8 @@ index db47699..79219c8 100644
 +	if m.notice != "" {
 +		b.WriteString("\n" + m.notice + "\n")
 +	}
-+	b.WriteString("\n" + m.help.View(m.keys) + "\n")
++	b.WriteString("\n" + m.helpRow(m.keys.Fetch, m.keys.Build, m.keys.Deploy, m.keys.Confirm))
++	b.WriteString("\n" + m.helpRow(m.keys.Suspend, m.keys.Logs, m.keys.History, m.keys.Quit) + "\n")
  	return b.String()
  }
  
@@ -584,14 +610,16 @@ index 0000000..92d3515
 +}
 diff --git a/cmd/watch_panels_test.go b/cmd/watch_panels_test.go
 new file mode 100644
-index 0000000..7a0bcb4
+index 0000000..d0018c5
 --- /dev/null
 +++ b/cmd/watch_panels_test.go
-@@ -0,0 +1,119 @@
+@@ -0,0 +1,133 @@
 +package cmd
 +
 +import (
++	"github.com/charmbracelet/bubbles/help"
 +	tea "github.com/charmbracelet/bubbletea"
++	"github.com/charmbracelet/x/ansi"
 +	"github.com/nlewo/comin/pkg/protobuf"
 +	"strings"
 +	"testing"
@@ -705,6 +733,18 @@ index 0000000..7a0bcb4
 +	}
 +	if got := adjustHistoryOffset(0, "end", len(historyEntries(list)), 8); got != 0 {
 +		t.Fatalf("history scroll beyond bounds: %d", got)
++	}
++}
++
++func TestWatchControlsHaveTwoShortRows(t *testing.T) {
++	m := Model{keys: keys, help: help.New()}
++	first := ansi.Strip(m.helpRow(keys.Fetch, keys.Build, keys.Deploy, keys.Confirm))
++	second := ansi.Strip(m.helpRow(keys.Suspend, keys.Logs, keys.History, keys.Quit))
++	if first != "f fetch • b build • d deploy • c confirm" {
++		t.Fatalf("unexpected primary control row: %q", first)
++	}
++	if second != "s suspend • l logs • g history • q quit" {
++		t.Fatalf("unexpected secondary control row: %q", second)
 +	}
 +}
 diff --git a/pkg/tui/tui.go b/pkg/tui/tui.go

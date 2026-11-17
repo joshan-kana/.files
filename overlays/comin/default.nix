@@ -36,7 +36,7 @@ in
             ../../patches/comin/allow-force-push.patch
             ../../patches/comin/execution-lifecycle.patch
             ../../patches/comin/manual-retry.patch
-            ../../patches/comin/darwin-switch-restart.patch
+            ../../patches/comin/deployment-restart.patch
             ../../patches/comin/stream-reconnect.patch
             ../../patches/comin/watch-tui.patch
           ];
