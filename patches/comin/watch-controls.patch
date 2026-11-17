@@ -1,5 +1,5 @@
 diff --git a/cmd/watch.go b/cmd/watch.go
-index db47699..85eca3c 100644
+index db47699..79219c8 100644
 --- a/cmd/watch.go
 +++ b/cmd/watch.go
 @@ -2,6 +2,7 @@ package cmd
@@ -54,7 +54,7 @@ index db47699..85eca3c 100644
  	Suspend: key.NewBinding(
  		key.WithKeys("s"),
  		key.WithHelp("s", "suspend/resume"),
-@@ -63,11 +75,20 @@ var keys = keyMap{
+@@ -63,11 +75,21 @@ var keys = keyMap{
  }
  
  type Model struct {
@@ -77,10 +77,11 @@ index db47699..85eca3c 100644
 +	width            int
 +	height           int
 +	history          []*protobuf.Deployment
++	pendingAction    string
  }
  
  func consumeStream(m Model) func() tea.Msg {
-@@ -80,16 +101,78 @@ func (m Model) Init() tea.Cmd {
+@@ -80,16 +102,89 @@ func (m Model) Init() tea.Cmd {
  	return tea.Batch(consumeStream(m), tick(), spinnerTick())
  }
  
@@ -96,6 +97,16 @@ index db47699..85eca3c 100644
 +
 +func runAction(name string, do func() error) tea.Cmd {
 +	return func() tea.Msg { return actionDone{action: name, err: do()} }
++}
++
++// Prevent repeated keypresses from enqueuing overlapping mutations.
++func (m Model) startAction(name string, action func() error) (tea.Model, tea.Cmd) {
++	if m.pendingAction != "" {
++		return m, nil
++	}
++	m.pendingAction = name
++	m.notice = name + " requested…"
++	return m, runAction(name, action)
 +}
 +
 +func (m Model) confirmPending() error {
@@ -132,13 +143,14 @@ index db47699..85eca3c 100644
 +				m.logs = appendLog(m.logs, logEntryFromStream(msg.Event, line))
 +			}
 +			if deploy := msg.Event.GetDeploymentFinishedType(); deploy != nil && deploy.Deployment != nil {
-+				m.history = append(m.history, deploy.Deployment)
++				m.history = upsertDeployment(m.history, deploy.Deployment)
 +			}
  		} else {
  			m.manager.ConnectionMsg = msg.FailureMsg
  		}
  		return m, consumeStream(m)
 +	case actionDone:
++		m.pendingAction = ""
 +		if msg.err != nil {
 +			m.notice = msg.action + ": " + msg.err.Error()
 +		} else {
@@ -159,7 +171,7 @@ index db47699..85eca3c 100644
  	case tickMsg:
  		return m, tick()
  	case spinnerMsg:
-@@ -97,6 +180,46 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -97,20 +192,63 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  		return m, spinnerTick()
  	case tea.KeyMsg:
  		switch {
@@ -170,7 +182,7 @@ index db47699..85eca3c 100644
 +			m.logOffset = adjustOffset(m.logOffset, msg.String(), len(m.logs), m.logRows())
 +			return m, nil
 +		case m.panel == "history" && (msg.String() == "j" || msg.String() == "up" || msg.String() == "k" || msg.String() == "down" || msg.String() == "pgup" || msg.String() == "pgdown" || msg.String() == "home" || msg.String() == "end"):
-+			m.historyOffset = adjustHistoryOffset(m.historyOffset, msg.String(), len(m.history), m.logRows())
++			m.historyOffset = adjustHistoryOffset(m.historyOffset, msg.String(), len(historyEntries(m.history)), m.logRows())
 +			return m, nil
 +		case key.Matches(msg, m.keys.Logs):
 +			if m.panel == "logs" {
@@ -190,23 +202,48 @@ index db47699..85eca3c 100644
 +			}
 +			return m, nil
 +		case key.Matches(msg, m.keys.Build):
-+			if m.client != nil {
-+				return m, runAction("retry", func() error { return m.client.Retry() })
++			if m.client == nil {
++				m.notice = "Not connected"
++				return m, nil
 +			}
-+			m.notice = "Not connected"
-+			return m, nil
++			return m.startAction("retry", m.client.Retry)
 +		case key.Matches(msg, m.keys.Deploy):
-+			if m.client != nil {
-+				return m, runAction("redeploy", func() error { return m.client.DeploymentLatestSubmit("") })
++			if m.client == nil {
++				m.notice = "Not connected"
++				return m, nil
 +			}
-+			m.notice = "Not connected"
-+			return m, nil
++			return m.startAction("redeploy", func() error { return m.client.DeploymentLatestSubmit("") })
 +		case key.Matches(msg, m.keys.Confirm):
-+			return m, runAction("confirmation", m.confirmPending)
++			return m.startAction("confirmation", m.confirmPending)
  		case key.Matches(msg, m.keys.Quit):
  			return m, tea.Quit
  		case key.Matches(msg, m.keys.Fetch):
-@@ -118,8 +241,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+-			if m.client != nil {
+-				m.client.Fetch()
++			if m.client == nil {
++				m.notice = "Not connected"
++				return m, nil
+ 			}
++			return m.startAction("fetch", m.client.Fetch)
+ 		case key.Matches(msg, m.keys.Suspend):
+-			if m.client != nil {
+-				if m.manager.IsSuspended {
+-					m.client.Resume() // nolint: errcheck
+-				} else {
+-					m.client.Suspend() // nolint: errcheck
+-				}
++			if m.client == nil {
++				m.notice = "Not connected"
++				return m, nil
+ 			}
++			if m.manager.IsSuspended {
++				return m.startAction("resume", m.client.Resume)
++			}
++			return m.startAction("suspend", m.client.Suspend)
+ 		}
+ 	}
+ 	return m, nil
+@@ -118,8 +256,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  
  func (m Model) View() string {
  	var b strings.Builder
@@ -229,13 +266,14 @@ index db47699..85eca3c 100644
  
 diff --git a/cmd/watch_panels.go b/cmd/watch_panels.go
 new file mode 100644
-index 0000000..afb624c
+index 0000000..92d3515
 --- /dev/null
 +++ b/cmd/watch_panels.go
-@@ -0,0 +1,291 @@
+@@ -0,0 +1,312 @@
 +package cmd
 +
 +import (
++	"context"
 +	"fmt"
 +	"os/exec"
 +	"regexp"
@@ -308,11 +346,13 @@ index 0000000..afb624c
 +// A service log is also useful after a deployment: the gRPC event stream
 +// cannot replay output emitted before the watcher connected.
 +func readServiceLogs() tea.Msg {
++	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
++	defer cancel()
 +	var command *exec.Cmd
 +	if runtime.GOOS == "darwin" {
-+		command = exec.Command("/usr/bin/tail", "-n", "300", "/var/log/comin.log")
++		command = exec.CommandContext(ctx, "/usr/bin/tail", "-n", "300", "/var/log/comin.log")
 +	} else {
-+		command = exec.Command("journalctl", "-u", "comin.service", "-n", "300", "--no-pager", "-o", "short-iso")
++		command = exec.CommandContext(ctx, "journalctl", "-u", "comin.service", "-n", "300", "--no-pager", "-o", "short-iso")
 +	}
 +	output, err := command.Output()
 +	if err != nil {
@@ -410,6 +450,50 @@ index 0000000..afb624c
 +	return min(max(0, offset), max(0, count-rows))
 +}
 +
++func upsertDeployment(items []*protobuf.Deployment, item *protobuf.Deployment) []*protobuf.Deployment {
++	if item == nil || item.Uuid == "" {
++		return items
++	}
++	for i, old := range items {
++		if old != nil && old.Uuid == item.Uuid {
++			items[i] = item
++			return items
++		}
++	}
++	items = append(items, item)
++	if len(items) > 100 {
++		items = items[len(items)-100:]
++	}
++	return items
++}
++
++func historyEntries(items []*protobuf.Deployment) []*protobuf.Deployment {
++	sorted := append([]*protobuf.Deployment(nil), items...)
++	sort.SliceStable(sorted, func(i, j int) bool {
++		if sorted[i] == nil {
++			return false
++		}
++		if sorted[j] == nil {
++			return true
++		}
++		if sorted[i].CreatedAt == nil {
++			return false
++		}
++		if sorted[j].CreatedAt == nil {
++			return true
++		}
++		return sorted[i].CreatedAt.AsTime().After(sorted[j].CreatedAt.AsTime())
++	})
++	entries := make([]*protobuf.Deployment, 0, len(sorted))
++	for _, d := range sorted {
++		if d == nil || d.Generation == nil || d.Generation.Source == nil || d.Generation.Source.GetGit() == nil || d.Generation.Source.GetGit().SelectedCommitId == "" {
++			continue
++		}
++		entries = append(entries, d)
++	}
++	return entries
++}
++
 +func (m Model) logsView() string {
 +	var b strings.Builder
 +	b.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("6")).Render("COMIN · LOGS"))
@@ -425,7 +509,7 @@ index 0000000..afb624c
 +	end := min(len(m.logs), start+rows)
 +	width := m.width
 +	if width < 30 {
-+		width = 100
++		width = 30
 +	}
 +	for _, line := range m.logs[start:end] {
 +		stage := strings.ToUpper(line.stage)
@@ -463,33 +547,7 @@ index 0000000..afb624c
 +	var b strings.Builder
 +	b.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("6")).Render("COMIN · DEPLOYMENT HISTORY"))
 +	b.WriteString("\n")
-+	deployments := append([]*protobuf.Deployment(nil), m.history...)
-+	sort.SliceStable(deployments, func(i, j int) bool {
-+		if deployments[i] == nil {
-+			return false
-+		}
-+		if deployments[j] == nil {
-+			return true
-+		}
-+		if deployments[i].CreatedAt == nil {
-+			return false
-+		}
-+		if deployments[j].CreatedAt == nil {
-+			return true
-+		}
-+		return deployments[i].CreatedAt.AsTime().After(deployments[j].CreatedAt.AsTime())
-+	})
-+	entries := make([]*protobuf.Deployment, 0, len(deployments))
-+	for _, d := range deployments {
-+		if d == nil || d.Generation == nil || d.Generation.Source == nil {
-+			continue
-+		}
-+		git := d.Generation.Source.GetGit()
-+		if git == nil || git.SelectedCommitId == "" {
-+			continue
-+		}
-+		entries = append(entries, d)
-+	}
++	entries := historyEntries(m.history)
 +	rows := m.logRows()
 +	start := min(m.historyOffset, max(0, len(entries)-rows))
 +	for _, d := range entries[start:min(len(entries), start+rows)] {
@@ -526,14 +584,15 @@ index 0000000..afb624c
 +}
 diff --git a/cmd/watch_panels_test.go b/cmd/watch_panels_test.go
 new file mode 100644
-index 0000000..e297b9a
+index 0000000..7a0bcb4
 --- /dev/null
 +++ b/cmd/watch_panels_test.go
-@@ -0,0 +1,74 @@
+@@ -0,0 +1,119 @@
 +package cmd
 +
 +import (
 +	tea "github.com/charmbracelet/bubbletea"
++	"github.com/nlewo/comin/pkg/protobuf"
 +	"strings"
 +	"testing"
 +)
@@ -604,8 +663,52 @@ index 0000000..e297b9a
 +		t.Fatalf("d offline feedback: %q", model.notice)
 +	}
 +}
++
++func TestWatcherActionDebounce(t *testing.T) {
++	var calls int
++	model := Model{keys: keys}
++	for i := 0; i < 100; i++ {
++		updated, cmd := model.startAction("retry", func() error { calls++; return nil })
++		model = updated.(Model)
++		if cmd == nil {
++			t.Fatal("first request should submit")
++		}
++		blocked, cmd2 := model.startAction("retry", func() error { t.Fatal("duplicate action executed"); return nil })
++		if cmd2 != nil {
++			t.Fatal("duplicate request queued")
++		}
++		model = blocked.(Model)
++		msg := cmd()
++		after, _ := model.Update(msg)
++		model = after.(Model)
++		if model.pendingAction != "" {
++			t.Fatal("pending action not released")
++		}
++	}
++	if calls != 100 {
++		t.Fatalf("expected 100 completed calls; got %d", calls)
++	}
++}
++
++func TestWatcherPersistedHistoryDedup(t *testing.T) {
++	gen := &protobuf.Generation{Source: &protobuf.Source{Source: &protobuf.Source_Git{Git: &protobuf.Git{SelectedCommitId: "123456abcdef"}}}}
++	d := &protobuf.Deployment{Uuid: "d1", Generation: gen, Status: "running"}
++	list := upsertDeployment(nil, d)
++	d2 := &protobuf.Deployment{Uuid: "d1", Generation: gen, Status: "done"}
++	list = upsertDeployment(list, d2)
++	if len(list) != 1 || list[0].Status != "done" {
++		t.Fatalf("history duplicated instead of updated: %v", list)
++	}
++	list = upsertDeployment(list, &protobuf.Deployment{Uuid: "dummy"})
++	if got := len(historyEntries(list)); got != 1 {
++		t.Fatalf("unexpected history entries: %d", got)
++	}
++	if got := adjustHistoryOffset(0, "end", len(historyEntries(list)), 8); got != 0 {
++		t.Fatalf("history scroll beyond bounds: %d", got)
++	}
++}
 diff --git a/internal/builder/builder.go b/internal/builder/builder.go
-index 3424bcc..0cc120b 100644
+index 3424bcc..91367d9 100644
 --- a/internal/builder/builder.go
 +++ b/internal/builder/builder.go
 @@ -35,17 +35,17 @@ const (
@@ -637,6 +740,19 @@ index 3424bcc..0cc120b 100644
  	buildRetryTimerDuration time.Duration
  
  	mu           sync.Mutex
+@@ -63,10 +63,10 @@ type Builder struct {
+ 	// BuildDone is used to be notified a build is finished. Be careful since only a single goroutine can listen it.
+ 	BuildDone chan string
+ 
+-	evaluator   Exec
++	evaluator   *Exec
+ 	evaluatorWg *sync.WaitGroup
+ 
+-	buildator   Exec
++	buildator   *Exec
+ 	buildatorWg *sync.WaitGroup
+ 
+ 	isSuspended bool
 @@ -74,9 +74,9 @@ type Builder struct {
  	postBuildCommand string
  
@@ -691,7 +807,35 @@ index 3424bcc..0cc120b 100644
  	}
  }
  
-@@ -196,6 +195,11 @@ func (b *Builder) Stop() {
+@@ -161,7 +160,12 @@ func (b *Builder) GetSystemAttr() string {
+ }
+ 
+ func (b *Builder) stopEval() {
+-	b.evaluator.Stop()
++	b.mu.Lock()
++	current := b.evaluator
++	b.mu.Unlock()
++	if current != nil {
++		current.Stop()
++	}
+ 	b.evaluatorWg.Wait()
+ 	b.isEvaluating.Store(false)
+ }
+@@ -173,7 +177,12 @@ func (b *Builder) stopEval() {
+ // generation is finished. This is however not a important issue since
+ // the builder will just rebuild the generation.
+ func (b *Builder) stopBuild() {
+-	b.buildator.Stop()
++	b.mu.Lock()
++	current := b.buildator
++	b.mu.Unlock()
++	if current != nil {
++		current.Stop()
++	}
+ 	b.buildatorWg.Wait()
+ 
+ 	b.mu.Lock()
+@@ -196,6 +205,11 @@ func (b *Builder) Stop() {
  func (b *Builder) cancelBuildRetry() {
  	b.mu.Lock()
  	defer b.mu.Unlock()
@@ -703,7 +847,7 @@ index 3424bcc..0cc120b 100644
  	if b.buildRetryCancel != nil {
  		b.buildRetryCancel()
  		b.buildRetryCancel = nil
-@@ -211,6 +215,15 @@ func (b *Builder) cancelBuildRetry() {
+@@ -211,6 +225,15 @@ func (b *Builder) cancelBuildRetry() {
  func (b *Builder) scheduleBuildRetry(generationUuid string) {
  	b.mu.Lock()
  	defer b.mu.Unlock()
@@ -719,7 +863,36 @@ index 3424bcc..0cc120b 100644
  
  	// Cancel any existing retry (without locking again)
  	if b.buildRetryCancel != nil {
-@@ -401,12 +414,39 @@ func (b *Builder) Resume(ctx context.Context) error {
+@@ -309,15 +332,14 @@ func (b *Builder) Eval(ctx context.Context, generation *protobuf.Generation) err
+ 		stdout:   stdout,
+ 		stderr:   stderr,
+ 	}
+-	b.evaluator = NewExec(evaluator, b.evalTimeout)
++	exec := NewExec(evaluator, b.evalTimeout)
++	b.evaluator = &exec
+ 
+-	// This is to wait until the evaluator is stopped
+ 	b.evaluatorWg.Add(1)
+-	b.evaluator.Start(ctx)
+-
++	exec.Start(ctx)
+ 	go func() {
+ 		defer b.evaluatorWg.Done()
+-		b.evaluator.Wait()
++		exec.Wait()
+ 
+ 		// We close the writers to stop associated goroutines
+ 		_ = stdout.Close()
+@@ -330,7 +352,7 @@ func (b *Builder) Eval(ctx context.Context, generation *protobuf.Generation) err
+ 			evaluator.drvPath,
+ 			evaluator.outPath,
+ 			evaluator.machineId,
+-			b.evaluator.getErr(),
++			exec.getErr(),
+ 		); err != nil {
+ 			logrus.Errorf("builder: %s", err)
+ 		}
+@@ -401,12 +423,39 @@ func (b *Builder) Resume(ctx context.Context) error {
  	return nil
  }
  
@@ -759,6 +932,33 @@ index 3424bcc..0cc120b 100644
  
  	if b.isSuspended {
  		logrus.Infof("builder: build submitted for generation %s while the builder is suspended", generationUuid)
+@@ -450,21 +499,20 @@ func (b *Builder) build(ctx context.Context, generationUuid string) error {
+ 		stdout:    stdout,
+ 		stderr:    stderr,
+ 	}
+-	b.buildator = NewExec(buildator, b.buildTimeout)
++	exec := NewExec(buildator, b.buildTimeout)
++	b.buildator = &exec
+ 
+-	// This is to wait until the evaluator is stopped
+ 	b.buildatorWg.Add(1)
+-	b.buildator.Start(ctx)
+-
++	exec.Start(ctx)
+ 	go func() {
+ 		defer b.buildatorWg.Done()
+-		b.buildator.Wait()
++		exec.Wait()
+ 
+ 		// We close the writers to stop associated goroutines
+ 		_ = stdout.Close()
+ 		_ = stderr.Close()
+ 
+-		buildErr := b.buildator.getErr()
++		buildErr := exec.getErr()
+ 		b.mu.Lock()
+ 		err := b.store.GenerationBuildFinished(generationUuid, buildErr)
+ 		if err != nil {
 diff --git a/internal/builder/builder_test.go b/internal/builder/builder_test.go
 index 7300a4a..6bcf09c 100644
 --- a/internal/builder/builder_test.go
@@ -814,6 +1014,30 @@ index 7300a4a..6bcf09c 100644
 +	assert.Nil(t, pendingRetry)
 +	assert.ErrorContains(t, builder.RetryBuild(context.Background()), "no failed build")
 +}
+diff --git a/internal/builder/exec.go b/internal/builder/exec.go
+index 8b4559e..8c81fd7 100644
+--- a/internal/builder/exec.go
++++ b/internal/builder/exec.go
+@@ -54,15 +54,14 @@ func (e *Exec) Start(ctx context.Context) {
+ 		}
+ 		e.started.Store(false)
+ 		e.finished.Store(true)
+-		select {
+-		case e.done <- struct{}{}:
+-		default:
+-		}
++		// Close instead of sending to an unbuffered channel: the waiter may
++		// arrive after execution finishes, and must still observe completion.
++		close(e.done)
+ 	}()
+ }
+ 
+ func (e *Exec) Wait() {
+-	if e.started.Load() {
++	if e.started.Load() || e.finished.Load() {
+ 		<-e.done
+ 	}
+ }
 diff --git a/internal/manager/manager.go b/internal/manager/manager.go
 index b37c200..9d86479 100644
 --- a/internal/manager/manager.go
@@ -915,10 +1139,45 @@ index b37c200..9d86479 100644
  				logrus.Infof("manager: comin needs to be restarted")
  				logrus.Infof("manager: exiting comin to let the service manager restart it")
 diff --git a/internal/server/server.go b/internal/server/server.go
-index de2b096..8399fc6 100644
+index de2b096..84ce372 100644
 --- a/internal/server/server.go
 +++ b/internal/server/server.go
-@@ -80,6 +80,13 @@ func (s *cominServer) DeploymentLatestSubmit(ctx context.Context, operation *pro
+@@ -32,23 +32,24 @@ type cominServer struct {
+ 
+ func (s *cominServer) Events(_ *emptypb.Empty, stream grpc.ServerStreamingServer[protobuf.Event]) error {
+ 	logrus.Infof("server: start to stream events")
+-
+ 	subscriber := s.broker.Subscribe("server-events")
++	defer s.broker.Unsubscribe(subscriber)
+ 	state := s.manager.GetState()
+ 	stateEvent := &protobuf.Event{Type: &protobuf.Event_ManagerState_{ManagerState: &protobuf.Event_ManagerState{State: state}}, CreatedAt: timestamppb.New(time.Now().UTC())}
+ 	if err := stream.Send(stateEvent); err != nil {
+-		logrus.Infof("server: failed to send stream: %s", err)
+-		s.broker.Unsubscribe(subscriber)
+ 		return err
+ 	}
+-
+ 	for {
+-
+-		event := <-subscriber
+-		if err := stream.Send(event); err != nil {
+-			logrus.Infof("server: failed to send stream: %s", err)
+-			s.broker.Unsubscribe(subscriber)
+-			return err
++		select {
++		case <-stream.Context().Done():
++			return stream.Context().Err()
++		case event, ok := <-subscriber:
++			if !ok {
++				return nil
++			}
++			if err := stream.Send(event); err != nil {
++				return err
++			}
+ 		}
+ 	}
+ }
+@@ -80,6 +81,13 @@ func (s *cominServer) DeploymentLatestSubmit(ctx context.Context, operation *pro
  	return nil, err
  }
  
@@ -975,23 +1234,272 @@ index eed874a..dee32f2 100644
  	g.AttemptNumber++
  	s.lastBuildStarted = g
 diff --git a/pkg/client/client.go b/pkg/client/client.go
-index 13de0d2..c4e1034 100644
+index 13de0d2..75b2847 100644
 --- a/pkg/client/client.go
 +++ b/pkg/client/client.go
-@@ -96,6 +96,13 @@ func (c Client) DeploymentLatestSubmit(operation string) error {
- 	return err
+@@ -39,7 +39,9 @@ func (c Client) Close() {
  }
  
+ func (c Client) GetManagerState() (state *protobuf.State, err error) {
+-	return c.cominClient.GetState(context.Background(), &emptypb.Empty{})
++	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
++	defer cancel()
++	return c.cominClient.GetState(ctx, &emptypb.Empty{})
+ }
+ 
+ type Streamer struct {
+@@ -50,54 +52,87 @@ type Streamer struct {
+ func (c Client) Stream(ctx context.Context) (ch chan Streamer) {
+ 	ch = make(chan Streamer)
+ 	go func() {
+-		for {
++		defer close(ch)
++		emit := func(item Streamer) bool {
++			select {
++			case ch <- item:
++				return true
++			case <-ctx.Done():
++				return false
++			}
++		}
++		for ctx.Err() == nil {
+ 			events, err := c.cominClient.Events(ctx, &emptypb.Empty{})
+ 			if err != nil {
+-				reason := fmt.Sprintf("failed to connect to the stream: %s", err)
+-				logrus.Debug(reason)
+-				ch <- Streamer{FailureMsg: reason}
+-				time.Sleep(time.Second)
+-				continue
+-			}
+-			for {
+-				event, err := events.Recv()
+-				if err == io.EOF {
+-					reason := fmt.Sprintf("server closed stream: %s", err)
+-					logrus.Debug(reason)
+-					ch <- Streamer{FailureMsg: reason}
+-					break
++				if !emit(Streamer{FailureMsg: fmt.Sprintf("connection lost: %s", err)}) {
++					return
+ 				}
+-				if err != nil {
+-					reason := fmt.Sprintf("failed to receive from the stream: %s", err)
+-					logrus.Debug(reason)
+-					ch <- Streamer{FailureMsg: reason}
+-					break
++			} else {
++				for ctx.Err() == nil {
++					event, err := events.Recv()
++					if err != nil {
++						if err != io.EOF && ctx.Err() == nil {
++							if !emit(Streamer{FailureMsg: fmt.Sprintf("stream disconnected: %s", err)}) {
++								return
++							}
++						} else if err == io.EOF && ctx.Err() == nil {
++							if !emit(Streamer{FailureMsg: "server closed the stream"}) {
++								return
++							}
++						}
++						break
++					}
++					if !emit(Streamer{Event: event}) {
++						return
++					}
+ 				}
+-				ch <- Streamer{Event: event}
++			}
++			select {
++			case <-ctx.Done():
++				return
++			case <-time.After(time.Second):
+ 			}
+ 		}
+ 	}()
+ 	return ch
+ }
+ 
+-func (c Client) Fetch() {
+-	c.cominClient.Fetch(context.Background(), &emptypb.Empty{}) // nolint: errcheck
++func (c Client) Fetch() error {
++	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
++	defer cancel()
++	_, err := c.cominClient.Fetch(ctx, &emptypb.Empty{})
++	return err
+ }
+ func (c Client) Suspend() error {
+-	_, err := c.cominClient.Suspend(context.Background(), &emptypb.Empty{})
++	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
++	defer cancel()
++	_, err := c.cominClient.Suspend(ctx, &emptypb.Empty{})
+ 	return err
+ }
+ func (c Client) Resume() error {
+-	_, err := c.cominClient.Resume(context.Background(), &emptypb.Empty{})
++	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
++	defer cancel()
++	_, err := c.cominClient.Resume(ctx, &emptypb.Empty{})
+ 	return err
+ }
+ func (c Client) DeploymentLatestSubmit(operation string) error {
+-	_, err := c.cominClient.DeploymentLatestSubmit(context.Background(), &protobuf.Operation{OperationSubmitted: operation})
++	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
++	defer cancel()
++	_, err := c.cominClient.DeploymentLatestSubmit(ctx, &protobuf.Operation{OperationSubmitted: operation})
++	return err
++}
++
 +func (c Client) Retry() error {
 +	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 +	defer cancel()
 +	_, err := c.cominClient.Retry(ctx, &emptypb.Empty{})
-+	return err
+ 	return err
+ }
+ 
+ func (c Client) Confirm(generationUUID, for_ string) error {
+-	_, err := c.cominClient.Confirm(context.Background(), &protobuf.ConfirmRequest{
++	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
++	defer cancel()
++	_, err := c.cominClient.Confirm(ctx, &protobuf.ConfirmRequest{
+ 		GenerationUuid: generationUUID, For: for_})
+ 	return err
+ }
+diff --git a/pkg/client/client_integration_test.go b/pkg/client/client_integration_test.go
+new file mode 100644
+index 0000000..615a926
+--- /dev/null
++++ b/pkg/client/client_integration_test.go
+@@ -0,0 +1,132 @@
++package client
++
++import (
++	"context"
++	"net"
++	"path/filepath"
++	"sync/atomic"
++	"testing"
++	"time"
++
++	"github.com/nlewo/comin/pkg/protobuf"
++	"google.golang.org/grpc"
++	"google.golang.org/protobuf/types/known/emptypb"
++)
++
++type stubServer struct {
++	protobuf.UnimplementedCominServer
++	hostname    string
++	retries     atomic.Int32
++	deployments atomic.Int32
++	fetches     atomic.Int32
 +}
 +
- func (c Client) Confirm(generationUUID, for_ string) error {
- 	_, err := c.cominClient.Confirm(context.Background(), &protobuf.ConfirmRequest{
- 		GenerationUuid: generationUUID, For: for_})
++func (s *stubServer) Events(_ *emptypb.Empty, stream grpc.ServerStreamingServer[protobuf.Event]) error {
++	event := &protobuf.Event{Type: &protobuf.Event_ManagerState_{ManagerState: &protobuf.Event_ManagerState{State: &protobuf.State{Builder: &protobuf.Builder{Hostname: s.hostname}}}}}
++	if err := stream.Send(event); err != nil {
++		return err
++	}
++	<-stream.Context().Done()
++	return nil
++}
++func (s *stubServer) Retry(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
++	s.retries.Add(1)
++	return &emptypb.Empty{}, nil
++}
++func (s *stubServer) DeploymentLatestSubmit(context.Context, *protobuf.Operation) (*emptypb.Empty, error) {
++	s.deployments.Add(1)
++	return &emptypb.Empty{}, nil
++}
++func (s *stubServer) Fetch(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
++	s.fetches.Add(1)
++	return &emptypb.Empty{}, nil
++}
++
++func runStub(t *testing.T, path, name string) (*grpc.Server, *stubServer) {
++	t.Helper()
++	l, err := net.Listen("unix", path)
++	if err != nil {
++		t.Fatal(err)
++	}
++	svc := &stubServer{hostname: name}
++	server := grpc.NewServer()
++	protobuf.RegisterCominServer(server, svc)
++	go func() { _ = server.Serve(l) }()
++	return server, svc
++}
++func nextHost(t *testing.T, channel <-chan Streamer, name string) {
++	t.Helper()
++	timer := time.NewTimer(12 * time.Second)
++	defer timer.Stop()
++	for {
++		select {
++		case <-timer.C:
++			t.Fatalf("never recovered connection to %s", name)
++		case update, ok := <-channel:
++			if !ok {
++				t.Fatalf("stream closed before %s", name)
++			}
++			if update.Event == nil || update.Event.GetManagerState() == nil {
++				continue
++			}
++			state := update.Event.GetManagerState().State
++			if state != nil && state.Builder != nil && state.Builder.Hostname == name {
++				return
++			}
++		}
++	}
++}
++func TestStreamReconnectAcrossDaemonRestarts(t *testing.T) {
++	path := filepath.Join(t.TempDir(), "comin.sock")
++	server, _ := runStub(t, path, "first")
++	c, err := New(ClientOpts{UnixSocketPath: path})
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer c.Close()
++	ctx, cancel := context.WithCancel(context.Background())
++	channel := c.Stream(ctx)
++	nextHost(t, channel, "first")
++	for i := 0; i < 8; i++ {
++		server.Stop()
++		// ResetConnectBackoff is only needed to make the stress test fast;
++		// the normal client also reconnects with gRPC's backoff.
++		c.conn.ResetConnectBackoff()
++		name := time.Now().Format("150405.000000")
++		server, _ = runStub(t, path, name)
++		nextHost(t, channel, name)
++	}
++	server.Stop()
++	cancel()
++	select {
++	case _, ok := <-channel:
++		if ok {
++			for range channel {
++			}
++		}
++	case <-time.After(2 * time.Second):
++		t.Fatal("stream goroutine did not stop on context cancellation")
++	}
++}
++func TestControlsUseNewRPCMethods(t *testing.T) {
++	path := filepath.Join(t.TempDir(), "comin.sock")
++	server, svc := runStub(t, path, "test")
++	defer server.Stop()
++	c, err := New(ClientOpts{UnixSocketPath: path})
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer c.Close()
++	if err := c.Fetch(); err != nil {
++		t.Fatal(err)
++	}
++	if err := c.Retry(); err != nil {
++		t.Fatal(err)
++	}
++	if err := c.DeploymentLatestSubmit(""); err != nil {
++		t.Fatal(err)
++	}
++	if svc.fetches.Load() != 1 || svc.retries.Load() != 1 || svc.deployments.Load() != 1 {
++		t.Fatalf("missing RPC calls fetch=%d retry=%d deploy=%d", svc.fetches.Load(), svc.retries.Load(), svc.deployments.Load())
++	}
++}
 diff --git a/pkg/protobuf/services.pb.go b/pkg/protobuf/services.pb.go
 index 06fb5a7..6806af8 100644
 --- a/pkg/protobuf/services.pb.go
@@ -2389,7 +2897,7 @@ index 58aab3f..5aeba34 100644
 +	Metadata: "services.proto",
  }
 diff --git a/pkg/tui/tui.go b/pkg/tui/tui.go
-index 8ef6c51..825ac1e 100644
+index 8ef6c51..68755b4 100644
 --- a/pkg/tui/tui.go
 +++ b/pkg/tui/tui.go
 @@ -191,14 +191,6 @@ func (bm BuilderModel) View() string {
@@ -2423,17 +2931,23 @@ index 8ef6c51..825ac1e 100644
  	return b.String()
  }
  
-@@ -282,8 +265,7 @@ func (mm ManagerModel) View() string {
+@@ -281,11 +264,11 @@ type ManagerModel struct {
+ func (mm ManagerModel) View() string {
  	var b strings.Builder
  
- 	if mm.ConnectionMsg != "" {
+-	if mm.ConnectionMsg != "" {
 -		b.WriteString(warnStyle.Render("Disconnected: "+mm.ConnectionMsg) + "\n")
 -		return b.String()
-+		b.WriteString(warnStyle.Render("Reconnecting to Comin…") + "\n")
++	connected := mm.ConnectionMsg == ""
++	if !connected {
++		b.WriteString(warnStyle.Render("Reconnecting to Comin… displaying last known state") + "\n")
  	}
- 	b.WriteString(dimStyle.Render("Connected:       ") + boolToString(true) + "\n")
+-	b.WriteString(dimStyle.Render("Connected:       ") + boolToString(true) + "\n")
++	b.WriteString(dimStyle.Render("Connected:       ") + boolToString(connected) + "\n")
  	b.WriteString(dimStyle.Render("Hostname:        ") + mm.Hostname + "\n")
-@@ -311,11 +293,34 @@ func UpdateManager(manager *ManagerModel, event *protobuf.Event) {
+ 	b.WriteString(labelStyle.Render("Suspended:       ") + boolToString(mm.IsSuspended) + "\n")
+ 	b.WriteString(labelStyle.Render("Reboot required: ") + boolToString(mm.NeedToReboot) + "\n")
+@@ -311,11 +294,34 @@ func UpdateManager(manager *ManagerModel, event *protobuf.Event) {
  			manager.Builder.IsBuilding = state.Builder.IsBuilding.GetValue()
  			manager.Builder.IsSuspended = state.Builder.IsSuspended.GetValue()
  			manager.Builder.Generation = state.Builder.Generation
@@ -2468,6 +2982,31 @@ index 8ef6c51..825ac1e 100644
  		}
  		if state.Fetcher != nil {
  			manager.Fetcher.IsFetching = state.Fetcher.IsFetching.GetValue()
+@@ -352,23 +358,6 @@ func UpdateManager(manager *ManagerModel, event *protobuf.Event) {
+ 		manager.Deployer.IsSuspended = false
+ 	case *protobuf.Event_RebootRequired_:
+ 		manager.NeedToReboot = true
+-	case *protobuf.Event_Log_:
+-		if logLine := e.Log.GetLine(); logLine != nil {
+-			msg := logLine.GetMsg()
+-			objectType := e.Log.GetObjectType()
+-			// Append log line to the appropriate slice, keeping only last 10
+-			switch objectType {
+-			case "evaluation", "build":
+-				manager.Builder.LogLines = append(manager.Builder.LogLines, msg)
+-				if len(manager.Builder.LogLines) > 10 {
+-					manager.Builder.LogLines = manager.Builder.LogLines[len(manager.Builder.LogLines)-10:]
+-				}
+-			case "deployment":
+-				manager.Deployer.LogLines = append(manager.Deployer.LogLines, msg)
+-				if len(manager.Deployer.LogLines) > 10 {
+-					manager.Deployer.LogLines = manager.Deployer.LogLines[len(manager.Deployer.LogLines)-10:]
+-				}
+-			}
+-		}
++
+ 	}
+ }
 diff --git a/pkg/tui/tui_history_test.go b/pkg/tui/tui_history_test.go
 new file mode 100644
 index 0000000..7b9fc11
