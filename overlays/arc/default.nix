@@ -10,9 +10,9 @@ _: {
             }
             {
               release = {
-                version = "1.171.0";
-                build = "89666";
-                hash = "sha256-73GOq7IH5dQrwJdaCxcMgclN4PpoTCwznx9rOEY+Y0s=";
+                version = "1.173.1";
+                build = "90936";
+                hash = "sha256-GOWD31SLe/P6BRZgUDNX9irkyloegQO4MGtQl1e1amw=";
               };
               pname = "arc";
               appName = "Arc.app";
