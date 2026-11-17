@@ -181,3 +181,17 @@ test("Theme gallery keeps a user-selected target through asynchronous active-the
   );
   assert.match(source, /onSearchTextChanged: \{\s*selectionTouched = true/);
 });
+
+test("Theme build cancellation uses only a symbol and keycap while retaining its accessible name", () => {
+  const status = qml("PanelStatus.qml");
+  const action = status.slice(
+    status.indexOf("ShellAction {\n            id: cancelAction"),
+  );
+  assert.match(action, /iconOnly: true/);
+  assert.match(action, /iconHint: true/);
+  assert.match(action, /inlineIconHint: true/);
+  assert.match(action, /title: status\.cancelLabel/);
+  assert.match(action, /shortcut: status\.cancelShortcut/);
+  assert.match(action, /onActivated: status\.cancelRequested\(\)/);
+  assert.doesNotMatch(action, /horizontalCompact: true/);
+});
