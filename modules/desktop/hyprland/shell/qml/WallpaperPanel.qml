@@ -296,10 +296,10 @@ Item {
                 font.pixelSize: panel.theme.fontSize(12)
                 focus: false
                 Keys.onPressed: event => {
-                    if (event.key === Qt.Key_Escape) {
+                    if (event.key === panel.runtime.shellKeyCode("controls", "Escape")) {
                         panel.leaveSearch();
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                    } else if (event.key === panel.runtime.shellKeyCode("controls", "Return") || event.key === panel.runtime.shellKeyCode("controls", "Enter")) {
                         panel.applySelected();
                         panel.leaveSearch();
                         event.accepted = true;
@@ -323,7 +323,7 @@ Item {
                 horizontalCompact: true
                 icon: panel.outputName === "all" ? "󰍺" : "󰍹"
                 title: panel.outputLabel
-                shortcut: "M"
+                shortcut: panel.runtime.shellHint("WallpaperPanel.display")
                 enabled: !panel.busy && (panel.outputChoices.length > 1 || !panel.outputAvailable)
                 onActivated: panel.cycleOutput()
             }
@@ -639,7 +639,7 @@ Item {
                 motion: panel.motion
                 compact: true
                 title: panel.resizeMode === "fit" ? "Fit" : "Fill"
-                shortcut: "F"
+                shortcut: panel.runtime.shellHint("WallpaperPanel.fit")
                 horizontalCompact: true
                 onActivated: panel.toggleFit()
             }
@@ -652,7 +652,7 @@ Item {
                 motion: panel.motion
                 compact: true
                 title: "Default"
-                shortcut: "R"
+                shortcut: panel.runtime.shellHint("WallpaperPanel.default")
                 horizontalCompact: true
                 enabled: !panel.busy
                 onActivated: panel.resetWallpaper()
@@ -665,23 +665,23 @@ Item {
             theme: panel.theme
             hints: [
                 {
-                    shortcut: "H/L",
+                    shortcut: panel.runtime.shellHint("WallpaperPanel.columns"),
                     label: "Columns"
                 },
                 {
-                    shortcut: "J/K",
+                    shortcut: panel.runtime.shellHint("WallpaperPanel.rows"),
                     label: "Rows"
                 },
                 {
-                    shortcut: "U/D",
+                    shortcut: panel.runtime.shellHint("WallpaperPanel.page"),
                     label: "Page"
                 },
                 {
-                    shortcut: "/",
+                    shortcut: panel.runtime.shellHint("WallpaperPanel.search"),
                     label: "Search"
                 },
                 {
-                    shortcut: "ENTER",
+                    shortcut: panel.runtime.shellHint("WallpaperPanel.set"),
                     label: "Set"
                 }
             ]

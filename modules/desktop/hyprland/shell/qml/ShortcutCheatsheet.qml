@@ -83,7 +83,7 @@ Item {
     }
 
     function handleNavigation(event: var): void {
-        if (event.key === Qt.Key_Escape) {
+        if (event.key === window.runtime.shellKeyCode("help", "Escape")) {
             if (helpOpen)
                 helpOpen = false;
             else if (search.activeFocus)
@@ -92,33 +92,33 @@ Item {
                 window.hide();
             event.accepted = true;
         } else if (helpOpen) {
-            if (event.key === Qt.Key_Question) {
+            if (event.key === window.runtime.shellKeyCode("help", "Question")) {
                 helpOpen = false;
                 event.accepted = true;
             }
-        } else if (event.key === Qt.Key_Tab) {
+        } else if (event.key === window.runtime.shellKeyCode("help", "Tab")) {
             if (search.activeFocus)
                 keySink.forceActiveFocus();
             else
                 search.forceActiveFocus();
             event.accepted = true;
-        } else if (!search.activeFocus && event.key === Qt.Key_Slash) {
+        } else if (!search.activeFocus && event.key === window.runtime.shellKeyCode("help", "Slash")) {
             search.forceActiveFocus();
             event.accepted = true;
-        } else if (!search.activeFocus && event.key === Qt.Key_Question) {
+        } else if (!search.activeFocus && event.key === window.runtime.shellKeyCode("help", "Question")) {
             helpOpen = true;
             event.accepted = true;
-        } else if (event.key === Qt.Key_Up || (!search.activeFocus && event.key === Qt.Key_K)) {
+        } else if (event.key === window.runtime.shellKeyCode("help", "Up") || (!search.activeFocus && event.key === window.runtime.shellKeyCode("help", "K"))) {
             flick.contentY = Math.max(0, flick.contentY - 72);
             event.accepted = true;
-        } else if (event.key === Qt.Key_Down || (!search.activeFocus && event.key === Qt.Key_J)) {
+        } else if (event.key === window.runtime.shellKeyCode("help", "Down") || (!search.activeFocus && event.key === window.runtime.shellKeyCode("help", "J"))) {
             flick.contentY = Math.min(Math.max(0, flick.contentHeight - flick.height), flick.contentY + 72);
             event.accepted = true;
-        } else if (event.key === Qt.Key_PageUp || (!search.activeFocus && event.key === Qt.Key_U)) {
-            flick.contentY = Math.max(0, flick.contentY - flick.height * (event.key === Qt.Key_U ? 0.5 : 0.8));
+        } else if (event.key === window.runtime.shellKeyCode("help", "PageUp") || (!search.activeFocus && event.key === window.runtime.shellKeyCode("help", "U"))) {
+            flick.contentY = Math.max(0, flick.contentY - flick.height * (event.key === window.runtime.shellKeyCode("help", "U") ? 0.5 : 0.8));
             event.accepted = true;
-        } else if (event.key === Qt.Key_PageDown || (!search.activeFocus && event.key === Qt.Key_D)) {
-            flick.contentY = Math.min(Math.max(0, flick.contentHeight - flick.height), flick.contentY + flick.height * (event.key === Qt.Key_D ? 0.5 : 0.8));
+        } else if (event.key === window.runtime.shellKeyCode("help", "PageDown") || (!search.activeFocus && event.key === window.runtime.shellKeyCode("help", "D"))) {
+            flick.contentY = Math.min(Math.max(0, flick.contentHeight - flick.height), flick.contentY + flick.height * (event.key === window.runtime.shellKeyCode("help", "D") ? 0.5 : 0.8));
             event.accepted = true;
         }
     }
@@ -438,32 +438,32 @@ Item {
                     theme: window.theme
                     hints: search.activeFocus ? [
                         {
-                            shortcut: "TAB",
+                            shortcut: window.runtime.shellHint("ShortcutCheatsheet.navigate"),
                             label: "Navigate"
                         },
                         {
-                            shortcut: "PGUP/PGDN",
+                            shortcut: window.runtime.shellHint("ShortcutCheatsheet.page"),
                             label: "Page"
                         },
                         {
-                            shortcut: "ESC",
+                            shortcut: window.runtime.shellHint("ShortcutCheatsheet.back"),
                             label: "Back"
                         }
                     ] : [
                         {
-                            shortcut: "J/K",
+                            shortcut: window.runtime.shellHint("ShortcutCheatsheet.scroll"),
                             label: "Scroll"
                         },
                         {
-                            shortcut: "U/D",
+                            shortcut: window.runtime.shellHint("ShortcutCheatsheet.halfPage"),
                             label: "Half page"
                         },
                         {
-                            shortcut: "/",
+                            shortcut: window.runtime.shellHint("ShortcutCheatsheet.search"),
                             label: "Search"
                         },
                         {
-                            shortcut: "ESC",
+                            shortcut: window.runtime.shellHint("ShortcutCheatsheet.close"),
                             label: "Close"
                         }
                     ]
@@ -488,31 +488,31 @@ Item {
             title: "Shortcut sheet controls"
             bindings: [
                 {
-                    key: "J / K",
+                    key: window.runtime.shellHint("ShortcutCheatsheet.legend.scroll_down_up"),
                     action: "Scroll down / up"
                 },
                 {
-                    key: "U / D",
+                    key: window.runtime.shellHint("ShortcutCheatsheet.legend.half_page_up_down"),
                     action: "Half page up / down"
                 },
                 {
-                    key: "PgUp / PgDn",
+                    key: window.runtime.shellHint("ShortcutCheatsheet.legend.scroll_by_page"),
                     action: "Scroll by page"
                 },
                 {
-                    key: "/",
+                    key: window.runtime.shellHint("ShortcutCheatsheet.legend.focus_search"),
                     action: "Focus search"
                 },
                 {
-                    key: "Tab",
+                    key: window.runtime.shellHint("ShortcutCheatsheet.legend.switch_search_navigation"),
                     action: "Switch search / navigation"
                 },
                 {
-                    key: "Esc",
+                    key: window.runtime.shellHint("ShortcutCheatsheet.legend.leave_search_then_close"),
                     action: "Leave search, then close"
                 },
                 {
-                    key: "?",
+                    key: window.runtime.shellHint("ShortcutCheatsheet.legend.toggle_these_controls"),
                     action: "Toggle these controls"
                 }
             ]

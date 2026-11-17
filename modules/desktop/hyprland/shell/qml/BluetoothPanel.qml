@@ -376,7 +376,7 @@ Item {
                             runtime: panel.runtime
                             theme: panel.theme
                             compact: true
-                            shortcut: deviceRow.modelData.pairing || !deviceRow.modelData.paired ? "P" : "ENTER"
+                            shortcut: deviceRow.modelData.pairing || !deviceRow.modelData.paired ? panel.runtime.shellHint("BluetoothPanel.pair") : panel.runtime.shellHint("BluetoothPanel.activate")
                             label: deviceRow.modelData.pairing ? "Cancel" : !deviceRow.modelData.paired ? "Pair" : deviceRow.modelData.connected ? "Drop" : "Link"
                         }
 
@@ -453,37 +453,37 @@ Item {
             theme: panel.theme
             hints: [
                 {
-                    shortcut: "J/K",
+                    shortcut: panel.runtime.shellHint("BluetoothPanel.select"),
                     label: "Select",
                     visible: panel.adapterAvailable && panel.system.bluetoothEnabled && panel.devices.length > 0
                 },
                 {
-                    shortcut: "ENTER",
+                    shortcut: panel.runtime.shellHint("BluetoothPanel.activate"),
                     label: panel.selectedDevice()?.connected ? "Drop" : "Link",
                     visible: panel.adapterAvailable && panel.system.bluetoothEnabled && panel.selectedDevice()?.paired === true
                 },
                 {
-                    shortcut: "B",
+                    shortcut: panel.runtime.shellHint("BluetoothPanel.radio"),
                     label: "Radio",
                     visible: panel.adapterAvailable
                 },
                 {
-                    shortcut: "SHIFT+D",
+                    shortcut: panel.runtime.shellHint("BluetoothPanel.scan"),
                     label: "Scan",
                     visible: panel.adapterAvailable && panel.system.bluetoothEnabled
                 },
                 {
-                    shortcut: "P",
+                    shortcut: panel.runtime.shellHint("BluetoothPanel.pair"),
                     label: panel.selectedDevice()?.pairing ? "Cancel pairing" : "Pair",
                     visible: panel.adapterAvailable && panel.system.bluetoothEnabled && panel.devices.length > 0
                 },
                 {
-                    shortcut: "T",
+                    shortcut: panel.runtime.shellHint("BluetoothPanel.trust"),
                     label: panel.selectedDevice()?.trusted ? "Untrust" : "Trust",
                     visible: panel.adapterAvailable && panel.system.bluetoothEnabled && panel.selectedDevice()?.paired === true
                 },
                 {
-                    shortcut: "F",
+                    shortcut: panel.runtime.shellHint("BluetoothPanel.forget"),
                     label: panel.forgetAddress.length > 0 ? "Confirm" : "Forget",
                     visible: panel.adapterAvailable && panel.system.bluetoothEnabled && panel.selectedDevice()?.paired === true
                 }

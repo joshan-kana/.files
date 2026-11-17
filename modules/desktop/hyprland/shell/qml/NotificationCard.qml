@@ -217,7 +217,7 @@ SquircleSurface {
                     iconOnly: true
                     iconHint: true
                     inlineIconHint: true
-                    shortcut: card.selected ? "M" : ""
+                    shortcut: card.selected ? card.runtime.shellHint("NotificationCard.mark") : ""
                     active: card.read
                     icon: card.read ? "󰄭" : "󰄬"
                     title: card.read ? "Mark unread" : "Mark read"
@@ -234,7 +234,7 @@ SquircleSurface {
                     iconOnly: true
                     iconHint: true
                     inlineIconHint: true
-                    shortcut: card.selected ? "R" : ""
+                    shortcut: card.selected ? card.runtime.shellHint("NotificationCard.reply") : ""
                     icon: "󰆁"
                     title: "Reply"
                     onActivated: card.replyFocusRequested()
@@ -249,7 +249,7 @@ SquircleSurface {
                     iconOnly: true
                     iconHint: true
                     inlineIconHint: true
-                    shortcut: card.selected ? "DEL" : ""
+                    shortcut: card.selected ? card.runtime.shellHint("NotificationCard.dismiss") : ""
                     icon: "󰆴"
                     title: "Dismiss"
                     onActivated: card.dismissAnimated()
@@ -310,7 +310,7 @@ SquircleSurface {
                     horizontalCompact: true
                     title: modelData.text || "Action"
                     iconName: card.notificationState.safeActionIcon(card.notification, modelData)
-                    shortcut: card.selected && index < 9 ? String(index + 1) : ""
+                    shortcut: card.selected && index < 9 ? card.runtime.shellNumberHint("activity", index) : ""
                     width: Math.min(actionButtons.width, Math.max(130, implicitWidth))
                     onActivated: card.actionRequested(index)
                 }
@@ -331,7 +331,7 @@ SquircleSurface {
                 compact: true
                 horizontalCompact: true
                 title: applicationOptions.preferences.popups === false ? "Allow popups" : "Mute popups"
-                shortcut: card.selected ? "ALT+P" : ""
+                shortcut: card.selected ? card.runtime.shellHint("NotificationCard.popup") : ""
                 width: Math.min(parent.width, Math.max(142, implicitWidth))
                 onActivated: card.notificationState.setApplicationPreference(card.notification, "popups", applicationOptions.preferences.popups === false)
             }
@@ -342,7 +342,7 @@ SquircleSurface {
                 compact: true
                 horizontalCompact: true
                 title: applicationOptions.preferences.history === false ? "Save history" : "Hide history"
-                shortcut: card.selected ? "ALT+H" : ""
+                shortcut: card.selected ? card.runtime.shellHint("NotificationCard.history") : ""
                 width: Math.min(parent.width, Math.max(142, implicitWidth))
                 onActivated: card.notificationState.setApplicationPreference(card.notification, "history", applicationOptions.preferences.history === false)
             }
@@ -353,7 +353,7 @@ SquircleSurface {
                 compact: true
                 horizontalCompact: true
                 title: applicationOptions.preferences.silent === true ? "Unmute app" : "Quiet app"
-                shortcut: card.selected ? "ALT+S" : ""
+                shortcut: card.selected ? card.runtime.shellHint("NotificationCard.silent") : ""
                 width: Math.min(parent.width, Math.max(142, implicitWidth))
                 onActivated: card.notificationState.setApplicationPreference(card.notification, "silent", applicationOptions.preferences.silent !== true)
             }
@@ -390,14 +390,14 @@ SquircleSurface {
                     text: card.replyDraft
                     onTextEdited: card.replyTextEdited(text)
                     onActiveFocusChanged: card.replyFocusChanged(activeFocus)
-                    Keys.onReturnPressed: {
-                        card.sendReply();
-                    }
-                    Keys.onEnterPressed: {
-                        card.sendReply();
-                    }
-                    Keys.onEscapePressed: {
-                        card.replyFinished();
+                    Keys.onPressed: event => {
+                        if (event.key === card.runtime.shellKeyCode("activity", "Return") || event.key === card.runtime.shellKeyCode("activity", "Enter")) {
+                            card.sendReply();
+                            event.accepted = true;
+                        } else if (event.key === card.runtime.shellKeyCode("activity", "Escape")) {
+                            card.replyFinished();
+                            event.accepted = true;
+                        }
                     }
                     Text {
                         anchors.fill: parent
@@ -419,7 +419,7 @@ SquircleSurface {
                 compact: true
                 horizontalCompact: true
                 title: "Send"
-                shortcut: reply.activeFocus ? "ENTER" : ""
+                shortcut: reply.activeFocus ? card.runtime.shellHint("NotificationCard.submit") : ""
                 width: 126
                 height: 42
                 enabled: reply.text.trim().length > 0

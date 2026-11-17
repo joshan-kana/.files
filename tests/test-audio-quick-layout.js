@@ -104,9 +104,12 @@ test("compact and expanded audio handling retain the complete keyboard contract"
   assert.match(mixer, /if \(picker\) \{/);
   assert.match(mixer, /picker\.moveDeviceSelection\(1\)/);
   assert.match(mixer, /picker\.selectDevice\(picker\.chooserIndex\)/);
-  assert.match(mixer, /key === Qt\.Key_M/);
-  assert.match(mixer, /key === Qt\.Key_P/);
-  assert.match(mixer, /key === Qt\.Key_Tab \|\| key === Qt\.Key_Backtab/);
+  assert.match(mixer, /key === mixer\.runtime\.shellKeyCode\("mixer", "M"\)/);
+  assert.match(mixer, /key === mixer\.runtime\.shellKeyCode\("mixer", "P"\)/);
+  assert.match(
+    mixer,
+    /key === mixer\.runtime\.shellKeyCode\("mixer", "Tab"\) \|\| key === mixer\.runtime\.shellKeyCode\("mixer", "Backtab"\)/,
+  );
   assert.match(controls, /if \(audioDeck\.deviceChooserOpen\) \{/);
   assert.match(
     controls,
@@ -143,7 +146,11 @@ test("mixer selection follows visual left-to-right order before descending throu
     result.map((item) => (item.kind === "stream" ? item.node.id : item.kind)),
     ["output", "input", "music", "browser", "recorder"],
   );
-  assert.ok(mixer.includes("key === Qt.Key_Down || key === Qt.Key_J"));
+  assert.ok(
+    mixer.includes(
+      'key === mixer.runtime.shellKeyCode("mixer", "Down") || key === mixer.runtime.shellKeyCode("mixer", "J")',
+    ),
+  );
   assert.ok(mixer.includes("function moveAudioSelection(delta: int)"));
 });
 

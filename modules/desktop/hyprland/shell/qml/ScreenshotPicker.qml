@@ -232,7 +232,7 @@ Item {
 
     function toggleAnnotation(): void {
         annotateAfterCapture = !annotateAfterCapture;
-        statusText = annotateAfterCapture ? "ANNOTATE AFTER CAPTURE · ENTER TO CONFIRM" : "CAPTURE ONLY · ENTER TO CONFIRM";
+        statusText = annotateAfterCapture ? "ANNOTATE AFTER CAPTURE · " + picker.runtime.shellHint("ScreenshotPicker.capture") + " TO CONFIRM" : "CAPTURE ONLY · " + picker.runtime.shellHint("ScreenshotPicker.capture") + " TO CONFIRM";
     }
 
     function capture(action: string): void {
@@ -370,7 +370,7 @@ Item {
                 picker.dismiss(true);
             } else {
                 picker.open = true;
-                picker.statusText = "RECORDING START FAILED · ENTER TO RETRY · ESC CANCEL";
+                picker.statusText = "RECORDING START FAILED · " + picker.runtime.shellHint("ScreenshotPicker.capture") + " TO RETRY · " + picker.runtime.shellHint("ScreenshotPicker.cancel") + " CANCEL";
                 keyboard.forceActiveFocus();
             }
         }
@@ -387,7 +387,7 @@ Item {
                     picker.open = true;
                     keyboard.forceActiveFocus();
                 }
-                picker.statusText = "CAPTURE FAILED · ENTER TO RETRY · ESC CANCEL";
+                picker.statusText = "CAPTURE FAILED · " + picker.runtime.shellHint("ScreenshotPicker.capture") + " TO RETRY · " + picker.runtime.shellHint("ScreenshotPicker.cancel") + " CANCEL";
             }
         }
     }
@@ -492,7 +492,7 @@ Item {
             picker.dragging = false;
             picker.endX = picker.clamp(mouse.x, 0, picker.width);
             picker.endY = picker.clamp(mouse.y, 0, picker.height);
-            picker.statusText = picker.selectionMode === "record" ? "REGION READY · ENTER TO RECORD" : (picker.annotateAfterCapture ? "REGION READY · ENTER TO CAPTURE + MARKUP" : "REGION READY · ENTER TO CAPTURE");
+            picker.statusText = picker.selectionMode === "record" ? "REGION READY · " + picker.runtime.shellHint("ScreenshotPicker.capture") + " TO RECORD" : (picker.annotateAfterCapture ? "REGION READY · " + picker.runtime.shellHint("ScreenshotPicker.capture") + " TO CAPTURE + MARKUP" : "REGION READY · " + picker.runtime.shellHint("ScreenshotPicker.capture") + " TO CAPTURE");
             keyboard.forceActiveFocus();
         }
     }
@@ -559,7 +559,7 @@ Item {
                         horizontalCompact: true
                         icon: picker.selectionMode === "record" ? "󰕧" : "󰹑"
                         title: picker.selectionMode === "record" ? "START" : picker.annotateAfterCapture ? "MARKUP" : picker.copying ? "COPY" : "SAVE"
-                        shortcut: "ENTER"
+                        shortcut: picker.runtime.shellHint("ScreenshotPicker.capture")
                         onActivated: picker.capture("")
                     }
                     ShellAction {
@@ -574,7 +574,7 @@ Item {
                         icon: "󰏫"
                         title: picker.annotateAfterCapture ? "EDIT ON" : "EDIT OFF"
                         active: picker.annotateAfterCapture
-                        shortcut: "E"
+                        shortcut: picker.runtime.shellHint("ScreenshotPicker.edit")
                         onActivated: picker.toggleAnnotation()
                     }
                     ShellAction {
@@ -586,7 +586,7 @@ Item {
                         compact: true
                         horizontalCompact: true
                         title: picker.selectionMode === "record" ? picker.audioLabel : picker.frozenForCapture ? "FROZEN" : "LIVE"
-                        shortcut: picker.selectionMode === "record" ? "E" : "Z"
+                        shortcut: picker.selectionMode === "record" ? picker.runtime.shellHint("ScreenshotPicker.edit") : picker.runtime.shellHint("ScreenshotPicker.toggleRecord")
                         onActivated: {
                             if (picker.selectionMode === "record")
                                 picker.cycleAudio();
@@ -604,23 +604,23 @@ Item {
                 theme: picker.theme
                 hints: [
                     {
-                        shortcut: "H/J/K/L · ARROWS",
+                        shortcut: picker.runtime.shellHint("ScreenshotPicker.move"),
                         label: "Move"
                     },
                     {
-                        shortcut: "SHIFT+HJKL/ARROWS",
+                        shortcut: picker.runtime.shellHint("ScreenshotPicker.resize"),
                         label: "Resize"
                     },
                     {
-                        shortcut: "F",
+                        shortcut: picker.runtime.shellHint("ScreenshotPicker.full"),
                         label: "Full"
                     },
                     {
-                        shortcut: "TAB",
+                        shortcut: picker.runtime.shellHint("ScreenshotPicker.display"),
                         label: "Display"
                     },
                     {
-                        shortcut: "ESC",
+                        shortcut: picker.runtime.shellHint("ScreenshotPicker.cancel"),
                         label: "Cancel"
                     }
                 ]
@@ -647,34 +647,34 @@ Item {
         Keys.onPressed: event => {
             if (!picker.open || picker.exporting)
                 return;
-            const resize = !!(event.modifiers & Qt.ShiftModifier);
+            const resize = !!(picker.runtime.shellModifier("capture", "Shift", event.modifiers));
             const step = resize ? 8 : 16;
-            if (event.key === Qt.Key_Escape) {
+            if (event.key === picker.runtime.shellKeyCode("capture", "Escape")) {
                 picker.dismiss(true);
-            } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+            } else if (event.key === picker.runtime.shellKeyCode("capture", "Return") || event.key === picker.runtime.shellKeyCode("capture", "Enter")) {
                 picker.capture("");
-            } else if (event.key === Qt.Key_Tab) {
+            } else if (event.key === picker.runtime.shellKeyCode("capture", "Tab")) {
                 picker.nextMonitor();
-            } else if (event.key === Qt.Key_E) {
+            } else if (event.key === picker.runtime.shellKeyCode("capture", "E")) {
                 if (picker.selectionMode === "record")
                     picker.cycleAudio();
                 else
                     picker.toggleAnnotation();
-            } else if (event.key === Qt.Key_Z && picker.selectionMode !== "record") {
+            } else if (event.key === picker.runtime.shellKeyCode("capture", "Z") && picker.selectionMode !== "record") {
                 picker.toggleFreeze();
-            } else if (event.key === Qt.Key_F) {
+            } else if (event.key === picker.runtime.shellKeyCode("capture", "F")) {
                 picker.initialiseSelection = false;
                 picker.startX = 0;
                 picker.startY = 0;
                 picker.endX = picker.width;
                 picker.endY = picker.height;
-            } else if (event.key === Qt.Key_Left || event.key === Qt.Key_H) {
+            } else if (event.key === picker.runtime.shellKeyCode("capture", "Left") || event.key === picker.runtime.shellKeyCode("capture", "H")) {
                 picker.moveSelection(-step, 0, resize);
-            } else if (event.key === Qt.Key_Right || event.key === Qt.Key_L) {
+            } else if (event.key === picker.runtime.shellKeyCode("capture", "Right") || event.key === picker.runtime.shellKeyCode("capture", "L")) {
                 picker.moveSelection(step, 0, resize);
-            } else if (event.key === Qt.Key_Up || event.key === Qt.Key_K) {
+            } else if (event.key === picker.runtime.shellKeyCode("capture", "Up") || event.key === picker.runtime.shellKeyCode("capture", "K")) {
                 picker.moveSelection(0, -step, resize);
-            } else if (event.key === Qt.Key_Down || event.key === Qt.Key_J) {
+            } else if (event.key === picker.runtime.shellKeyCode("capture", "Down") || event.key === picker.runtime.shellKeyCode("capture", "J")) {
                 picker.moveSelection(0, step, resize);
             } else {
                 return;

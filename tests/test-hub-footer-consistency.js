@@ -16,15 +16,21 @@ test("shared footer always shows Escape and Shift+Escape, including details", ()
     host,
     /\.filter\(item => item\.shortcut\.length > 0\) : \[\]\)\.concat\(\[/,
   );
-  assert.match(host, /shortcut: "ESC",\s*label: host\.escapeHintLabel/);
-  assert.match(host, /shortcut: "SHIFT\+ESC",\s*label: "Close all"/);
+  assert.match(
+    host,
+    /shortcut: host\.runtime\.shellHint\("ShellExpansionHost.back"\),\s*label: host\.escapeHintLabel/,
+  );
+  assert.match(
+    host,
+    /shortcut: host\.runtime\.shellHint\("ShellExpansionHost.closeAll"\),\s*label: "Close all"/,
+  );
   assert.doesNotMatch(
     host,
     /host\.detailVisible \? \[\] : \[[\s\S]*?shortcut: "ESC"/,
   );
   assert.match(
     host,
-    /sequence: "Shift\+Esc"[\s\S]*?onActivated: host\.expansionState\.close\(\)/,
+    /sequence: host\.runtime\.shellSequence\("ShellExpansionHost.closeAll"\)[\s\S]*?onActivated: host\.expansionState\.close\(\)/,
   );
 });
 
@@ -94,9 +100,12 @@ test("nested panels share canonical I/O navigation and preserve text-entry owner
   );
   assert.match(
     controls,
-    /event\.key === Qt\.Key_V\) \{\s*networkPanel\.invoke\("toggleDetailView"\)/,
+    /event\.key === root\.runtime\.shellKeyCode\("controls", "V"\)\) \{\s*networkPanel\.invoke\("toggleDetailView"\)/,
   );
-  assert.match(network, /shortcut: "V"\s*active: panel\.detailView/);
+  assert.match(
+    network,
+    /shortcut: panel\.runtime\.shellHint\("NetworkPanel.detail"\)\s*active: panel\.detailView/,
+  );
 });
 
 test("footer inset and panel height agree for both measured and live geometry", () => {
@@ -152,16 +161,40 @@ test("detail navigation has one global Escape hint and locally owned movement hi
     activity.indexOf("id: footer"),
     activity.indexOf("id: list"),
   );
-  assert.doesNotMatch(activityFooter, /shortcut: "ESC"/);
-  assert.match(host, /shortcut: "ESC",\s*label: host\.escapeHintLabel/);
-  assert.match(activity, /event\.key === Qt\.Key_Escape/);
+  assert.doesNotMatch(
+    activityFooter,
+    /shortcut: host\.runtime\.shellHint\("ShellExpansionHost.back"\)/,
+  );
+  assert.match(
+    host,
+    /shortcut: host\.runtime\.shellHint\("ShellExpansionHost.back"\),\s*label: host\.escapeHintLabel/,
+  );
+  assert.match(
+    activity,
+    /event\.key === center\.runtime\.shellKeyCode\("activity", "Escape"\)/,
+  );
   for (const gallery of [wallpaper, theme]) {
-    assert.doesNotMatch(gallery, /shortcut: "ESC"/);
-    assert.match(gallery, /shortcut: "H\/L",\s*label: "Columns"/);
-    assert.match(gallery, /shortcut: "J\/K",\s*label: "Rows"/);
-    assert.match(gallery, /shortcut: "\/",\s*label: "Search"/);
+    assert.doesNotMatch(
+      gallery,
+      /shortcut: host\.runtime\.shellHint\("ShellExpansionHost.back"\)/,
+    );
+    assert.match(
+      gallery,
+      /shortcut: panel\.runtime\.shellHint\("(?:WallpaperPanel|ThemePanel)\.columns"\),\s*label: "Columns"/,
+    );
+    assert.match(
+      gallery,
+      /shortcut: panel\.runtime\.shellHint\("(?:WallpaperPanel|ThemePanel)\.rows"\),\s*label: "Rows"/,
+    );
+    assert.match(
+      gallery,
+      /shortcut: panel\.runtime\.shellHint\("(?:WallpaperPanel|ThemePanel)\.search"\),\s*label: "Search"/,
+    );
   }
-  assert.match(wallpaper, /event\.key === Qt\.Key_Escape/);
+  assert.match(
+    wallpaper,
+    /event\.key === panel\.runtime\.shellKeyCode\("controls", "Escape"\)/,
+  );
   const strip = source("KeyHintStrip.qml");
   assert.match(strip, /model: strip\.wrappedRows/);
   assert.match(strip, /opacity: 0\s*enabled: false/);
@@ -215,8 +248,14 @@ test("Audio legends stay local while shared hub help is never duplicated inside 
   );
   assert.match(host, /id: hubFooter[\s\S]*?id: footerHints/);
   assert.match(section, /id: headerHints/);
-  assert.match(controls, /shortcut: "J\/K",\s*label: "Select"/);
-  assert.match(controls, /shortcut: "H\/L",\s*label: "Level"/);
+  assert.match(
+    controls,
+    /shortcut: root\.runtime\.shellHint\("SystemContent.audioSelect"\),\s*label: "Select"/,
+  );
+  assert.match(
+    controls,
+    /shortcut: root\.runtime\.shellHint\("SystemContent.audioAdjust"\),\s*label: "Level"/,
+  );
   assert.doesNotMatch(
     controls.slice(
       controls.indexOf('title: "Media"'),
@@ -229,7 +268,10 @@ test("Audio legends stay local while shared hub help is never duplicated inside 
     media,
     /shortcut: "\?",\s*label: "Help"|title: "Help \(\?\)"/,
   );
-  assert.match(source("HubTabs.qml"), /shortcut: "\?"/);
+  assert.match(
+    source("HubTabs.qml"),
+    /shortcut: root\.runtime\.shellHint\("HubTabs.help"\)/,
+  );
   assert.match(host, /bottomMargin: host.theme.spacing3/);
 });
 
@@ -314,7 +356,7 @@ test("shared key hints collapse empty keycaps without leaving layout gaps", () =
   const audio = source("AudioDeviceControl.qml");
   assert.match(
     audio,
-    /shortcut: deviceControl\.selected \? "M" : deviceControl\.microphone \? "X" : ""/,
+    /shortcut: deviceControl\.selected \? deviceControl\.runtime\.shellHint\("AudioDeviceControl.mute"\) : deviceControl\.microphone \? deviceControl\.runtime\.shellHint\("AudioDeviceControl.muteMicrophone"\) : ""/,
   );
   const action = source("ShellAction.qml");
   assert.match(action, /shortcut: root\.shortcut/);
@@ -331,8 +373,14 @@ test("footer only contains shared navigation and keyboard controls", () => {
     /id: footerStatus|Critical alerts|notifications"|Recording saved|Saving recording/,
   );
   assert.match(host, /id: footerHints/);
-  assert.match(host, /shortcut: "ESC"/);
-  assert.match(host, /shortcut: "SHIFT\+ESC"/);
+  assert.match(
+    host,
+    /shortcut: host\.runtime\.shellHint\("ShellExpansionHost.back"\)/,
+  );
+  assert.match(
+    host,
+    /shortcut: host\.runtime\.shellHint\("ShellExpansionHost.closeAll"\)/,
+  );
   // The universal recording stop shortcut still works when the hub is open.
   assert.match(
     host,

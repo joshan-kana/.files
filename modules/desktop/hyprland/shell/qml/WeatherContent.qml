@@ -30,19 +30,19 @@ FocusScope {
         anchors.fill: parent
         focus: true
         Keys.onPressed: event => {
-            if (event.key === Qt.Key_Escape) {
+            if (event.key === panel.runtime.shellKeyCode("weather", "Escape")) {
                 panel.closeRequested();
                 event.accepted = true;
-            } else if (event.key === Qt.Key_R) {
+            } else if (event.key === panel.runtime.shellKeyCode("weather", "R")) {
                 panel.weather.refresh();
                 event.accepted = true;
-            } else if (event.key === Qt.Key_C || event.key === Qt.Key_Backspace) {
+            } else if (event.key === panel.runtime.shellKeyCode("weather", "C") || event.key === panel.runtime.shellKeyCode("weather", "Backspace")) {
                 panel.calendarRequested();
                 event.accepted = true;
-            } else if (event.key === Qt.Key_J || event.key === Qt.Key_L || event.key === Qt.Key_Down || event.key === Qt.Key_Right) {
+            } else if (event.key === panel.runtime.shellKeyCode("weather", "J") || event.key === panel.runtime.shellKeyCode("weather", "L") || event.key === panel.runtime.shellKeyCode("weather", "Down") || event.key === panel.runtime.shellKeyCode("weather", "Right")) {
                 panel.selectedDay = Math.min(6, panel.selectedDay + 1);
                 event.accepted = true;
-            } else if (event.key === Qt.Key_K || event.key === Qt.Key_H || event.key === Qt.Key_Up || event.key === Qt.Key_Left) {
+            } else if (event.key === panel.runtime.shellKeyCode("weather", "K") || event.key === panel.runtime.shellKeyCode("weather", "H") || event.key === panel.runtime.shellKeyCode("weather", "Up") || event.key === panel.runtime.shellKeyCode("weather", "Left")) {
                 panel.selectedDay = Math.max(0, panel.selectedDay - 1);
                 event.accepted = true;
             }
@@ -249,15 +249,15 @@ FocusScope {
             theme: panel.theme
             hints: [
                 {
-                    shortcut: "J/K",
+                    shortcut: panel.runtime.shellHint("WeatherContent.days"),
                     label: "Days"
                 },
                 {
-                    shortcut: "C",
+                    shortcut: panel.runtime.shellHint("WeatherContent.calendar"),
                     label: "Calendar"
                 },
                 {
-                    shortcut: "R",
+                    shortcut: panel.runtime.shellHint("WeatherContent.refresh"),
                     label: "Refresh"
                 }
             ]

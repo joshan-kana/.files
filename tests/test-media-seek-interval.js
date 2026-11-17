@@ -78,12 +78,24 @@ test("all media transport buttons and global shortcuts use the same step", () =>
 });
 test("seek interval controls use shared action keycaps and include keyboard navigation", () => {
   const page = read("MediaContent.qml");
-  assert.match(page, /shortcut: "-"/);
-  assert.match(page, /shortcut: "\+"/);
+  assert.match(
+    page,
+    /shortcut: content\.runtime\.shellHint\("MediaContent.shorter"\)/,
+  );
+  assert.match(
+    page,
+    /shortcut: content\.runtime\.shellHint\("MediaContent.longer"\)/,
+  );
   assert.match(page, /onActivated: content\.media\.adjustSeekStep\(1\)/);
   assert.match(page, /onActivated: content\.media\.adjustSeekStep\(-1\)/);
-  assert.match(page, /Qt\.Key_Minus \|\| event\.key === Qt\.Key_Underscore/);
-  assert.match(page, /Qt\.Key_Plus \|\| event\.key === Qt\.Key_Equal/);
+  assert.match(
+    page,
+    /content\.runtime\.shellKeyCode\("media", "Minus"\) \|\| event\.key === content\.runtime\.shellKeyCode\("media", "Underscore"\)/,
+  );
+  assert.match(
+    page,
+    /content\.runtime\.shellKeyCode\("media", "Plus"\) \|\| event\.key === content\.runtime\.shellKeyCode\("media", "Equal"\)/,
+  );
   assert.match(page, /Seek interval · " \+ media\.seekSeconds/);
 });
 

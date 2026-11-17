@@ -132,7 +132,7 @@ ShellSurface {
                     runtime: deviceControl.runtime
                     compact: true
                     emphasized: deviceControl.selected
-                    shortcut: deviceControl.selected ? "M" : deviceControl.microphone ? "X" : ""
+                    shortcut: deviceControl.selected ? deviceControl.runtime.shellHint("AudioDeviceControl.mute") : deviceControl.microphone ? deviceControl.runtime.shellHint("AudioDeviceControl.muteMicrophone") : ""
                 }
             }
         }
@@ -207,7 +207,7 @@ ShellSurface {
                     runtime: deviceControl.runtime
                     compact: true
                     emphasized: deviceControl.chooserOpen
-                    shortcut: deviceControl.selected ? "P" : "⌄"
+                    shortcut: deviceControl.selected ? deviceControl.runtime.shellHint("AudioDeviceControl.chooser") : "⌄"
                 }
             }
         }

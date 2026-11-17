@@ -87,7 +87,7 @@ test("opacity sliders live in visual-mode tiles with normal keyhints, not a sepa
   assert.match(setting, /TileKeyHint \{/);
   assert.match(
     setting,
-    /shortcut: setting\.keyboardSelected \? "H\/L" : setting\.shortcut/,
+    /shortcut: setting\.keyboardSelected \? setting\.runtime\.shellHint\("OpacitySetting.level"\) : setting\.shortcut/,
   );
   assert.match(setting, /from: 0\.20/);
   assert.match(setting, /to: 1/);
@@ -106,8 +106,14 @@ test("opacity sliders live in visual-mode tiles with normal keyhints, not a sepa
     controls,
     /OpacitySetting \{[\s\S]*?label: "Frosted glass"[\s\S]*?onOpacityRequested: value => root\.appearance\.setGlassOpacity\(value\)/,
   );
-  assert.match(controls, /shortcut: "SHIFT\+D"/);
-  assert.match(controls, /shortcut: "SHIFT\+R"/);
+  assert.match(
+    controls,
+    /shortcut: root\.runtime\.shellHint\("SystemContent.windowTransparency"\)/,
+  );
+  assert.match(
+    controls,
+    /shortcut: root\.runtime\.shellHint\("SystemContent.shellGlass"\)/,
+  );
   assert.doesNotMatch(
     controls,
     /id: transparencyPanel|openTransparency|opacitySettingsButton|SHIFT\+O/,

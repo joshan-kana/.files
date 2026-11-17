@@ -149,13 +149,13 @@ FocusScope {
         focus: true
         Keys.onPressed: event => {
             if (calendar.calendarPickerOpen) {
-                if (event.key === Qt.Key_Escape || event.key === Qt.Key_C) {
+                if (event.key === calendar.runtime.shellKeyCode("calendar", "Escape") || event.key === calendar.runtime.shellKeyCode("calendar", "C")) {
                     calendar.navigateBack();
-                } else if (event.key === Qt.Key_J || event.key === Qt.Key_Down) {
+                } else if (event.key === calendar.runtime.shellKeyCode("calendar", "J") || event.key === calendar.runtime.shellKeyCode("calendar", "Down")) {
                     calendar.calendarPickerIndex = Math.min(agenda.calendars.length - 1, calendar.calendarPickerIndex + 1);
-                } else if (event.key === Qt.Key_K || event.key === Qt.Key_Up) {
+                } else if (event.key === calendar.runtime.shellKeyCode("calendar", "K") || event.key === calendar.runtime.shellKeyCode("calendar", "Up")) {
                     calendar.calendarPickerIndex = Math.max(0, calendar.calendarPickerIndex - 1);
-                } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
+                } else if (event.key === calendar.runtime.shellKeyCode("calendar", "Return") || event.key === calendar.runtime.shellKeyCode("calendar", "Enter") || event.key === calendar.runtime.shellKeyCode("calendar", "Space")) {
                     calendar.toggleCalendarAt(calendar.calendarPickerIndex);
                 } else {
                     return;
@@ -163,35 +163,35 @@ FocusScope {
                 event.accepted = true;
                 return;
             }
-            if (event.key === Qt.Key_C && agenda.calendars.length > 0) {
+            if (event.key === calendar.runtime.shellKeyCode("calendar", "C") && agenda.calendars.length > 0) {
                 calendar.calendarPickerIndex = 0;
                 calendar.calendarPickerOpen = true;
                 event.accepted = true;
-            } else if (event.key === Qt.Key_Escape) {
+            } else if (event.key === calendar.runtime.shellKeyCode("calendar", "Escape")) {
                 calendar.navigateBack();
                 event.accepted = true;
-            } else if (event.key === Qt.Key_K || event.key === Qt.Key_Up || event.key === Qt.Key_PageUp) {
+            } else if (event.key === calendar.runtime.shellKeyCode("calendar", "K") || event.key === calendar.runtime.shellKeyCode("calendar", "Up") || event.key === calendar.runtime.shellKeyCode("calendar", "PageUp")) {
                 calendar.browseMonths(-1);
                 event.accepted = true;
-            } else if (event.key === Qt.Key_J || event.key === Qt.Key_Down || event.key === Qt.Key_PageDown) {
+            } else if (event.key === calendar.runtime.shellKeyCode("calendar", "J") || event.key === calendar.runtime.shellKeyCode("calendar", "Down") || event.key === calendar.runtime.shellKeyCode("calendar", "PageDown")) {
                 calendar.browseMonths(1);
                 event.accepted = true;
-            } else if (event.key === Qt.Key_H || event.key === Qt.Key_Left) {
+            } else if (event.key === calendar.runtime.shellKeyCode("calendar", "H") || event.key === calendar.runtime.shellKeyCode("calendar", "Left")) {
                 calendar.browseDays(-1);
                 event.accepted = true;
-            } else if (event.key === Qt.Key_L || event.key === Qt.Key_Right) {
+            } else if (event.key === calendar.runtime.shellKeyCode("calendar", "L") || event.key === calendar.runtime.shellKeyCode("calendar", "Right")) {
                 calendar.browseDays(1);
                 event.accepted = true;
-            } else if (event.key === Qt.Key_U || event.key === Qt.Key_D) {
-                agendaView.scrollEvents(event.key === Qt.Key_U ? -1 : 1);
+            } else if (event.key === calendar.runtime.shellKeyCode("calendar", "U") || event.key === calendar.runtime.shellKeyCode("calendar", "D")) {
+                agendaView.scrollEvents(event.key === calendar.runtime.shellKeyCode("calendar", "U") ? -1 : 1);
                 event.accepted = true;
-            } else if (event.key === Qt.Key_R) {
+            } else if (event.key === calendar.runtime.shellKeyCode("calendar", "R")) {
                 agenda.refresh();
                 event.accepted = true;
-            } else if (event.key === Qt.Key_T) {
+            } else if (event.key === calendar.runtime.shellKeyCode("calendar", "T")) {
                 calendar.today();
                 event.accepted = true;
-            } else if (event.key === Qt.Key_F || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+            } else if (event.key === calendar.runtime.shellKeyCode("calendar", "F") || event.key === calendar.runtime.shellKeyCode("calendar", "Return") || event.key === calendar.runtime.shellKeyCode("calendar", "Enter")) {
                 calendar.forecastRequested();
                 event.accepted = true;
             }
@@ -392,19 +392,19 @@ FocusScope {
                 theme: calendar.theme
                 hints: [
                     {
-                        shortcut: "J/K",
+                        shortcut: calendar.runtime.shellHint("CalendarContent.months"),
                         label: "Months"
                     },
                     {
-                        shortcut: "H/L",
+                        shortcut: calendar.runtime.shellHint("CalendarContent.days"),
                         label: "Days"
                     },
                     {
-                        shortcut: "U/D",
+                        shortcut: calendar.runtime.shellHint("CalendarContent.events"),
                         label: "Events"
                     },
                     {
-                        shortcut: "C",
+                        shortcut: calendar.runtime.shellHint("CalendarContent.calendars"),
                         label: "Calendars"
                     }
                 ]
@@ -417,7 +417,7 @@ FocusScope {
                 iconOnly: true
                 icon: "󰃰"
                 title: "Today"
-                shortcut: "T"
+                shortcut: calendar.runtime.shellHint("CalendarContent.today")
                 iconHint: true
                 inlineIconHint: true
                 runtime: calendar.runtime
@@ -544,15 +544,15 @@ FocusScope {
                 Repeater {
                     model: [
                         {
-                            shortcut: "J/K",
+                            shortcut: calendar.runtime.shellHint("CalendarContent.selectCalendar"),
                             label: "Select"
                         },
                         {
-                            shortcut: "SPACE",
+                            shortcut: calendar.runtime.shellHint("CalendarContent.toggleCalendar"),
                             label: "Toggle"
                         },
                         {
-                            shortcut: "ESC",
+                            shortcut: calendar.runtime.shellHint("CalendarContent.closeCalendars"),
                             label: "Close"
                         }
                     ]

@@ -94,7 +94,7 @@ test("Theme search uses filtered gallery items and the shared search field", () 
   );
   assert.match(
     controls,
-    /if \(themePanel.open\)[\s\S]*?event.key === Qt.Key_Slash\)[\s\S]*?themePanel.invoke\("enterSearch"\)/,
+    /if \(themePanel.open\)[\s\S]*?event\.key === root\.runtime\.shellKeyCode\("controls", "Slash"\)\)[\s\S]*?themePanel.invoke\("enterSearch"\)/,
   );
   const source = theme.match(/readonly property var filteredThemes: (.+)/);
   assert.ok(source);
@@ -125,11 +125,11 @@ test("Theme search returns focus to the shared keyboard owner", () => {
   const controls = qml("SystemContent.qml");
   assert.match(
     theme,
-    /event.key === Qt.Key_Escape\)[\s\S]*?panel.leaveSearch\(\)/,
+    /event\.key === panel\.runtime\.shellKeyCode\("controls", "Escape"\)\)[\s\S]*?panel.leaveSearch\(\)/,
   );
   assert.match(
     theme,
-    /Qt.Key_Return \|\| event.key === Qt.Key_Enter\)[\s\S]*?panel.activateSelected\(\);[\s\S]*?panel.leaveSearch\(\)/,
+    /panel\.runtime\.shellKeyCode\("controls", "Return"\) \|\| event\.key === panel\.runtime\.shellKeyCode\("controls", "Enter"\)\)[\s\S]*?panel.activateSelected\(\);[\s\S]*?panel.leaveSearch\(\)/,
   );
   assert.match(
     theme,

@@ -265,7 +265,7 @@ FocusScope {
                         iconOnly: true
                         icon: "󰄭"
                         title: "Mark all read"
-                        shortcut: "SHIFT+M"
+                        shortcut: center.runtime.shellHint("NotificationContent.markAllRead")
                         iconHint: true
                         onActivated: center.notificationState.markAllRead()
                     }
@@ -280,7 +280,7 @@ FocusScope {
                         iconOnly: true
                         icon: "󰄬"
                         title: "Mark all unread"
-                        shortcut: "SHIFT+N"
+                        shortcut: center.runtime.shellHint("NotificationContent.markAllUnread")
                         iconHint: true
                         onActivated: center.notificationState.markAllUnread()
                     }
@@ -296,7 +296,7 @@ FocusScope {
                         iconOnly: true
                         icon: center.notificationState.silent ? "󰂛" : "󰂚"
                         title: center.notificationState.silent ? "Resume alerts" : "Pause alerts"
-                        shortcut: "S"
+                        shortcut: center.runtime.shellHint("NotificationContent.silent")
                         iconHint: true
                         onActivated: center.notificationState.toggleSilent()
                     }
@@ -312,7 +312,7 @@ FocusScope {
                         iconOnly: true
                         icon: center.notificationState.presentation ? "󰍺" : "󰍹"
                         title: center.notificationState.presentation ? "Exit presentation mode" : "Presentation mode"
-                        shortcut: "P"
+                        shortcut: center.runtime.shellHint("NotificationContent.presentation")
                         iconHint: true
                         onActivated: center.notificationState.togglePresentation()
                     }
@@ -327,7 +327,7 @@ FocusScope {
                         iconOnly: true
                         icon: center.notificationState.historyEnabled ? "󰋚" : "󰗨"
                         title: center.notificationState.historyEnabled ? "Disable saved history" : "Enable saved history"
-                        shortcut: "SHIFT+H"
+                        shortcut: center.runtime.shellHint("NotificationContent.history")
                         iconHint: true
                         onActivated: center.notificationState.toggleHistory()
                     }
@@ -342,7 +342,7 @@ FocusScope {
                         iconOnly: true
                         icon: "󰆴"
                         title: "Clear all"
-                        shortcut: "C"
+                        shortcut: center.runtime.shellHint("NotificationContent.clearAll")
                         iconHint: true
                         onActivated: center.notificationState.clearAll()
                     }
@@ -408,15 +408,15 @@ FocusScope {
             theme: center.theme
             hints: [
                 {
-                    shortcut: "J/K · ARROWS",
+                    shortcut: center.runtime.shellHint("NotificationContent.navigate"),
                     label: "Navigate"
                 },
                 {
-                    shortcut: "H/L · ARROWS",
+                    shortcut: center.runtime.shellHint("NotificationContent.groups"),
                     label: "Groups"
                 },
                 {
-                    shortcut: "E",
+                    shortcut: center.runtime.shellHint("NotificationContent.expand"),
                     label: "Expand"
                 }
             ]
@@ -606,70 +606,70 @@ FocusScope {
             focus: center.engaged
 
             Keys.onPressed: event => {
-                if ((event.modifiers & Qt.AltModifier) && [Qt.Key_P, Qt.Key_H, Qt.Key_S].includes(event.key)) {
+                if ((center.runtime.shellModifier("activity", "Alt", event.modifiers)) && [center.runtime.shellKeyCode("activity", "P"), center.runtime.shellKeyCode("activity", "H"), center.runtime.shellKeyCode("activity", "S")].includes(event.key)) {
                     const notification = center.selectedNotification();
                     if (notification && center.expandedGroupKey === center.selectedGroup().key) {
-                        const name = event.key === Qt.Key_P ? "popups" : event.key === Qt.Key_H ? "history" : "silent";
+                        const name = event.key === center.runtime.shellKeyCode("activity", "P") ? "popups" : event.key === center.runtime.shellKeyCode("activity", "H") ? "history" : "silent";
                         const prefs = center.notificationState.applicationPreferences(notification);
                         center.notificationState.setApplicationPreference(notification, name, name === "silent" ? prefs.silent !== true : prefs[name] === false);
                         event.accepted = true;
                     }
-                } else if (event.key === Qt.Key_Escape) {
+                } else if (event.key === center.runtime.shellKeyCode("activity", "Escape")) {
                     center.navigateBack();
                     event.accepted = true;
-                } else if (event.key === Qt.Key_Up || event.key === Qt.Key_K) {
+                } else if (event.key === center.runtime.shellKeyCode("activity", "Up") || event.key === center.runtime.shellKeyCode("activity", "K")) {
                     center.navigate(-1);
                     event.accepted = true;
-                } else if (event.key === Qt.Key_Down || event.key === Qt.Key_J) {
+                } else if (event.key === center.runtime.shellKeyCode("activity", "Down") || event.key === center.runtime.shellKeyCode("activity", "J")) {
                     center.navigate(1);
                     event.accepted = true;
-                } else if (event.key === Qt.Key_H && (event.modifiers & Qt.ShiftModifier)) {
+                } else if (event.key === center.runtime.shellKeyCode("activity", "H") && (center.runtime.shellModifier("activity", "Shift", event.modifiers))) {
                     center.notificationState.toggleHistory();
                     event.accepted = true;
-                } else if (event.key === Qt.Key_Left || event.key === Qt.Key_H || event.key === Qt.Key_Right || event.key === Qt.Key_L) {
-                    center.selectGroup((event.key === Qt.Key_Left || event.key === Qt.Key_H) ? -1 : 1);
+                } else if (event.key === center.runtime.shellKeyCode("activity", "Left") || event.key === center.runtime.shellKeyCode("activity", "H") || event.key === center.runtime.shellKeyCode("activity", "Right") || event.key === center.runtime.shellKeyCode("activity", "L")) {
+                    center.selectGroup((event.key === center.runtime.shellKeyCode("activity", "Left") || event.key === center.runtime.shellKeyCode("activity", "H")) ? -1 : 1);
                     event.accepted = true;
-                } else if (event.key === Qt.Key_P) {
+                } else if (event.key === center.runtime.shellKeyCode("activity", "P")) {
                     center.notificationState.togglePresentation();
                     event.accepted = true;
-                } else if (event.key === Qt.Key_M && (event.modifiers & Qt.ShiftModifier)) {
+                } else if (event.key === center.runtime.shellKeyCode("activity", "M") && (center.runtime.shellModifier("activity", "Shift", event.modifiers))) {
                     center.notificationState.markAllRead();
                     event.accepted = true;
-                } else if (event.key === Qt.Key_N && (event.modifiers & Qt.ShiftModifier)) {
+                } else if (event.key === center.runtime.shellKeyCode("activity", "N") && (center.runtime.shellModifier("activity", "Shift", event.modifiers))) {
                     center.notificationState.markAllUnread();
                     event.accepted = true;
-                } else if (event.key === Qt.Key_M) {
+                } else if (event.key === center.runtime.shellKeyCode("activity", "M")) {
                     center.notificationState.toggleRead(center.selectedNotification());
                     event.accepted = true;
-                } else if (event.key === Qt.Key_U || event.key === Qt.Key_PageUp || event.key === Qt.Key_D || event.key === Qt.Key_PageDown) {
+                } else if (event.key === center.runtime.shellKeyCode("activity", "U") || event.key === center.runtime.shellKeyCode("activity", "PageUp") || event.key === center.runtime.shellKeyCode("activity", "D") || event.key === center.runtime.shellKeyCode("activity", "PageDown")) {
                     const rowHeight = list.currentItem ? list.currentItem.height + list.spacing : 92;
                     const steps = Math.max(1, Math.floor(list.height / Math.max(1, rowHeight) / 2));
-                    center.selectGroup(((event.key === Qt.Key_D || event.key === Qt.Key_PageDown) ? 1 : -1) * steps);
+                    center.selectGroup(((event.key === center.runtime.shellKeyCode("activity", "D") || event.key === center.runtime.shellKeyCode("activity", "PageDown")) ? 1 : -1) * steps);
                     event.accepted = true;
-                } else if (event.key === Qt.Key_E) {
+                } else if (event.key === center.runtime.shellKeyCode("activity", "E")) {
                     center.toggleExpanded();
                     event.accepted = true;
-                } else if (event.key === Qt.Key_R) {
+                } else if (event.key === center.runtime.shellKeyCode("activity", "R")) {
                     center.focusReply();
                     event.accepted = true;
-                } else if (event.key >= Qt.Key_1 && event.key <= Qt.Key_9) {
+                } else if (center.runtime.shellNumberIndex("activity", event.key, 9) >= 0) {
                     const group = center.selectedGroup();
-                    const index = event.key - Qt.Key_1;
+                    const index = center.runtime.shellNumberIndex("activity", event.key, 9);
                     const actions = center.notificationState.explicitActions(center.selectedNotification());
                     if (group && index < (center.expandedGroupKey === group.key ? actions.length : Math.min(2, actions.length)))
                         center.notificationState.invokeAction(center.selectedNotification(), index);
                     event.accepted = true;
-                } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                } else if (event.key === center.runtime.shellKeyCode("activity", "Return") || event.key === center.runtime.shellKeyCode("activity", "Enter")) {
                     if (!center.notificationState.invokeDefault(center.selectedNotification()))
                         center.toggleExpanded();
                     event.accepted = true;
-                } else if (event.key === Qt.Key_Delete || event.key === Qt.Key_Backspace) {
+                } else if (event.key === center.runtime.shellKeyCode("activity", "Delete") || event.key === center.runtime.shellKeyCode("activity", "Backspace")) {
                     center.dismissSelected();
                     event.accepted = true;
-                } else if (event.key === Qt.Key_S) {
+                } else if (event.key === center.runtime.shellKeyCode("activity", "S")) {
                     center.notificationState.toggleSilent();
                     event.accepted = true;
-                } else if (event.key === Qt.Key_C) {
+                } else if (event.key === center.runtime.shellKeyCode("activity", "C")) {
                     center.notificationState.clearAll();
                     center.selectedIndex = 0;
                     center.selectedMemberIndex = 0;

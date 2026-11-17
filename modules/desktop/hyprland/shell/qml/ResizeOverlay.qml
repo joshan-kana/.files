@@ -160,21 +160,21 @@ PanelWindow {
         focus: overlay.open
         enabled: overlay.open
         Keys.onPressed: event => {
-            const opposite = !!(event.modifiers & Qt.ShiftModifier);
+            const opposite = !!(overlay.runtime.shellModifier("resize", "Shift", event.modifiers));
             const size = opposite ? -50 : 50;
-            if (event.key === Qt.Key_Escape || event.key === Qt.Key_Return || event.key === Qt.Key_R) {
+            if (event.key === overlay.runtime.shellKeyCode("resize", "Escape") || event.key === overlay.runtime.shellKeyCode("resize", "Return") || event.key === overlay.runtime.shellKeyCode("resize", "R")) {
                 overlay.open = false;
-            } else if (event.key === Qt.Key_H || event.key === Qt.Key_Left) {
+            } else if (event.key === overlay.runtime.shellKeyCode("resize", "H") || event.key === overlay.runtime.shellKeyCode("resize", "Left")) {
                 overlay.resizeWindow(-size, 0);
-            } else if (event.key === Qt.Key_J || event.key === Qt.Key_Down) {
+            } else if (event.key === overlay.runtime.shellKeyCode("resize", "J") || event.key === overlay.runtime.shellKeyCode("resize", "Down")) {
                 overlay.resizeWindow(0, size);
-            } else if (event.key === Qt.Key_K || event.key === Qt.Key_Up) {
+            } else if (event.key === overlay.runtime.shellKeyCode("resize", "K") || event.key === overlay.runtime.shellKeyCode("resize", "Up")) {
                 overlay.resizeWindow(0, -size);
-            } else if (event.key === Qt.Key_L || event.key === Qt.Key_Right) {
+            } else if (event.key === overlay.runtime.shellKeyCode("resize", "L") || event.key === overlay.runtime.shellKeyCode("resize", "Right")) {
                 overlay.resizeWindow(size, 0);
-            } else if (event.key === Qt.Key_B) {
+            } else if (event.key === overlay.runtime.shellKeyCode("resize", "B")) {
                 overlay.balance();
-            } else if (event.key === Qt.Key_S) {
+            } else if (event.key === overlay.runtime.shellKeyCode("resize", "S")) {
                 overlay.inspectOpen = !overlay.inspectOpen;
                 if (overlay.inspectOpen)
                     overlay.keyboard.refresh("inspect");
@@ -234,25 +234,25 @@ PanelWindow {
                     Repeater {
                         model: [
                             {
-                                key: "H",
+                                key: overlay.runtime.shellHint("ResizeOverlay.legend.move_1"),
                                 title: "Narrower",
                                 x: -50,
                                 y: 0
                             },
                             {
-                                key: "J",
+                                key: overlay.runtime.shellHint("ResizeOverlay.legend.move_2"),
                                 title: "Taller",
                                 x: 0,
                                 y: 50
                             },
                             {
-                                key: "K",
+                                key: overlay.runtime.shellHint("ResizeOverlay.legend.move_3"),
                                 title: "Shorter",
                                 x: 0,
                                 y: -50
                             },
                             {
-                                key: "L",
+                                key: overlay.runtime.shellHint("ResizeOverlay.legend.move"),
                                 title: "Wider",
                                 x: 50,
                                 y: 0
@@ -297,19 +297,19 @@ PanelWindow {
                     theme: overlay.theme
                     hints: [
                         {
-                            shortcut: "SHIFT",
+                            shortcut: overlay.runtime.shellHint("ResizeOverlay.reverse"),
                             label: "Reverse"
                         },
                         {
-                            shortcut: "B",
+                            shortcut: overlay.runtime.shellHint("ResizeOverlay.balance"),
                             label: "Balance"
                         },
                         {
-                            shortcut: "S",
+                            shortcut: overlay.runtime.shellHint("ResizeOverlay.inspect"),
                             label: overlay.inspectOpen ? "Hide status" : "Inspect"
                         },
                         {
-                            shortcut: "ESC",
+                            shortcut: overlay.runtime.shellHint("ResizeOverlay.done"),
                             label: "Done"
                         }
                     ]

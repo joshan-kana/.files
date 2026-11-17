@@ -13,7 +13,7 @@ test("a single shared question-mark action is visible on every hub page and deta
   const tabs = qml("HubTabs.qml");
   const host = qml("ShellExpansionHost.qml");
   assert.match(tabs, /signal helpRequested/);
-  assert.match(tabs, /shortcut: "\?"/);
+  assert.match(tabs, /shortcut: root\.runtime\.shellHint\("HubTabs.help"\)/);
   assert.match(tabs, /Accessible\.name: "Keyboard help"/);
   assert.match(tabs, /onActivated: root\.helpRequested\(\)/);
   assert.match(host, /helpOpen: host\.helpVisible/);
@@ -39,16 +39,25 @@ test("a single shared question-mark action is visible on every hub page and deta
 test("contextual help can be opened and dismissed on every hub page without triggering underlying shortcuts", () => {
   const host = qml("ShellExpansionHost.qml");
   assert.match(host, /function toggleHelp\(\): void/);
-  assert.match(host, /sequence: "\?"[\s\S]*?onActivated: host\.toggleHelp\(\)/);
   assert.match(
     host,
-    /sequence: "Esc"[\s\S]*?onActivated: host\.otherHelpOpen = false/,
+    /sequence: host\.runtime\.shellSequence\("ShellExpansionHost.helpOpen"\)[\s\S]*?onActivated: host\.toggleHelp\(\)/,
+  );
+  assert.match(
+    host,
+    /sequence: host\.runtime\.shellSequence\("ShellExpansionHost.helpClose"\)[\s\S]*?onActivated: host\.otherHelpOpen = false/,
   );
   assert.match(host, /enabled: !host\.otherHelpOpen/);
   assert.match(host, /onCurrentComponentChanged: \{\s*otherHelpOpen = false;/);
   assert.match(host, /else\s+host\.otherHelpOpen = false;/);
-  assert.match(host, /sequence: "J"[\s\S]*?scopedHelp\.scrollHints\(1\)/);
-  assert.match(host, /sequence: "K"[\s\S]*?scopedHelp\.scrollHints\(-1\)/);
+  assert.match(
+    host,
+    /sequence: host\.runtime\.shellSequence\("ShellExpansionHost.helpDown"\)[\s\S]*?scopedHelp\.scrollHints\(1\)/,
+  );
+  assert.match(
+    host,
+    /sequence: host\.runtime\.shellSequence\("ShellExpansionHost.helpUp"\)[\s\S]*?scopedHelp\.scrollHints\(-1\)/,
+  );
 });
 
 test("help stays between the shared header and footer, and scrolls in its own viewport", () => {
@@ -86,32 +95,44 @@ test("keyboard scrolling is available on every contextual Help view", () => {
 
   // Home, Weather and Activity use application shortcuts, which work
   // regardless of the focused card or virtualized page.
-  for (const [shortcut, amount] of [
-    ["J", 1],
-    ["Down", 1],
-    ["K", -1],
-    ["Up", -1],
-    ["D", 4],
-    ["PgDown", 4],
-    ["U", -4],
-    ["PgUp", -4],
+  for (const [action, amount] of [
+    ["helpDown", 1],
+    ["helpArrowDown", 1],
+    ["helpUp", -1],
+    ["helpArrowUp", -1],
+    ["helpPageDown", 4],
+    ["helpPgDown", 4],
+    ["helpPageUp", -4],
+    ["helpPgUp", -4],
   ]) {
     const pattern = new RegExp(
-      'sequence: "' +
-        shortcut +
-        '"[\\s\\S]*?enabled: host\\.otherHelpOpen[\\s\\S]*?onActivated: scopedHelp\\.scrollHints\\(' +
+      'sequence: host\\.runtime\\.shellSequence\\("ShellExpansionHost\\.' +
+        action +
+        '"\\)[\\s\\S]*?enabled: host\\.otherHelpOpen[\\s\\S]*?onActivated: scopedHelp\\.scrollHints\\(' +
         amount +
         "\\)",
     );
-    assert.match(host, pattern, shortcut + " should scroll other Help views");
+    assert.match(host, pattern, action + " should scroll other Help views");
   }
 
   // Controls and Now Playing retain their focused keyboard handlers.
   for (const page of [system, media]) {
-    assert.match(page, /Qt\.Key_J \|\| event\.key === Qt\.Key_Down/);
-    assert.match(page, /Qt\.Key_K \|\| event\.key === Qt\.Key_Up/);
-    assert.match(page, /Qt\.Key_D \|\| event\.key === Qt\.Key_PageDown/);
-    assert.match(page, /Qt\.Key_U \|\| event\.key === Qt\.Key_PageUp/);
+    assert.match(
+      page,
+      /shellKeyCode\("(?:controls|media)", "J"\) \|\| event\.key === \w+\.runtime\.shellKeyCode\("(?:controls|media)", "Down"\)/,
+    );
+    assert.match(
+      page,
+      /shellKeyCode\("(?:controls|media)", "K"\) \|\| event\.key === \w+\.runtime\.shellKeyCode\("(?:controls|media)", "Up"\)/,
+    );
+    assert.match(
+      page,
+      /shellKeyCode\("(?:controls|media)", "D"\) \|\| event\.key === \w+\.runtime\.shellKeyCode\("(?:controls|media)", "PageDown"\)/,
+    );
+    assert.match(
+      page,
+      /shellKeyCode\("(?:controls|media)", "U"\) \|\| event\.key === \w+\.runtime\.shellKeyCode\("(?:controls|media)", "PageUp"\)/,
+    );
   }
 
   assert.match(
@@ -122,5 +143,8 @@ test("keyboard scrolling is available on every contextual Help view", () => {
     help,
     /onOpenChanged: \{\s*if \(open\)\s*hintsViewport\.contentY = 0;/,
   );
-  assert.match(help, /keyboardScroll \? "J\/K scroll · U\/D page/);
+  assert.match(
+    help,
+    /keyboardScroll \? help\.runtime\.shellHint\("ShellExpansionHost\.helpDown"\)/,
+  );
 });

@@ -60,7 +60,8 @@ Item {
     readonly property var entries: [
         {
             id: "lock",
-            shortcut: "Q",
+            binding: "SessionPanel.lock",
+            shortcut: panel.runtime.shellHint("SessionPanel.lock"),
             accentRole: "connectivity",
             label: "Lock",
             icon: "",
@@ -69,7 +70,8 @@ Item {
         },
         {
             id: "suspend",
-            shortcut: "W",
+            binding: "SessionPanel.suspend",
+            shortcut: panel.runtime.shellHint("SessionPanel.suspend"),
             accentRole: "media",
             label: "Suspend",
             icon: "󰤄",
@@ -78,7 +80,8 @@ Item {
         },
         {
             id: "logout",
-            shortcut: "E",
+            binding: "SessionPanel.logout",
+            shortcut: panel.runtime.shellHint("SessionPanel.logout"),
             accentRole: "capture",
             label: "Log out",
             icon: "󰍃",
@@ -87,7 +90,8 @@ Item {
         },
         {
             id: "reboot",
-            shortcut: "A",
+            binding: "SessionPanel.reboot",
+            shortcut: panel.runtime.shellHint("SessionPanel.reboot"),
             accentRole: "resources",
             label: "Reboot",
             icon: "󰜉",
@@ -96,7 +100,8 @@ Item {
         },
         {
             id: "poweroff",
-            shortcut: "S",
+            binding: "SessionPanel.shutdown",
+            shortcut: panel.runtime.shellHint("SessionPanel.shutdown"),
             accentRole: "attention",
             label: "Power off",
             icon: "󰐥",
@@ -105,7 +110,8 @@ Item {
         },
         {
             id: "restore",
-            shortcut: "D",
+            binding: "SessionPanel.restoreWindows",
+            shortcut: panel.runtime.shellHint("SessionPanel.restoreWindows"),
             accentRole: "resources",
             label: "Restore windows",
             icon: "󰑓",
@@ -228,9 +234,8 @@ Item {
         closeView();
     }
 
-    function activateShortcut(key: int): bool {
-        const shortcut = String.fromCharCode(key);
-        const index = entries.findIndex(entry => entry.shortcut === shortcut);
+    function activateShortcut(key: int, modifiers: int): bool {
+        const index = entries.findIndex(entry => runtime.shellMatchesHint(entry.binding, key, modifiers));
         if (index < 0)
             return false;
         activateIndex(index);
@@ -384,7 +389,7 @@ Item {
                     id: moveHint
                     runtime: panel.runtime
                     theme: panel.theme
-                    shortcut: "HJKL"
+                    shortcut: panel.runtime.shellHint("SessionPanel.move")
                     label: "Move"
                     compact: true
                 }
@@ -393,7 +398,7 @@ Item {
                     id: actionHint
                     runtime: panel.runtime
                     theme: panel.theme
-                    shortcut: "ENTER"
+                    shortcut: panel.runtime.shellHint("SessionPanel.confirm")
                     label: panel.armedAction.length > 0 ? "Confirm" : "Activate"
                     compact: true
                 }

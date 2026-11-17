@@ -302,7 +302,7 @@ Item {
                 name: "Back to File Actions",
                 genericName: "Return to contextual operations",
                 icon: "go-previous",
-                key: "↵ BACK"
+                key: palette.runtime.shellHint("CommandPalette.confirm") + " BACK"
             }
         ];
         if (!info) {
@@ -453,39 +453,39 @@ Item {
     anchors.fill: parent
 
     Shortcut {
-        sequence: "Shift+Esc"
+        sequence: palette.runtime.shellSequence("CommandPalette.closeAll")
         context: Qt.ApplicationShortcut
         enabled: palette.open
         onActivated: palette.hide()
     }
 
     Shortcut {
-        sequence: "?"
+        sequence: palette.runtime.shellSequence("CommandPalette.help")
         context: Qt.ApplicationShortcut
         enabled: palette.open && !search.activeFocus
         onActivated: palette.helpOpen = !palette.helpOpen
     }
 
     Shortcut {
-        sequence: "Alt+1"
+        sequence: palette.runtime.shellSequence("CommandPalette.unified")
         context: Qt.ApplicationShortcut
         enabled: palette.open
         onActivated: palette.chooseScope("unified")
     }
     Shortcut {
-        sequence: "Alt+2"
+        sequence: palette.runtime.shellSequence("CommandPalette.apps")
         context: Qt.ApplicationShortcut
         enabled: palette.open
         onActivated: palette.chooseScope("apps")
     }
     Shortcut {
-        sequence: "Alt+3"
+        sequence: palette.runtime.shellSequence("CommandPalette.actions")
         context: Qt.ApplicationShortcut
         enabled: palette.open
         onActivated: palette.chooseScope("actions")
     }
     Shortcut {
-        sequence: "Alt+4"
+        sequence: palette.runtime.shellSequence("CommandPalette.emoji")
         context: Qt.ApplicationShortcut
         enabled: palette.open
         onActivated: palette.chooseScope("emoji")
@@ -596,9 +596,9 @@ Item {
                     {
                         kind: "argument",
                         name: "Confirm " + parameterTarget.name,
-                        genericName: parameterTarget.parameterMode === "confirmClipboard" ? "Send clipboard to " + (parameterTarget.urlTemplate.match(/^https?:\/\/([^/?#]+)/) || ["", "this website"])[1] + " · Escape to cancel" : "Enter to confirm · Escape to cancel",
+                        genericName: parameterTarget.parameterMode === "confirmClipboard" ? "Send clipboard to " + (parameterTarget.urlTemplate.match(/^https?:\/\/([^/?#]+)/) || ["", "this website"])[1] + " · " + palette.runtime.shellHint("CommandPalette.back") + " to cancel" : palette.runtime.shellHint("CommandPalette.confirm") + " to confirm · " + palette.runtime.shellHint("CommandPalette.back") + " to cancel",
                         icon: "dialog-warning",
-                        key: "↵ CONFIRM"
+                        key: palette.runtime.shellHint("CommandPalette.confirm") + " CONFIRM"
                     }
                 ];
             if (!rawQuery)
@@ -612,7 +612,7 @@ Item {
                         name: "Move to workspace " + rawQuery,
                         genericName: "Workspace 1–10",
                         icon: "view-grid",
-                        key: "↵ MOVE"
+                        key: palette.runtime.shellHint("CommandPalette.confirm") + " MOVE"
                     }
                 ];
             return [
@@ -621,7 +621,7 @@ Item {
                     name: "Set " + parameterTarget.name + " to " + rawQuery + "%",
                     genericName: "Enter a percentage (0–100)",
                     icon: "preferences-system",
-                    key: "↵ SET"
+                    key: palette.runtime.shellHint("CommandPalette.confirm") + " SET"
                 }
             ];
         }
@@ -641,7 +641,7 @@ Item {
                         name: "Set " + direct[1] + " to " + direct[2] + "%",
                         genericName: "Set using the existing desktop service",
                         icon: "preferences-system",
-                        key: "↵ SET"
+                        key: palette.runtime.shellHint("CommandPalette.confirm") + " SET"
                     } : {
                         kind: "unavailable",
                         name: volumeRequest ? "Audio Output Unavailable" : "Hardware Brightness Unavailable",
@@ -658,7 +658,7 @@ Item {
                 {
                     kind: "calculation",
                     name: "= " + conversion.result,
-                    genericName: conversion.description + " · Enter to copy",
+                    genericName: conversion.description + " · " + palette.runtime.shellHint("CommandPalette.confirm") + " to copy",
                     icon: "accessories-calculator",
                     key: "COPY",
                     result: conversion.result
@@ -676,7 +676,7 @@ Item {
                     {
                         kind: "calculation",
                         name: "= " + result,
-                        genericName: expression + " · Enter to copy",
+                        genericName: expression + " · " + palette.runtime.shellHint("CommandPalette.confirm") + " to copy",
                         icon: "accessories-calculator",
                         key: "COPY",
                         result: result
@@ -788,7 +788,7 @@ Item {
                 name: entry.kind === "calculation" || entry.kind === "symbol" ? "Copy Result" : "Open / Run",
                 genericName: entry.name,
                 icon: "system-run",
-                key: "↵ RUN"
+                key: palette.runtime.shellHint("CommandPalette.confirm") + " RUN"
             }
         ];
         if (entry.kind === "window")
@@ -1299,22 +1299,22 @@ Item {
                             {
                                 title: "Unified",
                                 scope: "unified",
-                                shortcut: "ALT+1"
+                                shortcut: palette.runtime.shellHint("CommandPalette.unified")
                             },
                             {
                                 title: "Apps",
                                 scope: "apps",
-                                shortcut: "ALT+2"
+                                shortcut: palette.runtime.shellHint("CommandPalette.apps")
                             },
                             {
                                 title: "Actions",
                                 scope: "actions",
-                                shortcut: "ALT+3"
+                                shortcut: palette.runtime.shellHint("CommandPalette.actions")
                             },
                             {
                                 title: "Emoji",
                                 scope: "emoji",
-                                shortcut: "ALT+4"
+                                shortcut: palette.runtime.shellHint("CommandPalette.emoji")
                             }
                         ]
                         delegate: ShellAction {
@@ -1410,24 +1410,24 @@ Item {
                     }
 
                     Keys.onPressed: event => {
-                        if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && (event.modifiers & Qt.AltModifier)) {
+                        if ((event.key === palette.runtime.shellKeyCode("palette", "Return") || event.key === palette.runtime.shellKeyCode("palette", "Enter")) && (palette.runtime.shellModifier("palette", "Alt", event.modifiers))) {
                             palette.openActions();
                             event.accepted = true;
-                        } else if (event.key === Qt.Key_Tab) {
+                        } else if (event.key === palette.runtime.shellKeyCode("palette", "Tab")) {
                             if (displayedModel.values.length > 0)
                                 results.forceActiveFocus();
                             event.accepted = true;
-                        } else if (event.key === Qt.Key_Escape) {
+                        } else if (event.key === palette.runtime.shellKeyCode("palette", "Escape")) {
                             palette.dismissOrReset();
                             event.accepted = true;
-                        } else if (event.key === Qt.Key_Down) {
+                        } else if (event.key === palette.runtime.shellKeyCode("palette", "Down")) {
                             results.currentIndex = Math.min(displayedModel.values.length - 1, results.currentIndex + 1);
                             event.accepted = true;
-                        } else if (event.key === Qt.Key_Up) {
+                        } else if (event.key === palette.runtime.shellKeyCode("palette", "Up")) {
                             results.currentIndex = Math.max(0, results.currentIndex - 1);
                             event.accepted = true;
-                        } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                            const keepOpen = (event.modifiers & Qt.ShiftModifier) !== 0;
+                        } else if (event.key === palette.runtime.shellKeyCode("palette", "Return") || event.key === palette.runtime.shellKeyCode("palette", "Enter")) {
+                            const keepOpen = (palette.runtime.shellModifier("palette", "Shift", event.modifiers)) !== 0;
                             palette.launchCurrent(keepOpen);
                             event.accepted = true;
                         }
@@ -1465,21 +1465,21 @@ Item {
 
                 Keys.priority: Keys.BeforeItem
                 Keys.onPressed: event => {
-                    if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && (event.modifiers & Qt.AltModifier)) {
+                    if ((event.key === palette.runtime.shellKeyCode("palette", "Return") || event.key === palette.runtime.shellKeyCode("palette", "Enter")) && (palette.runtime.shellModifier("palette", "Alt", event.modifiers))) {
                         palette.openActions();
-                    } else if (event.key === Qt.Key_Tab || event.key === Qt.Key_I || event.key === Qt.Key_Slash) {
+                    } else if (event.key === palette.runtime.shellKeyCode("palette", "Tab") || event.key === palette.runtime.shellKeyCode("palette", "I") || event.key === palette.runtime.shellKeyCode("palette", "Slash")) {
                         search.forceActiveFocus();
-                    } else if (event.key === Qt.Key_Escape) {
+                    } else if (event.key === palette.runtime.shellKeyCode("palette", "Escape")) {
                         palette.dismissOrReset();
-                    } else if (event.key === Qt.Key_Down || event.key === Qt.Key_J) {
+                    } else if (event.key === palette.runtime.shellKeyCode("palette", "Down") || event.key === palette.runtime.shellKeyCode("palette", "J")) {
                         results.currentIndex = Math.min(displayedModel.values.length - 1, results.currentIndex + 1);
-                    } else if (event.key === Qt.Key_Up || event.key === Qt.Key_K) {
+                    } else if (event.key === palette.runtime.shellKeyCode("palette", "Up") || event.key === palette.runtime.shellKeyCode("palette", "K")) {
                         results.currentIndex = Math.max(0, results.currentIndex - 1);
-                    } else if (event.key === Qt.Key_U || event.key === Qt.Key_PageUp || event.key === Qt.Key_D || event.key === Qt.Key_PageDown) {
+                    } else if (event.key === palette.runtime.shellKeyCode("palette", "U") || event.key === palette.runtime.shellKeyCode("palette", "PageUp") || event.key === palette.runtime.shellKeyCode("palette", "D") || event.key === palette.runtime.shellKeyCode("palette", "PageDown")) {
                         const rows = Math.max(1, Math.floor(results.height / (57 + results.spacing) / 2));
-                        results.currentIndex = Math.max(0, Math.min(displayedModel.values.length - 1, results.currentIndex + ((event.key === Qt.Key_D || event.key === Qt.Key_PageDown) ? rows : -rows)));
-                    } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                        palette.launchCurrent((event.modifiers & Qt.ShiftModifier) !== 0);
+                        results.currentIndex = Math.max(0, Math.min(displayedModel.values.length - 1, results.currentIndex + ((event.key === palette.runtime.shellKeyCode("palette", "D") || event.key === palette.runtime.shellKeyCode("palette", "PageDown")) ? rows : -rows)));
+                    } else if (event.key === palette.runtime.shellKeyCode("palette", "Return") || event.key === palette.runtime.shellKeyCode("palette", "Enter")) {
+                        palette.launchCurrent((palette.runtime.shellModifier("palette", "Shift", event.modifiers)) !== 0);
                     } else {
                         return;
                     }
@@ -1624,7 +1624,7 @@ Item {
                         compact: true
                         iconOnly: true
                         icon: "󰍉"
-                        title: "More actions (Alt+Enter)"
+                        title: "More actions (" + palette.runtime.shellHint("CommandPalette.actionMenu") + ")"
                         onActivated: {
                             results.currentIndex = result.index;
                             palette.openActions();
@@ -1667,45 +1667,45 @@ Item {
                     theme: palette.theme
                     hints: palette.actionMode ? [
                         {
-                            shortcut: "J/K",
+                            shortcut: palette.runtime.shellHint("CommandPalette.select"),
                             label: "Select"
                         },
                         {
-                            shortcut: "ENTER",
+                            shortcut: palette.runtime.shellHint("CommandPalette.execute"),
                             label: "Execute"
                         },
                         {
-                            shortcut: "ESC",
+                            shortcut: palette.runtime.shellHint("CommandPalette.back"),
                             label: "Back"
                         }
                     ] : search.activeFocus ? [
                         {
-                            shortcut: "TAB",
+                            shortcut: palette.runtime.shellHint("CommandPalette.navigate"),
                             label: "Navigate"
                         },
                         {
-                            shortcut: "ALT+ENTER",
+                            shortcut: palette.runtime.shellHint("CommandPalette.actionMenu"),
                             label: "Actions"
                         },
                         {
-                            shortcut: "SHIFT+ESC",
+                            shortcut: palette.runtime.shellHint("CommandPalette.closeAll"),
                             label: "Close"
                         }
                     ] : [
                         {
-                            shortcut: "J/K",
+                            shortcut: palette.runtime.shellHint("CommandPalette.selectResults"),
                             label: "Select"
                         },
                         {
-                            shortcut: "U/D",
+                            shortcut: palette.runtime.shellHint("CommandPalette.pageResults"),
                             label: "Page"
                         },
                         {
-                            shortcut: "ALT+ENTER",
+                            shortcut: palette.runtime.shellHint("CommandPalette.resultActions"),
                             label: "Actions"
                         },
                         {
-                            shortcut: "ESC",
+                            shortcut: palette.runtime.shellHint("CommandPalette.resultBack"),
                             label: "Back"
                         }
                     ]
@@ -1722,35 +1722,35 @@ Item {
             title: "Command palette controls"
             bindings: [
                 {
-                    key: "Alt+1–4",
+                    key: palette.runtime.shellHint("CommandPalette.legendModes"),
                     action: "Choose search mode"
                 },
                 {
-                    key: "Tab",
+                    key: palette.runtime.shellHint("CommandPalette.legendTab"),
                     action: "Switch search and results"
                 },
                 {
-                    key: "J / K",
+                    key: palette.runtime.shellHint("CommandPalette.legendSelect"),
                     action: "Move through results"
                 },
                 {
-                    key: "U / D",
+                    key: palette.runtime.shellHint("CommandPalette.legendPage"),
                     action: "Half-page through results"
                 },
                 {
-                    key: "Enter",
+                    key: palette.runtime.shellHint("CommandPalette.legendEnter"),
                     action: "Run selected result"
                 },
                 {
-                    key: "Shift+Enter",
+                    key: palette.runtime.shellHint("CommandPalette.legendShiftEnter"),
                     action: "Run without closing"
                 },
                 {
-                    key: "Alt+Enter",
+                    key: palette.runtime.shellHint("CommandPalette.actionMenu"),
                     action: "Selected result actions"
                 },
                 {
-                    key: "Esc",
+                    key: palette.runtime.shellHint("CommandPalette.back"),
                     action: "Close help or palette"
                 }
             ]

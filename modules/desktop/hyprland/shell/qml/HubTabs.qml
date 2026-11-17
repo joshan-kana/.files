@@ -134,7 +134,7 @@ Item {
         cornerRadius: root.theme.radiusLarge
         fillColor: root.theme.expressiveSurface
         Accessible.role: Accessible.Button
-        Accessible.name: root.backLabel + " (Esc)"
+        Accessible.name: root.backLabel + " (" + root.runtime.shellHint("ShellExpansionHost.back") + ")"
 
         Text {
             anchors.centerIn: parent
@@ -150,7 +150,7 @@ Item {
             motion: root.motion
             cornerRadius: root.theme.radiusLarge
             Accessible.role: Accessible.Button
-            Accessible.name: root.backLabel + " (Esc)"
+            Accessible.name: root.backLabel + " (" + root.runtime.shellHint("ShellExpansionHost.back") + ")"
             onActivated: root.backRequested()
         }
     }
@@ -174,7 +174,7 @@ Item {
             anchors.centerIn: parent
             runtime: root.runtime
             theme: root.theme
-            shortcut: "?"
+            shortcut: root.runtime.shellHint("HubTabs.help")
             compact: true
             emphasized: root.helpOpen
         }

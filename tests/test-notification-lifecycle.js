@@ -117,10 +117,10 @@ test("history shortcut is handled before ordinary H navigation", () => {
     "utf8",
   );
   const history = content.indexOf(
-    "event.key === Qt.Key_H && (event.modifiers & Qt.ShiftModifier)",
+    'event.key === center.runtime.shellKeyCode("activity", "H") && (center.runtime.shellModifier("activity", "Shift", event.modifiers))',
   );
   const nav = content.indexOf(
-    "event.key === Qt.Key_Left || event.key === Qt.Key_H",
+    'event.key === center.runtime.shellKeyCode("activity", "Left") || event.key === center.runtime.shellKeyCode("activity", "H")',
   );
   assert.ok(history > 0 && nav > history);
 });

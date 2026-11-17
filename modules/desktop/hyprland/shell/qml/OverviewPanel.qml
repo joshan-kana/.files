@@ -431,7 +431,7 @@ Item {
                     motion: overview.motion
                     compact: true
                     title: "ALL"
-                    shortcut: "A"
+                    shortcut: overview.runtime.shellHint("OverviewPanel.all")
                     active: overview.showAllWorkspaces && !overview.moveMode
                     enabled: !overview.moveMode && !overview.movePending
                     onActivated: overview.browseAllWorkspaces()
@@ -476,40 +476,40 @@ Item {
                     theme: overview.theme
                     hints: overview.moveMode ? [
                         {
-                            shortcut: "1–0",
+                            shortcut: overview.runtime.shellHint("OverviewPanel.destination"),
                             label: "Destination"
                         },
                         {
-                            shortcut: "H/L",
+                            shortcut: overview.runtime.shellHint("OverviewPanel.target"),
                             label: "Target"
                         },
                         {
-                            shortcut: "ENTER",
+                            shortcut: overview.runtime.shellHint("OverviewPanel.moveConfirm"),
                             label: "Move"
                         },
                         {
-                            shortcut: "ESC",
+                            shortcut: overview.runtime.shellHint("OverviewPanel.moveCancel"),
                             label: "Cancel"
                         }
                     ] : [
                         {
-                            shortcut: "1–0",
+                            shortcut: overview.runtime.shellHint("OverviewPanel.workspace"),
                             label: "Workspace"
                         },
                         {
-                            shortcut: "H/J/K/L",
+                            shortcut: overview.runtime.shellHint("OverviewPanel.navigate"),
                             label: "Navigate"
                         },
                         {
-                            shortcut: "M",
+                            shortcut: overview.runtime.shellHint("OverviewPanel.move"),
                             label: "Move"
                         },
                         {
-                            shortcut: "ENTER",
+                            shortcut: overview.runtime.shellHint("OverviewPanel.open"),
                             label: "Open"
                         },
                         {
-                            shortcut: "ESC",
+                            shortcut: overview.runtime.shellHint("OverviewPanel.close"),
                             label: "Close"
                         }
                     ]
@@ -576,7 +576,7 @@ Item {
                 Text {
                     anchors.centerIn: parent
                     visible: overview.windows.length === 0
-                    text: overview.showAllWorkspaces ? "No open application windows" : "Workspace " + overview.browsedWorkspace + " is empty · ENTER to switch"
+                    text: overview.showAllWorkspaces ? "No open application windows" : "Workspace " + overview.browsedWorkspace + " is empty · " + overview.runtime.shellHint("OverviewPanel.open") + " to switch"
                     color: overview.theme.textMuted
                     font.family: overview.runtime.fontMono
                     font.pixelSize: overview.theme.fontSize(13)
@@ -606,7 +606,7 @@ Item {
                     horizontalCompact: true
                     title: overview.chosenFloating ? "TILE" : "FLOAT"
                     icon: "󰉋"
-                    shortcut: "F"
+                    shortcut: overview.runtime.shellHint("OverviewPanel.toggleFloating")
                     active: overview.chosenFloating
                     enabled: !!overview.chosenWindow && !overview.moveMode && !overview.movePending && !overview.actionPending
                     onActivated: overview.toggleWindowState("float")
@@ -621,7 +621,7 @@ Item {
                     horizontalCompact: true
                     title: overview.chosenPinned ? "UNPIN" : "PIN"
                     icon: "󰐃"
-                    shortcut: "P"
+                    shortcut: overview.runtime.shellHint("OverviewPanel.togglePin")
                     active: overview.chosenPinned
                     enabled: !!overview.chosenWindow && overview.chosenFloating && !overview.moveMode && !overview.movePending && !overview.actionPending
                     onActivated: overview.toggleWindowState("pin")
@@ -635,50 +635,51 @@ Item {
         anchors.fill: parent
         focus: overview.open
         Keys.onPressed: event => {
-            if (event.key === Qt.Key_Escape) {
+            if (event.key === overview.runtime.shellKeyCode("overview", "Escape")) {
                 if (overview.moveMode)
                     overview.cancelMove();
                 else
                     overview.hide();
-            } else if (event.key === Qt.Key_M && !overview.movePending) {
+            } else if (event.key === overview.runtime.shellKeyCode("overview", "M") && !overview.movePending) {
                 overview.startMove(overview.selectedIndex);
-            } else if (event.key === Qt.Key_F && !overview.moveMode) {
+            } else if (event.key === overview.runtime.shellKeyCode("overview", "F") && !overview.moveMode) {
                 overview.toggleWindowState("float");
-            } else if (event.key === Qt.Key_P && !overview.moveMode) {
+            } else if (event.key === overview.runtime.shellKeyCode("overview", "P") && !overview.moveMode) {
                 overview.toggleWindowState("pin");
-            } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+            } else if (event.key === overview.runtime.shellKeyCode("overview", "Return") || event.key === overview.runtime.shellKeyCode("overview", "Enter")) {
                 if (overview.moveMode)
                     overview.executeMove(overview.destinationWorkspace);
                 else
                     overview.activateSelection();
-            } else if (event.key >= Qt.Key_1 && event.key <= Qt.Key_9) {
+            } else if (overview.runtime.shellNumberIndex("overview", event.key, 9) >= 0) {
+                const workspace = overview.runtime.shellNumberIndex("overview", event.key, 9) + 1;
                 if (overview.moveMode)
-                    overview.destinationWorkspace = event.key - Qt.Key_0;
+                    overview.destinationWorkspace = workspace;
                 else
-                    overview.focusWorkspace(event.key - Qt.Key_0);
-            } else if (event.key === Qt.Key_0) {
+                    overview.focusWorkspace(workspace);
+            } else if (event.key === overview.runtime.shellKeyCode("overview", "0")) {
                 if (overview.moveMode)
                     overview.destinationWorkspace = 10;
                 else
                     overview.focusWorkspace(10);
-            } else if (event.key === Qt.Key_A && !overview.moveMode) {
+            } else if (event.key === overview.runtime.shellKeyCode("overview", "A") && !overview.moveMode) {
                 overview.browseAllWorkspaces();
-            } else if (event.key === Qt.Key_H || event.key === Qt.Key_Left) {
+            } else if (event.key === overview.runtime.shellKeyCode("overview", "H") || event.key === overview.runtime.shellKeyCode("overview", "Left")) {
                 if (overview.moveMode)
                     overview.destinationWorkspace = Math.max(1, overview.destinationWorkspace - 1);
                 else
                     overview.chooseIndex(Math.max(0, overview.selectedIndex - 1));
-            } else if (event.key === Qt.Key_L || event.key === Qt.Key_Right) {
+            } else if (event.key === overview.runtime.shellKeyCode("overview", "L") || event.key === overview.runtime.shellKeyCode("overview", "Right")) {
                 if (overview.moveMode)
                     overview.destinationWorkspace = Math.min(10, overview.destinationWorkspace + 1);
                 else
                     overview.chooseIndex(Math.max(0, Math.min(overview.windows.length - 1, overview.selectedIndex + 1)));
-            } else if (event.key === Qt.Key_J || event.key === Qt.Key_Down) {
+            } else if (event.key === overview.runtime.shellKeyCode("overview", "J") || event.key === overview.runtime.shellKeyCode("overview", "Down")) {
                 if (overview.moveMode)
                     overview.destinationWorkspace = Math.min(10, overview.destinationWorkspace + 3);
                 else
                     overview.chooseIndex(Math.max(0, Math.min(overview.windows.length - 1, overview.selectedIndex + windowsGrid.columns)));
-            } else if (event.key === Qt.Key_K || event.key === Qt.Key_Up) {
+            } else if (event.key === overview.runtime.shellKeyCode("overview", "K") || event.key === overview.runtime.shellKeyCode("overview", "Up")) {
                 if (overview.moveMode)
                     overview.destinationWorkspace = Math.max(1, overview.destinationWorkspace - 3);
                 else

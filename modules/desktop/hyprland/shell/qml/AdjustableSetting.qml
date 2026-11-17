@@ -144,7 +144,7 @@ ShellSurface {
 
     // Keep the keycap aligned to the tile, independently of icon and slider layout.
     TileKeyHint {
-        shortcut: setting.keyboardSelected ? "H/L" : setting.toggleShortcut
+        shortcut: setting.keyboardSelected ? setting.runtime.shellHint("AdjustableSetting.level") : setting.toggleShortcut
         compact: true
         runtime: setting.runtime
         motion: setting.motion

@@ -391,13 +391,13 @@ WlSessionLock {
                                 }
 
                                 Keys.onPressed: event => {
-                                    if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                                    if (event.key === lock.runtime.shellKeyCode("lock", "Return") || event.key === lock.runtime.shellKeyCode("lock", "Enter")) {
                                         if (!lock.authRevealed)
                                             lock.authRevealed = true;
                                         else
                                             lock.submitPassword();
                                         event.accepted = true;
-                                    } else if (event.key === Qt.Key_Escape || (event.modifiers & Qt.ControlModifier && event.key === Qt.Key_U)) {
+                                    } else if (event.key === lock.runtime.shellKeyCode("lock", "Escape") || (lock.runtime.shellModifier("lock", "Control", event.modifiers) && event.key === lock.runtime.shellKeyCode("lock", "U"))) {
                                         lock.password = "";
                                         text = "";
                                         lock.authRevealed = false;
