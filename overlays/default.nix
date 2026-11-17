@@ -22,7 +22,6 @@ _: {
     ./tuicr
     ./technitium-roaming
     ./webhook
-    ./warp
     ./arc
     ./raycast
     ./agentgateway
