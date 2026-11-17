@@ -1,19 +1,12 @@
 {
   editScope,
   extendScope,
+  lib,
   moduleRegistry,
   ...
 }:
 
-{
-  inherit (moduleRegistry)
-    theme
-    networking
-    backups
-    desktop
-    virtualisation
-    ;
-
+lib.recursiveUpdate (import ../../profiles/workstation.nix { inherit moduleRegistry; }) {
   dotfiles.users.primary.homeRoot = "/Users";
 
   nix = editScope moduleRegistry.nix {

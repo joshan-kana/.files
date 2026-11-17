@@ -2,29 +2,13 @@
   config,
   editScope,
   extendScope,
+  lib,
   moduleRegistry,
   pkgs,
   ...
 }:
 
-{
-  inherit (moduleRegistry)
-    backups
-    nix
-    theme
-    cli
-    networking
-    appimage
-    audio
-    virtualisation
-    desktop
-    ;
-
-  imports = [
-  ];
-
-  dotfiles.scopes.system.boot.splash.enable = true;
-
+lib.recursiveUpdate (import ../../profiles/workstation.nix { inherit moduleRegistry; }) {
   hardware = import ./hardware.nix;
 
   system = extendScope moduleRegistry.system {

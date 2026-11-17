@@ -1,27 +1,13 @@
 {
   extendScope,
+  lib,
   moduleRegistry,
   pkgs,
   ...
 }:
 
-{
-  inherit (moduleRegistry)
-    system
-    nix
-    theme
-    networking
-    appimage
-    audio
-    virtualisation
-    desktop
-    desktopApps
-    ;
-
-  dotfiles = {
-    rebuild.flags = "--impure";
-    scopes.system.boot.splash.enable = true;
-  };
+lib.recursiveUpdate (import ../../profiles/workstation.nix { inherit moduleRegistry; }) {
+  dotfiles.rebuild.flags = "--impure";
 
   hardware = import ./hardware.nix;
 
