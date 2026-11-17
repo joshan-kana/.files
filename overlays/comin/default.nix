@@ -25,11 +25,6 @@ in
   };
 
   config = {
-    services.comin = {
-      grpc.unix_socket_group = if isDarwin then "staff" else "users";
-      buildAttemptsLimit = 3;
-    };
-
     nixpkgs.overlays = [
       (final: _prev: {
         comin = upstream.packages.${final.stdenv.hostPlatform.system}.comin.overrideAttrs (old: {
@@ -63,14 +58,8 @@ in
     # The upstream Comin module reads this option for its executable PATH.
     # With `nix.enable = false`, Determinate still owns the daemon.
     nix.package = lib.mkDefault pkgs.nix;
-    launchd.daemons.comin = lib.mkMerge [
-      {
-        command = lib.mkForce "/nix/var/nix/profiles/system-profiles/comin/sw/bin/comin run --config /etc/comin/config.yaml";
-        serviceConfig.EnvironmentVariables.PATH = lib.mkForce "/run/current-system/sw/bin:/nix/var/nix/profiles/default/bin:/usr/bin:/bin";
-      }
-      (lib.mkIf config.services.comin.allowForcePush {
-        serviceConfig.EnvironmentVariables.COMIN_ALLOW_FORCE_PUSH = "true";
-      })
-    ];
+    launchd.daemons.comin = lib.mkIf config.services.comin.allowForcePush {
+      serviceConfig.EnvironmentVariables.COMIN_ALLOW_FORCE_PUSH = "true";
+    };
   };
 }

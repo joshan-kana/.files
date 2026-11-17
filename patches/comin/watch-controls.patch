@@ -708,7 +708,7 @@ index 0000000..7a0bcb4
 +	}
 +}
 diff --git a/internal/builder/builder.go b/internal/builder/builder.go
-index 3424bcc..91367d9 100644
+index 3424bcc..ba4cbe4 100644
 --- a/internal/builder/builder.go
 +++ b/internal/builder/builder.go
 @@ -35,17 +35,17 @@ const (
@@ -835,7 +835,20 @@ index 3424bcc..91367d9 100644
  	b.buildatorWg.Wait()
  
  	b.mu.Lock()
-@@ -196,6 +205,11 @@ func (b *Builder) Stop() {
+@@ -184,9 +193,11 @@ func (b *Builder) stopBuild() {
+ // Stop stops the evaluator and the builder is required and wait until
+ // they have been actually stopped.
+ func (b *Builder) Stop() {
++	// Cancel the pending automatic retry before stopping its current work.
++	// Otherwise its timer may start a new build while we preempt it.
++	b.cancelBuildRetry()
+ 	b.stopEval()
+ 	b.stopBuild()
+-	b.cancelBuildRetry()
+ 
+ 	b.mu.Lock()
+ 	defer b.mu.Unlock()
+@@ -196,6 +207,11 @@ func (b *Builder) Stop() {
  func (b *Builder) cancelBuildRetry() {
  	b.mu.Lock()
  	defer b.mu.Unlock()
@@ -847,7 +860,7 @@ index 3424bcc..91367d9 100644
  	if b.buildRetryCancel != nil {
  		b.buildRetryCancel()
  		b.buildRetryCancel = nil
-@@ -211,6 +225,15 @@ func (b *Builder) cancelBuildRetry() {
+@@ -211,6 +227,15 @@ func (b *Builder) cancelBuildRetry() {
  func (b *Builder) scheduleBuildRetry(generationUuid string) {
  	b.mu.Lock()
  	defer b.mu.Unlock()
@@ -863,7 +876,39 @@ index 3424bcc..91367d9 100644
  
  	// Cancel any existing retry (without locking again)
  	if b.buildRetryCancel != nil {
-@@ -309,15 +332,14 @@ func (b *Builder) Eval(ctx context.Context, generation *protobuf.Generation) err
+@@ -223,9 +248,10 @@ func (b *Builder) scheduleBuildRetry(generationUuid string) {
+ 	}
+ 	b.buildRetryAt = nil
+ 
+-	// Set the retry time
+-	retryAt := time.Now().Add(b.buildRetryTimerDuration)
+-	b.buildRetryAt = timestamppb.New(retryAt)
++	// The timestamp doubles as the scheduled retry's identity. Ignore a
++	// callback from an earlier timer after replacement or cancellation.
++	retryAt := timestamppb.New(time.Now().Add(b.buildRetryTimerDuration))
++	b.buildRetryAt = retryAt
+ 
+ 	// Create context for the retry
+ 	b.buildRetryCtx, b.buildRetryCancel = context.WithCancel(context.Background())
+@@ -236,14 +262,15 @@ func (b *Builder) scheduleBuildRetry(generationUuid string) {
+ 		retryGenerationUuid := generationUuid
+ 		b.mu.Lock()
+ 		// Check if we still have a retry scheduled (might have been cancelled)
+-		if b.buildRetryAt != nil {
++		if b.buildRetryAt == retryAt && b.GenerationUuid == retryGenerationUuid {
+ 			logrus.Infof("builder: retrying build for generation %s after failure", retryGenerationUuid)
+ 			// The attempt number will be incremented by GenerationBuildStart
+ 			// Clear retry state and save context before unlocking
+ 			buildRetryCtx := b.buildRetryCtx
+ 			b.buildRetryAt = nil
+ 			b.buildRetryTimer = nil
+-			b.buildRetryCancel = nil
++			// Keep buildRetryCancel so Stop can cancel a retry even after
++			// its timer fired but before the pending build actually starts.
+ 			b.mu.Unlock()
+ 			// Submit the build for retry (outside the lock to avoid deadlock)
+ 			b.SubmitBuild(buildRetryCtx, retryGenerationUuid)
+@@ -309,15 +336,14 @@ func (b *Builder) Eval(ctx context.Context, generation *protobuf.Generation) err
  		stdout:   stdout,
  		stderr:   stderr,
  	}
@@ -883,7 +928,7 @@ index 3424bcc..91367d9 100644
  
  		// We close the writers to stop associated goroutines
  		_ = stdout.Close()
-@@ -330,7 +352,7 @@ func (b *Builder) Eval(ctx context.Context, generation *protobuf.Generation) err
+@@ -330,7 +356,7 @@ func (b *Builder) Eval(ctx context.Context, generation *protobuf.Generation) err
  			evaluator.drvPath,
  			evaluator.outPath,
  			evaluator.machineId,
@@ -892,7 +937,7 @@ index 3424bcc..91367d9 100644
  		); err != nil {
  			logrus.Errorf("builder: %s", err)
  		}
-@@ -401,12 +423,39 @@ func (b *Builder) Resume(ctx context.Context) error {
+@@ -401,12 +427,39 @@ func (b *Builder) Resume(ctx context.Context) error {
  	return nil
  }
  
@@ -932,7 +977,7 @@ index 3424bcc..91367d9 100644
  
  	if b.isSuspended {
  		logrus.Infof("builder: build submitted for generation %s while the builder is suspended", generationUuid)
-@@ -450,21 +499,20 @@ func (b *Builder) build(ctx context.Context, generationUuid string) error {
+@@ -450,21 +503,20 @@ func (b *Builder) build(ctx context.Context, generationUuid string) error {
  		stdout:    stdout,
  		stderr:    stderr,
  	}
@@ -960,10 +1005,47 @@ index 3424bcc..91367d9 100644
  		err := b.store.GenerationBuildFinished(generationUuid, buildErr)
  		if err != nil {
 diff --git a/internal/builder/builder_test.go b/internal/builder/builder_test.go
-index 7300a4a..6bcf09c 100644
+index 7300a4a..ac6cdf9 100644
 --- a/internal/builder/builder_test.go
 +++ b/internal/builder/builder_test.go
-@@ -550,3 +550,50 @@ func TestBuilderDoesNotRetryWhenCancelled(t *testing.T) {
+@@ -349,6 +349,7 @@ func TestBuilderRetryOnFailure(t *testing.T) {
+ 	// Create a mock that always fails builds
+ 	eMock := NewExecutorMock(false)
+ 	b := New(s, eMock, bk, "", "", "", "my-machine", false, 5*time.Second, 100*time.Millisecond, 0, 100*time.Millisecond, "")
++	t.Cleanup(b.Stop)
+ 	ctx := t.Context()
+ 
+ 	// Create and evaluate a generation
+@@ -394,7 +395,10 @@ func TestBuilderRetryCancelledOnNewEval(t *testing.T) {
+ 	assert.Nil(t, err)
+ 	// Create a mock that always fails builds
+ 	eMock := NewExecutorMock(false)
+-	b := New(s, eMock, bk, "", "", "", "my-machine", false, 5*time.Second, 100*time.Millisecond, 0, 100*time.Millisecond, "")
++	// Leave enough time to observe a scheduled retry and cancel it before
++	// the timer races the test's new evaluation on loaded CI machines.
++	b := New(s, eMock, bk, "", "", "", "my-machine", false, 5*time.Second, 100*time.Millisecond, 0, 2*time.Second, "")
++	t.Cleanup(b.Stop)
+ 	ctx := t.Context()
+ 
+ 	// Create and evaluate the first generation
+@@ -427,8 +431,14 @@ func TestBuilderRetryCancelledOnNewEval(t *testing.T) {
+ 
+ 	// Now submit a new evaluation - this should cancel the retry
+ 	generation2 := s.NewGeneration("", "", "", &protobuf.GitRepositoryStatus{SelectedCommitId: "commit-2"}, 0)
+-	_ = b.Eval(ctx, &generation2)
+-	eMock.evalDone <- struct{}{}
++	if err := b.Eval(ctx, &generation2); err != nil {
++		t.Fatalf("new evaluation failed: %s", err)
++	}
++	select {
++	case eMock.evalDone <- struct{}{}:
++	case <-time.After(2 * time.Second):
++		t.Fatal("new evaluation was not started")
++	}
+ 	gUUID2 := <-b.EvaluationDone
+ 
+ 	// Give the Eval time to cancel the retry
+@@ -550,3 +560,50 @@ func TestBuilderDoesNotRetryWhenCancelled(t *testing.T) {
  
  	assert.False(t, retryScheduled, "build retry should NOT be scheduled when build is cancelled, but it was")
  }
