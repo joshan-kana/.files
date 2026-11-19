@@ -37,14 +37,13 @@ ShellSurface {
 
     surfaceLayer: ShellSurface.Control
     cornerRadius: active ? theme.radiusLarge : theme.radiusMedium
-    // A setting can be enabled without owning the keyboard. Keep the active
-    // tint/glow, but reserve the stronger outline for the selected slider;
-    // otherwise an enabled Night Light looks focused after Shift+Tab leaves.
-    outlined: keyboardSelected
+    // An enabled setting keeps the same accent outline as other Controls
+    // tiles. Keyboard selection adds a stronger focus border independently.
+    outlined: active || keyboardSelected
     luminous: active || keyboardSelected
     luminousColor: roleAccent
-    borderWidth: keyboardSelected ? theme.borderFocus : 0
-    borderColor: keyboardSelected ? theme.blend(roleAccent, theme.textStrong, 0.55) : "transparent"
+    borderWidth: keyboardSelected ? theme.borderFocus : active ? theme.borderThin : 0
+    borderColor: keyboardSelected ? theme.blend(roleAccent, theme.textStrong, 0.55) : active ? roleAccent : "transparent"
     hovered: tileHover.hovered
     fillColor: active ? theme.blend(theme.controlBase, roleAccent, theme.dark ? 0.12 : 0.08) : theme.expressiveSurfaceStrong
     Behavior on cornerRadius {
