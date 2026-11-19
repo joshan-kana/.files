@@ -18,13 +18,7 @@ const tileLayout = (controls, width, textScale, count, spacing = 8) => {
     spacing,
     children: { length: count },
   };
-  for (const property of [
-    "minimumTileWidth",
-    "capacity",
-    "rows",
-    "columns",
-    "cellWidth",
-  ]) {
+  for (const property of ["minimumTileWidth", "capacity", "rows", "columns"]) {
     const expression = canvas.match(
       new RegExp(`readonly property (?:real|int) ${property}: ([^\n]+)`),
     )?.[1];
@@ -34,6 +28,28 @@ const tileLayout = (controls, width, textScale, count, spacing = 8) => {
       `return (${expression});`,
     )(...Object.values(scope));
   }
+  const method = canvas.match(
+    /function cellWidth\(tile: Item\): real \{([\s\S]*?)\n\s+\}/,
+  )?.[1];
+  assert.ok(method, "missing adaptive tile width method");
+  const calculate = new Function(
+    "children",
+    "rows",
+    "columns",
+    "width",
+    "spacing",
+    "tile",
+    method,
+  );
+  scope.cellWidth = (index) =>
+    calculate(
+      { length: count, indexOf: (tile) => tile.index },
+      scope.rows,
+      scope.columns,
+      width,
+      spacing,
+      { index },
+    );
   return scope;
 };
 
@@ -65,7 +81,7 @@ test("Visual Modes and Quick Actions share one continuous 14-tile canvas", () =>
     .split("id: controlTiles")[1]
     .split("ShellSurface {")[0];
   assert.equal(
-    (tiles.match(/width: controlTiles\.cellWidth/g) || []).length,
+    (tiles.match(/width: controlTiles\.cellWidth\(this\)/g) || []).length,
     14,
   );
   assert.equal((tiles.match(/QuickSettingChip \{/g) || []).length, 11);
@@ -190,18 +206,36 @@ test("global Escape footer reflects slider-selection focus without adding widget
 
 test("tile rows adapt to panel width, text scale and added or removed actions", () => {
   const controls = read("SystemContent.qml");
-  for (const width of [320, 420, 560, 860, 1120]) {
+  for (const width of [320, 420, 560, 584, 732, 860, 1028, 1120]) {
     for (const scale of [1, 1.25, 1.5, 2]) {
       for (const count of [1, 5, 9, 12, 13, 14, 15, 16, 17, 21, 22]) {
         const layout = tileLayout(controls, width, scale, count);
         assert.ok(layout.columns >= 1 && layout.columns <= layout.capacity);
         assert.ok(layout.rows * layout.columns >= count);
         assert.ok((layout.rows - 1) * layout.columns < count);
-        assert.ok(layout.cellWidth >= layout.minimumTileWidth - 0.01);
-        assert.ok(
-          layout.columns * layout.cellWidth + (layout.columns - 1) * 8 <=
-            width + 0.01,
+        const widerRows = count % layout.rows;
+        const rowSizes = Array.from({ length: layout.rows }, (_, row) =>
+          widerRows === 0 || row < widerRows
+            ? layout.columns
+            : layout.columns - 1,
         );
+        assert.equal(
+          rowSizes.reduce((sum, size) => sum + size, 0),
+          count,
+        );
+        let first = 0;
+        for (const size of rowSizes) {
+          const cellWidth = layout.cellWidth(first);
+          assert.ok(cellWidth >= Math.floor(layout.minimumTileWidth));
+          assert.ok(cellWidth * size + (size - 1) * 8 <= width);
+          assert.ok(
+            width - cellWidth * size - (size - 1) * 8 < size,
+            "each row fills the canvas without an empty trailing area",
+          );
+          for (let index = first; index < first + size; index++)
+            assert.equal(layout.cellWidth(index), cellWidth);
+          first += size;
+        }
       }
     }
   }
@@ -216,8 +250,11 @@ test("tile rows adapt to panel width, text scale and added or removed actions", 
     assert.equal(layout.columns, columns);
     assert.equal(layout.rows, rows);
   }
+  const uneven = tileLayout(controls, 1000, 1, 14);
+  assert.equal(uneven.rows, 3);
+  assert.equal(uneven.columns, 5);
+  assert.ok(uneven.cellWidth(10) > uneven.cellWidth(0));
 });
-
 test("one focused Controls handler owns forward and reverse slider traversal", () => {
   const controls = read("SystemContent.qml");
   const host = read("ShellExpansionHost.qml");
@@ -465,9 +502,9 @@ test("Visual Modes and Quick Actions use the same calculated width and wrap", ()
     controls,
     /readonly property int columns: Math.max\(1, Math.ceil\(children.length \/ rows\)\)/,
   );
-  assert.match(controls, /readonly property real cellWidth:/);
+  assert.match(controls, /function cellWidth\(tile: Item\): real \{/);
   assert.equal(
-    (controls.match(/width: controlTiles\.cellWidth/g) || []).length,
+    (controls.match(/width: controlTiles\.cellWidth\(this\)/g) || []).length,
     14,
   );
 });
