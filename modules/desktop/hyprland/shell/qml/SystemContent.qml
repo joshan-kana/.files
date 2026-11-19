@@ -1175,21 +1175,6 @@ FocusScope {
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
-                            icon: "󰑓"
-                            title: root.resetRunning ? "Restoring…" : "Restore defaults"
-                            shortcut: root.runtime.shellHint("SystemContent.reset")
-                            active: root.resetConfirmPending
-                            enabled: !root.resetRunning
-                            activeColor: root.theme.roleColor("warning")
-                            onActivated: root.resetConfirmPending = !root.resetConfirmPending
-                        }
-
-                        QuickSettingChip {
-                            width: actionTiles.cellWidth(this)
-                            height: root.dashboardTileHeight
-                            runtime: root.runtime
-                            theme: root.theme
-                            motion: root.motion
                             icon: root.notificationState.silent ? "󰂛" : "󰂚"
                             title: root.notificationState.silent ? "Silent" : "Alerts"
                             shortcut: root.runtime.shellHint("SystemContent.alerts")
@@ -1251,6 +1236,21 @@ FocusScope {
                             shortcut: root.runtime.shellHint("SystemContent.captures")
                             activeColor: root.theme.roleColor("capture")
                             onActivated: root.openRecordings()
+                        }
+
+                        QuickSettingChip {
+                            width: actionTiles.cellWidth(this)
+                            height: root.dashboardTileHeight
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: "󰑓"
+                            title: root.resetRunning ? "Restoring…" : "Restore defaults"
+                            shortcut: root.runtime.shellHint("SystemContent.reset")
+                            active: root.resetConfirmPending
+                            enabled: !root.resetRunning
+                            activeColor: root.theme.roleColor("warning")
+                            onActivated: root.resetConfirmPending = !root.resetConfirmPending
                         }
                     }
 
