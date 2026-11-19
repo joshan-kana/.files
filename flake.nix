@@ -766,19 +766,25 @@
           desktop-regressions =
             pkgs.runCommand "desktop-regression-tests"
               {
-                nativeBuildInputs = with pkgs; [
-                  nodejs
-                  python3
-                  bash
-                  nix
-                  vdirsyncer
-                ];
+                nativeBuildInputs =
+                  with pkgs;
+                  [
+                    nodejs
+                    python3
+                    bash
+                    nix
+                    vdirsyncer
+                  ]
+                  ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [ pkgs.kdePackages.qtdeclarative ];
               }
               ''
                 export HOME="$TMPDIR"
                 export NIX_CONFIG='experimental-features = nix-command flakes'
                 cd ${self.outPath}
                 node --test tests/test-*.js
+                ${lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
+                  QT_QPA_PLATFORM=offscreen qmltestrunner -input tests/qml -import ${pkgs.kdePackages.qtdeclarative}/lib/qt-6/qml -platform offscreen
+                ''}
                 python3 tests/test-desktop-scripts.py
                 python3 tests/test-palette-index.py
                 python3 tests/test-calendar-sync.py
