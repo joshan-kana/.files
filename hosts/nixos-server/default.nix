@@ -39,7 +39,6 @@ lib.recursiveUpdate (import ../../profiles/minimal.nix { inherit lib moduleRegis
   system = editScope moduleRegistry.system {
     boot.loader = { lib, ... }: {
       boot.loader = {
-        systemd-boot.configurationLimit = 10;
         timeout = lib.mkDefault 1;
       };
     };
