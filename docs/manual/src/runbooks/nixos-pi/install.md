@@ -117,6 +117,7 @@ read -r PI_SECRETS_SOURCE
 printf 'Backup bootstrap directory: '
 read -r PI_BACKUP_SOURCE
 [ -s "$PI_SECRETS_SOURCE/comin-github" ]
+[ -s "$PI_SECRETS_SOURCE/attic-token" ]
 [ -s "$PI_BACKUP_SOURCE/$(basename "$SECRETS_RCLONE_CONFIG")" ]
 [ -s "$PI_BACKUP_SOURCE/$(basename "$SECRETS_PASSWORD_FILE")" ]
 
@@ -135,9 +136,8 @@ if [ -n "$(find "$MNT/nix/store" -mindepth 1 -maxdepth 1 ! -uid 0 -print -quit)"
   exit 1
 fi
 install -d -m 0700 "$MNT$PRIMARY_HOME" "$MNT$USER_SECRETS_DIR"
-cp -LR -- "$PI_SECRETS_SOURCE/." "$MNT$USER_SECRETS_DIR/"
-find "$MNT$USER_SECRETS_DIR" -type d -exec chmod 0700 {} +
-find "$MNT$USER_SECRETS_DIR" -type f -exec chmod 0600 {} +
+install -m 0600 "$PI_SECRETS_SOURCE/comin-github" "$MNT$USER_SECRETS_DIR/comin-github"
+install -m 0600 "$PI_SECRETS_SOURCE/attic-token" "$MNT$USER_SECRETS_DIR/attic-token"
 install -d -m 0700 "$(dirname "$MNT$SECRETS_RCLONE_CONFIG")" "$(dirname "$MNT$SECRETS_PASSWORD_FILE")"
 install -m 0600 "$PI_BACKUP_SOURCE/$(basename "$SECRETS_RCLONE_CONFIG")" "$MNT$SECRETS_RCLONE_CONFIG"
 install -m 0600 "$PI_BACKUP_SOURCE/$(basename "$SECRETS_PASSWORD_FILE")" "$MNT$SECRETS_PASSWORD_FILE"
