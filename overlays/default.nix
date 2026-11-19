@@ -54,6 +54,7 @@ _: {
     ./seerr
     ./vial
     ./determinate-nix
+    ./fakeroot
     ./steam
     ./vlc
     ./dropbox

@@ -9,42 +9,26 @@
 {
   imports = [ "${modulesPath}/installer/sd-card/sd-image-aarch64.nix" ];
 
+  # Use the same explicit boot drivers as the installed host.
+  hardware.enableAllHardware = lib.mkForce false;
+
+  boot.supportedFilesystems = lib.mkForce {
+    btrfs = true;
+    vfat = true;
+  };
+
+  fileSystems = {
+    "/".fsType = lib.mkForce "btrfs";
+    "/boot/firmware".enable = lib.mkForce false;
+  };
+
   # Keep NixOS's SD-card firmware/U-Boot layout, but use Btrfs for the root
   # filesystem and resize it after extending the root partition at first boot.
   sdImage = {
     compressImage = false;
     firmwareSize = 512;
     rootVolumeLabel = "ROOT";
-    rootFilesystemCreator = modulesPath + "/../lib/make-btrfs-fs.nix";
-    # Older fakeroot releases miss nftw() ownership lookups used by mkfs.btrfs.
-    # Prefer nixpkgs again as soon as it includes the upstream correction.
-    rootFilesystemImage = pkgs.callPackage config.sdImage.rootFilesystemCreator (
-      {
-        inherit (config.sdImage) storePaths;
-        compressImage = config.sdImage.compressImage;
-        populateImageCommands = config.sdImage.populateRootCommands;
-        volumeLabel = config.sdImage.rootVolumeLabel;
-        fakeroot =
-          if lib.versionAtLeast pkgs.fakeroot.version "2.0" then
-            pkgs.fakeroot
-          else
-            pkgs.fakeroot.overrideAttrs {
-              version = "2.1.4";
-              src = pkgs.fetchurl {
-                url = "https://deb.debian.org/debian/pool/main/f/fakeroot/fakeroot_2.1.4.orig.tar.xz";
-                hash = "sha256-CCK9Wp8M8Z0roFRriLBDLU09mRfbYsV7dARMytugbkk=";
-              };
-              patches = [ ];
-              postUnpack =
-                builtins.replaceStrings [ "source/scripts/fakeroot.in" ] [ "$sourceRoot/scripts/fakeroot.in" ]
-                  pkgs.fakeroot.postUnpack;
-            };
-      }
-      // lib.optionalAttrs (config.sdImage.rootPartitionUUID != null) {
-        uuid = config.sdImage.rootPartitionUUID;
-      }
-    );
-    expandOnBoot = false;
+    rootFilesystemCreator = ./make-btrfs-fs.nix;
 
     # Ensure early-boot services resolve /var/run to the writable /run tmpfs.
     populateRootCommands = lib.mkAfter ''
@@ -71,33 +55,13 @@
     '';
   };
 
-  systemd.services.expand-root-partition = {
-    description = "Expand Raspberry Pi Btrfs root partition on first boot";
-    wantedBy = [ "sysinit.target" ];
-    unitConfig = {
-      DefaultDependencies = false;
-      ConditionPathExists = config.sdImage.nixPathRegistrationFile;
-    };
-    before = [
-      "sysinit.target"
-      "shutdown.target"
-      "register-nix-paths.service"
-    ];
-    after = [ "local-fs.target" ];
-    conflicts = [ "shutdown.target" ];
-    restartIfChanged = false;
-    serviceConfig = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-    };
-    script = ''
-      root_part=$(${lib.getExe' pkgs.util-linux "findmnt"} -n -o SOURCE /)
-      device=$(${lib.getExe' pkgs.util-linux "lsblk"} -npo PKNAME "$root_part")
-      partition=$(${lib.getExe' pkgs.util-linux "lsblk"} -nro PARTN "$root_part")
-      test -n "$partition"
-      printf ',+,\n' | ${lib.getExe' pkgs.util-linux "sfdisk"} -N "$partition" --no-reread "$device"
-      ${lib.getExe' pkgs.util-linux "partx"} -u -n "$partition" "$device"
-      ${lib.getExe' pkgs.btrfs-progs "btrfs"} filesystem resize max /
-    '';
-  };
+  systemd.services.expand-root-partition.script = lib.mkForce ''
+    rootPart=$(${lib.getExe' pkgs.util-linux "findmnt"} -n -o SOURCE /)
+    device=$(${lib.getExe' pkgs.util-linux "lsblk"} -npo PKNAME "$rootPart")
+    partition=$(${lib.getExe' pkgs.util-linux "lsblk"} -nro PARTN "$rootPart")
+    test -n "$partition"
+    printf ',+,\n' | ${lib.getExe' pkgs.util-linux "sfdisk"} -N "$partition" --no-reread "$device"
+    ${lib.getExe' pkgs.util-linux "partx"} -u -n "$partition" "$device"
+    ${lib.getExe' pkgs.btrfs-progs "btrfs"} filesystem resize max /
+  '';
 }
