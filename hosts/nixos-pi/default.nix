@@ -9,6 +9,11 @@
 lib.recursiveUpdate (import ../../profiles/workstation.nix { inherit moduleRegistry; }) {
   hardware = import ./hardware.nix;
 
+  # Qt Widgets styles are not Qt Quick Controls modules; importing
+  # Kvantum as a QML style prevents Plasma wallpaper and panels loading.
+  home-manager.users.${config.dotfiles.users.primary.name}.home.sessionVariables.QT_STYLE_OVERRIDE =
+    lib.mkForce "";
+
   # The Pi boots through firmware/U-Boot instead of an EFI boot manager.
   boot.loader = {
     grub.enable = false;

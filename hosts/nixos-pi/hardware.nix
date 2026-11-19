@@ -4,6 +4,9 @@
   hardware.enableRedistributableFirmware = true;
   hardware.graphics.enable = true;
 
+  # KWin needs more contiguous scanout memory at 2560x1440.
+  boot.kernelParams = [ "cma=256M" ];
+
   boot.supportedFilesystems = {
     btrfs = true;
     zfs = lib.mkForce false;
