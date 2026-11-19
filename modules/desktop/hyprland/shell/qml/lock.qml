@@ -25,24 +25,24 @@ ShellRoot {
     }
 
     RuntimeConfig {
-        id: runtime
+        id: qmlRuntime
     }
 
     Theme {
-        id: theme
-        runtime: runtime
+        id: qmlTheme
+        runtime: qmlRuntime
     }
 
     Motion {
-        id: motion
-        runtime: runtime
+        id: qmlMotion
+        runtime: qmlRuntime
     }
 
     LockScreen {
         id: lockScreen
-        runtime: runtime
-        theme: theme
-        motion: motion
+        runtime: qmlRuntime
+        theme: qmlTheme
+        motion: qmlMotion
     }
 
     function stopLockService(): void {

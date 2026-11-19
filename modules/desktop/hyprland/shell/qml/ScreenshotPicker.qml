@@ -24,12 +24,12 @@ Item {
     readonly property string audioLabel: audioMode === "system" ? "SYSTEM AUDIO" : audioMode === "microphone" ? "MICROPHONE" : "NO AUDIO"
     property string snapshotPath: ""
     property string statusText: ""
-    readonly property bool freezeEnabled: capturePreferences.preferenceSource === "default" ? runtime.captureFreezeEnabled : capturePreferences.freezeEnabled
+    readonly property bool freezeEnabled: qmlCapturePreferences.preferenceSource === "default" ? runtime.captureFreezeEnabled : qmlCapturePreferences.freezeEnabled
     property bool frozenForCapture: true
     property bool modeSnapshotPending: false
     property bool liveExportPending: false
     property Settings capturePreferences: Settings {
-        id: capturePreferences
+        id: qmlCapturePreferences
         location: "file://" + (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/linux-desktop/preferences.ini"
         category: "Capture"
         property bool freezeEnabled: picker.runtime.captureFreezeEnabled
@@ -108,30 +108,30 @@ Item {
     }
 
     Component.onCompleted: {
-        if (capturePreferences.preferenceSource !== "")
+        if (qmlCapturePreferences.preferenceSource !== "")
             return;
         // Preserve explicitly stored values from older settings files.
-        capturePreferences.preferenceSource = capturePreferences.value("freezeEnabled", null) === null ? "default" : "user";
-        capturePreferences.setValue("preferenceSource", capturePreferences.preferenceSource);
-        capturePreferences.sync();
+        qmlCapturePreferences.preferenceSource = qmlCapturePreferences.value("freezeEnabled", null) === null ? "default" : "user";
+        qmlCapturePreferences.setValue("preferenceSource", qmlCapturePreferences.preferenceSource);
+        qmlCapturePreferences.sync();
     }
 
     function resetToDeclared(): void {
-        capturePreferences.preferenceSource = "default";
-        capturePreferences.setValue("preferenceSource", "default");
-        capturePreferences.sync();
+        qmlCapturePreferences.preferenceSource = "default";
+        qmlCapturePreferences.setValue("preferenceSource", "default");
+        qmlCapturePreferences.sync();
     }
 
     function toggleFreeze(): void {
         if (selectionMode === "record" || exporting)
             return;
-        capturePreferences.freezeEnabled = !freezeEnabled;
-        capturePreferences.setValue("freezeEnabled", capturePreferences.freezeEnabled);
-        capturePreferences.preferenceSource = "user";
-        capturePreferences.setValue("preferenceSource", "user");
-        capturePreferences.sync();
+        qmlCapturePreferences.freezeEnabled = !freezeEnabled;
+        qmlCapturePreferences.setValue("freezeEnabled", qmlCapturePreferences.freezeEnabled);
+        qmlCapturePreferences.preferenceSource = "user";
+        qmlCapturePreferences.setValue("preferenceSource", "user");
+        qmlCapturePreferences.sync();
         initialiseSelection = false;
-        if (!capturePreferences.freezeEnabled) {
+        if (!qmlCapturePreferences.freezeEnabled) {
             modeSnapshotDelay.stop();
             modeRevealDelay.stop();
             modeSnapshotPending = false;

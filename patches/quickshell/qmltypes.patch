@@ -115,3 +115,105 @@
          isCreatable: false
          exportMetaObjectRevisions: [0]
          Property {
+--- a/Quickshell/_Window/quickshell-window.qmltypes
++++ b/Quickshell/_Window/quickshell-window.qmltypes
+@@ -809,8 +809,6 @@
+             Parameter { name: "height"; type: "double" }
+         }
+     }
+-    Component { isTypeOpaque: true; name: "Margins"; accessSemantics: "value" }
+     Component { isTypeOpaque: true; name: "PendingRegion"; accessSemantics: "value" }
+     Component { isTypeOpaque: true; name: "PopupAnchor"; accessSemantics: "value" }
+-    Component { isTypeOpaque: true; name: "QuickshellScreenInfo"; accessSemantics: "value" }
+ }
+--- a/Quickshell/Wayland/quickshell-wayland.qmltypes
++++ b/Quickshell/Wayland/quickshell-wayland.qmltypes
+@@ -131,5 +131,12 @@
+         Method { name: "onWidthChanged"; lineNumber: 183 }
+         Method { name: "onHeightChanged"; lineNumber: 184 }
+     }
+-    Component { isTypeOpaque: true; name: "QuickshellScreenInfo"; accessSemantics: "value" }
++    Component {
++        name: "QuickshellScreenInfo"
++        accessSemantics: "reference"
++        exports: ["Quickshell.Wayland/QuickshellScreenInfo 0.0"]
++        Property { name: "name"; type: "QString"; isReadonly: true }
++        Property { name: "width"; type: "int"; isReadonly: true }
++        Property { name: "height"; type: "int"; isReadonly: true }
++    }
+ }
+--- a/Quickshell/Services/SystemTray/quickshell-service-statusnotifier.qmltypes
++++ b/Quickshell/Services/SystemTray/quickshell-service-statusnotifier.qmltypes
+@@ -208,7 +208,6 @@
+             Parameter { name: "relativeY"; type: "int" }
+         }
+     }
+-    Component { isTypeOpaque: true; name: "UntypedObjectModel"; accessSemantics: "value" }
+     Component {
+         isTypeOpaque: true
+         name: "qs::dbus::dbusmenu::DBusMenuHandle"
+--- a/Quickshell/Networking/quickshell-network.qmltypes
++++ b/Quickshell/Networking/quickshell-network.qmltypes
+@@ -612,5 +612,5 @@
+         Signal { name: "hasLinkChanged"; lineNumber: 43 }
+     }
+     Component { isTypeOpaque: true; name: "QList<NMSettings*>"; accessSemantics: "value" }
+-    Component { isTypeOpaque: true; name: "UntypedObjectModel"; accessSemantics: "value" }
++
+ }
+--- a/Quickshell/Bluetooth/quickshell-bluetooth.qmltypes
++++ b/Quickshell/Bluetooth/quickshell-bluetooth.qmltypes
+@@ -408,5 +408,5 @@
+         }
+         Signal { name: "defaultAdapterChanged"; lineNumber: 80 }
+     }
+-    Component { isTypeOpaque: true; name: "UntypedObjectModel"; accessSemantics: "value" }
++
+ }
+--- a/Quickshell/Services/Notifications/quickshell-service-notifications.qmltypes
++++ b/Quickshell/Services/Notifications/quickshell-service-notifications.qmltypes
+@@ -443,5 +443,5 @@
+         name: "QList<qs::service::notifications::NotificationAction*>"
+         accessSemantics: "value"
+     }
+-    Component { isTypeOpaque: true; name: "UntypedObjectModel"; accessSemantics: "value" }
++
+ }
+--- a/Quickshell/Services/UPower/quickshell-service-upower.qmltypes
++++ b/Quickshell/Services/UPower/quickshell-service-upower.qmltypes
+@@ -458,5 +458,5 @@
+         }
+         Signal { name: "onBatteryChanged"; lineNumber: 94 }
+     }
+-    Component { isTypeOpaque: true; name: "UntypedObjectModel"; accessSemantics: "value" }
++
+ }
+--- a/Quickshell/Services/Pipewire/quickshell-service-pipewire.qmltypes
++++ b/Quickshell/Services/Pipewire/quickshell-service-pipewire.qmltypes
+@@ -643,7 +643,7 @@
+             Parameter { name: "object"; type: "QObject"; isPointer: true }
+         }
+     }
+-    Component { isTypeOpaque: true; name: "UntypedObjectModel"; accessSemantics: "value" }
++
+     Component {
+         isTypeOpaque: true
+         name: "qs::service::pipewire::PwNodeType::Flags"
+--- a/Quickshell/Services/Mpris/quickshell-service-mpris.qmltypes
++++ b/Quickshell/Services/Mpris/quickshell-service-mpris.qmltypes
+@@ -526,5 +526,5 @@
+             isPropertyConstant: true
+         }
+     }
+-    Component { isTypeOpaque: true; name: "UntypedObjectModel"; accessSemantics: "value" }
++
+ }
+--- a/Quickshell/Wayland/_ToplevelManagement/quickshell-wayland-toplevel-management.qmltypes
++++ b/Quickshell/Wayland/_ToplevelManagement/quickshell-wayland-toplevel-management.qmltypes
+@@ -151,5 +151,5 @@
+     }
+     Component { isTypeOpaque: true; name: "QList<QuickshellScreenInfo*>"; accessSemantics: "value" }
+     Component { isTypeOpaque: true; name: "QuickshellScreenInfo"; accessSemantics: "value" }
+-    Component { isTypeOpaque: true; name: "UntypedObjectModel"; accessSemantics: "value" }
++
+ }

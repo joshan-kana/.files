@@ -9,7 +9,7 @@ QtObject {
 
     signal themeChanged
     property alias jsonAdapter: data
-    property alias themeAdapter: themeData
+    readonly property var themeAdapter: themeData
     readonly property var configData: root.jsonAdapter
 
     readonly property string terminal: root.configData.defaults.terminal

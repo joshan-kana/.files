@@ -35,7 +35,7 @@ PanelWindow {
     }
     readonly property var frameBounds: ({
             x: screen ? (screen.width - width) / 2 : 0,
-            y: margins.top,
+            y: effectiveTopOffset,
             width: width,
             height: height * attachmentProgress,
             visible: frameConnected && attachmentProgress > 0.001
@@ -50,7 +50,8 @@ PanelWindow {
     implicitHeight: Math.min(Math.max(1, (screen ? screen.height : 700) - theme.panelTopOffset * 2), Math.max(1, statusContent.implicitHeight))
     readonly property real topOffset: frameConnected ? (barVisible ? theme.barInsetTop : theme.frameThickness) : theme.panelTopOffset
     anchors.top: true
-    margins.top: hubVisible && hubBounds.visible && hubBounds.y + hubBounds.height + implicitHeight + theme.spacing3 < (screen ? screen.height : 1000) ? hubBounds.y + hubBounds.height + theme.spacing3 : topOffset
+    readonly property real effectiveTopOffset: hubVisible && hubBounds.visible && hubBounds.y + hubBounds.height + implicitHeight + theme.spacing3 < (screen ? screen.height : 1000) ? hubBounds.y + hubBounds.height + theme.spacing3 : topOffset
+    margins.top: effectiveTopOffset
     WlrLayershell.namespace: "linux-desktop-status-inspection"
     WlrLayershell.layer: screenFullscreen ? WlrLayer.Overlay : WlrLayer.Top
     // Inspection owns the keyboard while visible, including when opened from

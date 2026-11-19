@@ -69,7 +69,7 @@ test("connected bar returns the actual clock island only near completion", () =>
   );
   assert.match(
     shell,
-    /dockOrigin: ambientBar\.originFor\(expansionState\.screen/,
+    /dockOrigin: qmlAmbientBar\.originFor\(qmlExpansionState\.screen/,
   );
   assert.match(shell, /expansionHost\.clockReveal < 0\.05/);
 });

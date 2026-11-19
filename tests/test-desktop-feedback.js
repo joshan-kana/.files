@@ -170,7 +170,7 @@ test("active resize owns local inspection and reports observed geometry", () => 
   assert.doesNotMatch(resize, /lastAction = `\$\{x > 0 \?/);
   assert.match(
     shell,
-    /screen: root\.resizeTargetScreen \|\| screens\.focusedScreen/,
+    /screen: root\.resizeTargetScreen \|\| qmlScreens\.focusedScreen/,
   );
 });
 
@@ -205,7 +205,7 @@ test("OSD and modes use the shared upper frame anchor without overlapping", () =
   );
   assert.match(
     shell,
-    /suspended: statusPeek\.open \|\| resizeOverlay\.open \|\| expansionState\.hasCurrent/,
+    /suspended: statusPeek\.open \|\| resizeOverlay\.open \|\| qmlExpansionState\.hasCurrent/,
   );
   assert.match(frame, /\[args\[9\], args\[10\], args\[11\]\]/);
   assert.match(read("StatusPeek.qml"), /frameEnabled && !hubVisible/);
@@ -268,9 +268,9 @@ test("compositor input modes have a canonical exit and persistent semantic feedb
   assert.match(osd, /if \(kindName === "mode"\)\s*hideTimer\.stop\(\)/);
   assert.match(
     popup,
-    /shortcut: popup\.runtime\.shortcutHint\("passthruExit"\)/,
+    /shortcut: qmlPopup\.runtime\.shortcutHint\("passthruExit"\)/,
   );
-  assert.match(popup, /popup\.osd\.kind === "mode" \? "ACTIVE"/);
+  assert.match(popup, /qmlPopup\.osd\.kind === "mode" \? "ACTIVE"/);
   assert.match(
     compositor,
     /passthru\.settings\.bind = map renderBinding passthruKeybindings/,

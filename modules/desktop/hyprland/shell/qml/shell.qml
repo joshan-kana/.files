@@ -11,25 +11,25 @@ import Quickshell.Wayland
 ShellRoot {
     id: root
 
-    readonly property RuntimeConfig runtimeRef: runtime
-    readonly property Theme themeRef: theme
-    readonly property Motion motionRef: motion
-    readonly property MediaState mediaRef: media
-    readonly property SpectrumState spectrumRef: spectrum
-    readonly property SystemState systemRef: system
+    readonly property RuntimeConfig runtimeRef: qmlRuntime
+    readonly property Theme themeRef: qmlTheme
+    readonly property Motion motionRef: qmlMotion
+    readonly property MediaState mediaRef: qmlMedia
+    readonly property SpectrumState spectrumRef: qmlSpectrum
+    readonly property SystemState systemRef: qmlSystem
     readonly property ResourceState resourcesRef: resources
-    readonly property PowerProfileState powerProfileRef: powerProfile
-    readonly property BrightnessState brightnessRef: brightness
+    readonly property PowerProfileState powerProfileRef: qmlPowerProfile
+    readonly property BrightnessState brightnessRef: qmlBrightness
     readonly property NightLightState nightLightRef: nightLight
     readonly property WeatherState weatherRef: weather
     readonly property NotificationState notificationsRef: notifications
 
-    readonly property bool wallpaperSpectrumEnabled: appearance.wallpaperSpectrumEnabled
-    readonly property bool musicReactiveEnabled: appearance.musicReactiveEnabled
+    readonly property bool wallpaperSpectrumEnabled: qmlAppearance.wallpaperSpectrumEnabled
+    readonly property bool musicReactiveEnabled: qmlAppearance.musicReactiveEnabled
 
     // A saved appearance preference is not a reason to animate invisible UI.
     // Demand comes from the actual shared shell surfaces that can be seen.
-    readonly property bool musicReactiveSurfaceVisible: musicReactiveEnabled && (desktopFrame.glassExposed || ambientBar.shown || expansionState.hasCurrent || expansionHost.closing || modalHost.contentVisible || notifications.popupVisible || osd.visible || osdPopup.closing || resizeOverlay.open || resizeOverlay.closing)
+    readonly property bool musicReactiveSurfaceVisible: musicReactiveEnabled && (desktopFrame.glassExposed || qmlAmbientBar.shown || qmlExpansionState.hasCurrent || expansionHost.closing || modalHost.contentVisible || notifications.popupVisible || qmlOsd.visible || osdPopup.closing || resizeOverlay.open || resizeOverlay.closing)
 
     property var statusTargetScreen: null
     property var resizeTargetScreen: null
@@ -37,71 +37,71 @@ ShellRoot {
         if (resizeOverlay.open) {
             resizeOverlay.inspectOpen = !resizeOverlay.inspectOpen;
             if (resizeOverlay.inspectOpen)
-                keyboard.refresh("inspect");
+                qmlKeyboard.refresh("inspect");
             return;
         }
         if (statusPeek.open) {
             statusPeek.open = false;
             return;
         }
-        statusTargetScreen = targetScreen || screens.focusedScreen;
+        statusTargetScreen = targetScreen || qmlScreens.focusedScreen;
         statusPeek.open = true;
     }
     function toggleBar(): void {
-        appearance.toggleBar();
+        qmlAppearance.toggleBar();
     }
 
     AppearancePreferences {
-        id: appearance
-        runtime: runtime
+        id: qmlAppearance
+        runtime: qmlRuntime
         frameGlassExposed: desktopFrame.glassExposed
-        expansionGlassExposed: expansionState.hasCurrent || expansionHost.closing
+        expansionGlassExposed: qmlExpansionState.hasCurrent || expansionHost.closing
         modalGlassExposed: modalHost.contentVisible
         // Popup ownership includes closing cards until their exit completes.
         // NotificationPopup has no separate closing property.
         notificationGlassExposed: notifications.popupVisible
-        osdGlassExposed: osd.visible || osdPopup.closing
+        osdGlassExposed: qmlOsd.visible || osdPopup.closing
         resizeGlassExposed: resizeOverlay.open || resizeOverlay.closing
     }
 
     RuntimeConfig {
-        id: runtime
+        id: qmlRuntime
     }
 
     Theme {
-        id: theme
-        runtime: runtime
+        id: qmlTheme
+        runtime: qmlRuntime
         musicReactiveEnabled: root.musicReactiveSurfaceVisible
-        shellGlassEnabled: appearance.shellGlassEnabled
-        glassOpacity: appearance.glassOpacity
+        shellGlassEnabled: qmlAppearance.shellGlassEnabled
+        glassOpacity: qmlAppearance.glassOpacity
         musicReactiveEnergy: reactive.sustain
         musicReactiveBeat: reactive.beatPulse
         musicReactiveTreble: reactive.treble
     }
 
     Motion {
-        id: motion
-        runtime: runtime
+        id: qmlMotion
+        runtime: qmlRuntime
     }
 
     ScreenRouter {
-        id: screens
+        id: qmlScreens
     }
 
     PolkitDialog {
         runtime: root.runtimeRef
         theme: root.themeRef
         motion: root.motionRef
-        screens: screens
+        screens: qmlScreens
     }
 
     WeatherState {
         id: weather
-        runtime: runtime
+        runtime: qmlRuntime
     }
 
     ShellExpansionState {
-        id: expansionState
+        id: qmlExpansionState
     }
 
     // Retain the outgoing view until the host finishes its closing morph.
@@ -110,15 +110,15 @@ ShellRoot {
         id: mediaExpansionComponent
 
         MediaContent {
-            appearance: appearance
+            appearance: qmlAppearance
             media: root.mediaRef
             spectrum: root.spectrumRef
             runtime: root.runtimeRef
             theme: root.themeRef
             motion: root.motionRef
-            engaged: expansionState.currentName === "media"
-            returnToControls: expansionState.backDestination === "controls"
-            onCloseRequested: expansionState.back()
+            engaged: qmlExpansionState.currentName === "media"
+            returnToControls: qmlExpansionState.backDestination === "controls"
+            onCloseRequested: qmlExpansionState.back()
         }
     }
 
@@ -130,9 +130,9 @@ ShellRoot {
             theme: root.themeRef
             motion: root.motionRef
             weather: root.weatherRef
-            engaged: expansionState.currentName === "calendar"
+            engaged: qmlExpansionState.currentName === "calendar"
             onForecastRequested: actions.toggleWeather()
-            onCloseRequested: expansionState.close()
+            onCloseRequested: qmlExpansionState.close()
         }
     }
 
@@ -144,9 +144,9 @@ ShellRoot {
             theme: root.themeRef
             motion: root.motionRef
             weather: root.weatherRef
-            engaged: expansionState.currentName === "weather"
-            onCalendarRequested: actions.toggleCalendar(expansionState.screen)
-            onCloseRequested: expansionState.back()
+            engaged: qmlExpansionState.currentName === "weather"
+            onCalendarRequested: actions.toggleCalendar(qmlExpansionState.screen)
+            onCloseRequested: qmlExpansionState.back()
         }
     }
 
@@ -154,7 +154,7 @@ ShellRoot {
         id: systemExpansionComponent
 
         SystemContent {
-            appearance: appearance
+            appearance: qmlAppearance
             runtime: root.runtimeRef
             theme: root.themeRef
             motion: root.motionRef
@@ -168,27 +168,27 @@ ShellRoot {
             powerProfile: root.powerProfileRef
             wallpaperSpectrumEnabled: root.wallpaperSpectrumEnabled
             musicReactiveEnabled: root.musicReactiveEnabled
-            barVisible: appearance.barVisible
-            frameVisible: appearance.frameVisible
-            windowTransparencyEnabled: appearance.windowTransparencyEnabled
-            shellGlassEnabled: appearance.shellGlassEnabled
-            engaged: expansionState.currentName === "system"
-            onWallpaperSpectrumToggleRequested: appearance.toggleWallpaperSpectrum()
-            onMusicReactiveToggleRequested: appearance.toggleMusicReactive()
-            onBarToggleRequested: appearance.toggleBar()
-            onFrameToggleRequested: appearance.toggleFrame()
-            onWindowTransparencyToggleRequested: appearance.toggleWindowTransparency()
-            onShellGlassToggleRequested: appearance.toggleShellGlass()
+            barVisible: qmlAppearance.barVisible
+            frameVisible: qmlAppearance.frameVisible
+            windowTransparencyEnabled: qmlAppearance.windowTransparencyEnabled
+            shellGlassEnabled: qmlAppearance.shellGlassEnabled
+            engaged: qmlExpansionState.currentName === "system"
+            onWallpaperSpectrumToggleRequested: qmlAppearance.toggleWallpaperSpectrum()
+            onMusicReactiveToggleRequested: qmlAppearance.toggleMusicReactive()
+            onBarToggleRequested: qmlAppearance.toggleBar()
+            onFrameToggleRequested: qmlAppearance.toggleFrame()
+            onWindowTransparencyToggleRequested: qmlAppearance.toggleWindowTransparency()
+            onShellGlassToggleRequested: qmlAppearance.toggleShellGlass()
             onRestoreDefaultsRequested: {
-                appearance.resetToDeclared();
-                motion.resetToDeclared();
+                qmlAppearance.resetToDeclared();
+                qmlMotion.resetToDeclared();
                 screenshotPicker.resetToDeclared();
             }
-            requestedView: expansionState.currentView
-            returnToControls: expansionState.backDestination === "controls"
-            onBackRequested: expansionState.back()
-            onDetailRequested: view => expansionState.enterDetail(view)
-            onCloseRequested: expansionState.close()
+            requestedView: qmlExpansionState.currentView
+            returnToControls: qmlExpansionState.backDestination === "controls"
+            onBackRequested: qmlExpansionState.back()
+            onDetailRequested: view => qmlExpansionState.enterDetail(view)
+            onCloseRequested: qmlExpansionState.close()
             onMediaRequested: actions.toggleMedia()
         }
     }
@@ -201,23 +201,23 @@ ShellRoot {
             runtime: root.runtimeRef
             theme: root.themeRef
             motion: root.motionRef
-            engaged: expansionState.currentName === "activity"
-            onCloseRequested: expansionState.close()
+            engaged: qmlExpansionState.currentName === "activity"
+            onCloseRequested: qmlExpansionState.close()
         }
     }
 
     ShellExpansionHost {
         id: expansionHost
-        runtime: runtime
-        theme: theme
-        motion: motion
-        frameEnabled: appearance.frameVisible
-        barVisible: appearance.barVisible
-        recordingState: recording
+        runtime: qmlRuntime
+        theme: qmlTheme
+        motion: qmlMotion
+        frameEnabled: qmlAppearance.frameVisible
+        barVisible: qmlAppearance.barVisible
+        recordingState: qmlRecording
         onRecordingStopRequested: actions.toggleRecording()
-        dockOrigin: ambientBar.originFor(expansionState.screen || Quickshell.screens[0], "system")
-        expansionState: expansionState
-        barWindows: ambientBar.instances
+        dockOrigin: qmlAmbientBar.originFor(qmlExpansionState.screen || Quickshell.screens[0], "system")
+        expansionState: qmlExpansionState
+        barWindows: qmlAmbientBar.instances
         mediaComponent: mediaExpansionComponent
         systemComponent: systemExpansionComponent
         calendarComponent: calendarExpansionComponent
@@ -226,59 +226,59 @@ ShellRoot {
     }
 
     MediaState {
-        id: media
-        appearance: appearance
+        id: qmlMedia
+        appearance: qmlAppearance
     }
 
     SystemState {
-        id: system
+        id: qmlSystem
     }
 
     PowerProfileState {
-        id: powerProfile
+        id: qmlPowerProfile
         active: true
     }
 
     ResourceState {
         id: resources
-        runtime: runtime
-        active: expansionState.hasCurrent && expansionState.currentName === "system" && expansionHost.systemContent !== null && expansionHost.systemContent.resourcesOpen
+        runtime: qmlRuntime
+        active: qmlExpansionState.hasCurrent && qmlExpansionState.currentName === "system" && expansionHost.systemContent !== null && expansionHost.systemContent.resourcesOpen
     }
 
     BrightnessState {
-        id: brightness
-        runtime: runtime
+        id: qmlBrightness
+        runtime: qmlRuntime
     }
 
     NightLightState {
         id: nightLight
-        runtime: runtime
+        runtime: qmlRuntime
     }
 
     KeyboardState {
-        id: keyboard
-        runtime: runtime
+        id: qmlKeyboard
+        runtime: qmlRuntime
     }
 
     InteractionModeState {
-        id: interactionMode
+        id: qmlInteractionMode
     }
 
     OsdState {
-        id: osd
-        system: system
-        brightness: brightness
-        keyboard: keyboard
-        interactionMode: interactionMode
-        screens: screens
-        runtime: runtime
+        id: qmlOsd
+        system: qmlSystem
+        brightness: qmlBrightness
+        keyboard: qmlKeyboard
+        interactionMode: qmlInteractionMode
+        screens: qmlScreens
+        runtime: qmlRuntime
     }
 
     NotificationState {
         id: notifications
-        runtime: runtime
-        preferredOutput: screens.focusedScreen ? screens.focusedScreen.name : ""
-        outputFullscreen: !!(Hyprland.monitorFor(screens.focusedScreen)?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 0) ?? false)
+        runtime: qmlRuntime
+        preferredOutput: qmlScreens.focusedScreen ? qmlScreens.focusedScreen.name : ""
+        outputFullscreen: !!(Hyprland.monitorFor(qmlScreens.focusedScreen)?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 0) ?? false)
     }
 
     Connections {
@@ -290,13 +290,13 @@ ShellRoot {
     }
 
     RecordingState {
-        id: recording
+        id: qmlRecording
     }
 
     SpectrumState {
-        id: spectrum
+        id: qmlSpectrum
         // No DSP client unless a visible spectrum consumer needs live audio.
-        active: (media.playing && ambientBar.shown) || (expansionState.hasCurrent && (expansionState.currentName === "system" || expansionState.currentName === "media")) || root.wallpaperSpectrumEnabled || root.musicReactiveSurfaceVisible
+        active: (qmlMedia.playing && qmlAmbientBar.shown) || (qmlExpansionState.hasCurrent && (qmlExpansionState.currentName === "system" || qmlExpansionState.currentName === "media")) || root.wallpaperSpectrumEnabled || root.musicReactiveSurfaceVisible
     }
 
     MusicReactiveState {
@@ -316,9 +316,9 @@ ShellRoot {
         id: desktopFrame
         theme: root.themeRef
         motion: root.motionRef
-        enabled: appearance.frameVisible
-        barVisible: appearance.barVisible
-        islands: ambientBar.frameIslands
+        enabled: qmlAppearance.frameVisible
+        barVisible: qmlAppearance.barVisible
+        islands: qmlAmbientBar.frameIslands
         hub: expansionHost.frameBounds
         hubScreen: expansionHost.screen
         toastByOutput: notifications.frameDocksByOutput
@@ -329,30 +329,30 @@ ShellRoot {
         inspection: statusPeek.frameBounds
         inspectionScreen: statusPeek.screen
         busy: !!expansionHost.loadingOperationVisible
-        busyScreen: expansionState.screen
+        busyScreen: qmlExpansionState.screen
     }
 
     AmbientBar {
-        id: ambientBar
+        id: qmlAmbientBar
         onSystemStatusRequested: screen => root.toggleStatusInspection(screen)
         // The expanding hub consumes the clock island throughout the whole
         // opening and closing transition, not only while Controls is active.
         // Let the clock join the frame while the hub finishes retracting.
-        controlsExpanded: expansionState.hasCurrent || (expansionHost.closing && expansionHost.clockReveal < 0.05) || resizeOverlay.open || resizeOverlay.closing || statusPeek.open || (osd.visible && !osdPopup.suspended)
+        controlsExpanded: qmlExpansionState.hasCurrent || (expansionHost.closing && expansionHost.clockReveal < 0.05) || resizeOverlay.open || resizeOverlay.closing || statusPeek.open || (qmlOsd.visible && !osdPopup.suspended)
         hubBounds: expansionHost.frameBounds
         hubScreen: expansionHost.screen
-        clockReveal: resizeOverlay.open || resizeOverlay.closing || statusPeek.open || (osd.visible && !osdPopup.suspended) ? 0 : expansionHost.clockReveal
-        shown: appearance.barVisible
-        frameVisible: appearance.frameVisible
-        runtime: runtime
-        theme: theme
-        motion: motion
-        media: media
-        spectrum: spectrum
-        system: system
-        powerProfile: powerProfile
+        clockReveal: resizeOverlay.open || resizeOverlay.closing || statusPeek.open || (qmlOsd.visible && !osdPopup.suspended) ? 0 : expansionHost.clockReveal
+        shown: qmlAppearance.barVisible
+        frameVisible: qmlAppearance.frameVisible
+        runtime: qmlRuntime
+        theme: qmlTheme
+        motion: qmlMotion
+        media: qmlMedia
+        spectrum: qmlSpectrum
+        system: qmlSystem
+        powerProfile: qmlPowerProfile
         notificationState: notifications
-        recordingState: recording
+        recordingState: qmlRecording
         onRecordingStopRequested: actions.toggleRecording()
         onMediaRequested: (screen, origin) => actions.toggleMedia(screen, origin)
         onSystemRequested: (screen, origin) => actions.toggleSystem(screen, origin)
@@ -363,11 +363,11 @@ ShellRoot {
 
     ModalSurfaceHost {
         id: modalHost
-        screens: screens
-        clipboardPanel: clipboardPanel
-        launcher: launcher
-        overviewPanel: overviewPanel
-        cheatsheet: cheatsheet
+        screens: qmlScreens
+        clipboardPanel: qmlClipboardPanel
+        launcher: qmlLauncher
+        overviewPanel: qmlOverviewPanel
+        cheatsheet: qmlCheatsheet
     }
 
     // Capture needs a full display, unlike the compact persistent modal. Map
@@ -383,7 +383,7 @@ ShellRoot {
         onHeightChanged: checkGeometry()
         onScreenChanged: checkGeometry()
         Component.onCompleted: checkGeometry()
-        screen: screenshotPicker.captureScreen || screens.focusedScreen || Quickshell.screens[0]
+        screen: screenshotPicker.captureScreen || qmlScreens.focusedScreen || Quickshell.screens[0]
         visible: open
         implicitWidth: screen ? screen.width : 2560
         implicitHeight: screen ? screen.height : 1440
@@ -434,52 +434,52 @@ ShellRoot {
     }
 
     ShortcutCheatsheet {
-        id: cheatsheet
+        id: qmlCheatsheet
         parent: modalHost.contentItem
-        screen: screens.focusedScreen
-        runtime: runtime
-        theme: theme
-        motion: motion
+        screen: qmlScreens.focusedScreen
+        runtime: qmlRuntime
+        theme: qmlTheme
+        motion: qmlMotion
     }
 
     ClipboardPanel {
-        id: clipboardPanel
+        id: qmlClipboardPanel
         parent: modalHost.contentItem
-        screen: screens.focusedScreen
-        runtime: runtime
-        theme: theme
-        motion: motion
+        screen: qmlScreens.focusedScreen
+        runtime: qmlRuntime
+        theme: qmlTheme
+        motion: qmlMotion
     }
 
     ScreenshotPicker {
         id: screenshotPicker
         parent: captureHost.contentItem
         surfaceReady: captureHost.geometryStable
-        runtime: runtime
-        theme: theme
-        motion: motion
+        runtime: qmlRuntime
+        theme: qmlTheme
+        motion: qmlMotion
         onSnapshotReady: actions.hideTransient("")
     }
 
     OverviewPanel {
-        id: overviewPanel
+        id: qmlOverviewPanel
         parent: modalHost.contentItem
-        screen: screens.focusedScreen
-        runtime: runtime
-        theme: theme
-        motion: motion
+        screen: qmlScreens.focusedScreen
+        runtime: qmlRuntime
+        theme: qmlTheme
+        motion: qmlMotion
     }
 
     ResizeOverlay {
         id: resizeOverlay
-        screen: root.resizeTargetScreen || screens.focusedScreen
-        keyboard: keyboard
-        system: system
-        frameEnabled: appearance.frameVisible
-        barVisible: appearance.barVisible
-        runtime: runtime
-        theme: theme
-        motion: motion
+        screen: root.resizeTargetScreen || qmlScreens.focusedScreen
+        keyboard: qmlKeyboard
+        system: qmlSystem
+        frameEnabled: qmlAppearance.frameVisible
+        barVisible: qmlAppearance.barVisible
+        runtime: qmlRuntime
+        theme: qmlTheme
+        motion: qmlMotion
     }
 
     // A single freedesktop server serves bounded, independent toast layouts
@@ -487,11 +487,11 @@ ShellRoot {
     // keyboard focus changes; no popup Wayland surface teleports.
     NotificationPopups {
         notificationState: notifications
-        runtime: runtime
-        theme: theme
-        motion: motion
-        frameEnabled: appearance.frameVisible
-        hubVisible: expansionState.hasCurrent || expansionHost.closing
+        runtime: qmlRuntime
+        theme: qmlTheme
+        motion: qmlMotion
+        frameEnabled: qmlAppearance.frameVisible
+        hubVisible: qmlExpansionState.hasCurrent || expansionHost.closing
         hubScreen: expansionHost.screen
         hubBounds: expansionHost.frameBounds
         onCenterRequested: screen => actions.showNotifications(screen)
@@ -499,44 +499,44 @@ ShellRoot {
 
     StatusPeek {
         id: statusPeek
-        screen: root.statusTargetScreen || screens.focusedScreen
-        runtime: runtime
-        theme: theme
-        motion: motion
-        system: system
-        keyboard: keyboard
-        brightness: brightness
-        recording: recording
-        frameEnabled: appearance.frameVisible
-        barVisible: appearance.barVisible
-        hubVisible: expansionState.hasCurrent
+        screen: root.statusTargetScreen || qmlScreens.focusedScreen
+        runtime: qmlRuntime
+        theme: qmlTheme
+        motion: qmlMotion
+        system: qmlSystem
+        keyboard: qmlKeyboard
+        brightness: qmlBrightness
+        recording: qmlRecording
+        frameEnabled: qmlAppearance.frameVisible
+        barVisible: qmlAppearance.barVisible
+        hubVisible: qmlExpansionState.hasCurrent
         hubBounds: expansionHost.frameBounds
-        modeName: interactionMode.passthroughActive ? "Passthrough" : resizeOverlay.open ? "Resize window" : "Normal"
+        modeName: qmlInteractionMode.passthroughActive ? "Passthrough" : resizeOverlay.open ? "Resize window" : "Normal"
         onCloseRequested: statusPeek.open = false
     }
 
     OsdPopup {
         id: osdPopup
-        screen: osd.activeScreen || screens.focusedScreen
-        osd: osd
-        barVisible: appearance.barVisible
-        suspended: statusPeek.open || resizeOverlay.open || expansionState.hasCurrent
-        runtime: runtime
-        theme: theme
-        motion: motion
-        frameEnabled: appearance.frameVisible
+        screen: qmlOsd.activeScreen || qmlScreens.focusedScreen
+        osd: qmlOsd
+        barVisible: qmlAppearance.barVisible
+        suspended: statusPeek.open || resizeOverlay.open || qmlExpansionState.hasCurrent
+        runtime: qmlRuntime
+        theme: qmlTheme
+        motion: qmlMotion
+        frameEnabled: qmlAppearance.frameVisible
     }
 
     CommandPalette {
-        id: launcher
+        id: qmlLauncher
         parent: modalHost.contentItem
-        clipboardPanel: clipboardPanel
-        screen: screens.focusedScreen
-        runtime: runtime
-        theme: theme
-        motion: motion
-        audioAvailable: system.audioAvailable
-        brightnessAvailable: brightness.supported
+        clipboardPanel: qmlClipboardPanel
+        screen: qmlScreens.focusedScreen
+        runtime: qmlRuntime
+        theme: qmlTheme
+        motion: qmlMotion
+        audioAvailable: qmlSystem.audioAvailable
+        brightnessAvailable: qmlBrightness.supported
         commands: [
             {
                 id: "status.inspect",
@@ -697,14 +697,14 @@ ShellRoot {
             },
             {
                 id: "media.seekForward",
-                name: "Seek Forward " + media.seekSeconds + " Seconds",
+                name: "Seek Forward " + qmlMedia.seekSeconds + " Seconds",
                 description: "Seek the selected player forward",
                 icon: "media-seek-forward",
                 keywords: ["music", "media", "seek"]
             },
             {
                 id: "media.seekBackward",
-                name: "Seek Backward " + media.seekSeconds + " Seconds",
+                name: "Seek Backward " + qmlMedia.seekSeconds + " Seconds",
                 description: "Seek the selected player backward",
                 icon: "media-seek-backward",
                 keywords: ["music", "media", "seek"]
@@ -792,7 +792,7 @@ ShellRoot {
             },
             {
                 id: "launcher.toggleHistory",
-                name: launcher.rememberRecents ? "Disable Palette Recent Usage" : "Enable Palette Recent Usage",
+                name: qmlLauncher.rememberRecents ? "Disable Palette Recent Usage" : "Enable Palette Recent Usage",
                 description: "Opt out of recording recently executed application and command identities",
                 icon: "preferences-system-privacy",
                 keywords: ["history", "recent", "privacy", "launcher", "tracking"]
@@ -843,11 +843,11 @@ ShellRoot {
             {
                 id: "terminal.open",
                 name: "Open Terminal",
-                description: runtime.terminal,
+                description: qmlRuntime.terminal,
                 icon: "utilities-terminal",
                 keywords: ["shell", "console"]
             }
-        ].filter(command => system.audioAvailable || !["audio.volumeUp", "audio.volumeDown", "audio.toggleMute"].includes(command.id)).concat(system.audioAvailable ? [
+        ].filter(command => qmlSystem.audioAvailable || !["audio.volumeUp", "audio.volumeDown", "audio.toggleMute"].includes(command.id)).concat(qmlSystem.audioAvailable ? [
             {
                 id: "audio.setVolume",
                 name: "Set Volume…",
@@ -856,7 +856,7 @@ ShellRoot {
                 parameterMode: "percent",
                 keywords: ["volume", "sound", "level", "percentage", "audio"]
             },
-        ] : []).concat(brightness.supported ? [
+        ] : []).concat(qmlBrightness.supported ? [
             {
                 id: "brightness.set",
                 name: "Set Brightness…",
@@ -890,43 +890,43 @@ ShellRoot {
             const percent = Number(argument);
             if (!Number.isInteger(percent) || percent < 0 || percent > 100)
                 return;
-            if (commandId === "audio.setVolume" && system.audioAvailable)
-                system.setVolume(percent / 100);
-            else if (commandId === "brightness.set" && brightness.supported)
-                brightness.adjust(percent - brightness.percent);
+            if (commandId === "audio.setVolume" && qmlSystem.audioAvailable)
+                qmlSystem.setVolume(percent / 100);
+            else if (commandId === "brightness.set" && qmlBrightness.supported)
+                qmlBrightness.adjust(percent - qmlBrightness.percent);
         }
     }
 
     Actions {
         id: actions
-        runtime: runtime
-        screenRouter: screens
-        ambientBar: ambientBar
-        expansionState: expansionState
+        runtime: qmlRuntime
+        screenRouter: qmlScreens
+        ambientBar: qmlAmbientBar
+        expansionState: qmlExpansionState
         themePanelOpen: !!expansionHost.systemContent && expansionHost.systemContent.themeOpen
         wallpaperPanelOpen: !!expansionHost.systemContent && expansionHost.systemContent.wallpaperOpen
         recordingsPanelOpen: !!expansionHost.systemContent && expansionHost.systemContent.recordingsOpen
         sessionPanelOpen: !!expansionHost.systemContent && expansionHost.systemContent.sessionOpen
         resourcesPanelOpen: !!expansionHost.systemContent && expansionHost.systemContent.resourcesOpen
-        cheatsheet: cheatsheet
-        launcher: launcher
-        clipboardPanel: clipboardPanel
+        cheatsheet: qmlCheatsheet
+        launcher: qmlLauncher
+        clipboardPanel: qmlClipboardPanel
         mixerDetailOpen: !!expansionHost.systemContent && expansionHost.systemContent.mixerOpen
         systemDetailOpen: expansionHost.detailVisible
-        overviewPanel: overviewPanel
-        mediaState: media
-        systemState: system
-        brightnessState: brightness
+        overviewPanel: qmlOverviewPanel
+        mediaState: qmlMedia
+        systemState: qmlSystem
+        brightnessState: qmlBrightness
         nightLightState: nightLight
         notificationState: notifications
-        motion: motion
-        onFrozenCaptureRequested: copy => screenshotPicker.begin(copy, screens.focusedScreen, "image")
+        motion: qmlMotion
+        onFrozenCaptureRequested: copy => screenshotPicker.begin(copy, qmlScreens.focusedScreen, "image")
         onRecordingSelectionRequested: {
             actions.hideTransient("");
-            screenshotPicker.begin(false, screens.focusedScreen, "record");
+            screenshotPicker.begin(false, qmlScreens.focusedScreen, "record");
         }
-        onWallpaperSpectrumToggleRequested: appearance.toggleWallpaperSpectrum()
-        onMusicReactiveToggleRequested: appearance.toggleMusicReactive()
+        onWallpaperSpectrumToggleRequested: qmlAppearance.toggleWallpaperSpectrum()
+        onMusicReactiveToggleRequested: qmlAppearance.toggleMusicReactive()
     }
 
     GlobalShortcut {
@@ -947,63 +947,63 @@ ShellRoot {
         appid: "linux-desktop"
         name: "launcher-slot-1"
         description: "Open command palette result 1"
-        onPressed: launcher.launchIndex(0)
+        onPressed: qmlLauncher.launchIndex(0)
     }
 
     GlobalShortcut {
         appid: "linux-desktop"
         name: "launcher-slot-2"
         description: "Open command palette result 2"
-        onPressed: launcher.launchIndex(1)
+        onPressed: qmlLauncher.launchIndex(1)
     }
 
     GlobalShortcut {
         appid: "linux-desktop"
         name: "launcher-slot-3"
         description: "Open command palette result 3"
-        onPressed: launcher.launchIndex(2)
+        onPressed: qmlLauncher.launchIndex(2)
     }
 
     GlobalShortcut {
         appid: "linux-desktop"
         name: "launcher-slot-4"
         description: "Open command palette result 4"
-        onPressed: launcher.launchIndex(3)
+        onPressed: qmlLauncher.launchIndex(3)
     }
 
     GlobalShortcut {
         appid: "linux-desktop"
         name: "launcher-slot-5"
         description: "Open command palette result 5"
-        onPressed: launcher.launchIndex(4)
+        onPressed: qmlLauncher.launchIndex(4)
     }
 
     GlobalShortcut {
         appid: "linux-desktop"
         name: "launcher-slot-6"
         description: "Open command palette result 6"
-        onPressed: launcher.launchIndex(5)
+        onPressed: qmlLauncher.launchIndex(5)
     }
 
     GlobalShortcut {
         appid: "linux-desktop"
         name: "launcher-slot-7"
         description: "Open command palette result 7"
-        onPressed: launcher.launchIndex(6)
+        onPressed: qmlLauncher.launchIndex(6)
     }
 
     GlobalShortcut {
         appid: "linux-desktop"
         name: "launcher-slot-8"
         description: "Open command palette result 8"
-        onPressed: launcher.launchIndex(7)
+        onPressed: qmlLauncher.launchIndex(7)
     }
 
     GlobalShortcut {
         appid: "linux-desktop"
         name: "launcher-slot-9"
         description: "Open command palette result 9"
-        onPressed: launcher.launchIndex(8)
+        onPressed: qmlLauncher.launchIndex(8)
     }
 
     GlobalShortcut {
@@ -1017,28 +1017,28 @@ ShellRoot {
         appid: "linux-desktop"
         name: "keyboard-caps-lock"
         description: "Show Caps Lock state"
-        onPressed: osd.refreshKeyboardLocks("caps")
+        onPressed: qmlOsd.refreshKeyboardLocks("caps")
     }
 
     GlobalShortcut {
         appid: "linux-desktop"
         name: "keyboard-num-lock"
         description: "Show Num Lock state"
-        onPressed: osd.refreshKeyboardLocks("num")
+        onPressed: qmlOsd.refreshKeyboardLocks("num")
     }
 
     GlobalShortcut {
         appid: "linux-desktop"
         name: "wallpaper-spectrum"
         description: "Toggle live wallpaper music spectrum"
-        onPressed: appearance.toggleWallpaperSpectrum()
+        onPressed: qmlAppearance.toggleWallpaperSpectrum()
     }
 
     GlobalShortcut {
         appid: "linux-desktop"
         name: "music-reactive"
         description: "Toggle music-reactive desktop surfaces"
-        onPressed: appearance.toggleMusicReactive()
+        onPressed: qmlAppearance.toggleMusicReactive()
     }
 
     GlobalShortcut {
@@ -1114,7 +1114,7 @@ ShellRoot {
         appid: "linux-desktop"
         name: "window-effects"
         description: "Toggle transparent windows"
-        onPressed: appearance.toggleWindowTransparency()
+        onPressed: qmlAppearance.toggleWindowTransparency()
     }
 
     GlobalShortcut {
@@ -1137,7 +1137,7 @@ ShellRoot {
         description: "Open keyboard-driven window resize controls"
         onPressed: {
             if (!resizeOverlay.open)
-                root.resizeTargetScreen = screens.focusedScreen;
+                root.resizeTargetScreen = qmlScreens.focusedScreen;
             resizeOverlay.open = !resizeOverlay.open;
         }
     }
@@ -1146,7 +1146,7 @@ ShellRoot {
         appid: "linux-desktop"
         name: "microphone-mute"
         description: "Toggle default microphone mute"
-        onPressed: system.toggleMicrophoneMute()
+        onPressed: qmlSystem.toggleMicrophoneMute()
     }
 
     GlobalShortcut {
@@ -1301,7 +1301,7 @@ ShellRoot {
         }
 
         function activeInputMode(): string {
-            return interactionMode.submap;
+            return qmlInteractionMode.submap;
         }
 
         function toggleCheatsheet(): void {
@@ -1317,11 +1317,11 @@ ShellRoot {
         }
 
         function clipboardOpen(): bool {
-            return clipboardPanel.open;
+            return qmlClipboardPanel.open;
         }
 
         function clipboardCount(): int {
-            return clipboardPanel.entries.length;
+            return qmlClipboardPanel.entries.length;
         }
 
         function toggleAudioMixer(): void {
@@ -1332,7 +1332,7 @@ ShellRoot {
         }
 
         function overviewOpen(): bool {
-            return overviewPanel.open;
+            return qmlOverviewPanel.open;
         }
 
         function audioMixerOpen(): bool {
@@ -1340,7 +1340,7 @@ ShellRoot {
         }
 
         function audioStreamCount(): int {
-            return system.audioStreams.length;
+            return qmlSystem.audioStreams.length;
         }
 
         function selectedAudioStreamVolume(): int {
@@ -1368,31 +1368,31 @@ ShellRoot {
         }
 
         function mediaPlayerCount(): int {
-            return media.players.length;
+            return qmlMedia.players.length;
         }
 
         function mediaPlayerIdentity(): string {
-            return media.available ? media.identity : "";
+            return qmlMedia.available ? qmlMedia.identity : "";
         }
 
         function mediaPlayerId(): string {
-            return media.available ? media.playerId(media.player) : "";
+            return qmlMedia.available ? qmlMedia.playerId(qmlMedia.player) : "";
         }
 
         function mediaPlaying(): bool {
-            return media.playing;
+            return qmlMedia.playing;
         }
 
         function mediaPositionSeconds(): int {
-            return media.available ? Math.round(media.position) : -1;
+            return qmlMedia.available ? Math.round(qmlMedia.position) : -1;
         }
 
         function mediaShuffleSupported(): bool {
-            return media.available && media.player.shuffleSupported;
+            return qmlMedia.available && qmlMedia.player.shuffleSupported;
         }
 
         function mediaShuffle(): bool {
-            return media.available && media.player.shuffleSupported ? media.player.shuffle : false;
+            return qmlMedia.available && qmlMedia.player.shuffleSupported ? qmlMedia.player.shuffle : false;
         }
 
         function mediaPlayPause(): void {
@@ -1436,7 +1436,7 @@ ShellRoot {
         }
 
         function weatherOpen(): bool {
-            return expansionState.hasCurrent && expansionState.currentName === "weather";
+            return qmlExpansionState.hasCurrent && qmlExpansionState.currentName === "weather";
         }
 
         function weatherAvailable(): bool {
@@ -1456,7 +1456,7 @@ ShellRoot {
         }
 
         function calendarOpen(): bool {
-            return expansionState.hasCurrent && expansionState.currentName === "calendar";
+            return qmlExpansionState.hasCurrent && qmlExpansionState.currentName === "calendar";
         }
 
         function showResources(): void {
@@ -1468,7 +1468,7 @@ ShellRoot {
         }
 
         function themeOpen(): bool {
-            return expansionState.hasCurrent && expansionState.currentName === "system" && expansionHost.systemContent ? expansionHost.systemContent.themeOpen : false;
+            return qmlExpansionState.hasCurrent && qmlExpansionState.currentName === "system" && expansionHost.systemContent ? expansionHost.systemContent.themeOpen : false;
         }
 
         function showSession(): void {
@@ -1476,7 +1476,7 @@ ShellRoot {
         }
 
         function sessionOpen(): bool {
-            return expansionState.hasCurrent && expansionState.currentName === "system" && expansionHost.systemContent ? expansionHost.systemContent.sessionOpen : false;
+            return qmlExpansionState.hasCurrent && qmlExpansionState.currentName === "system" && expansionHost.systemContent ? expansionHost.systemContent.sessionOpen : false;
         }
 
         function toggleNotifications(): void {
@@ -1484,7 +1484,7 @@ ShellRoot {
         }
 
         function notificationsOpen(): bool {
-            return !notifications.locked && expansionState.hasCurrent && expansionState.currentName === "activity";
+            return !notifications.locked && qmlExpansionState.hasCurrent && qmlExpansionState.currentName === "activity";
         }
 
         function notificationCount(): int {
@@ -1496,7 +1496,7 @@ ShellRoot {
         }
 
         function barShown(): bool {
-            return ambientBar.shown;
+            return qmlAmbientBar.shown;
         }
 
         function toggleBar(): void {
@@ -1504,47 +1504,47 @@ ShellRoot {
         }
 
         function frameShown(): bool {
-            return appearance.frameVisible;
+            return qmlAppearance.frameVisible;
         }
 
         function toggleFrame(): void {
-            appearance.toggleFrame();
+            qmlAppearance.toggleFrame();
         }
 
         function toggleWindowEffects(): void {
-            appearance.toggleWindowTransparency();
+            qmlAppearance.toggleWindowTransparency();
         }
 
         function toggleShellGlass(): void {
-            appearance.toggleShellGlass();
+            qmlAppearance.toggleShellGlass();
         }
 
         function shellGlassEnabled(): bool {
-            return appearance.shellGlassEnabled;
+            return qmlAppearance.shellGlassEnabled;
         }
 
         function windowEffectsEnabled(): bool {
-            return appearance.windowTransparencyEnabled;
+            return qmlAppearance.windowTransparencyEnabled;
         }
 
         function idleInhibited(): bool {
-            return system.idleInhibited;
+            return qmlSystem.idleInhibited;
         }
 
         function powerProfileCurrent(): string {
-            return powerProfile.current;
+            return qmlPowerProfile.current;
         }
 
         function powerProfileCount(): int {
-            return powerProfile.profiles.length;
+            return qmlPowerProfile.profiles.length;
         }
 
         function cyclePowerProfile(): void {
-            powerProfile.cycle();
+            qmlPowerProfile.cycle();
         }
 
         function toggleIdleInhibited(): void {
-            system.toggleIdleInhibited();
+            qmlSystem.toggleIdleInhibited();
         }
 
         function clearNotifications(): void {
@@ -1556,19 +1556,19 @@ ShellRoot {
         }
 
         function animationsEnabled(): bool {
-            return motion.enabled;
+            return qmlMotion.enabled;
         }
 
         function mediaOpen(): bool {
-            return expansionState.hasCurrent && expansionState.currentName === "media";
+            return qmlExpansionState.hasCurrent && qmlExpansionState.currentName === "media";
         }
 
         function spectrumConnected(): bool {
-            return spectrum.connected;
+            return qmlSpectrum.connected;
         }
 
         function spectrumSequence(): int {
-            return spectrum.sequence;
+            return qmlSpectrum.sequence;
         }
 
         function musicReactiveOn(): bool {
@@ -1588,19 +1588,19 @@ ShellRoot {
         }
 
         function systemOpen(): bool {
-            return expansionState.hasCurrent && expansionState.currentName === "system";
+            return qmlExpansionState.hasCurrent && qmlExpansionState.currentName === "system";
         }
 
         function controlsSelectedSlider(): string {
-            return expansionState.currentName === "system" && expansionHost.systemContent ? expansionHost.systemContent.selectedSlider : "";
+            return qmlExpansionState.currentName === "system" && expansionHost.systemContent ? expansionHost.systemContent.selectedSlider : "";
         }
 
         function volumePercent(): int {
-            return system.volumePercent;
+            return qmlSystem.volumePercent;
         }
 
         function audioMuted(): bool {
-            return system.muted;
+            return qmlSystem.muted;
         }
 
         function volumeUp(): void {
@@ -1624,55 +1624,55 @@ ShellRoot {
         }
 
         function brightnessSupported(): bool {
-            return brightness.supported;
+            return qmlBrightness.supported;
         }
 
         function brightnessPercent(): int {
-            return brightness.percent;
+            return qmlBrightness.percent;
         }
 
         function osdVisible(): bool {
-            return osd.visible;
+            return qmlOsd.visible;
         }
 
         function osdKind(): string {
-            return osd.kind;
+            return qmlOsd.kind;
         }
 
         function osdValue(): int {
-            return osd.value;
+            return qmlOsd.value;
         }
 
         function networkName(): string {
-            return system.networkName;
+            return qmlSystem.networkName;
         }
 
         function bluetoothConnectedCount(): int {
-            return system.bluetoothConnectedCount;
+            return qmlSystem.bluetoothConnectedCount;
         }
 
         function batteryAvailable(): bool {
-            return system.batteryAvailable;
+            return qmlSystem.batteryAvailable;
         }
 
         function batteryPercent(): int {
-            return system.batteryPercent;
+            return qmlSystem.batteryPercent;
         }
 
         function trayCount(): int {
-            return system.trayCount;
+            return qmlSystem.trayCount;
         }
 
         function trayMenuOpen(): bool {
-            return expansionState.hasCurrent && expansionState.currentName === "system" && expansionHost.systemContent ? expansionHost.systemContent.trayMenuOpen : false;
+            return qmlExpansionState.hasCurrent && qmlExpansionState.currentName === "system" && expansionHost.systemContent ? expansionHost.systemContent.trayMenuOpen : false;
         }
 
         function trayMenuItemCount(): int {
-            return expansionState.hasCurrent && expansionState.currentName === "system" && expansionHost.systemContent ? expansionHost.systemContent.trayMenuItemCount : 0;
+            return qmlExpansionState.hasCurrent && qmlExpansionState.currentName === "system" && expansionHost.systemContent ? expansionHost.systemContent.trayMenuItemCount : 0;
         }
 
         function openSelectedTrayItem(): void {
-            if (expansionState.hasCurrent && expansionState.currentName === "system" && expansionHost.loadedContent)
+            if (qmlExpansionState.hasCurrent && qmlExpansionState.currentName === "system" && expansionHost.loadedContent)
                 expansionHost.systemContent.activateTrayItem();
         }
 
@@ -1681,7 +1681,7 @@ ShellRoot {
         }
 
         function terminal(): string {
-            return runtime.terminal;
+            return qmlRuntime.terminal;
         }
     }
 }
