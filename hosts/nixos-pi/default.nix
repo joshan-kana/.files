@@ -38,30 +38,16 @@ lib.recursiveUpdate (import ../../profiles/workstation.nix { inherit moduleRegis
     };
   };
 
-  system = editScope moduleRegistry.system {
-    identity = _: {
-      systemd.tmpfiles.rules = [
-        "z ${config.dotfiles.secretsDir}/attic-token 0600 ${config.dotfiles.users.primary.name} users - -"
-        "z ${config.dotfiles.secretsDir}/comin-github 0600 ${config.dotfiles.users.primary.name} users - -"
-      ];
-    };
+  users.users.${config.dotfiles.users.primary.name} = {
+    uid = 1000;
+    openssh.authorizedKeys.keys = [
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGMZdbT05P/naiv07J32DxHDOR5A1z8F9jijeBrDkXWV joshankana@gmail.com"
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBU9mnHy1HP+StbXl3HmTSpOVJ1VETv9DYWUj1YmzDKc chatgpt-shell-nixos-pi"
+    ];
   };
 
-  networking = editScope moduleRegistry.networking {
-    ssh = _: {
-      users.users.${config.dotfiles.users.primary.name}.openssh.authorizedKeys.keys = [
-        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGMZdbT05P/naiv07J32DxHDOR5A1z8F9jijeBrDkXWV joshankana@gmail.com"
-        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBU9mnHy1HP+StbXl3HmTSpOVJ1VETv9DYWUj1YmzDKc chatgpt-shell-nixos-pi"
-      ];
-
-      systemd.tmpfiles.rules = [
-        "f+ /etc/elevation-authorized-key 0444 root root - ${
-          lib.concatStringsSep "\\n" [
-            "ssh-ed25519\\x20AAAAC3NzaC1lZDI1NTE5AAAAIEBfBg52XAZkpWk2cKNqvITRhsrnmEdz8yon5bpZZP/w\\x20joshan@nixos-pi-sudo"
-            "ssh-ed25519\\x20AAAAC3NzaC1lZDI1NTE5AAAAIMgQFxMmgs5HwY+l9twQBUEt672VOFrmgAnOKuoMuzz/\\x20nixos-pi-sudo"
-          ]
-        }\\n"
-      ];
-    };
-  };
+  environment.etc."elevation-authorized-key".text = ''
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEBfBg52XAZkpWk2cKNqvITRhsrnmEdz8yon5bpZZP/w joshan@nixos-pi-sudo
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMgQFxMmgs5HwY+l9twQBUEt672VOFrmgAnOKuoMuzz/ nixos-pi-sudo
+  '';
 }
