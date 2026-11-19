@@ -69,7 +69,7 @@ PanelWindow {
     }
     readonly property var frameBounds: ({
             x: screen ? (screen.width - width) / 2 : 0,
-            y: margins.top,
+            y: effectiveTopOffset,
             width: width,
             height: height * attachmentProgress,
             visible: frameConnected && attachmentProgress > 0.001
@@ -84,7 +84,8 @@ PanelWindow {
     anchors {
         top: true
     }
-    margins.top: frameConnected ? (barVisible ? theme.barInsetTop : theme.frameThickness) : theme.panelTopOffset
+    readonly property real effectiveTopOffset: frameConnected ? (barVisible ? theme.barInsetTop : theme.frameThickness) : theme.panelTopOffset
+    margins.top: effectiveTopOffset
     updatesEnabled: surfaceLifecycle.needsRendering
     mask: surfaceLifecycle.inputRegion
     WlrLayershell.namespace: "linux-desktop-resize-controls"

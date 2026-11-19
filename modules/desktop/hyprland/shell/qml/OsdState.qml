@@ -1,5 +1,4 @@
 import QtQuick
-import Quickshell.Io
 
 QtObject {
     id: root

@@ -106,9 +106,9 @@ Variants {
 
         screen: modelData
 
-        readonly property QtObject runtime: bars.runtime
+        readonly property RuntimeConfig runtime: bars.runtime
         readonly property QtObject theme: bars.theme
-        readonly property QtObject motion: bars.motion
+        readonly property Motion motion: bars.motion
         readonly property QtObject media: bars.media
         readonly property QtObject spectrum: bars.spectrum
         readonly property QtObject system: bars.system

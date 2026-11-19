@@ -125,7 +125,7 @@ Item {
     }
 
     DetailHero {
-        id: header
+        id: qmlHeader
         width: parent.width
         runtime: view.runtime
         theme: view.theme
@@ -140,9 +140,9 @@ Item {
         id: menuList
 
         anchors {
-            top: header.bottom
+            top: qmlHeader.bottom
             right: parent.right
-            bottom: footer.top
+            bottom: qmlFooter.top
             left: parent.left
             topMargin: view.theme.spacing4
             bottomMargin: view.theme.spacing3
@@ -250,7 +250,7 @@ Item {
     }
 
     Row {
-        id: footer
+        id: qmlFooter
 
         anchors {
             right: parent.right

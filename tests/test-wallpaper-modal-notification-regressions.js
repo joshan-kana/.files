@@ -71,13 +71,16 @@ test("notification viewport remains stable as the number of toasts changes", () 
   // without revealing stale text beneath cards animating into their slots.
   assert.match(
     source,
-    /visible: !evicted && outputName === \(popup\.screen \? popup\.screen\.name : ""\) && slot < popup\.maxToastSlots/,
+    /visible: !evicted && outputName === \(qmlPopup\.screen \? qmlPopup\.screen\.name : ""\) && slot < qmlPopup\.maxToastSlots/,
   );
   assert.doesNotMatch(
     source,
     /implicitHeight:[^\n]*(toastCount|visibleToastCount)/,
   );
-  assert.match(source, /y: slot \* \(popup\.cardHeight \+ popup\.cardGap\)/);
+  assert.match(
+    source,
+    /y: slot \* \(qmlPopup\.cardHeight \+ qmlPopup\.cardGap\)/,
+  );
   // The fixed backing must not block clicks in unoccupied slots.
   assert.match(source, /interactiveItem: toastInputArea/);
   assert.match(
@@ -86,7 +89,7 @@ test("notification viewport remains stable as the number of toasts changes", () 
   );
   assert.match(
     source,
-    /height: popup\.interactiveToastSlots > 0 \? popup\.interactiveToastSlots \* popup\.cardHeight/,
+    /height: qmlPopup\.interactiveToastSlots > 0 \? qmlPopup\.interactiveToastSlots \* qmlPopup\.cardHeight/,
   );
   assert.match(source, /updatesEnabled: surfaceLifecycle\.needsRendering/);
   const maskItem = source.match(

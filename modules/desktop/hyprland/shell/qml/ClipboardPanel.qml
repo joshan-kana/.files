@@ -312,7 +312,7 @@ Item {
             anchors.margins: panel.theme.spacing5
 
             Column {
-                id: header
+                id: qmlHeader
                 width: parent.width
                 spacing: panel.theme.spacing2
 
@@ -388,9 +388,9 @@ Item {
                 id: list
 
                 anchors {
-                    top: header.bottom
+                    top: qmlHeader.bottom
                     right: previewPane.visible ? previewPane.left : parent.right
-                    bottom: footer.top
+                    bottom: qmlFooter.top
                     left: parent.left
                     rightMargin: previewPane.visible ? panel.theme.spacing3 : 0
                     topMargin: panel.theme.spacing4
@@ -655,7 +655,7 @@ Item {
             }
 
             KeyHintStrip {
-                id: footer
+                id: qmlFooter
                 width: parent.width
                 anchors.bottom: parent.bottom
                 runtime: panel.runtime

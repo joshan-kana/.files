@@ -46,5 +46,5 @@ test("connected frame and floating Controls share one busy-state source", () => 
   );
   assert.match(host, /maintenanceOperationRole/);
   assert.match(shell, /busy: !!expansionHost\.loadingOperationVisible/);
-  assert.match(shell, /busyScreen: expansionState\.screen/);
+  assert.match(shell, /busyScreen: qmlExpansionState\.screen/);
 });
