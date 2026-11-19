@@ -9,48 +9,41 @@
 lib.recursiveUpdate (import ../../profiles/workstation.nix { inherit moduleRegistry; }) {
   hardware = import ./hardware.nix;
 
-  # The shared Kvantum Qt styling is incompatible with Plasma's QML
-  # controls on this host. Let Plasma select its native Qt style.
-  home-manager.users.${config.dotfiles.users.primary.name}.stylix.targets.qt.enable =
-    lib.mkForce false;
+  dotfiles.scopes = {
+    system.boot.loader.enable = false;
+    virtualisation.enable = false;
 
-  # The Pi boots through firmware/U-Boot instead of an EFI boot manager.
-  boot.loader = {
-    grub.enable = false;
-    generic-extlinux-compatible = {
-      enable = true;
-      configurationLimit = 5;
+    desktopApps = {
+      children.enable = false;
+      bitwarden.enable = true;
+      filelight.enable = true;
+      gparted.enable = true;
+      jellyfin.enable = true;
+      kitty.enable = true;
+      moonlight.enable = true;
+      mopidy.enable = true;
+      mullvad.enable = true;
+      nautilus.enable = true;
+      qbittorrent.enable = true;
+      spotify.enable = true;
+      vlc.enable = true;
+      vscode.enable = true;
+      zen.enable = true;
     };
   };
 
-  dotfiles = {
-    scopes = {
-      system.boot.loader.enable = false;
-      virtualisation.enable = false;
+  theme = editScope moduleRegistry.theme {
+    home = _: {
+      stylix.targets.qt.enable = lib.mkForce false;
+    };
+  };
 
-      desktopApps = {
-        waypipe.enable = false;
-        keymapp.enable = false;
-        vial.enable = false;
-        openclaw.enable = false;
-        openWebui.enable = false;
-        thunderbird.enable = false;
-        obsidian.enable = false;
-        githubDesktop.enable = false;
-        pycharm.enable = false;
-        libreoffice.enable = false;
-        ollama.enable = false;
-        discord.enable = false;
-        onlyoffice.enable = false;
-        beeperMatrixClient.enable = false;
-        chatgpt.enable = false;
-        bambuStudio.enable = false;
-        prusaSlicer.enable = false;
-        orcaSlicerNightly.enable = false;
-        gimp.enable = false;
-        inkscape.enable = false;
-        krita.enable = false;
-      };
+  system = editScope moduleRegistry.system {
+    identity = _: {
+      systemd.tmpfiles.rules = [
+        "z ${config.dotfiles.secretsDir}/attic-token 0600 ${config.dotfiles.users.primary.name} users - -"
+        "z ${config.dotfiles.secretsDir}/comin-github 0600 ${config.dotfiles.users.primary.name} users - -"
+      ];
     };
   };
 
