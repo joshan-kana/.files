@@ -692,18 +692,18 @@ test("Compact Audio keeps Output/Input without app rows and shows correct header
   assert.match(read("ShellSection.qml"), /id: headerHints/);
 });
 
-test("Quick Actions retain handlers and put Restore Defaults alongside actions", () => {
+test("Quick Actions retain handlers and keep Restore Defaults last", () => {
   const controls = read("SystemContent.qml");
   const actions = controls
     .split("id: actionTiles")[1]
     .split("ShellSurface {")[0];
   const titles = [
-    'title: root.resetRunning ? "Restoring…" : "Restore defaults"',
     'title: root.notificationState.silent ? "Silent" : "Alerts"',
     'title: root.system.idleInhibited ? "Stay awake" : "Idle allowed"',
     'title: (root.powerProfile.available ? root.powerProfile.label(root.powerProfile.current) : "Power")',
     'title: "Resources"',
     'title: "Captures"',
+    'title: root.resetRunning ? "Restoring…" : "Restore defaults"',
   ];
   let previous = -1;
   for (const title of titles) {
