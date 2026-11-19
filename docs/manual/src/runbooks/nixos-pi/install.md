@@ -45,7 +45,7 @@ Press Ctrl+T to display progress while `dd` runs. When it finishes, unmount the 
 ```sh
 diskutil unmountDisk "/dev/$DISK"
 orb usb list
-printf 'Current Samsung USB passthrough ID: '
+printf 'Current USB passthrough ID: '
 read -r USB_ID
 orb usb attach "$USB_ID" -m nixos-orbstack
 orb -m nixos-orbstack -u root sh
@@ -88,7 +88,7 @@ read -r SD_DISK
   [ "$(lsblk -ndo RM "$SD_DISK")" = 1 ] || exit 1
 ```
 
-## Install host credentials on the card
+## Install host credentials on the installation drive
 
 Prepare directories containing this host's required secrets and its Restic backup bootstrap credentials. The files must remain outside Git and the Nix store. Run the generated host exports in the same root shell:
 
@@ -96,7 +96,7 @@ Prepare directories containing this host's required secrets and its Restic backu
 {{#include ../../generated/hosts/nixos-pi.sh}}
 ```
 
-Use the partitions of the **verified microSD device**, not another disk that happens to have the same labels:
+Use the partitions of the **verified installation drive**, not another disk that happens to have the same labels:
 
 ```sh
 BOOT_PART=$(lsblk -lnpo PATH "$SD_DISK" | sed -n '2p')
@@ -145,7 +145,7 @@ sync
 umount /mnt/nixos-pi-root
 ```
 
-Safely unmount and eject the drive. On macOS, leave the OrbStack root shell and run `orb usb detach "$USB_ID"` using its current ID before unplugging the USB. The installed credentials reside on an unencrypted filesystem: keep the card physically secure and do not publish or share its contents.
+Safely unmount and eject the drive. On macOS, leave the OrbStack root shell and run `orb usb detach "$USB_ID"` using its current ID before unplugging the USB. The installed credentials reside on an unencrypted filesystem: keep the drive physically secure and do not publish or share its contents.
 
 ## First boot
 
@@ -234,4 +234,4 @@ Reload the generated host exports before verifying or initializing its secrets b
 
 {{#include ../_shared/secrets-backup-first-boot.inc}}
 
-Test HDMI output and audio, MPV playback, and Jellyfin MPV Shim on the Pi. Video decoding and codec compatibility depend on the actual hardware and media. Reinstall by writing a current image to the card and copying the host credentials onto its root partition. Restore additional mutable data from its normal backups where applicable.
+Test HDMI output and audio, MPV playback, and Jellyfin MPV Shim on the Pi. Video decoding and codec compatibility depend on the actual hardware and media. Reinstall by writing a current image to the drive and copying the host credentials onto its root partition. Restore additional mutable data from its normal backups where applicable.
