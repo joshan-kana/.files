@@ -1,16 +1,16 @@
 # Installation guide for `nixos-pi`
 
-This installation uses a flashable ARM64 NixOS SD-card image with a FAT `/boot` partition containing the firmware, extlinux configuration, kernel and initrd, alongside a Btrfs root filesystem. The root partition grows to fill the installation drive on first boot.
+Build the installation image from the evaluated `nixos-pi` configuration. The image includes its boot files and root filesystem; the root partition expands on first boot.
 
 ## Build the image
 
-Build the stock NixOS SD-card image from the repository root using an `aarch64-linux` builder (for example, the OrbStack NixOS machine on macOS):
+Build the image from the repository root using a Linux builder that supports the host's architecture:
 
 ```sh
 nix build .#nixos-pi-image --out-link /tmp/nixos-pi-image
 ```
 
-The output is an uncompressed bootable disk image. Disabling compression avoids repeatedly compressing the Btrfs root and complete disk image. No writable image copy is necessary. On macOS, flash directly using `diskutil` and `dd`; use OrbStack USB passthrough only when mounting Btrfs to install credentials.
+On macOS, write the image using `diskutil` and `dd`. Use OrbStack USB passthrough only when mounting the Linux root filesystem to install credentials.
 
 ## Flash the removable drive
 
@@ -101,12 +101,13 @@ Use the partitions of the **verified installation drive**, not another disk that
 ```sh
 BOOT_PART=$(lsblk -lnpo PATH "$SD_DISK" | sed -n '2p')
 ROOT_PART=$(lsblk -lnpo PATH "$SD_DISK" | sed -n '3p')
-[ "$(blkid -s LABEL -o value "$BOOT_PART")" = FIRMWARE ]
+[ "$(blkid -s LABEL -o value "$BOOT_PART")" = "${BOOT_DEVICE##*/}" ]
+[ "$(blkid -s TYPE -o value "$BOOT_PART")" = "$BOOT_FS" ]
 [ "$(blkid -s LABEL -o value "$ROOT_PART")" = "${ROOT_DEVICE##*/}" ]
 [ "$(blkid -s TYPE -o value "$ROOT_PART")" = "$ROOT_FS" ]
 
 mkdir -p /mnt/nixos-pi-boot /mnt/nixos-pi-root
-mount -o ro "$BOOT_PART" /mnt/nixos-pi-boot
+mount -t "$BOOT_FS" -o ro "$BOOT_PART" /mnt/nixos-pi-boot
 [ -s /mnt/nixos-pi-boot/u-boot.bin ]
 [ -s /mnt/nixos-pi-boot/config.txt ]
 [ -s /mnt/nixos-pi-boot/extlinux/extlinux.conf ]
@@ -149,7 +150,7 @@ Safely unmount and eject the drive. On macOS, leave the OrbStack root shell and 
 
 ## First boot
 
-Connect a keyboard, monitor, network and power. The Btrfs root partition expands on first boot. The regular user and secret-directory ownership are initialized by NixOS.
+Connect a keyboard, monitor, network and power. The root partition expands on first boot. The regular user and secret-directory ownership are initialized by NixOS.
 
 Change the initial workstation password at the local console before connecting to untrusted networks:
 
@@ -164,7 +165,6 @@ hostname
 findmnt -T /
 lsblk -f
 systemctl --failed --no-pager
-systemctl status comin --no-pager
 systemctl status display-manager --no-pager
 ```
 
