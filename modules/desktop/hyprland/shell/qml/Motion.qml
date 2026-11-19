@@ -9,13 +9,13 @@ QtObject {
     // A user-selected motion preference survives shell reload, logout and
     // reboot independently of the Nix-generated runtime defaults.
     property Settings preferences: Settings {
-        id: preferences
+        id: qmlPreferences
         location: "file://" + (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/linux-desktop/preferences.ini"
         category: "Motion"
         property bool animationsEnabled: root.runtime.animationsEnabled
         property string preferenceSource: ""
     }
-    readonly property bool enabled: preferences.preferenceSource === "default" ? runtime.animationsEnabled : preferences.animationsEnabled
+    readonly property bool enabled: qmlPreferences.preferenceSource === "default" ? runtime.animationsEnabled : qmlPreferences.animationsEnabled
 
     readonly property int instant: 0
     readonly property int fast: enabled ? 100 : 0
@@ -59,30 +59,30 @@ QtObject {
     }
 
     Component.onCompleted: {
-        if (preferences.preferenceSource === "") {
+        if (qmlPreferences.preferenceSource === "") {
             // Preserve explicitly stored values from older settings files.
-            preferences.preferenceSource = preferences.value("animationsEnabled", null) === null ? "default" : "user";
-            preferences.setValue("preferenceSource", preferences.preferenceSource);
-            preferences.sync();
+            qmlPreferences.preferenceSource = qmlPreferences.value("animationsEnabled", null) === null ? "default" : "user";
+            qmlPreferences.setValue("preferenceSource", qmlPreferences.preferenceSource);
+            qmlPreferences.sync();
         }
         syncCompositorMotion();
         syncWallpaperMotion();
     }
 
     function resetToDeclared(): void {
-        preferences.preferenceSource = "default";
-        preferences.setValue("preferenceSource", "default");
-        preferences.sync();
+        qmlPreferences.preferenceSource = "default";
+        qmlPreferences.setValue("preferenceSource", "default");
+        qmlPreferences.sync();
         syncCompositorMotion();
         syncWallpaperMotion();
     }
 
     function toggle(): void {
-        preferences.animationsEnabled = !enabled;
-        preferences.setValue("animationsEnabled", preferences.animationsEnabled);
-        preferences.preferenceSource = "user";
-        preferences.setValue("preferenceSource", "user");
-        preferences.sync();
+        qmlPreferences.animationsEnabled = !enabled;
+        qmlPreferences.setValue("animationsEnabled", qmlPreferences.animationsEnabled);
+        qmlPreferences.preferenceSource = "user";
+        qmlPreferences.setValue("preferenceSource", "user");
+        qmlPreferences.sync();
         syncCompositorMotion();
         syncWallpaperMotion();
     }

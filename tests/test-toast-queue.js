@@ -191,7 +191,7 @@ test("newest popup is displayed at the first and highest visible slot", () => {
   assert.match(stateSource, /popups\.insert\(0, \{/);
   assert.match(
     popupSource,
-    /y: slot \* \(popup\.cardHeight \+ popup\.cardGap\)/,
+    /y: slot \* \(qmlPopup\.cardHeight \+ qmlPopup\.cardGap\)/,
   );
   assert.match(
     centerSource,

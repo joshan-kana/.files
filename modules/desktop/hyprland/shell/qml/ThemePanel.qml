@@ -46,7 +46,7 @@ Item {
         }
     }
 
-    implicitHeight: header.height + panel.theme.spacing4 * 3 + searchSurface.height + operationBanner.implicitHeight + panel.theme.spacing3 * 2 + Math.min(505, Math.max(280, Math.ceil(themes.length / Math.max(1, themeList.columnCount)) * themeList.cellHeight)) + footer.implicitHeight
+    implicitHeight: header.height + panel.theme.spacing4 * 3 + searchSurface.height + operationBanner.implicitHeight + panel.theme.spacing3 * 2 + Math.min(505, Math.max(280, Math.ceil(themes.length / Math.max(1, themeList.columnCount)) * themeList.cellHeight)) + qmlFooter.implicitHeight
     visible: open
     onFilteredThemesChanged: selectedIndex = Math.max(0, Math.min(selectedIndex, filteredThemes.length - 1))
 
@@ -402,7 +402,7 @@ Item {
         anchors {
             top: operationBanner.bottom
             right: parent.right
-            bottom: footer.top
+            bottom: qmlFooter.top
             left: parent.left
             topMargin: panel.theme.spacing3
             bottomMargin: panel.theme.spacing3
@@ -710,7 +710,7 @@ Item {
     }
 
     Column {
-        id: footer
+        id: qmlFooter
 
         anchors {
             right: parent.right

@@ -66,7 +66,7 @@ test("frosted-glass percentage maps directly to actual pane alpha", () => {
   const theme = qml("Theme.qml");
   const surface = qml("ShellSurface.qml");
   const frame = qml("DesktopFrame.qml");
-  assert.match(root, /glassOpacity: appearance\.glassOpacity/);
+  assert.match(root, /glassOpacity: qmlAppearance\.glassOpacity/);
   assert.match(theme, /property real glassOpacity: 0\.70/);
   assert.match(
     surface,

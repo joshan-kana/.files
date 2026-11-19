@@ -34,10 +34,10 @@ FocusScope {
     }
 
     function toggleCalendarAt(index: int): void {
-        if (index < 0 || index >= agenda.calendars.length)
+        if (index < 0 || index >= qmlAgenda.calendars.length)
             return;
-        const source = agenda.calendars[index];
-        agenda.setCalendarEnabled(source.id, !source.enabled);
+        const source = qmlAgenda.calendars[index];
+        qmlAgenda.setCalendarEnabled(source.id, !source.enabled);
     }
 
     signal closeRequested
@@ -70,7 +70,7 @@ FocusScope {
     }
 
     AgendaState {
-        id: agenda
+        id: qmlAgenda
         runtime: calendar.runtime
         active: calendar.engaged
         startDate: calendar.selectedDateKey
@@ -152,7 +152,7 @@ FocusScope {
                 if (event.key === calendar.runtime.shellKeyCode("calendar", "Escape") || event.key === calendar.runtime.shellKeyCode("calendar", "C")) {
                     calendar.navigateBack();
                 } else if (event.key === calendar.runtime.shellKeyCode("calendar", "J") || event.key === calendar.runtime.shellKeyCode("calendar", "Down")) {
-                    calendar.calendarPickerIndex = Math.min(agenda.calendars.length - 1, calendar.calendarPickerIndex + 1);
+                    calendar.calendarPickerIndex = Math.min(qmlAgenda.calendars.length - 1, calendar.calendarPickerIndex + 1);
                 } else if (event.key === calendar.runtime.shellKeyCode("calendar", "K") || event.key === calendar.runtime.shellKeyCode("calendar", "Up")) {
                     calendar.calendarPickerIndex = Math.max(0, calendar.calendarPickerIndex - 1);
                 } else if (event.key === calendar.runtime.shellKeyCode("calendar", "Return") || event.key === calendar.runtime.shellKeyCode("calendar", "Enter") || event.key === calendar.runtime.shellKeyCode("calendar", "Space")) {
@@ -163,7 +163,7 @@ FocusScope {
                 event.accepted = true;
                 return;
             }
-            if (event.key === calendar.runtime.shellKeyCode("calendar", "C") && agenda.calendars.length > 0) {
+            if (event.key === calendar.runtime.shellKeyCode("calendar", "C") && qmlAgenda.calendars.length > 0) {
                 calendar.calendarPickerIndex = 0;
                 calendar.calendarPickerOpen = true;
                 event.accepted = true;
@@ -186,7 +186,7 @@ FocusScope {
                 agendaView.scrollEvents(event.key === calendar.runtime.shellKeyCode("calendar", "U") ? -1 : 1);
                 event.accepted = true;
             } else if (event.key === calendar.runtime.shellKeyCode("calendar", "R")) {
-                agenda.refresh();
+                qmlAgenda.refresh();
                 event.accepted = true;
             } else if (event.key === calendar.runtime.shellKeyCode("calendar", "T")) {
                 calendar.today();
@@ -240,13 +240,13 @@ FocusScope {
         }
 
         Row {
-            id: featured
+            id: qmlFeatured
             width: parent.width
             spacing: calendar.theme.spacing3
 
             Column {
                 id: leftColumn
-                width: (featured.width - featured.spacing) * 0.47
+                width: (qmlFeatured.width - qmlFeatured.spacing) * 0.47
                 spacing: calendar.theme.spacing3
                 WeatherSummary {
                     width: parent.width
@@ -367,11 +367,11 @@ FocusScope {
 
             AgendaList {
                 id: agendaView
-                width: (featured.width - featured.spacing) * 0.53
+                width: (qmlFeatured.width - qmlFeatured.spacing) * 0.53
                 runtime: calendar.runtime
                 theme: calendar.theme
                 motion: calendar.motion
-                agenda: agenda
+                agenda: qmlAgenda
                 startDate: calendar.selectedDateKey
                 featured: true
                 onCalendarsRequested: {
@@ -438,9 +438,9 @@ FocusScope {
     ShellSurface {
         id: calendarPicker
         z: 11
-        visible: calendar.calendarPickerOpen && agenda.calendars.length > 0
+        visible: calendar.calendarPickerOpen && qmlAgenda.calendars.length > 0
         x: Math.max(0, parent.width - width - calendar.theme.spacing2)
-        y: featured.y + calendar.theme.spacing4
+        y: qmlFeatured.y + calendar.theme.spacing4
         width: Math.min(350, parent.width - calendar.theme.spacing3 * 2)
         height: pickerItems.implicitHeight + calendar.theme.spacing3 * 2
         theme: calendar.theme
@@ -477,7 +477,7 @@ FocusScope {
                 }
                 Text {
                     id: enabledLabel
-                    text: agenda.calendars.filter(source => source.enabled).length + " / " + agenda.calendars.length + " ON"
+                    text: qmlAgenda.calendars.filter(source => source.enabled).length + " / " + qmlAgenda.calendars.length + " ON"
                     font.family: calendar.runtime.fontMono
                     font.pixelSize: calendar.theme.fontSize(10)
                     color: calendar.theme.textMuted
@@ -485,7 +485,7 @@ FocusScope {
             }
 
             Repeater {
-                model: agenda.calendars
+                model: qmlAgenda.calendars
                 delegate: ShellSurface {
                     id: sourceRow
                     required property var modelData

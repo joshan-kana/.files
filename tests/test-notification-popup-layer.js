@@ -34,13 +34,13 @@ test("notification toasts render above the Controls hub without changing popup g
   // each other when a fourth notification arrived.
   assert.match(
     popup,
-    /visible: !evicted && outputName === \(popup\.screen \? popup\.screen\.name : ""\) && slot < popup\.maxToastSlots/,
+    /visible: !evicted && outputName === \(qmlPopup\.screen \? qmlPopup\.screen\.name : ""\) && slot < qmlPopup\.maxToastSlots/,
   );
-  assert.match(popup, /onVisibleChanged: popup\.contourEpoch\+\+/);
+  assert.match(popup, /onVisibleChanged: qmlPopup\.contourEpoch\+\+/);
   assert.match(popup, /if \(toast && toast\.visible\)/);
   assert.match(
     root,
-    /hubVisible: expansionState\.hasCurrent \|\| expansionHost\.closing/,
+    /hubVisible: qmlExpansionState\.hasCurrent \|\| expansionHost\.closing/,
   );
   assert.match(
     popup,
@@ -48,14 +48,14 @@ test("notification toasts render above the Controls hub without changing popup g
   );
   assert.match(
     popup,
-    /visible: frameAttached && toast\.attachmentProgress > 0\.001/,
+    /visible: frameAttached && state\.attachmentProgress > 0\.001/,
   );
-  assert.match(popup, /frameConnected: popup\.frameAttached/);
-  assert.match(popup, /cornerRadius: toast\.cornerRadius/);
-  assert.match(popup, /cornerRadius: popup\.theme\.radiusMedium/);
+  assert.match(popup, /frameConnected: qmlPopup\.frameAttached/);
+  assert.match(popup, /cornerRadius: state\.cornerRadius/);
+  assert.match(popup, /cornerRadius: qmlPopup\.theme\.radiusMedium/);
   assert.match(
     popup,
-    /height: bottom - y,\s+cornerRadius: toast\.cornerRadius/,
+    /height: bottom - y,\s+cornerRadius: state\.cornerRadius/,
   );
   assert.match(popup, /readonly property bool hubOverlapsToasts:/);
   assert.match(root, /hubBounds: expansionHost\.frameBounds/);
@@ -63,7 +63,7 @@ test("notification toasts render above the Controls hub without changing popup g
     outputs,
     /hubVisible: outputs\.hubVisible && outputs\.hubScreen === screen/,
   );
-  assert.match(popup, /glassAllowed: !popup\.hubOverlapsToasts/);
+  assert.match(popup, /glassAllowed: !qmlPopup\.hubOverlapsToasts/);
 });
 
 test("one notification server routes output-specific toast masks and frame docks", () => {
@@ -79,7 +79,7 @@ test("one notification server routes output-specific toast masks and frame docks
   assert.match(state, /function moveOrphanedPopups/);
   assert.match(
     root,
-    /preferredOutput: screens\.focusedScreen \? screens\.focusedScreen\.name/,
+    /preferredOutput: qmlScreens\.focusedScreen \? qmlScreens\.focusedScreen\.name/,
   );
   assert.match(root, /toastByOutput: notifications\.frameDocksByOutput/);
   assert.match(frame, /frame\.toastByOutput\[modelData\.name\]/);

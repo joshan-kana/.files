@@ -1,6 +1,5 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import "DesktopIcons.js" as DesktopIcons
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Io

@@ -6,7 +6,7 @@ import Quickshell.Services.Notifications
 import Quickshell.Wayland
 
 PanelWindow {
-    id: popup
+    id: qmlPopup
 
     required property NotificationState notificationState
     required property RuntimeConfig runtime
@@ -53,6 +53,14 @@ PanelWindow {
     // causes the compositor to glide the entire popup instead of just cards.
     readonly property int maxToastSlots: Math.max(1, Math.min(3, Math.floor(((screen ? screen.height : 1440) - dockTop - theme.frameThickness + cardGap) / (cardHeight + cardGap))))
     readonly property int interactiveToastSlots: Math.min(maxToastSlots, toastCount)
+    function toastFrameState(toast: var): var {
+        return {
+            cornerRadius: toast.cornerRadius,
+            hovered: toast.hovered,
+            pressed: toast.pointerPressed,
+            attachmentProgress: toast.attachmentProgress
+        };
+    }
     readonly property var frameDocks: {
         const epoch = contourEpoch;
         const result = [];
@@ -61,18 +69,19 @@ PanelWindow {
             if (toast && toast.visible) {
                 // Frame geometry follows only painted cards. Evicted entries
                 // remain in the model for cleanup, not on the visible frame.
+                const state = toastFrameState(toast);
                 const y = Math.max(0, toast.y);
-                const bottom = Math.min(popup.height, toast.y + toast.height);
+                const bottom = Math.min(qmlPopup.height, toast.y + toast.height);
                 if (bottom > y + 0.05)
                     result.push({
                         x: frameBounds.x + toast.x,
                         y: frameBounds.y + y,
                         width: toast.width,
                         height: bottom - y,
-                        cornerRadius: toast.cornerRadius,
-                        hovered: toast.hovered,
-                        pressed: toast.pointerPressed,
-                        visible: frameAttached && toast.attachmentProgress > 0.001
+                        cornerRadius: state.cornerRadius,
+                        hovered: state.hovered,
+                        pressed: state.pressed,
+                        visible: frameAttached && state.attachmentProgress > 0.001
                     });
             }
         }
@@ -81,13 +90,13 @@ PanelWindow {
     readonly property bool frameConnected: frameEnabled && !notificationState.locked && !(Hyprland.monitorFor(screen)?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false)
     // Only overlapping surfaces need an independent fill. The shared frame
     // continues to own the toast's squircle when the hub is merely nearby.
-    readonly property real toastLeft: screen ? screen.width - width - margins.right : 0
+    readonly property real toastLeft: screen ? screen.width - width - (frameConnected ? theme.frameThickness : theme.panelSideOffset) : 0
     readonly property real occupiedHeight: interactiveToastSlots * cardHeight + Math.max(0, interactiveToastSlots - 1) * cardGap
     readonly property bool hubOverlapsToasts: hubVisible && hubBounds && hubBounds.visible !== false && hubBounds.x < toastLeft + width && hubBounds.x + hubBounds.width > toastLeft && hubBounds.y < dockTop + occupiedHeight && hubBounds.y + hubBounds.height > dockTop
     readonly property bool frameAttached: frameConnected && !hubOverlapsToasts
     readonly property var frameBounds: ({
             x: toastLeft,
-            y: margins.top,
+            y: dockTop,
             width: width,
             height: height,
             visible: frameAttached && toastCount > 0
@@ -97,15 +106,15 @@ PanelWindow {
     updatesEnabled: surfaceLifecycle.needsRendering
     PopupSurfaceLifecycle {
         id: surfaceLifecycle
-        popup: popup
-        exposed: popup.notificationState.popupVisible && popup.toastCount > 0 && !popup.notificationState.locked
+        popup: qmlPopup
+        exposed: qmlPopup.notificationState.popupVisible && qmlPopup.toastCount > 0 && !qmlPopup.notificationState.locked
         // Only actual cards accept input, not the transparent reserved slots.
         interactiveItem: toastInputArea
     }
     Item {
         id: toastInputArea
-        width: popup.width
-        height: popup.interactiveToastSlots > 0 ? popup.interactiveToastSlots * popup.cardHeight + (popup.interactiveToastSlots - 1) * popup.cardGap : 0
+        width: qmlPopup.width
+        height: qmlPopup.interactiveToastSlots > 0 ? qmlPopup.interactiveToastSlots * qmlPopup.cardHeight + (qmlPopup.interactiveToastSlots - 1) * qmlPopup.cardGap : 0
     }
     mask: surfaceLifecycle.inputRegion
     color: "transparent"
@@ -119,8 +128,8 @@ PanelWindow {
     }
 
     margins {
-        top: popup.dockTop
-        right: popup.frameConnected ? popup.theme.frameThickness : theme.panelSideOffset
+        top: qmlPopup.dockTop
+        right: qmlPopup.frameConnected ? qmlPopup.theme.frameThickness : theme.panelSideOffset
     }
 
     WlrLayershell.namespace: "linux-desktop-notification-popup"
@@ -133,8 +142,8 @@ PanelWindow {
 
     Repeater {
         id: toastRepeater
-        model: popup.notificationState.popups
-        onCountChanged: popup.contourEpoch++
+        model: qmlPopup.notificationState.popups
+        onCountChanged: qmlPopup.contourEpoch++
 
         ShellSurface {
             id: toast
@@ -150,7 +159,7 @@ PanelWindow {
             property bool attachmentReady: false
             property real attachmentProgress: 0
             function updateAttachment(): void {
-                attachmentProgress = popup.frameAttached && phase !== "visible" && !evicted ? 0 : 1;
+                attachmentProgress = qmlPopup.frameAttached && phase !== "visible" && !evicted ? 0 : 1;
             }
             Component.onCompleted: {
                 attachmentReady = true;
@@ -165,121 +174,121 @@ PanelWindow {
                     updateAttachment();
             }
             Connections {
-                target: popup
+                target: qmlPopup
                 function onFrameConnectedChanged(): void {
                     toast.updateAttachment();
                 }
             }
-            onAttachmentProgressChanged: popup.contourEpoch++
+            onAttachmentProgressChanged: qmlPopup.contourEpoch++
             Behavior on attachmentProgress {
                 NumberAnimation {
-                    duration: popup.frameAttached && popup.motion.enabled ? Math.min(190, popup.motion.morph) : 0
-                    easing.type: popup.motion.morphType
-                    easing.bezierCurve: popup.motion.morphCurve
+                    duration: qmlPopup.frameAttached && qmlPopup.motion.enabled ? Math.min(190, qmlPopup.motion.morph) : 0
+                    easing.type: qmlPopup.motion.morphType
+                    easing.bezierCurve: qmlPopup.motion.morphCurve
                 }
             }
-            readonly property color urgencyColor: notification && notification.urgency === NotificationUrgency.Critical ? popup.theme.critical : notification && notification.urgency === NotificationUrgency.Low ? popup.theme.textMuted : popup.theme.roleColor("notifications")
+            readonly property color urgencyColor: notification && notification.urgency === NotificationUrgency.Critical ? qmlPopup.theme.critical : notification && notification.urgency === NotificationUrgency.Low ? qmlPopup.theme.textMuted : qmlPopup.theme.roleColor("notifications")
             readonly property bool pointerPressed: toastPress.visualPressed
-            readonly property var explicitActions: popup.notificationState.explicitActions(notification)
+            readonly property var explicitActions: qmlPopup.notificationState.explicitActions(notification)
             hovered: toastPress.pointerHovered && phase === "visible"
             onHoveredChanged: {
-                popup.contourEpoch++;
-                popup.notificationState.pausePopup(toast.notification, hovered);
+                qmlPopup.contourEpoch++;
+                qmlPopup.notificationState.pausePopup(toast.notification, hovered);
             }
-            onPointerPressedChanged: popup.contourEpoch++
-            x: popup.width - width
-            y: slot * (popup.cardHeight + popup.cardGap)
+            onPointerPressedChanged: qmlPopup.contourEpoch++
+            x: qmlPopup.width - width
+            y: slot * (qmlPopup.cardHeight + qmlPopup.cardGap)
             // Expiring cards may finish their ordinary exit under live cards.
             // Evicted cards, however, are not painted: the replacement's
             // animated arrival would otherwise reveal their old text beneath
             // it, even when both use the same bounded slot.
             z: phase === "closing" ? 0 : 1
-            onXChanged: popup.contourEpoch++
-            onYChanged: popup.contourEpoch++
-            onWidthChanged: popup.contourEpoch++
-            onHeightChanged: popup.contourEpoch++
-            width: popup.frameAttached ? popup.width * attachmentProgress : popup.width
-            height: popup.cardHeight
-            clip: popup.frameAttached
-            visible: !evicted && outputName === (popup.screen ? popup.screen.name : "") && slot < popup.maxToastSlots
-            onVisibleChanged: popup.contourEpoch++
+            onXChanged: qmlPopup.contourEpoch++
+            onYChanged: qmlPopup.contourEpoch++
+            onWidthChanged: qmlPopup.contourEpoch++
+            onHeightChanged: qmlPopup.contourEpoch++
+            width: qmlPopup.frameAttached ? qmlPopup.width * attachmentProgress : qmlPopup.width
+            height: qmlPopup.cardHeight
+            clip: qmlPopup.frameAttached
+            visible: !evicted && outputName === (qmlPopup.screen ? qmlPopup.screen.name : "") && slot < qmlPopup.maxToastSlots
+            onVisibleChanged: qmlPopup.contourEpoch++
 
             Behavior on y {
                 NumberAnimation {
-                    duration: popup.motion.enabled ? popup.motion.spatialNormal : 0
-                    easing.type: popup.motion.spatialType
-                    easing.bezierCurve: popup.motion.spatialCurve
+                    duration: qmlPopup.motion.enabled ? qmlPopup.motion.spatialNormal : 0
+                    easing.type: qmlPopup.motion.spatialType
+                    easing.bezierCurve: qmlPopup.motion.spatialCurve
                 }
             }
-            theme: popup.theme
-            motion: popup.motion
+            theme: qmlPopup.theme
+            motion: qmlPopup.motion
             surfaceLayer: ShellSurface.Pane
-            cornerRadius: popup.theme.radiusMedium
-            frameConnected: popup.frameAttached
+            cornerRadius: qmlPopup.theme.radiusMedium
+            frameConnected: qmlPopup.frameAttached
             // Preserve readable toast backing above the hub, even when
             // the user's general shell-glass preference is translucent.
-            glassAllowed: !popup.hubOverlapsToasts
-            fillColor: popup.theme.paneBase
-            borderColor: toast.notification && toast.notification.urgency === NotificationUrgency.Critical ? Qt.rgba(popup.theme.critical.r, popup.theme.critical.g, popup.theme.critical.b, 0.58) : popup.theme.subtleBorder
-            borderWidth: popup.frameAttached ? 0 : popup.theme.borderFocus
+            glassAllowed: !qmlPopup.hubOverlapsToasts
+            fillColor: qmlPopup.theme.paneBase
+            borderColor: toast.notification && toast.notification.urgency === NotificationUrgency.Critical ? Qt.rgba(qmlPopup.theme.critical.r, qmlPopup.theme.critical.g, qmlPopup.theme.critical.b, 0.58) : qmlPopup.theme.subtleBorder
+            borderWidth: qmlPopup.frameAttached ? 0 : qmlPopup.theme.borderFocus
 
             // Ordinary expiry/dismissal still retracts its connected contour,
             // while detached cards use the normal opacity fade. Evicted cards
             // do not participate in the rendered stack.
-            opacity: popup.frameAttached ? 1 : (toast.phase === "visible" && !toast.evicted ? 1 : 0)
-            scale: popup.frameAttached ? 1 : (toast.phase === "visible" ? 1 : 0.965)
+            opacity: qmlPopup.frameAttached ? 1 : (toast.phase === "visible" && !toast.evicted ? 1 : 0)
+            scale: qmlPopup.frameAttached ? 1 : (toast.phase === "visible" ? 1 : 0.965)
 
             Behavior on opacity {
-                enabled: !popup.frameAttached
+                enabled: !qmlPopup.frameAttached
                 NumberAnimation {
-                    duration: !popup.motion.enabled ? 0 : toast.evicted ? popup.motion.spatialNormal : popup.motion.fast
-                    easing.type: toast.phase === "visible" ? popup.motion.enterType : popup.motion.exitType
-                    easing.bezierCurve: toast.phase === "visible" ? popup.motion.enterCurve : popup.motion.exitCurve
+                    duration: !qmlPopup.motion.enabled ? 0 : toast.evicted ? qmlPopup.motion.spatialNormal : qmlPopup.motion.fast
+                    easing.type: toast.phase === "visible" ? qmlPopup.motion.enterType : qmlPopup.motion.exitType
+                    easing.bezierCurve: toast.phase === "visible" ? qmlPopup.motion.enterCurve : qmlPopup.motion.exitCurve
                 }
             }
 
             Behavior on scale {
-                enabled: !popup.frameAttached
+                enabled: !qmlPopup.frameAttached
                 NumberAnimation {
-                    duration: popup.motion.normal
-                    easing.type: popup.motion.enterType
-                    easing.bezierCurve: popup.motion.enterCurve
+                    duration: qmlPopup.motion.normal
+                    easing.type: qmlPopup.motion.enterType
+                    easing.bezierCurve: qmlPopup.motion.enterCurve
                 }
             }
 
             StateLayer {
                 id: toastPress
-                theme: popup.theme
-                motion: popup.motion
+                theme: qmlPopup.theme
+                motion: qmlPopup.motion
                 cornerRadius: toast.cornerRadius
-                stateColor: popup.theme.roleColor("notifications")
+                stateColor: qmlPopup.theme.roleColor("notifications")
                 // The shared frame draws this exact attached contour. A
                 // second rectangular/pill overlay would double-highlight it.
-                showHover: !popup.frameAttached
+                showHover: !qmlPopup.frameAttached
                 disabled: toast.phase !== "visible"
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
 
                 onActivated: event => {
                     if (event.button === Qt.RightButton) {
-                        popup.notificationState.dismiss(toast.notification);
+                        qmlPopup.notificationState.dismiss(toast.notification);
                     } else {
-                        popup.notificationState.hidePopup(toast.notification);
-                        if (!popup.notificationState.invokeDefault(toast.notification))
-                            popup.centerRequested();
+                        qmlPopup.notificationState.hidePopup(toast.notification);
+                        if (!qmlPopup.notificationState.invokeDefault(toast.notification))
+                            qmlPopup.centerRequested();
                     }
                 }
             }
 
             Item {
                 anchors.fill: parent
-                anchors.margins: popup.theme.spacing4
+                anchors.margins: qmlPopup.theme.spacing4
 
                 SquircleSurface {
                     id: accent
 
                     width: 5
                     cornerRadius: 2.5
-                    exponent: popup.theme.squircleExponent
+                    exponent: qmlPopup.theme.squircleExponent
                     fillColor: toast.urgencyColor
 
                     anchors {
@@ -295,23 +304,23 @@ PanelWindow {
                         right: parent.right
                         bottom: parent.bottom
                         left: accent.right
-                        leftMargin: popup.theme.spacing4
+                        leftMargin: qmlPopup.theme.spacing4
                     }
-                    spacing: popup.theme.spacing2
+                    spacing: qmlPopup.theme.spacing2
 
                     Row {
                         width: parent.width
-                        spacing: popup.theme.spacing2
+                        spacing: qmlPopup.theme.spacing2
 
                         ShellSurface {
                             id: appMark
                             width: 26
                             height: 26
-                            theme: popup.theme
-                            motion: popup.motion
+                            theme: qmlPopup.theme
+                            motion: qmlPopup.motion
                             surfaceLayer: ShellSurface.Control
-                            cornerRadius: popup.theme.radiusSmall
-                            fillColor: popup.theme.blend(popup.theme.controlBase, toast.urgencyColor, 0.15)
+                            cornerRadius: qmlPopup.theme.radiusSmall
+                            fillColor: qmlPopup.theme.blend(qmlPopup.theme.controlBase, toast.urgencyColor, 0.15)
 
                             NotificationArtwork {
                                 anchors.fill: parent
@@ -325,8 +334,8 @@ PanelWindow {
                             anchors.verticalCenter: parent.verticalCenter
                             text: toast.notification ? (toast.notification.appName || "SYSTEM").toUpperCase() : "SYSTEM"
                             color: toast.urgencyColor
-                            font.family: popup.runtime.fontMono
-                            font.pixelSize: popup.theme.fontSize(10)
+                            font.family: qmlPopup.runtime.fontMono
+                            font.pixelSize: qmlPopup.theme.fontSize(10)
                             font.weight: Font.DemiBold
                             font.letterSpacing: 1.4
                             width: Math.min(implicitWidth, Math.max(90, parent.width * 0.42))
@@ -342,34 +351,34 @@ PanelWindow {
                             id: actionHint
                             anchors.verticalCenter: parent.verticalCenter
                             text: !toast.notification ? "" : toast.notification.urgency === NotificationUrgency.Critical ? "CRITICAL" : toast.explicitActions.length > 0 ? toast.explicitActions.length + " ACTION" + (toast.explicitActions.length === 1 ? "" : "S") : toast.notification.hasInlineReply ? "REPLY" : ""
-                            color: popup.theme.textMuted
-                            font.family: popup.runtime.fontMono
-                            font.pixelSize: popup.theme.fontSize(9)
+                            color: qmlPopup.theme.textMuted
+                            font.family: qmlPopup.runtime.fontMono
+                            font.pixelSize: qmlPopup.theme.fontSize(9)
                             font.letterSpacing: 0.8
                         }
                     }
 
                     MarqueeText {
-                        width: Math.max(1, parent.width - (preview.visible ? preview.width + popup.theme.spacing2 : 0))
+                        width: Math.max(1, parent.width - (preview.visible ? preview.width + qmlPopup.theme.spacing2 : 0))
                         text: toast.notification ? toast.notification.summary : ""
                         textFormat: Text.PlainText
-                        color: popup.theme.textStrong
-                        font.family: popup.runtime.fontMono
-                        font.pixelSize: popup.theme.fontSize(15)
+                        color: qmlPopup.theme.textStrong
+                        font.family: qmlPopup.runtime.fontMono
+                        font.pixelSize: qmlPopup.theme.fontSize(15)
                         font.weight: Font.DemiBold
                     }
 
                     Text {
-                        width: Math.max(1, parent.width - (preview.visible ? preview.width + popup.theme.spacing2 : 0))
+                        width: Math.max(1, parent.width - (preview.visible ? preview.width + qmlPopup.theme.spacing2 : 0))
                         maximumLineCount: toast.explicitActions.length > 0 ? 2 : 3
-                        text: popup.notificationState.bodyMarkup(toast.notification)
+                        text: qmlPopup.notificationState.bodyMarkup(toast.notification)
                         textFormat: Text.StyledText
-                        onLinkActivated: link => popup.notificationState.openBodyLink(link)
+                        onLinkActivated: link => qmlPopup.notificationState.openBodyLink(link)
                         visible: text.length > 0
-                        color: popup.theme.text
+                        color: qmlPopup.theme.text
                         opacity: 0.84
-                        font.family: popup.runtime.fontMono
-                        font.pixelSize: popup.theme.fontSize(12)
+                        font.family: qmlPopup.runtime.fontMono
+                        font.pixelSize: qmlPopup.theme.fontSize(12)
                         wrapMode: Text.Wrap
                         elide: Text.ElideRight
                     }
@@ -395,7 +404,7 @@ PanelWindow {
                         right: parent.right
                         bottom: parent.bottom
                     }
-                    spacing: popup.theme.spacing1
+                    spacing: qmlPopup.theme.spacing1
                     visible: toast.explicitActions.length > 0 || (toast.notification && toast.notification.hasInlineReply)
 
                     Repeater {
@@ -403,31 +412,31 @@ PanelWindow {
                         delegate: ShellAction {
                             required property int index
                             required property var modelData
-                            runtime: popup.runtime
-                            theme: popup.theme
-                            motion: popup.motion
+                            runtime: qmlPopup.runtime
+                            theme: qmlPopup.theme
+                            motion: qmlPopup.motion
                             compact: true
                             horizontalCompact: true
                             width: Math.min(135, Math.max(78, implicitWidth))
                             height: 31
                             title: modelData.text || "Action"
-                            iconName: popup.notificationState.safeActionIcon(toast.notification, modelData)
-                            onActivated: popup.notificationState.invokeAction(toast.notification, index)
+                            iconName: qmlPopup.notificationState.safeActionIcon(toast.notification, modelData)
+                            onActivated: qmlPopup.notificationState.invokeAction(toast.notification, index)
                         }
                     }
                     ShellAction {
                         visible: toast.explicitActions.length > 2 || (toast.notification && toast.notification.hasInlineReply)
-                        runtime: popup.runtime
-                        theme: popup.theme
-                        motion: popup.motion
+                        runtime: qmlPopup.runtime
+                        theme: qmlPopup.theme
+                        motion: qmlPopup.motion
                         compact: true
                         horizontalCompact: true
                         width: 78
                         height: 31
                         title: toast.notification && toast.notification.hasInlineReply ? "Reply…" : "More…"
                         onActivated: {
-                            popup.notificationState.hidePopup(toast.notification);
-                            popup.centerRequested();
+                            qmlPopup.notificationState.hidePopup(toast.notification);
+                            qmlPopup.centerRequested();
                         }
                     }
                 }
@@ -436,14 +445,14 @@ PanelWindow {
                     anchors {
                         left: accent.right
                         bottom: parent.bottom
-                        leftMargin: popup.theme.spacing4
+                        leftMargin: qmlPopup.theme.spacing4
                     }
                     visible: !quickActions.visible
-                    text: popup.notificationState.hasDefaultAction(toast.notification) ? "CLICK · OPEN  /  RMB · DISMISS" : "CLICK · HISTORY  /  RMB · DISMISS"
-                    color: popup.theme.textMuted
+                    text: qmlPopup.notificationState.hasDefaultAction(toast.notification) ? "CLICK · OPEN  /  RMB · DISMISS" : "CLICK · HISTORY  /  RMB · DISMISS"
+                    color: qmlPopup.theme.textMuted
                     opacity: 0.62
-                    font.family: popup.runtime.fontMono
-                    font.pixelSize: popup.theme.fontSize(8)
+                    font.family: qmlPopup.runtime.fontMono
+                    font.pixelSize: qmlPopup.theme.fontSize(8)
                 }
             }
         }
