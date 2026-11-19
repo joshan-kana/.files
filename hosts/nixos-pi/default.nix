@@ -9,12 +9,10 @@
 lib.recursiveUpdate (import ../../profiles/workstation.nix { inherit moduleRegistry; }) {
   hardware = import ./hardware.nix;
 
-  # Kvantum is a Qt Widgets style, not a Qt Quick Controls style. Clear
-  # both shell and systemd-user environments so Plasma QML loads normally.
-  home-manager.users.${config.dotfiles.users.primary.name} = {
-    home.sessionVariables.QT_STYLE_OVERRIDE = lib.mkForce "";
-    systemd.user.sessionVariables.QT_STYLE_OVERRIDE = lib.mkForce "";
-  };
+  # The shared Kvantum Qt styling is incompatible with Plasma's QML
+  # controls on this host. Let Plasma select its native Qt style.
+  home-manager.users.${config.dotfiles.users.primary.name}.stylix.targets.qt.enable =
+    lib.mkForce false;
 
   # The Pi boots through firmware/U-Boot instead of an EFI boot manager.
   boot.loader = {
