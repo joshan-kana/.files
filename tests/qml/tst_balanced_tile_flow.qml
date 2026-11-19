@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtTest
 import "../../modules/desktop/hyprland/shell/qml" as Desktop
