@@ -203,6 +203,27 @@ ssh-keyscan -H -t ed25519 "$HOST_NAME.home" 2>/dev/null >> ~/.ssh/known_hosts
 
 The remote target becomes accessible through ChatGPT Shell Access after the server has deployed the configuration containing that target and its SSH keys. Keep the Pi reachable by its configured LAN hostname.
 
+## Recover a previous system generation
+
+The Raspberry Pi firmware boots through U-Boot and an extlinux menu. When a new generation cannot mount the USB root filesystem, interrupt U-Boot's autoboot countdown and run:
+
+```text
+bootflow scan
+```
+
+Choose the last working `NixOS - Configuration ...` menu entry instead of `NixOS - Default`. On the recovered system, make its running generation the boot default again before attempting another upgrade:
+
+```sh
+run0 sh -c '
+  set -eu
+  system=$(readlink -f /run/current-system)
+  nix-env --profile /nix/var/nix/profiles/system --set "$system"
+  "$system/bin/switch-to-configuration" boot
+'
+```
+
+Check `/boot/extlinux/extlinux.conf` and verify that the `nixos-default` entry points to the recovered generation's initrd. Keep the previous generation available until the replacement has booted successfully on the Pi. A successful build or bootloader installation alone is not a boot validation.
+
 ## Secrets backup
 
 Reload the generated host exports before verifying or initializing its secrets backup:
