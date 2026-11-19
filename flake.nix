@@ -388,6 +388,7 @@
           moduleRegistryInput ? moduleRegistry,
           configurationOutputName ? configurationName,
           configurationFlakeSubdirectory ? null,
+          extraModules ? [ ],
         }:
         let
           inherit (lib.systems.elaborate system) isDarwin isLinux;
@@ -433,7 +434,8 @@
             (semantic.rootModule (
               lib.setFunctionArgs (args: (host args) // { _file = toString hostFile; }) (lib.functionArgs host)
             ))
-          ];
+          ]
+          ++ extraModules;
         };
 
       hostSpecs = {
@@ -468,9 +470,12 @@
         };
       };
 
-      nixosPiImage = self.nixosConfigurations.nixos-pi.extendModules {
-        modules = [ ./hosts/nixos-pi/image.nix ];
-      };
+      nixosPiImage = mkHost "nixos-pi" (
+        hostSpecs.nixos-pi
+        // {
+          extraModules = [ ./hosts/nixos-pi/image.nix ];
+        }
+      );
 
       nixosHostSpecs = lib.filterAttrs (_: spec: (lib.systems.elaborate spec.system).isLinux) hostSpecs;
       darwinHostSpecs = lib.filterAttrs (_: spec: (lib.systems.elaborate spec.system).isDarwin) hostSpecs;
