@@ -8,12 +8,10 @@ const read = (name) => fs.readFileSync(path.join(base, name), "utf8");
 
 // Evaluate the QML layout expressions with varying widths, text scales and
 // tile counts so changes to the actual bindings cannot silently break wrapping.
-const tileLayout = (controls, width, textScale, count, spacing = 8) => {
-  const canvas = controls
-    .split("id: controlTiles")[1]
-    .split("QuickSettingChip {")[0];
+const tileLayout = (width, textScale, count, spacing = 8) => {
+  const canvas = read("BalancedTileFlow.qml");
   const scope = {
-    root: { theme: { textScale } },
+    textScale,
     width,
     spacing,
     children: { length: count },
@@ -75,25 +73,43 @@ test("hover and press motion on shared Controls tiles stays inside the clipped v
   }
 });
 
-test("Visual Modes and Quick Actions share one continuous 14-tile canvas", () => {
+test("Visual Modes and Quick Actions have distinct full-width balanced sections", () => {
   const controls = read("SystemContent.qml");
-  const tiles = controls
-    .split("id: controlTiles")[1]
+  const visual = controls
+    .split("id: visualTiles")[1]
+    .split("id: quickActionsSection")[0];
+  const actions = controls
+    .split("id: actionTiles")[1]
     .split("ShellSurface {")[0];
   assert.equal(
-    (tiles.match(/width: controlTiles\.cellWidth\(this\)/g) || []).length,
-    14,
+    (visual.match(/width: visualTiles\.cellWidth\(this\)/g) || []).length,
+    8,
   );
-  assert.equal((tiles.match(/QuickSettingChip \{/g) || []).length, 11);
-  assert.equal((tiles.match(/OpacitySetting \{/g) || []).length, 2);
-  assert.equal((tiles.match(/AdjustableSetting \{/g) || []).length, 1);
-  assert.match(controls, /id: quickActionsHeading/);
+  assert.equal(
+    (actions.match(/width: actionTiles\.cellWidth\(this\)/g) || []).length,
+    6,
+  );
+  assert.equal((visual.match(/OpacitySetting \{/g) || []).length, 2);
+  assert.equal((visual.match(/AdjustableSetting \{/g) || []).length, 1);
+  assert.match(controls, /id: visualModesGroup/);
+  assert.match(controls, /id: quickActionsSection/);
   assert.match(controls, /text: "VISUAL MODES"/);
-  assert.match(controls, /text: "· QUICK ACTIONS"/);
-  assert.doesNotMatch(
-    controls,
-    /id: (?:visualModeStrip|actionStrip|commandRight)/,
+  assert.match(controls, /title: "Quick Actions"/);
+  assert.match(controls, /accentRole: "attention"/);
+  assert.match(
+    actions,
+    /title: root.resetRunning \? "Restoring…" : "Restore defaults"/,
   );
+  assert.doesNotMatch(visual, /Restore defaults/);
+  assert.match(controls, /id: sliderSelectionHint/);
+  assert.match(controls, /id: sliderNavigationHint/);
+  assert.match(visual, /active: root.barVisible/);
+  assert.match(visual, /active: root.motion.enabled/);
+  assert.doesNotMatch(
+    visual,
+    /active: !root\.barVisible|active: !root\.motion\.enabled/,
+  );
+  assert.doesNotMatch(controls, /id: controlTiles|id: quickActionsHeading/);
 });
 
 test("night light uses inline, interactive slider with value and shared KeyHint", () => {
@@ -209,7 +225,7 @@ test("tile rows adapt to panel width, text scale and added or removed actions", 
   for (const width of [320, 420, 560, 584, 732, 860, 1028, 1120]) {
     for (const scale of [1, 1.25, 1.5, 2]) {
       for (const count of [1, 5, 9, 12, 13, 14, 15, 16, 17, 21, 22]) {
-        const layout = tileLayout(controls, width, scale, count);
+        const layout = tileLayout(width, scale, count);
         assert.ok(layout.columns >= 1 && layout.columns <= layout.capacity);
         assert.ok(layout.rows * layout.columns >= count);
         assert.ok((layout.rows - 1) * layout.columns < count);
@@ -246,11 +262,11 @@ test("tile rows adapt to panel width, text scale and added or removed actions", 
     [1120, 1.5, 14, 5, 3],
     [560, 1, 14, 3, 5],
   ]) {
-    const layout = tileLayout(controls, width, scale, count);
+    const layout = tileLayout(width, scale, count);
     assert.equal(layout.columns, columns);
     assert.equal(layout.rows, rows);
   }
-  const uneven = tileLayout(controls, 1000, 1, 14);
+  const uneven = tileLayout(1000, 1, 14);
   assert.equal(uneven.rows, 3);
   assert.equal(uneven.columns, 5);
   assert.ok(uneven.cellWidth(10) > uneven.cellWidth(0));
@@ -293,25 +309,30 @@ test("one focused Controls handler owns forward and reverse slider traversal", (
   assert.equal(current, "glass");
 });
 
-test("active slider status does not masquerade as keyboard focus after reverse traversal", () => {
+test("enabled slider tiles retain an accent border without confusing keyboard focus", () => {
   for (const name of ["OpacitySetting.qml", "AdjustableSetting.qml"]) {
     const tile = read(name);
-    assert.match(tile, /outlined: keyboardSelected/);
-    assert.match(
-      tile,
-      /borderWidth: keyboardSelected \? theme\.borderFocus : 0/,
-    );
-    assert.match(
-      tile,
-      /borderColor: keyboardSelected \? theme\.blend\(roleAccent, theme\.textStrong, 0\.55\) : "transparent"/,
-    );
+    assert.match(tile, /outlined: active \|\| keyboardSelected/);
     assert.match(tile, /luminous: active \|\| keyboardSelected/);
+    assert.match(
+      tile,
+      /borderWidth: keyboardSelected \? theme\.borderFocus : active \? theme\.borderThin : 0/,
+    );
+    assert.match(
+      tile,
+      /borderColor: keyboardSelected \? theme\.blend\(roleAccent, theme\.textStrong, 0\.55\) : active \? roleAccent : "transparent"/,
+    );
     assert.match(
       tile,
       /fillColor: active \? theme\.blend\(theme\.controlBase, roleAccent,/,
     );
-    assert.doesNotMatch(tile, /outlined: active \|\| keyboardSelected/);
   }
+  const chip = read("QuickSettingChip.qml");
+  assert.match(chip, /outlined: chip.active/);
+  assert.match(
+    chip,
+    /borderColor: chip.active \? chip.activeColor : "transparent"/,
+  );
 });
 
 test("modifier-only keys cannot clear slider selection across repeated Shift+Tab presses", () => {
@@ -344,7 +365,8 @@ test("Controls keeps paired primary controls and one responsive canvas above aud
   const controls = read("SystemContent.qml");
   assert.match(controls, /id: commandMatrix/);
   assert.match(controls, /id: tileCanvas/);
-  assert.match(controls, /id: controlTiles/);
+  assert.match(controls, /id: visualTiles/);
+  assert.match(controls, /id: actionTiles/);
   assert.match(controls, /id: mediaMatrix/);
   assert.match(
     controls,
@@ -367,7 +389,8 @@ test("Controls preserves primary actions and shared audio/visual controls", () =
     "sessionButton",
     "connectionTiles",
     "tileCanvas",
-    "controlTiles",
+    "visualTiles",
+    "actionTiles",
     "audioDeck",
     "trayItem",
     "brightnessHint",
@@ -429,14 +452,17 @@ test("Dashboard hierarchy puts the shared tile canvas between top controls and m
   const controls = read("SystemContent.qml");
   const appearance = controls.indexOf("id: appearanceSection");
   const connectivity = controls.indexOf("id: connectionTiles");
-  const tiles = controls.indexOf("id: controlTiles");
+  const modes = controls.indexOf("id: visualTiles");
+  const actions = controls.indexOf("id: actionTiles");
   const lower = controls.indexOf("id: mediaMatrix");
   const audio = controls.indexOf("id: audioSection");
   const media = controls.indexOf("ControlsMediaCard {");
   assert.ok(
-    appearance >= 0 && appearance < connectivity && connectivity < tiles,
+    appearance >= 0 && appearance < connectivity && connectivity < modes,
   );
-  assert.ok(tiles < lower && lower < audio && audio < media);
+  assert.ok(
+    modes < actions && actions < lower && lower < audio && audio < media,
+  );
   assert.match(controls, /title: "Connectivity"/);
   assert.match(
     controls,
@@ -484,28 +510,34 @@ test("Compact Media shares a live spectrum, controls and full Now Playing naviga
   );
 });
 
-test("Visual Modes and Quick Actions use the same calculated width and wrap", () => {
+test("both Controls sections use the same balanced row width calculation", () => {
   const controls = read("SystemContent.qml");
+  const flow = read("BalancedTileFlow.qml");
   assert.match(
-    controls,
-    /readonly property real minimumTileWidth: 140 \* root.theme.textScale/,
+    flow,
+    /readonly property real minimumTileWidth: 140 \* textScale/,
   );
   assert.match(
-    controls,
+    flow,
     /readonly property int capacity: Math.max\(1, Math.min\(7,/,
   );
   assert.match(
-    controls,
+    flow,
     /readonly property int rows: Math.max\(1, Math.ceil\(children.length \/ capacity\)\)/,
   );
   assert.match(
-    controls,
+    flow,
     /readonly property int columns: Math.max\(1, Math.ceil\(children.length \/ rows\)\)/,
   );
-  assert.match(controls, /function cellWidth\(tile: Item\): real \{/);
+  assert.match(flow, /function cellWidth\(tile: Item\): real \{/);
+  assert.equal((controls.match(/BalancedTileFlow \{/g) || []).length, 2);
   assert.equal(
-    (controls.match(/width: controlTiles\.cellWidth\(this\)/g) || []).length,
-    14,
+    (controls.match(/width: visualTiles\.cellWidth\(this\)/g) || []).length,
+    8,
+  );
+  assert.equal(
+    (controls.match(/width: actionTiles\.cellWidth\(this\)/g) || []).length,
+    6,
   );
 });
 
@@ -660,43 +692,60 @@ test("Compact Audio keeps Output/Input without app rows and shows correct header
   assert.match(read("ShellSection.qml"), /id: headerHints/);
 });
 
-test("Quick Actions retain their order and direct action handlers in the shared canvas", () => {
+test("Quick Actions retain handlers and put Restore Defaults alongside actions", () => {
   const controls = read("SystemContent.qml");
-  const tiles = controls
-    .split("id: controlTiles")[1]
+  const actions = controls
+    .split("id: actionTiles")[1]
     .split("ShellSurface {")[0];
-  const actions = [
+  const titles = [
+    'title: root.resetRunning ? "Restoring…" : "Restore defaults"',
     'title: root.notificationState.silent ? "Silent" : "Alerts"',
     'title: root.system.idleInhibited ? "Stay awake" : "Idle allowed"',
     'title: (root.powerProfile.available ? root.powerProfile.label(root.powerProfile.current) : "Power")',
     'title: "Resources"',
     'title: "Captures"',
   ];
-  let previous = tiles.indexOf('title: root.resetRunning ? "Restoring…"');
-  for (const action of actions) {
-    const index = tiles.indexOf(action);
-    assert.ok(index > previous, action);
+  let previous = -1;
+  for (const title of titles) {
+    const index = actions.indexOf(title);
+    assert.ok(index > previous, title);
     previous = index;
   }
-  assert.match(tiles, /onActivated: root.openResources\(\)/);
-  assert.match(tiles, /onActivated: root.openRecordings\(\)/);
+  assert.match(
+    actions,
+    /onActivated: root.resetConfirmPending = !root.resetConfirmPending/,
+  );
+  assert.match(actions, /onActivated: root.openResources\(\)/);
+  assert.match(actions, /onActivated: root.openRecordings\(\)/);
 });
 
-test("all 14 tile heights remain fixed as the canvas is rebalanced", () => {
+test("all 14 tile heights remain fixed when the categories rebalance separately", () => {
   const controls = read("SystemContent.qml");
-  const tiles = controls
-    .split("id: controlTiles")[1]
+  const visual = controls
+    .split("id: visualTiles")[1]
+    .split("id: quickActionsSection")[0];
+  const actions = controls
+    .split("id: actionTiles")[1]
     .split("ShellSurface {")[0];
   assert.equal(
-    (tiles.match(/height: root.dashboardTileHeight/g) || []).length,
-    14,
+    (visual.match(/height: root.dashboardTileHeight/g) || []).length,
+    8,
+  );
+  assert.equal(
+    (actions.match(/height: root.dashboardTileHeight/g) || []).length,
+    6,
   );
   assert.match(controls, /readonly property int dashboardTileHeight: 72/);
-  for (const count of [13, 14, 15, 16, 20]) {
-    const layout = tileLayout(controls, 1120, 1, count);
-    assert.ok(layout.columns * 72 > 0);
+  for (const count of [1, 2, 5, 6, 8, 9, 15, 20]) {
+    const layout = tileLayout(1120, 1, count);
     assert.equal(layout.rows, Math.ceil(count / layout.capacity));
   }
+  const visualLayout = tileLayout(1120, 1, 8);
+  const actionLayout = tileLayout(1120, 1, 6);
+  assert.equal(visualLayout.rows, 2);
+  assert.equal(visualLayout.columns, 4);
+  assert.equal(actionLayout.rows, 1);
+  assert.equal(actionLayout.columns, 6);
 });
 
 test("compact Media anchors artwork and player information above footer controls", () => {

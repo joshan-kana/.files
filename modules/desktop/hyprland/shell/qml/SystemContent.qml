@@ -972,326 +972,327 @@ FocusScope {
             Column {
                 id: tileCanvas
                 width: parent.width
-                spacing: root.theme.spacing2
+                spacing: root.theme.spacing4
 
-                Row {
-                    width: parent.width
-                    height: 24
-                    spacing: root.theme.spacing2
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: "VISUAL MODES"
-                        color: root.theme.readableRoleColor("display")
-                        font.family: root.runtime.fontMono
-                        font.pixelSize: root.theme.fontPanelEyebrow
-                        font.weight: Font.DemiBold
-                        font.letterSpacing: 1.0
-                    }
-                    Text {
-                        id: quickActionsHeading
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: "· QUICK ACTIONS"
-                        color: root.theme.readableRoleColor("attention")
-                        font.family: root.runtime.fontMono
-                        font.pixelSize: root.theme.fontPanelEyebrow
-                        font.weight: Font.DemiBold
-                        font.letterSpacing: 1.0
-                    }
-                    Item {
-                        width: Math.max(0, parent.width - parent.children[0].implicitWidth - quickActionsHeading.implicitWidth - sliderSelectionHint.implicitWidth - (sliderNavigationHint.visible ? sliderNavigationHint.implicitWidth + parent.spacing : 0) - parent.spacing * 3)
-                        height: 1
-                    }
-                    KeyHint {
-                        id: sliderSelectionHint
-                        anchors.verticalCenter: parent.verticalCenter
-                        shortcut: root.runtime.shellHint("SystemContent.tabSelect")
-                        label: root.selectedSlider.length > 0 ? "Next slider" : "Select slider"
-                        compact: true
-                        runtime: root.runtime
-                        theme: root.theme
-                        emphasized: root.selectedSlider.length > 0
-                    }
-                    KeyHint {
-                        id: sliderNavigationHint
-                        visible: root.selectedSlider.length > 0
-                        anchors.verticalCenter: parent.verticalCenter
-                        shortcut: root.runtime.shellHint("SystemContent.rowSelect")
-                        label: "Select"
-                        compact: true
-                        runtime: root.runtime
-                        theme: root.theme
-                    }
-                }
-
-                Flow {
-                    id: controlTiles
+                Column {
+                    id: visualModesGroup
                     width: parent.width
                     spacing: root.theme.spacing2
-                    // One adaptive canvas lets either category grow without
-                    // stranding the shorter group beside an empty column.
-                    readonly property real minimumTileWidth: 140 * root.theme.textScale
-                    readonly property int capacity: Math.max(1, Math.min(7, Math.floor((width + spacing) / (minimumTileWidth + spacing))))
-                    readonly property int rows: Math.max(1, Math.ceil(children.length / capacity))
-                    readonly property int columns: Math.max(1, Math.ceil(children.length / rows))
-                    function cellWidth(tile: Item): real {
-                        const index = children.indexOf(tile);
-                        if (index < 0)
-                            return 1;
-                        const widerRows = children.length % rows;
-                        const count = widerRows === 0 || index < widerRows * columns ? columns : columns - 1;
-                        return Math.max(1, Math.floor((width - spacing * (count - 1)) / count));
-                    }
 
-                    QuickSettingChip {
-                        width: controlTiles.cellWidth(this)
-                        height: root.dashboardTileHeight
-                        runtime: root.runtime
-                        theme: root.theme
-                        motion: root.motion
-                        icon: "󰸉"
-                        title: root.wallpaperSpectrumEnabled ? "Wallpaper spectrum" : "Spectrum off"
-                        shortcut: root.runtime.shellHint("SystemContent.wallpaperSpectrum")
-                        active: root.wallpaperSpectrumEnabled
-                        activeColor: root.theme.roleColor("workspace")
-                        onActivated: root.wallpaperSpectrumToggleRequested()
-                    }
-
-                    QuickSettingChip {
-                        width: controlTiles.cellWidth(this)
-                        height: root.dashboardTileHeight
-                        runtime: root.runtime
-                        theme: root.theme
-                        motion: root.motion
-                        icon: DesktopIcons.glyphFor("audioMixer")
-                        title: root.musicReactiveEnabled ? "Audio reactive" : "Reactive off"
-                        shortcut: root.runtime.shellHint("SystemContent.musicReactive")
-                        active: root.musicReactiveEnabled
-                        activeColor: root.theme.roleColor("audio")
-                        onActivated: root.musicReactiveToggleRequested()
-                    }
-
-                    OpacitySetting {
-                        width: controlTiles.cellWidth(this)
-                        height: root.dashboardTileHeight
-                        runtime: root.runtime
-                        theme: root.theme
-                        motion: root.motion
-                        icon: "󰍹"
-                        label: "Windows"
-                        opacityValue: root.appearance.windowOpacity
-                        shortcut: root.runtime.shellHint("SystemContent.windowTransparency")
-                        active: root.windowTransparencyEnabled
-                        keyboardSelected: root.selectedSlider === "windows"
-                        onSliderActivated: root.selectSlider("windows")
-                        roleAccent: root.theme.roleColor("display")
-                        onToggleRequested: root.windowTransparencyToggleRequested()
-                        onOpacityRequested: value => root.appearance.setWindowOpacity(value)
-                    }
-
-                    OpacitySetting {
-                        width: controlTiles.cellWidth(this)
-                        height: root.dashboardTileHeight
-                        runtime: root.runtime
-                        theme: root.theme
-                        motion: root.motion
-                        icon: "󰊠"
-                        label: "Frosted glass"
-                        opacityValue: root.appearance.glassOpacity
-                        shortcut: root.runtime.shellHint("SystemContent.shellGlass")
-                        active: root.shellGlassEnabled
-                        keyboardSelected: root.selectedSlider === "glass"
-                        onSliderActivated: root.selectSlider("glass")
-                        roleAccent: root.theme.roleColor("connectivity")
-                        onToggleRequested: root.shellGlassToggleRequested()
-                        onOpacityRequested: value => root.appearance.setGlassOpacity(value)
-                    }
-
-                    QuickSettingChip {
-                        width: controlTiles.cellWidth(this)
-                        height: root.dashboardTileHeight
-                        runtime: root.runtime
-                        theme: root.theme
-                        motion: root.motion
-                        icon: "󰀻"
-                        title: root.barVisible ? "Bar visible" : "Bar hidden"
-                        shortcut: root.runtime.shellHint("SystemContent.bar")
-                        active: !root.barVisible
-                        activeColor: root.theme.roleColor("positive")
-                        onActivated: root.barToggleRequested()
-                    }
-                    QuickSettingChip {
-                        width: controlTiles.cellWidth(this)
-                        height: root.dashboardTileHeight
-                        runtime: root.runtime
-                        theme: root.theme
-                        motion: root.motion
-                        icon: root.frameVisible ? "󰏗" : "󰏖"
-                        title: root.frameVisible ? "Frame visible" : "Frame hidden"
-                        shortcut: root.runtime.shellHint("SystemContent.frame")
-                        active: root.frameVisible
-                        activeColor: root.theme.roleColor("display")
-                        onActivated: root.frameToggleRequested()
-                    }
-
-                    QuickSettingChip {
-                        width: controlTiles.cellWidth(this)
-                        height: root.dashboardTileHeight
-                        runtime: root.runtime
-                        theme: root.theme
-                        motion: root.motion
-                        icon: root.motion.enabled ? "󰐊" : "󰏤"
-                        title: root.motion.enabled ? "Animations" : "Reduced motion"
-                        shortcut: root.runtime.shellHint("SystemContent.motion")
-                        active: !root.motion.enabled
-                        activeColor: root.theme.roleColor("warning")
-                        onActivated: root.motion.toggle()
-                    }
-
-                    AdjustableSetting {
-                        width: controlTiles.cellWidth(this)
-                        height: root.dashboardTileHeight
-                        runtime: root.runtime
-                        theme: root.theme
-                        motion: root.motion
-                        icon: root.nightLight.active ? "󰖔" : "󰖙"
-                        label: "Night Light"
-                        valueText: root.nightLight.supported ? root.nightLight.temperature + " K" : "Unavailable"
-                        keyboardSelected: root.selectedSlider === "nightLight"
-                        onSliderActivated: root.selectSlider("nightLight")
-                        value: root.nightLight.temperature
-                        from: 2500
-                        to: 6500
-                        onValueRequested: value => root.nightLight.setTemperature(value)
-                        toggleShortcut: root.runtime.shellHint("SystemContent.nightLight")
-                        roleAccent: root.theme.roleColor("warmth")
-                        active: root.nightLight.active
-                        canToggle: root.nightLight.supported && !root.nightLight.busy
-                        canAdjust: root.nightLight.supported
-                        onToggleRequested: root.nightLight.toggle()
-                    }
-                    QuickSettingChip {
-                        width: controlTiles.cellWidth(this)
-                        height: root.dashboardTileHeight
-                        runtime: root.runtime
-                        theme: root.theme
-                        motion: root.motion
-                        icon: "󰑓"
-                        title: root.resetRunning ? "Restoring…" : "Restore defaults"
-                        shortcut: root.runtime.shellHint("SystemContent.reset")
-                        active: root.resetConfirmPending
-                        enabled: !root.resetRunning
-                        activeColor: root.theme.roleColor("warning")
-                        onActivated: root.resetConfirmPending = !root.resetConfirmPending
-                    }
-
-                    QuickSettingChip {
-                        width: controlTiles.cellWidth(this)
-                        height: root.dashboardTileHeight
-                        runtime: root.runtime
-                        theme: root.theme
-                        motion: root.motion
-                        icon: root.notificationState.silent ? "󰂛" : "󰂚"
-                        title: root.notificationState.silent ? "Silent" : "Alerts"
-                        shortcut: root.runtime.shellHint("SystemContent.alerts")
-                        active: root.notificationState.silent
-                        activeColor: root.notificationState.silent ? root.theme.roleColor("warning") : root.theme.roleColor("attention")
-                        onActivated: root.notificationState.toggleSilent()
-                    }
-
-                    QuickSettingChip {
-                        width: controlTiles.cellWidth(this)
-                        height: root.dashboardTileHeight
-                        runtime: root.runtime
-                        theme: root.theme
-                        motion: root.motion
-                        icon: root.system.idleInhibited ? "󰅶" : "󰒲"
-                        title: root.system.idleInhibited ? "Stay awake" : "Idle allowed"
-                        shortcut: root.runtime.shellHint("SystemContent.stayAwake")
-                        active: root.system.idleInhibited
-                        activeColor: root.theme.roleColor("warmth")
-                        onActivated: root.system.toggleIdleInhibited()
-                    }
-
-                    QuickSettingChip {
-                        width: controlTiles.cellWidth(this)
-                        height: root.dashboardTileHeight
-                        runtime: root.runtime
-                        theme: root.theme
-                        motion: root.motion
-                        icon: root.system.batteryAvailable ? root.system.batteryLevelIcon : "󰐥"
-                        title: (root.powerProfile.available ? root.powerProfile.label(root.powerProfile.current) : "Power") + (root.system.batteryAvailable ? " " + root.system.batteryPercent + "%" : "")
-                        shortcut: root.runtime.shellHint("SystemContent.powerProfile")
-                        enabled: root.powerProfile.available && !root.powerProfile.applying
-                        active: root.powerProfile.current === "power-saver"
-                        activeColor: root.theme.powerProfileColor(root.powerProfile.current)
-                        onActivated: root.powerProfile.cycle()
-                    }
-
-                    QuickSettingChip {
-                        width: controlTiles.cellWidth(this)
-                        height: root.dashboardTileHeight
-                        runtime: root.runtime
-                        theme: root.theme
-                        motion: root.motion
-                        icon: DesktopIcons.glyphFor("resources")
-                        title: "Resources"
-                        shortcut: root.runtime.shellHint("SystemContent.resources")
-                        activeColor: root.theme.roleColor("resources")
-                        onActivated: root.openResources()
-                    }
-
-                    QuickSettingChip {
-                        width: controlTiles.cellWidth(this)
-                        height: root.dashboardTileHeight
-                        runtime: root.runtime
-                        theme: root.theme
-                        motion: root.motion
-                        icon: DesktopIcons.glyphFor("captures")
-                        title: "Captures"
-                        shortcut: root.runtime.shellHint("SystemContent.captures")
-                        activeColor: root.theme.roleColor("capture")
-                        onActivated: root.openRecordings()
-                    }
-                }
-
-                ShellSurface {
-                    visible: root.resetConfirmPending || root.resetRunning || root.resetStatus.length > 0
-                    width: parent.width
-                    height: visible ? resetContents.implicitHeight + root.theme.spacing3 * 2 : 0
-                    theme: root.theme
-                    motion: root.motion
-                    surfaceLayer: ShellSurface.Group
-                    cornerRadius: root.theme.radiusMedium
-                    fillColor: root.theme.groupBase
-
-                    Column {
-                        id: resetContents
-                        width: parent.width - root.theme.spacing3 * 2
-                        anchors.centerIn: parent
+                    Row {
+                        width: parent.width
+                        height: 24
                         spacing: root.theme.spacing2
                         Text {
-                            width: parent.width
-                            wrapMode: Text.WordWrap
-                            text: root.resetConfirmPending ? "Restore Nix defaults for appearance, motion, notifications, captures and wallpapers? Personal files and the active system generation stay intact." : root.resetStatus
-                            color: root.resetConfirmPending ? root.theme.textStrong : root.theme.textMuted
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "VISUAL MODES"
+                            color: root.theme.readableRoleColor("display")
                             font.family: root.runtime.fontMono
-                            font.pixelSize: root.theme.fontSize(11)
+                            font.pixelSize: root.theme.fontPanelEyebrow
+                            font.weight: Font.DemiBold
+                            font.letterSpacing: 1.0
                         }
-                        KeyHintStrip {
-                            visible: root.resetConfirmPending
-                            width: parent.width
+                        Item {
+                            width: Math.max(0, parent.width - parent.children[0].implicitWidth - sliderSelectionHint.implicitWidth - (sliderNavigationHint.visible ? sliderNavigationHint.implicitWidth + parent.spacing : 0) - parent.spacing * 2)
+                            height: 1
+                        }
+                        KeyHint {
+                            id: sliderSelectionHint
+                            anchors.verticalCenter: parent.verticalCenter
+                            shortcut: root.runtime.shellHint("SystemContent.tabSelect")
+                            label: root.selectedSlider.length > 0 ? "Next slider" : "Select slider"
+                            compact: true
                             runtime: root.runtime
                             theme: root.theme
-                            hints: [
-                                {
-                                    shortcut: root.runtime.shellHint("SystemContent.resetConfirm"),
-                                    label: "Restore"
-                                },
-                                {
-                                    shortcut: root.runtime.shellHint("SystemContent.resetCancel"),
-                                    label: "Cancel"
-                                }
-                            ]
+                            emphasized: root.selectedSlider.length > 0
+                        }
+                        KeyHint {
+                            id: sliderNavigationHint
+                            visible: root.selectedSlider.length > 0
+                            anchors.verticalCenter: parent.verticalCenter
+                            shortcut: root.runtime.shellHint("SystemContent.rowSelect")
+                            label: "Select"
+                            compact: true
+                            runtime: root.runtime
+                            theme: root.theme
+                        }
+                    }
+
+                    BalancedTileFlow {
+                        id: visualTiles
+                        width: parent.width
+                        spacing: root.theme.spacing2
+                        textScale: root.theme.textScale
+
+                        QuickSettingChip {
+                            width: visualTiles.cellWidth(this)
+                            height: root.dashboardTileHeight
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: "󰸉"
+                            title: root.wallpaperSpectrumEnabled ? "Wallpaper spectrum" : "Spectrum off"
+                            shortcut: root.runtime.shellHint("SystemContent.wallpaperSpectrum")
+                            active: root.wallpaperSpectrumEnabled
+                            activeColor: root.theme.roleColor("workspace")
+                            onActivated: root.wallpaperSpectrumToggleRequested()
+                        }
+
+                        QuickSettingChip {
+                            width: visualTiles.cellWidth(this)
+                            height: root.dashboardTileHeight
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: DesktopIcons.glyphFor("audioMixer")
+                            title: root.musicReactiveEnabled ? "Audio reactive" : "Reactive off"
+                            shortcut: root.runtime.shellHint("SystemContent.musicReactive")
+                            active: root.musicReactiveEnabled
+                            activeColor: root.theme.roleColor("audio")
+                            onActivated: root.musicReactiveToggleRequested()
+                        }
+
+                        OpacitySetting {
+                            width: visualTiles.cellWidth(this)
+                            height: root.dashboardTileHeight
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: "󰍹"
+                            label: "Windows"
+                            opacityValue: root.appearance.windowOpacity
+                            shortcut: root.runtime.shellHint("SystemContent.windowTransparency")
+                            active: root.windowTransparencyEnabled
+                            keyboardSelected: root.selectedSlider === "windows"
+                            onSliderActivated: root.selectSlider("windows")
+                            roleAccent: root.theme.roleColor("display")
+                            onToggleRequested: root.windowTransparencyToggleRequested()
+                            onOpacityRequested: value => root.appearance.setWindowOpacity(value)
+                        }
+
+                        OpacitySetting {
+                            width: visualTiles.cellWidth(this)
+                            height: root.dashboardTileHeight
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: "󰊠"
+                            label: "Frosted glass"
+                            opacityValue: root.appearance.glassOpacity
+                            shortcut: root.runtime.shellHint("SystemContent.shellGlass")
+                            active: root.shellGlassEnabled
+                            keyboardSelected: root.selectedSlider === "glass"
+                            onSliderActivated: root.selectSlider("glass")
+                            roleAccent: root.theme.roleColor("connectivity")
+                            onToggleRequested: root.shellGlassToggleRequested()
+                            onOpacityRequested: value => root.appearance.setGlassOpacity(value)
+                        }
+
+                        QuickSettingChip {
+                            width: visualTiles.cellWidth(this)
+                            height: root.dashboardTileHeight
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: "󰀻"
+                            title: root.barVisible ? "Bar visible" : "Bar hidden"
+                            shortcut: root.runtime.shellHint("SystemContent.bar")
+                            active: root.barVisible
+                            activeColor: root.theme.roleColor("positive")
+                            onActivated: root.barToggleRequested()
+                        }
+                        QuickSettingChip {
+                            width: visualTiles.cellWidth(this)
+                            height: root.dashboardTileHeight
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: root.frameVisible ? "󰏗" : "󰏖"
+                            title: root.frameVisible ? "Frame visible" : "Frame hidden"
+                            shortcut: root.runtime.shellHint("SystemContent.frame")
+                            active: root.frameVisible
+                            activeColor: root.theme.roleColor("display")
+                            onActivated: root.frameToggleRequested()
+                        }
+
+                        QuickSettingChip {
+                            width: visualTiles.cellWidth(this)
+                            height: root.dashboardTileHeight
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: root.motion.enabled ? "󰐊" : "󰏤"
+                            title: root.motion.enabled ? "Animations" : "Reduced motion"
+                            shortcut: root.runtime.shellHint("SystemContent.motion")
+                            active: root.motion.enabled
+                            activeColor: root.theme.roleColor("display")
+                            onActivated: root.motion.toggle()
+                        }
+
+                        AdjustableSetting {
+                            width: visualTiles.cellWidth(this)
+                            height: root.dashboardTileHeight
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: root.nightLight.active ? "󰖔" : "󰖙"
+                            label: "Night Light"
+                            valueText: root.nightLight.supported ? root.nightLight.temperature + " K" : "Unavailable"
+                            keyboardSelected: root.selectedSlider === "nightLight"
+                            onSliderActivated: root.selectSlider("nightLight")
+                            value: root.nightLight.temperature
+                            from: 2500
+                            to: 6500
+                            onValueRequested: value => root.nightLight.setTemperature(value)
+                            toggleShortcut: root.runtime.shellHint("SystemContent.nightLight")
+                            roleAccent: root.theme.roleColor("warmth")
+                            active: root.nightLight.active
+                            canToggle: root.nightLight.supported && !root.nightLight.busy
+                            canAdjust: root.nightLight.supported
+                            onToggleRequested: root.nightLight.toggle()
+                        }
+                    }
+                }
+
+                ShellSection {
+                    id: quickActionsSection
+                    width: parent.width
+                    runtime: root.runtime
+                    theme: root.theme
+                    title: "Quick Actions"
+                    emphasized: true
+                    accentRole: "attention"
+
+                    BalancedTileFlow {
+                        id: actionTiles
+                        width: parent.width
+                        spacing: root.theme.spacing2
+                        textScale: root.theme.textScale
+
+                        QuickSettingChip {
+                            width: actionTiles.cellWidth(this)
+                            height: root.dashboardTileHeight
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: "󰑓"
+                            title: root.resetRunning ? "Restoring…" : "Restore defaults"
+                            shortcut: root.runtime.shellHint("SystemContent.reset")
+                            active: root.resetConfirmPending
+                            enabled: !root.resetRunning
+                            activeColor: root.theme.roleColor("warning")
+                            onActivated: root.resetConfirmPending = !root.resetConfirmPending
+                        }
+
+                        QuickSettingChip {
+                            width: actionTiles.cellWidth(this)
+                            height: root.dashboardTileHeight
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: root.notificationState.silent ? "󰂛" : "󰂚"
+                            title: root.notificationState.silent ? "Silent" : "Alerts"
+                            shortcut: root.runtime.shellHint("SystemContent.alerts")
+                            active: root.notificationState.silent
+                            activeColor: root.notificationState.silent ? root.theme.roleColor("warning") : root.theme.roleColor("attention")
+                            onActivated: root.notificationState.toggleSilent()
+                        }
+
+                        QuickSettingChip {
+                            width: actionTiles.cellWidth(this)
+                            height: root.dashboardTileHeight
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: root.system.idleInhibited ? "󰅶" : "󰒲"
+                            title: root.system.idleInhibited ? "Stay awake" : "Idle allowed"
+                            shortcut: root.runtime.shellHint("SystemContent.stayAwake")
+                            active: root.system.idleInhibited
+                            activeColor: root.theme.roleColor("warmth")
+                            onActivated: root.system.toggleIdleInhibited()
+                        }
+
+                        QuickSettingChip {
+                            width: actionTiles.cellWidth(this)
+                            height: root.dashboardTileHeight
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: root.system.batteryAvailable ? root.system.batteryLevelIcon : "󰐥"
+                            title: (root.powerProfile.available ? root.powerProfile.label(root.powerProfile.current) : "Power") + (root.system.batteryAvailable ? " " + root.system.batteryPercent + "%" : "")
+                            shortcut: root.runtime.shellHint("SystemContent.powerProfile")
+                            enabled: root.powerProfile.available && !root.powerProfile.applying
+                            active: root.powerProfile.current === "power-saver"
+                            activeColor: root.theme.powerProfileColor(root.powerProfile.current)
+                            onActivated: root.powerProfile.cycle()
+                        }
+
+                        QuickSettingChip {
+                            width: actionTiles.cellWidth(this)
+                            height: root.dashboardTileHeight
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: DesktopIcons.glyphFor("resources")
+                            title: "Resources"
+                            shortcut: root.runtime.shellHint("SystemContent.resources")
+                            activeColor: root.theme.roleColor("resources")
+                            onActivated: root.openResources()
+                        }
+
+                        QuickSettingChip {
+                            width: actionTiles.cellWidth(this)
+                            height: root.dashboardTileHeight
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: DesktopIcons.glyphFor("captures")
+                            title: "Captures"
+                            shortcut: root.runtime.shellHint("SystemContent.captures")
+                            activeColor: root.theme.roleColor("capture")
+                            onActivated: root.openRecordings()
+                        }
+                    }
+
+                    ShellSurface {
+                        visible: root.resetConfirmPending || root.resetRunning || root.resetStatus.length > 0
+                        width: parent.width
+                        height: visible ? resetContents.implicitHeight + root.theme.spacing3 * 2 : 0
+                        theme: root.theme
+                        motion: root.motion
+                        surfaceLayer: ShellSurface.Group
+                        cornerRadius: root.theme.radiusMedium
+                        fillColor: root.theme.groupBase
+
+                        Column {
+                            id: resetContents
+                            width: parent.width - root.theme.spacing3 * 2
+                            anchors.centerIn: parent
+                            spacing: root.theme.spacing2
+                            Text {
+                                width: parent.width
+                                wrapMode: Text.WordWrap
+                                text: root.resetConfirmPending ? "Restore Nix defaults for appearance, motion, notifications, captures and wallpapers? Personal files and the active system generation stay intact." : root.resetStatus
+                                color: root.resetConfirmPending ? root.theme.textStrong : root.theme.textMuted
+                                font.family: root.runtime.fontMono
+                                font.pixelSize: root.theme.fontSize(11)
+                            }
+                            KeyHintStrip {
+                                visible: root.resetConfirmPending
+                                width: parent.width
+                                runtime: root.runtime
+                                theme: root.theme
+                                hints: [
+                                    {
+                                        shortcut: root.runtime.shellHint("SystemContent.resetConfirm"),
+                                        label: "Restore"
+                                    },
+                                    {
+                                        shortcut: root.runtime.shellHint("SystemContent.resetCancel"),
+                                        label: "Cancel"
+                                    }
+                                ]
+                            }
                         }
                     }
                 }
