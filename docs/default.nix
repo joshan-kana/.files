@@ -473,6 +473,12 @@ let
       export DOTFILES_REPO=${lib.escapeShellArg config.dotfiles.paths.repoPath}
       export PRIMARY_USER=${lib.escapeShellArg primaryUser.name}
       export PRIMARY_HOME=${lib.escapeShellArg "${primaryUser.homeRoot}/${primaryUser.name}"}
+      ${lib.optionalString (config.users.users.${primaryUser.name}.uid != null) ''
+        export PRIMARY_UID=${toString config.users.users.${primaryUser.name}.uid}
+        export PRIMARY_GID=${
+          toString config.users.groups.${config.users.users.${primaryUser.name}.group}.gid
+        }
+      ''}
       export USER_SECRETS_DIR=${lib.escapeShellArg config.dotfiles.secretsDir}
       export SECRETS_BACKUP_ENABLED=${
         lib.escapeShellArg (if secretsBackup == null then "false" else "true")
