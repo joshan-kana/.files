@@ -725,7 +725,12 @@
           nixos-eval = builtins.deepSeq (builtins.mapAttrs (
             _: host: host.config.system.build.bootStage2.drvPath
           ) self.nixosConfigurations) pkgs.emptyFile;
-          nixos-pi-image-eval = builtins.seq nixosPiImage.config.system.build.sdImage.drvPath pkgs.emptyFile;
+          nixos-pi-image-eval =
+            assert lib.assertMsg (lib.all (modules: lib.elem "pcie-brcmstb" modules) [
+              nixosPiImage.config.boot.initrd.availableKernelModules
+              self.nixosConfigurations.nixos-pi.config.boot.initrd.availableKernelModules
+            ]) "Raspberry Pi USB root requires the Broadcom PCIe driver in both initrds";
+            builtins.seq nixosPiImage.config.system.build.sdImage.drvPath pkgs.emptyFile;
           docs = self.packages.${system}.docs;
           repo-quality = treefmt.config.build.check self;
           git-attributes =

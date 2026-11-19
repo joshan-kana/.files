@@ -11,7 +11,11 @@
     btrfs = true;
     zfs = lib.mkForce false;
   };
+  # The Pi 4 USB 3 controller sits behind Broadcom PCIe. Include its
+  # controller and USB storage drivers for both image and system upgrades.
   boot.initrd.availableKernelModules = [
+    "pcie-brcmstb"
+    "uas"
     "usbhid"
     "usb_storage"
     "sd_mod"
