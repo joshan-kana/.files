@@ -1,6 +1,6 @@
 # Installation guide for `nixos-pi`
 
-This installation uses a flashable ARM64 NixOS SD-card image with a FAT `/boot` partition containing the firmware, extlinux configuration, kernel and initrd, alongside a Btrfs root filesystem. The root partition grows to fill the microSD card on first boot.
+This installation uses a flashable ARM64 NixOS SD-card image with a FAT `/boot` partition containing the firmware, extlinux configuration, kernel and initrd, alongside a Btrfs root filesystem. The root partition grows to fill the installation drive on first boot.
 
 ## Build the image
 
@@ -10,46 +10,83 @@ Build the stock NixOS SD-card image from the repository root using an `aarch64-l
 nix build .#nixos-pi-image --out-link /tmp/nixos-pi-image
 ```
 
-The output is an uncompressed bootable disk image. Disabling image compression avoids repeated compression and decompression of the Btrfs root and complete SD image. No writable copy or image-provisioning step is necessary. On macOS, attach the microSD reader to the OrbStack NixOS machine before flashing. On native NixOS, operate directly on the removable card.
+The output is an uncompressed bootable disk image. Disabling compression avoids repeatedly compressing the Btrfs root and complete disk image. No writable image copy is necessary. On macOS, flash directly using `diskutil` and `dd`; use OrbStack USB passthrough only when mounting Btrfs to install credentials.
 
-## Flash the microSD card
+## Flash the removable drive
 
-Run the following commands on Linux as root (`run0 zsh` on NixOS, or `orb -m nixos-orbstack -u root zsh` from the Mac). Ensure the raw image and source credentials are accessible in that environment. The image is written directly to the card without an intermediate copy.
+Writing the image erases the entire selected drive. Verify its model, capacity, and removable USB identity immediately before flashing; macOS disk numbers change when drives are reconnected. Never select a disk based only on a previously observed number.
+
+### macOS
+
+The OrbStack NixOS guest builds the image, but macOS writes it directly to the USB drive:
+
+```sh
+GUEST_IMAGE=$(orb -m nixos-orbstack -u root sh -c 'find -L /tmp/nixos-pi-image/sd-image -maxdepth 1 -name "*.img" -print -quit')
+IMAGE="$HOME/OrbStack/nixos-orbstack$(orb -m nixos-orbstack -u root realpath "$GUEST_IMAGE")"
+test -f "$IMAGE" || exit 1
+
+diskutil list external physical
+printf 'Verified removable USB disk (for example disk7): '
+read -r DISK
+DISK="${DISK#/dev/}"
+diskutil info "/dev/$DISK"
+
+printf 'Type FLASH after verifying the disk model and size: '
+read -r CONFIRM
+[ "$CONFIRM" = FLASH ] || exit 1
+
+diskutil unmountDisk "/dev/$DISK" &&
+  sudo dd if="$IMAGE" of="/dev/r$DISK" bs=4m &&
+  sync
+```
+
+Press Ctrl+T to display progress while `dd` runs. When it finishes, unmount the written partitions, locate the USB's current passthrough ID, and attach **only this drive** to OrbStack for Btrfs credential provisioning:
+
+```sh
+diskutil unmountDisk "/dev/$DISK"
+orb usb list
+printf 'Current Samsung USB passthrough ID: '
+read -r USB_ID
+orb usb attach "$USB_ID" -m nixos-orbstack
+orb -m nixos-orbstack -u root sh
+```
+
+Inside OrbStack, use the Linux commands below only to verify and mount the flashed partitions, not to flash the drive again.
+
+### Native Linux
 
 Inspect the connected storage before choosing a device:
 
 ```sh
-set -e
-lsblk -o NAME,PATH,MODEL,TRAN,RM,SIZE,FSTYPE,MOUNTPOINTS
-```
-
-Use the full-disk path of the removable microSD card, not a partition. **Flashing irreversibly overwrites its existing contents.** A USB device must report `TRAN=usb` and `RM=1`; confirm the model and size as well.
-
-```sh
-printf 'MicroSD whole-disk path: '
+lsblk -o NAME,PATH,MODEL,SERIAL,TRAN,RM,SIZE,FSTYPE,MOUNTPOINTS
+printf 'Verified removable USB whole-disk path: '
 read -r SD_DISK
-lsblk -o NAME,PATH,MODEL,TRAN,RM,SIZE,FSTYPE,MOUNTPOINTS "$SD_DISK"
-
 [ "$(lsblk -ndo TRAN "$SD_DISK")" = usb ] &&
-  [ "$(lsblk -ndo RM "$SD_DISK")" = 1 ] || {
-    echo 'Not a removable USB disk; refusing to flash.' >&2
-    exit 1
-  }
+  [ "$(lsblk -ndo RM "$SD_DISK")" = 1 ] || exit 1
 
-printf 'Type FLASH to erase the selected card: '
+printf 'Type FLASH after verifying the disk model and size: '
 read -r CONFIRM
 [ "$CONFIRM" = FLASH ] || exit 1
 
-IMAGE=$(find -L /tmp/nixos-pi-image/sd-image -maxdepth 1 -name '*.img' -type f -print -quit)
-[ -n "$IMAGE" ] || exit 1
-
+IMAGE=$(find -L /tmp/nixos-pi-image/sd-image -maxdepth 1 -name '*.img' -print -quit)
+test -n "$IMAGE" || exit 1
 dd if="$IMAGE" of="$SD_DISK" bs=4M status=progress conv=fsync
 sync
 blockdev --rereadpt "$SD_DISK"
 udevadm settle
 ```
 
-The same completed Nix store image can be reused for retries or another card. Never start another build just to locate the result. On macOS, leave the card attached to OrbStack until credentials have been installed.
+### Verify the flashed partitions
+
+In the Linux root shell (native Linux or OrbStack), identify the **current** target device by model, serial, transport, capacity and removable status:
+
+```sh
+lsblk -o NAME,PATH,MODEL,SERIAL,TRAN,RM,SIZE,FSTYPE,LABEL,MOUNTPOINTS
+printf 'Verified USB whole-disk path: '
+read -r SD_DISK
+[ "$(lsblk -ndo TRAN "$SD_DISK")" = usb ] &&
+  [ "$(lsblk -ndo RM "$SD_DISK")" = 1 ] || exit 1
+```
 
 ## Install host credentials on the card
 
@@ -86,6 +123,17 @@ read -r PI_BACKUP_SOURCE
 umask 077
 mount -t "$ROOT_FS" "$ROOT_PART" /mnt/nixos-pi-root
 MNT=/mnt/nixos-pi-root
+for path in "$MNT" "$MNT/nix" "$MNT/nix/store" "$MNT/boot"; do
+  [ "$(stat -c %u "$path")" = 0 ] || { echo "Incorrect root ownership: $path" >&2; exit 1; }
+done
+[ -L "$MNT/var/run" ] && [ "$(readlink "$MNT/var/run")" = ../run ] || {
+  echo 'Missing /var/run link in the image.' >&2
+  exit 1
+}
+if [ -n "$(find "$MNT/nix/store" -mindepth 1 -maxdepth 1 ! -uid 0 -print -quit)" ]; then
+  echo 'Nix store contains incorrectly owned outputs.' >&2
+  exit 1
+fi
 install -d -m 0700 "$MNT$PRIMARY_HOME" "$MNT$USER_SECRETS_DIR"
 cp -LR -- "$PI_SECRETS_SOURCE/." "$MNT$USER_SECRETS_DIR/"
 find "$MNT$USER_SECRETS_DIR" -type d -exec chmod 0700 {} +
@@ -97,7 +145,7 @@ sync
 umount /mnt/nixos-pi-root
 ```
 
-Safely eject the card. On macOS, detach the USB reader from OrbStack before removing it. The installed credentials reside on an unencrypted filesystem: keep the card physically secure and do not publish or share its contents.
+Safely unmount and eject the drive. On macOS, leave the OrbStack root shell and run `orb usb detach "$USB_ID"` using its current ID before unplugging the USB. The installed credentials reside on an unencrypted filesystem: keep the card physically secure and do not publish or share its contents.
 
 ## First boot
 

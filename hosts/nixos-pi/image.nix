@@ -16,7 +16,37 @@
     firmwareSize = 512;
     rootVolumeLabel = "ROOT";
     rootFilesystemCreator = modulesPath + "/../lib/make-btrfs-fs.nix";
+    # nixpkgs still ships fakeroot 1.38.1, which misses ownership lookups
+    # made through nftw() by modern mkfs.btrfs.
+    rootFilesystemImage = pkgs.callPackage config.sdImage.rootFilesystemCreator (
+      {
+        inherit (config.sdImage) storePaths;
+        compressImage = config.sdImage.compressImage;
+        populateImageCommands = config.sdImage.populateRootCommands;
+        volumeLabel = config.sdImage.rootVolumeLabel;
+        fakeroot = pkgs.fakeroot.overrideAttrs {
+          version = "2.1.4";
+          src = pkgs.fetchurl {
+            url = "https://deb.debian.org/debian/pool/main/f/fakeroot/fakeroot_2.1.4.orig.tar.xz";
+            hash = "sha256-CCK9Wp8M8Z0roFRriLBDLU09mRfbYsV7dARMytugbkk=";
+          };
+          patches = [ ];
+          postUnpack =
+            builtins.replaceStrings [ "source/scripts/fakeroot.in" ] [ "$sourceRoot/scripts/fakeroot.in" ]
+              pkgs.fakeroot.postUnpack;
+        };
+      }
+      // lib.optionalAttrs (config.sdImage.rootPartitionUUID != null) {
+        uuid = config.sdImage.rootPartitionUUID;
+      }
+    );
     expandOnBoot = false;
+
+    # Ensure early-boot services resolve /var/run to the writable /run tmpfs.
+    populateRootCommands = lib.mkAfter ''
+      mkdir -p files/var
+      ln -s ../run files/var/run
+    '';
 
     populateFirmwareCommands = lib.mkAfter ''
       mkdir -p firmware/overlays
