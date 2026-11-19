@@ -1033,10 +1033,17 @@ FocusScope {
                     readonly property int capacity: Math.max(1, Math.min(7, Math.floor((width + spacing) / (minimumTileWidth + spacing))))
                     readonly property int rows: Math.max(1, Math.ceil(children.length / capacity))
                     readonly property int columns: Math.max(1, Math.ceil(children.length / rows))
-                    readonly property real cellWidth: Math.max(1, (width - spacing * (columns - 1)) / columns)
+                    function cellWidth(tile: Item): real {
+                        const index = children.indexOf(tile);
+                        if (index < 0)
+                            return 1;
+                        const widerRows = children.length % rows;
+                        const count = widerRows === 0 || index < widerRows * columns ? columns : columns - 1;
+                        return Math.max(1, Math.floor((width - spacing * (count - 1)) / count));
+                    }
 
                     QuickSettingChip {
-                        width: controlTiles.cellWidth
+                        width: controlTiles.cellWidth(this)
                         height: root.dashboardTileHeight
                         runtime: root.runtime
                         theme: root.theme
@@ -1050,7 +1057,7 @@ FocusScope {
                     }
 
                     QuickSettingChip {
-                        width: controlTiles.cellWidth
+                        width: controlTiles.cellWidth(this)
                         height: root.dashboardTileHeight
                         runtime: root.runtime
                         theme: root.theme
@@ -1064,7 +1071,7 @@ FocusScope {
                     }
 
                     OpacitySetting {
-                        width: controlTiles.cellWidth
+                        width: controlTiles.cellWidth(this)
                         height: root.dashboardTileHeight
                         runtime: root.runtime
                         theme: root.theme
@@ -1082,7 +1089,7 @@ FocusScope {
                     }
 
                     OpacitySetting {
-                        width: controlTiles.cellWidth
+                        width: controlTiles.cellWidth(this)
                         height: root.dashboardTileHeight
                         runtime: root.runtime
                         theme: root.theme
@@ -1100,7 +1107,7 @@ FocusScope {
                     }
 
                     QuickSettingChip {
-                        width: controlTiles.cellWidth
+                        width: controlTiles.cellWidth(this)
                         height: root.dashboardTileHeight
                         runtime: root.runtime
                         theme: root.theme
@@ -1113,7 +1120,7 @@ FocusScope {
                         onActivated: root.barToggleRequested()
                     }
                     QuickSettingChip {
-                        width: controlTiles.cellWidth
+                        width: controlTiles.cellWidth(this)
                         height: root.dashboardTileHeight
                         runtime: root.runtime
                         theme: root.theme
@@ -1127,7 +1134,7 @@ FocusScope {
                     }
 
                     QuickSettingChip {
-                        width: controlTiles.cellWidth
+                        width: controlTiles.cellWidth(this)
                         height: root.dashboardTileHeight
                         runtime: root.runtime
                         theme: root.theme
@@ -1141,7 +1148,7 @@ FocusScope {
                     }
 
                     AdjustableSetting {
-                        width: controlTiles.cellWidth
+                        width: controlTiles.cellWidth(this)
                         height: root.dashboardTileHeight
                         runtime: root.runtime
                         theme: root.theme
@@ -1163,7 +1170,7 @@ FocusScope {
                         onToggleRequested: root.nightLight.toggle()
                     }
                     QuickSettingChip {
-                        width: controlTiles.cellWidth
+                        width: controlTiles.cellWidth(this)
                         height: root.dashboardTileHeight
                         runtime: root.runtime
                         theme: root.theme
@@ -1178,7 +1185,7 @@ FocusScope {
                     }
 
                     QuickSettingChip {
-                        width: controlTiles.cellWidth
+                        width: controlTiles.cellWidth(this)
                         height: root.dashboardTileHeight
                         runtime: root.runtime
                         theme: root.theme
@@ -1192,7 +1199,7 @@ FocusScope {
                     }
 
                     QuickSettingChip {
-                        width: controlTiles.cellWidth
+                        width: controlTiles.cellWidth(this)
                         height: root.dashboardTileHeight
                         runtime: root.runtime
                         theme: root.theme
@@ -1206,7 +1213,7 @@ FocusScope {
                     }
 
                     QuickSettingChip {
-                        width: controlTiles.cellWidth
+                        width: controlTiles.cellWidth(this)
                         height: root.dashboardTileHeight
                         runtime: root.runtime
                         theme: root.theme
@@ -1221,7 +1228,7 @@ FocusScope {
                     }
 
                     QuickSettingChip {
-                        width: controlTiles.cellWidth
+                        width: controlTiles.cellWidth(this)
                         height: root.dashboardTileHeight
                         runtime: root.runtime
                         theme: root.theme
@@ -1234,7 +1241,7 @@ FocusScope {
                     }
 
                     QuickSettingChip {
-                        width: controlTiles.cellWidth
+                        width: controlTiles.cellWidth(this)
                         height: root.dashboardTileHeight
                         runtime: root.runtime
                         theme: root.theme
