@@ -10,8 +10,8 @@ _: {
             }
             {
               release = {
-                version = "3.7.7";
-                hash = "sha256-VJ6yshRk1/RgYWXlHDamsaJSrJp5lYIookAVJBJ1naI=";
+                version = "3.7.8";
+                hash = "sha256-wsyV6dBy2PrsNSfQbkqJmdX5gApQXM8vAuwFpEbUqFA=";
               };
               pname = "iterm2";
               appName = "iTerm.app";

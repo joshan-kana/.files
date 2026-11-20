@@ -5,8 +5,8 @@ _: {
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
         aldente = import ../../lib/mac-app.nix { inherit prev; } {
           release = {
-            version = "1.40.1";
-            hash = "sha256-y+P0fxsIud5XYMr0a0llpuyAsf+LXwQ6foO5UrAGyiM=";
+            version = "1.40.2";
+            hash = "sha256-ZjtUJcdDIolioBnsf/DKkX9IAqHaedbLSkxgCWOLw90=";
           };
           pname = "aldente";
           appName = "AlDente.app";
