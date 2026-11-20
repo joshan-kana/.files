@@ -13,8 +13,8 @@ Item {
     property string title: "Controls"
     property var bindings: []
     property real backdropRadius: theme.radiusLarge
-    // Blur the actual hub content beneath Help, rather than the wallpaper
-    // through the same Wayland layer. Do not sample the Help item itself.
+    // Sample the hub beneath the translucent Help card, not the wallpaper
+    // behind its Wayland layer or the Help overlay itself.
     property Item blurSource: null
     property bool keyboardScroll: false
 
@@ -44,34 +44,6 @@ Item {
         }
     }
 
-    Item {
-        visible: help.open && help.theme.shellGlassEnabled && help.blurSource !== null
-        x: help.blurSource ? help.blurSource.x : 0
-        y: help.blurSource ? help.blurSource.y : 0
-        width: help.blurSource ? help.blurSource.width : 0
-        height: help.blurSource ? help.blurSource.height : 0
-        clip: true
-
-        // The sharp source must not remain underneath a blurred copy;
-        // capture it once per update and let the blur replace its normal draw.
-        ShaderEffectSource {
-            id: blurTexture
-            anchors.fill: parent
-            sourceItem: help.blurSource
-            hideSource: help.open && help.theme.shellGlassEnabled
-            live: help.open
-            visible: false
-        }
-
-        MultiEffect {
-            anchors.fill: parent
-            source: blurTexture
-            blurEnabled: true
-            blurMax: 32
-            blur: 0.75
-        }
-    }
-
     SquircleSurface {
         anchors.fill: parent
         exponent: help.theme.squircleExponent
@@ -88,6 +60,46 @@ Item {
             // The owner binds `open` to its helpOpen state. Do not assign to
             // `open` here: imperative assignment destroys that QML binding.
             onClicked: help.dismissed()
+        }
+    }
+
+    // Blur only the modal glass itself. The full-hub scrim stays uniform;
+    // sampling the entire content viewport made a rectangular blur boundary.
+    Item {
+        id: glassBackdrop
+        visible: help.open && help.theme.shellGlassEnabled && help.blurSource !== null
+        x: helpCard.x
+        y: helpCard.y
+        width: helpCard.width
+        height: helpCard.height
+        clip: true
+
+        ShaderEffectSource {
+            id: blurTexture
+            anchors.fill: parent
+            sourceItem: help.blurSource
+            sourceRect: help.blurSource ? Qt.rect(glassBackdrop.x - help.blurSource.x, glassBackdrop.y - help.blurSource.y, glassBackdrop.width, glassBackdrop.height) : Qt.rect(0, 0, 0, 0)
+            live: help.open
+            visible: false
+        }
+
+        SquircleSurface {
+            id: blurMask
+            anchors.fill: parent
+            cornerRadius: helpCard.cornerRadius
+            exponent: help.theme.squircleExponent
+            fillColor: "white"
+            visible: false
+        }
+
+        MultiEffect {
+            anchors.fill: parent
+            source: blurTexture
+            blurEnabled: true
+            blurMax: 32
+            blur: 0.75
+            maskEnabled: true
+            maskSource: blurMask
         }
     }
 
