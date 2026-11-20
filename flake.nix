@@ -609,6 +609,8 @@
         {
           docs = generatedDocs.book;
           docs-source = generatedDocs.docsSource;
+        }
+        // lib.optionalAttrs (system == hostSpecs.nixos-pi.system) {
           nixos-pi-image = nixosPiImage.config.system.build.sdImage;
         }
         // updatePackagesFor system
