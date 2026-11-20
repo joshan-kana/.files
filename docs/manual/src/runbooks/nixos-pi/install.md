@@ -235,4 +235,6 @@ Reload the generated host exports before verifying or initializing its secrets b
 
 {{#include ../_shared/secrets-backup-first-boot.inc}}
 
-Test HDMI output and audio, MPV playback, and Jellyfin MPV Shim on the Pi. Video decoding and codec compatibility depend on the actual hardware and media. Reinstall by writing a current image to the drive and copying the host credentials onto its root partition. Restore additional mutable data from its normal backups where applicable.
+The Pi 4 supports a single 4K/60 Hz display on HDMI0, the micro-HDMI port next to USB-C power. The installation image enables the necessary firmware clock setting, but the connected display, HDMI input mode, and cable must also support 4K/60 Hz. Select 3840×2160 at 60 Hz in Plasma Display Configuration, then verify the active mode. HDR10 requires a capable display and a playback pipeline that passes HDR metadata; enabling a high-refresh-rate output does not automatically enable HDR.
+
+Test HDMI output and audio, MPV playback, and Jellyfin MPV Shim on the Pi. Verify the selected display mode and HDR signalling with representative media on the physical display. Video decoding and codec compatibility depend on the actual hardware and media. Reinstall by writing a current image to the drive and copying the host credentials onto its root partition. Restore additional mutable data from its normal backups where applicable.

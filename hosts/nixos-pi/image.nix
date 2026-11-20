@@ -44,6 +44,7 @@
 
       [pi4]
       dtoverlay=vc4-kms-v3d
+      hdmi_enable_4kp60=1
       max_framebuffers=2
       EOF_CONFIG
 
