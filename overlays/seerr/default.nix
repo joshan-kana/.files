@@ -5,7 +5,7 @@
     (_final: prev: {
       seerr = prev.seerr.overrideAttrs (old: {
         postInstall = (old.postInstall or "") + ''
-          cp next.config.ts "$out/share/next.config.ts"
+          cp next.config.mjs "$out/share/next.config.mjs"
           mkdir -p "$out/share/.next/cache"
         '';
       });
