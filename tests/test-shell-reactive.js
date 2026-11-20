@@ -21,9 +21,23 @@ test("native squircle fill retains outlines while reusing premultiplied scene-gr
   assert.match(surface, /import LinuxDesktop\.Visuals 1\.0/);
   assert.match(surface, /SquircleFillItem\s*\{/);
   assert.match(surface, /lightStrength: root\.lightStrength/);
+  // Flat translucent tiles use one antialiased contour, not a triangle fan
+  // whose internal centre joins can leave hairline artifacts at half-height.
+  assert.match(surface, /nativeEffects: reactiveGradientStrength > 0\.00001/);
+  assert.match(
+    surface,
+    /visible: !root\.nativeEffects && root\.fillOpacity > 0 && root\.fillColor\.a > 0/,
+  );
+  assert.match(surface, /ShapePath\s*\{\s*fillColor: root\.fillColor/);
+  assert.match(surface, /opacity: root\.fillOpacity/);
+  assert.match(surface, /visible: root\.nativeEffects/);
   assert.match(surface, /PathSvg\s*\{\s*path: root\.borderPathData/);
   assert.match(surface, /path: root\.fillPathData/);
-  assert.doesNotMatch(surface, /fillGradient: RadialGradient/);
+  assert.match(surface, /fillGradient: RadialGradient/);
+  assert.match(
+    surface,
+    /visible: !root\.nativeEffects && root\.lightStrength > 0\.00001/,
+  );
 
   assert.match(renderer, /class SquircleFillItem : public QQuickItem/);
   assert.match(renderer, /QSGGeometryNode/);
