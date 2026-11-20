@@ -104,3 +104,24 @@ test("connected panes do not double-tint the frame, but detached glass still wor
       /frameConnected && !.*shellGlassEnabled \? "transparent"/,
     );
 });
+
+test("hub Help uses a single panel-shaped scrim with live, demand-driven glass blur", () => {
+  const host = qml("ShellExpansionHost.qml");
+  const help = qml("WidgetHelp.qml");
+  assert.match(
+    host,
+    /z: 200[\s\S]*?anchors\.fill: parent[\s\S]*?WidgetHelp \{/,
+  );
+  assert.match(host, /blurSource: contentViewport/);
+  assert.match(help, /import QtQuick\.Effects/);
+  assert.match(help, /source: help\.blurSource/);
+  assert.match(
+    help,
+    /visible: help\.open && help\.theme\.shellGlassEnabled && help\.blurSource !== null/,
+  );
+  assert.match(help, /MultiEffect \{[\s\S]*?blurEnabled: true/);
+  assert.match(help, /fillColor: Qt\.rgba\(help\.theme\.background\.r/);
+  // Back/Help remain clickable; no duplicate full-screen Wayland overlay.
+  assert.match(host, /HubTabs \{[\s\S]*?z: 250/);
+  assert.doesNotMatch(help, /PanelWindow/);
+});

@@ -123,7 +123,8 @@ test("inspection is reachable through canonical shortcut, palette and status isl
   assert.match(shell, /name: "status-peek"/);
   assert.match(shell, /function statusInspectionOpen\(\): bool/);
   assert.match(shell, /function toggleStatusInspection\(\): void/);
-  assert.match(shell, /id: "status\.inspect"/);
+  assert.match(read("ActionCatalog.js"), /id: "status\.inspect"/);
+  assert.match(read("Actions.qml"), /statusInspectionRequested\(\)/);
   assert.match(
     bar,
     /onInspectRequested: bars\.systemStatusRequested\(bar\.modelData\)/,

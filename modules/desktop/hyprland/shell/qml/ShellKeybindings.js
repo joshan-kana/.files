@@ -57,9 +57,16 @@ function modifier(registry, scope, slot, mask, qt) {
   return !!(mask & (bits[spec] ?? 0));
 }
 
+function actionAssignment(registry, action) {
+  const explicit = registry?.actions?.[action];
+  return typeof explicit === "string" ? explicit.toUpperCase() : "";
+}
+
 function hint(registry, action) {
   const entry = registry?.hints?.[action];
   if (!entry) return "";
+  const explicit = actionAssignment(registry, action);
+  if (explicit) return explicit;
   const scope = entry.scope;
   if (entry.literal === true) return entry.template;
   const render = (name) => assigned(registry, scope, name);
@@ -159,6 +166,29 @@ function sequence(registry, action) {
 }
 
 function matchesHint(registry, action, key, modifiers, qt) {
+  const explicit = actionAssignment(registry, action);
+  if (explicit) {
+    const parts = explicit.split("+");
+    const assignedKey = parts.pop();
+    const modifiersByName = {
+      SHIFT: qt.ShiftModifier,
+      ALT: qt.AltModifier,
+      CTRL: qt.ControlModifier,
+      SUPER: qt.MetaModifier,
+    };
+    const bits =
+      qt.ShiftModifier | qt.AltModifier | qt.ControlModifier | qt.MetaModifier;
+    if (
+      codeFor(assignedKey, qt) !== key ||
+      parts.some((name) => !(name in modifiersByName))
+    )
+      return false;
+    const expected = parts.reduce(
+      (mask, name) => mask | modifiersByName[name],
+      0,
+    );
+    return (modifiers & bits) === expected;
+  }
   const entry = registry?.hints?.[action];
   if (!entry || !/^(?:SHIFT\+|ALT\+|CTRL\+)?[A-Z0-9]$/.test(entry.template))
     return false;

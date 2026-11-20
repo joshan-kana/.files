@@ -1113,17 +1113,9 @@ PanelWindow {
 
         Item {
             z: 200
-            // Keep contextual Help inside the hub's content region. The
-            // shared Back/Help header sits above it and the navigation footer
-            // stays below it, even when Controls is taller than the display.
-            anchors {
-                top: tabs.bottom
-                bottom: hubFooter.top
-                left: parent.left
-                right: parent.right
-                topMargin: host.theme.spacing3
-                bottomMargin: host.theme.spacing3
-            }
+            // The scrim follows the complete hub contour in every frame/bar
+            // configuration. Header Back/Help remain above it at z:250.
+            anchors.fill: parent
             opacity: shellSurface.contentReveal
 
             WidgetHelp {
@@ -1137,6 +1129,7 @@ PanelWindow {
                 title: host.helpCaption
                 bindings: host.helpKeys
                 backdropRadius: host.theme.radiusPanel
+                blurSource: contentViewport
                 onDismissed: {
                     if (host.systemContent)
                         host.systemContent.helpOpen = false;
