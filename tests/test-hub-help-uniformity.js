@@ -76,7 +76,7 @@ test("help dims the entire hub while keeping shared header controls and its own 
   assert.match(overlay, /WidgetHelp \{[\s\S]*?anchors\.fill: parent/);
   assert.match(
     help,
-    /height: Math\.min\(parent\.height - theme\.spacing5 \* 2/,
+    /height: Math\.min\(\(help\.blurSource \? help\.blurSource\.height : parent\.height\) - theme\.spacing5 \* 2/,
   );
   assert.match(help, /contentHeight: content\.implicitHeight/);
   assert.match(help, /clip: true/);
