@@ -459,11 +459,23 @@
           hostModule = ./hosts/nixos-server;
         };
 
+        nixos-pi = {
+          system = "aarch64-linux";
+          hostModule = ./hosts/nixos-pi;
+        };
+
         mac = {
           system = "aarch64-darwin";
           hostModule = ./hosts/mac;
         };
       };
+
+      nixosPiImage = mkHost "nixos-pi" (
+        hostSpecs.nixos-pi
+        // {
+          extraModules = [ ./hosts/nixos-pi/image.nix ];
+        }
+      );
 
       nixosHostSpecs = lib.filterAttrs (_: spec: (lib.systems.elaborate spec.system).isLinux) hostSpecs;
       darwinHostSpecs = lib.filterAttrs (_: spec: (lib.systems.elaborate spec.system).isDarwin) hostSpecs;
@@ -597,6 +609,9 @@
         {
           docs = generatedDocs.book;
           docs-source = generatedDocs.docsSource;
+        }
+        // lib.optionalAttrs (system == hostSpecs.nixos-pi.system) {
+          nixos-pi-image = nixosPiImage.config.system.build.sdImage;
         }
         // updatePackagesFor system
       );
