@@ -1,12 +1,12 @@
 _:
 let
   release = {
-    version = "1.19.6";
-    hash = "sha256-/fyO9QsQusoQeLep7fQE4zA2PIo6QP2in4bdXToKCwI=";
+    version = "1.19.7";
+    hash = "sha256-xIGNOMs/mRm/4nbIEnFFlsxQ2k0BqCrC8ivy5ktEFnc=";
   };
   linuxHashes = {
-    x86_64-linux = "sha256-phZ/arPF8WGzFya5S88KvLf3jIV7FuSFreuOUJa3Ss0=";
-    aarch64-linux = "sha256-K8E7losyxdOrXUUIeruatO8BtVhFYMF1EclWxMaB+C4=";
+    x86_64-linux = "sha256-fwNn2Lg/zaZlAW4akHaDqQN+YVifJJPEIG6oUNVf704=";
+    aarch64-linux = "sha256-kqmi1GGyJ+ep4JoVVjD7NndqudqeeAsOw8BhtaV6UTk=";
   };
 in
 {
