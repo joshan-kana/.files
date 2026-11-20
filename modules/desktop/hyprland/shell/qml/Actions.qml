@@ -1,9 +1,24 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "ActionCatalog.js" as ActionCatalog
+import "DesktopIcons.js" as DesktopIcons
 
 QtObject {
     id: actions
+    property bool wallpaperSpectrumEnabled: false
+    property bool musicReactiveEnabled: false
+    signal statusInspectionRequested
+    readonly property var paletteCommands: ActionCatalog.commands({
+        wallpaperSpectrumEnabled: wallpaperSpectrumEnabled,
+        musicReactiveEnabled: musicReactiveEnabled,
+        seekSeconds: mediaState.seekSeconds,
+        rememberRecents: launcher.rememberRecents,
+        terminal: runtime.terminal,
+        audioAvailable: systemState.audioAvailable,
+        brightnessAvailable: brightnessState.supported,
+        glyphFor: DesktopIcons.glyphFor
+    })
     required property RuntimeConfig runtime
     required property ScreenRouter screenRouter
     required property AmbientBar ambientBar
@@ -293,7 +308,9 @@ QtObject {
     }
 
     function invokeCommand(commandId: string): void {
-        if (commandId === "session.lock")
+        if (commandId === "status.inspect")
+            statusInspectionRequested();
+        else if (commandId === "session.lock")
             lockSession();
         else if (commandId === "audio.mixer")
             toggleAudioMixer();
@@ -343,6 +360,10 @@ QtObject {
             mediaCyclePlayer();
         else if (commandId === "controls.toggle")
             toggleSystem();
+        else if (commandId === "controls.network")
+            showSystem(null, null, "network");
+        else if (commandId === "controls.bluetooth")
+            showSystem(null, null, "bluetooth");
         else if (commandId === "home.toggle")
             toggleCalendar();
         else if (commandId === "weather.toggle")

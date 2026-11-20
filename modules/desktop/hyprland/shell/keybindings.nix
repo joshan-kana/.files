@@ -72,6 +72,15 @@
   # Optional scope-specific slot overrides. Keep unrelated panels independent.
   overrides = { };
 
+  # Action-specific assignments take precedence over shared slot defaults.
+  # Changing an action must not silently remap every use of the same letter.
+  actions = {
+    "SystemContent.bar" = "SHIFT+A";
+    "SystemContent.frame" = "SHIFT+S";
+    "SystemContent.nightLight" = "T";
+    "SystemContent.shellGlass" = "SHIFT+R";
+  };
+
   # Action-owned keyhints. Display strings resolve their symbols through base
   # and scope overrides, not through duplicated labels in QML.
   hints = {
