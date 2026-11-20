@@ -139,10 +139,66 @@ Item {
         }
     }
 
-    // The static fill and changing luminous wash share one persistent scene
-    // graph geometry, leaving shadows and the original vector outline intact.
+    // The native triangle fan can expose its centre-to-edge joins on ordinary
+    // translucent fills and luminous controls. Use the shared continuous
+    // contour there; keep native geometry for the live spectrum gradient.
+    readonly property bool nativeEffects: reactiveGradientStrength > 0.00001
+
+    Shape {
+        anchors.fill: parent
+        visible: !root.nativeEffects && root.fillOpacity > 0 && root.fillColor.a > 0
+        opacity: root.fillOpacity
+        antialiasing: true
+        preferredRendererType: Shape.CurveRenderer
+
+        ShapePath {
+            fillColor: root.fillColor
+            strokeColor: "transparent"
+            strokeWidth: -1
+            PathSvg {
+                path: root.fillPathData
+            }
+        }
+    }
+
+    Shape {
+        anchors.fill: parent
+        visible: !root.nativeEffects && root.lightStrength > 0.00001
+        antialiasing: true
+        preferredRendererType: Shape.CurveRenderer
+
+        ShapePath {
+            fillColor: "transparent"
+            strokeColor: "transparent"
+            strokeWidth: -1
+            fillGradient: RadialGradient {
+                centerX: root.width * 0.15
+                centerY: root.height * -0.16
+                centerRadius: Math.max(root.width * 0.9, root.height * 2) * root.lightSpread
+                focalX: centerX
+                focalY: centerY
+                GradientStop {
+                    position: 0
+                    color: Qt.rgba(root.lightColor.r, root.lightColor.g, root.lightColor.b, root.lightStrength * root.lightColor.a)
+                }
+                GradientStop {
+                    position: 0.44
+                    color: Qt.rgba(root.lightColor.r, root.lightColor.g, root.lightColor.b, root.lightStrength * root.lightColor.a * 0.28)
+                }
+                GradientStop {
+                    position: 1
+                    color: "transparent"
+                }
+            }
+            PathSvg {
+                path: root.fillPathData
+            }
+        }
+    }
+
     SquircleFillItem {
         anchors.fill: parent
+        visible: root.nativeEffects
         fillColor: root.fillColor
         fillOpacity: root.fillOpacity
         gradientStrength: root.reactiveGradientStrength
