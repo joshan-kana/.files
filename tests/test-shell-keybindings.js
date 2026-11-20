@@ -19,7 +19,12 @@ const hints = Object.fromEntries(
     ),
   ].map((m) => [m[1], { scope: m[2], template: m[3] }]),
 );
-const registry = { base, overrides: {}, hints };
+const actionAssignments = Object.fromEntries(
+  [...source.matchAll(/^ {4}"(SystemContent\.[^"]+)" = "([^"]+)";$/gm)].map(
+    (m) => [m[1], m[2]],
+  ),
+);
+const registry = { base, overrides: {}, actions: actionAssignments, hints };
 const Qt = {};
 for (const [
   i,
@@ -123,7 +128,7 @@ test("modifier changes, alternatives and special keys remain consistent", () => 
     false,
   );
   assert.equal(f.hint(changed, "ThemePanel.cancel"), "Z");
-  assert.equal(f.hint(changed, "SystemContent.nightLight"), "B");
+  assert.equal(f.hint(changed, "SystemContent.nightLight"), "T");
   assert.equal(f.hint(changed, "ThemePanel.search"), "/");
   assert.equal(f.hint(changed, "ScreenshotPicker.cancel"), "ESC");
   assert.equal(f.sequence(changed, "CommandPalette.apps"), "Ctrl+2");
@@ -164,4 +169,40 @@ test("numbered actions use the assigned key for each index, not a contiguous key
     fs.readFileSync(path.join(qmlDir, "NotificationCard.qml"), "utf8"),
     /shellNumberHint/,
   );
+});
+
+test("semantic action bindings change their handler and hint without changing a shared slot", () => {
+  assert.ok(Object.keys(actionAssignments).length >= 4);
+  const custom = {
+    ...registry,
+    actions: { ...registry.actions, "SystemContent.frame": "ALT+Z" },
+  };
+  assert.equal(f.hint(custom, "SystemContent.frame"), "ALT+Z");
+  assert.equal(
+    f.hint(custom, "SystemContent.idleInhibited"),
+    f.hint(registry, "SystemContent.idleInhibited"),
+  );
+  assert.equal(f.keyCode(custom, "controls", "S", Qt), 83);
+  assert.equal(
+    f.matchesHint(custom, "SystemContent.frame", 90, Qt.AltModifier, Qt),
+    true,
+  );
+  assert.equal(
+    f.matchesHint(custom, "SystemContent.frame", 83, Qt.ShiftModifier, Qt),
+    false,
+  );
+  assert.equal(
+    f.matchesHint(custom, "SystemContent.frame", 90, Qt.ShiftModifier, Qt),
+    false,
+  );
+  const controls = fs.readFileSync(
+    path.join(qmlDir, "SystemContent.qml"),
+    "utf8",
+  );
+  for (const action of Object.keys(actionAssignments))
+    assert.ok(
+      controls.includes(
+        `shellMatchesHint("${action}", event.key, event.modifiers)`,
+      ),
+    );
 });

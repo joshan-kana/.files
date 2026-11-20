@@ -13,14 +13,18 @@ const context = vm.createContext({});
 vm.runInContext(qml("DesktopIcons.js"), context);
 
 const surfaces = {
-  theme: ["SystemContent.qml", "ThemePanel.qml", "shell.qml"],
-  wallpaper: ["SystemContent.qml", "WallpaperPanel.qml", "shell.qml"],
-  session: ["SystemContent.qml", "SessionPanel.qml", "shell.qml"],
-  resources: ["SystemContent.qml", "ResourceDashboard.qml", "shell.qml"],
-  captures: ["SystemContent.qml", "RecordingLibrary.qml", "shell.qml"],
-  clipboard: ["ClipboardPanel.qml", "shell.qml"],
-  shortcuts: ["ShortcutCheatsheet.qml", "shell.qml"],
-  audioMixer: ["SystemContent.qml", "AudioMixerContent.qml", "shell.qml"],
+  theme: ["SystemContent.qml", "ThemePanel.qml", "ActionCatalog.js"],
+  wallpaper: ["SystemContent.qml", "WallpaperPanel.qml", "ActionCatalog.js"],
+  session: ["SystemContent.qml", "SessionPanel.qml", "ActionCatalog.js"],
+  resources: ["SystemContent.qml", "ResourceDashboard.qml", "ActionCatalog.js"],
+  captures: ["SystemContent.qml", "RecordingLibrary.qml", "ActionCatalog.js"],
+  clipboard: ["ClipboardPanel.qml", "ActionCatalog.js"],
+  shortcuts: ["ShortcutCheatsheet.qml", "ActionCatalog.js"],
+  audioMixer: [
+    "SystemContent.qml",
+    "AudioMixerContent.qml",
+    "ActionCatalog.js",
+  ],
 };
 
 test("semantic destination icons are centralized and reused in every entry point", () => {
@@ -35,7 +39,9 @@ test("semantic destination icons are centralized and reused in every entry point
     );
     for (const file of files) {
       assert.ok(
-        qml(file).includes(`DesktopIcons.glyphFor("${destination}")`),
+        qml(file).includes(
+          `${file === "ActionCatalog.js" ? "options" : "DesktopIcons"}.glyphFor("${destination}")`,
+        ),
         `${file} must use the shared icon for ${destination}`,
       );
     }
@@ -63,7 +69,7 @@ test("detail headers use the existing Nerd Font optical box and no competing gly
 
 test("built-in palette actions retain shared glyphs while applications keep their icons", () => {
   const palette = qml("CommandPalette.qml");
-  const shell = qml("shell.qml");
+  const catalog = qml("ActionCatalog.js");
   assert.match(palette, /glyph: command\.glyph \|\| ""/);
   assert.match(
     palette,
@@ -85,12 +91,10 @@ test("built-in palette actions retain shared glyphs while applications keep thei
     ["shortcuts.toggle", "shortcuts"],
     ["audio.mixer", "audioMixer"],
   ]) {
-    const at = shell.indexOf(`id: "${id}"`);
+    const at = catalog.indexOf(`id: "${id}"`);
     assert.ok(at >= 0, `${id} command missing`);
     assert.ok(
-      shell
-        .slice(at, at + 270)
-        .includes(`glyph: DesktopIcons.glyphFor("${key}")`),
+      catalog.slice(at, at + 300).includes(`glyph: options.glyphFor("${key}")`),
       `${id} icon mismatch`,
     );
   }

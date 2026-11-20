@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import QtQuick.Effects
 
 Item {
     id: help
@@ -12,6 +13,9 @@ Item {
     property string title: "Controls"
     property var bindings: []
     property real backdropRadius: theme.radiusLarge
+    // Blur the actual hub content beneath Help, rather than the wallpaper
+    // through the same Wayland layer. Do not sample the Help item itself.
+    property Item blurSource: null
     property bool keyboardScroll: false
 
     function scrollHints(rows: int): void {
@@ -40,11 +44,30 @@ Item {
         }
     }
 
+    Item {
+        visible: help.open && help.theme.shellGlassEnabled && help.blurSource !== null
+        x: help.blurSource ? help.blurSource.x : 0
+        y: help.blurSource ? help.blurSource.y : 0
+        width: help.blurSource ? help.blurSource.width : 0
+        height: help.blurSource ? help.blurSource.height : 0
+        clip: true
+
+        MultiEffect {
+            anchors.fill: parent
+            source: help.blurSource
+            blurEnabled: true
+            blurMax: 32
+            blur: 0.75
+        }
+    }
+
     SquircleSurface {
         anchors.fill: parent
         exponent: help.theme.squircleExponent
         cornerRadius: help.backdropRadius
-        fillColor: Qt.rgba(help.theme.background.r, help.theme.background.g, help.theme.background.b, 0.68)
+        // One panel-shaped scrim across the whole hub, not a rectangle that
+        // abruptly stops below the header and above the footer.
+        fillColor: Qt.rgba(help.theme.background.r, help.theme.background.g, help.theme.background.b, 0.56)
         borderColor: "transparent"
         borderWidth: 0
 

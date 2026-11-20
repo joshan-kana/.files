@@ -1999,11 +1999,11 @@ FocusScope {
                     root.musicReactiveToggleRequested();
                 } else if (shifted && event.key === root.runtime.shellKeyCode("controls", "D")) {
                     root.windowTransparencyToggleRequested();
-                } else if (shifted && event.key === root.runtime.shellKeyCode("controls", "R")) {
+                } else if (root.runtime.shellMatchesHint("SystemContent.shellGlass", event.key, event.modifiers)) {
                     root.shellGlassToggleRequested();
-                } else if (shifted && event.key === root.runtime.shellKeyCode("controls", "A")) {
+                } else if (root.runtime.shellMatchesHint("SystemContent.bar", event.key, event.modifiers)) {
                     root.barToggleRequested();
-                } else if (shifted && event.key === root.runtime.shellKeyCode("controls", "S")) {
+                } else if (root.runtime.shellMatchesHint("SystemContent.frame", event.key, event.modifiers)) {
                     root.frameToggleRequested();
                 } else if (shifted && event.key === root.runtime.shellKeyCode("controls", "E")) {
                     root.motion.toggle();
@@ -2057,7 +2057,7 @@ FocusScope {
                     root.system.toggleMicrophoneMute();
                 } else if (event.key === root.runtime.shellKeyCode("controls", "P")) {
                     root.toggleSelectedAudioDeviceChooser();
-                } else if (event.key === root.runtime.shellKeyCode("controls", "T")) {
+                } else if (root.runtime.shellMatchesHint("SystemContent.nightLight", event.key, event.modifiers)) {
                     root.nightLight.toggle();
                 } else if (event.key === root.runtime.shellKeyCode("controls", "Minus") && event.modifiers === Qt.NoModifier) {
                     root.nightLight.warmer();

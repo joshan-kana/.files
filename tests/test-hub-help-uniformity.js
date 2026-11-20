@@ -60,7 +60,7 @@ test("contextual help can be opened and dismissed on every hub page without trig
   );
 });
 
-test("help stays between the shared header and footer, and scrolls in its own viewport", () => {
+test("help dims the entire hub while keeping shared header controls and its own scrolling", () => {
   const host = qml("ShellExpansionHost.qml");
   const help = qml("WidgetHelp.qml");
   const overlay = host.slice(
@@ -70,14 +70,9 @@ test("help stays between the shared header and footer, and scrolls in its own vi
       host.indexOf("        Item {\n            z: 200"),
     ),
   );
-  assert.match(overlay, /top: tabs\.bottom/);
-  assert.match(overlay, /bottom: hubFooter\.top/);
-  assert.match(overlay, /topMargin: host\.theme\.spacing3/);
-  assert.match(overlay, /bottomMargin: host\.theme\.spacing3/);
-  assert.doesNotMatch(
-    overlay,
-    /anchors\.fill: parent[\s\S]*?opacity: shellSurface\.contentReveal/,
-  );
+  assert.match(overlay, /anchors\.fill: parent/);
+  assert.match(overlay, /blurSource: contentViewport/);
+  assert.match(host, /HubTabs \{[\s\S]*?z: 250/);
   assert.match(overlay, /WidgetHelp \{[\s\S]*?anchors\.fill: parent/);
   assert.match(
     help,
