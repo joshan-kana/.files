@@ -52,9 +52,20 @@ Item {
         height: help.blurSource ? help.blurSource.height : 0
         clip: true
 
+        // The sharp source must not remain underneath a blurred copy;
+        // capture it once per update and let the blur replace its normal draw.
+        ShaderEffectSource {
+            id: blurTexture
+            anchors.fill: parent
+            sourceItem: help.blurSource
+            hideSource: help.open && help.theme.shellGlassEnabled
+            live: help.open
+            visible: false
+        }
+
         MultiEffect {
             anchors.fill: parent
-            source: help.blurSource
+            source: blurTexture
             blurEnabled: true
             blurMax: 32
             blur: 0.75
@@ -83,9 +94,10 @@ Item {
     ShellSurface {
         id: helpCard
 
-        width: Math.min(parent.width - theme.spacing5 * 2, 430)
-        height: Math.min(parent.height - theme.spacing5 * 2, Math.max(180, content.implicitHeight + theme.spacing5 * 2))
-        anchors.centerIn: parent
+        width: Math.min((help.blurSource ? help.blurSource.width : parent.width) - theme.spacing5 * 2, 430)
+        height: Math.min((help.blurSource ? help.blurSource.height : parent.height) - theme.spacing5 * 2, Math.max(180, content.implicitHeight + theme.spacing5 * 2))
+        x: help.blurSource ? help.blurSource.x + (help.blurSource.width - width) / 2 : (parent.width - width) / 2
+        y: help.blurSource ? help.blurSource.y + (help.blurSource.height - height) / 2 : (parent.height - height) / 2
         theme: help.theme
         motion: help.motion
         surfaceLayer: ShellSurface.Group

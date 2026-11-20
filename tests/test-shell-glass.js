@@ -114,7 +114,14 @@ test("hub Help uses a single panel-shaped scrim with live, demand-driven glass b
   );
   assert.match(host, /blurSource: contentViewport/);
   assert.match(help, /import QtQuick\.Effects/);
-  assert.match(help, /source: help\.blurSource/);
+  assert.match(help, /sourceItem: help\.blurSource/);
+  assert.match(help, /source: blurTexture/);
+  assert.match(
+    help,
+    /hideSource: help\.open && help\.theme\.shellGlassEnabled/,
+  );
+  assert.match(help, /x: help\.blurSource \? help\.blurSource\.x/);
+  assert.match(help, /y: help\.blurSource \? help\.blurSource\.y/);
   assert.match(
     help,
     /visible: help\.open && help\.theme\.shellGlassEnabled && help\.blurSource !== null/,
