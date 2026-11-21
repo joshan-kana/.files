@@ -1585,6 +1585,7 @@ FocusScope {
                 brightness: root.brightness
                 recording: root.recording
                 modeName: root.statusMode
+                closeLabel: root.returnToControls ? "Back" : "Close"
                 onRefreshRequested: root.refreshStatus()
                 onCloseRequested: root.backFromDetail()
             }

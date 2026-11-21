@@ -12,6 +12,7 @@ Item {
     required property BrightnessState brightness
     required property RecordingState recording
     property string modeName: "Normal"
+    property string closeLabel: "Close"
     signal refreshRequested
     signal closeRequested
 
@@ -77,7 +78,7 @@ Item {
                 motion: content.motion
                 iconOnly: true
                 icon: "󰅖"
-                title: "Close status"
+                title: content.closeLabel === "Back" ? "Back to Controls" : "Close status"
                 onActivated: content.closeRequested()
             }
         }
@@ -197,7 +198,7 @@ Item {
                 },
                 {
                     shortcut: content.runtime.shellHint("StatusContent.close"),
-                    label: "Close"
+                    label: content.closeLabel
                 }
             ]
         }
