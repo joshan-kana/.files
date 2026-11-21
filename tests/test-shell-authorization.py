@@ -1,0 +1,127 @@
+"""Regression tests for scoped operator authorization and replay protection."""
+
+import asyncio
+import importlib.util
+import json
+import sys
+import tempfile
+import time
+import unittest
+import uuid
+from pathlib import Path
+from unittest.mock import patch
+
+spec = importlib.util.spec_from_file_location("authorization", Path(sys.argv.pop(1)))
+authorization = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = authorization
+spec.loader.exec_module(authorization)
+
+
+class AuthorizationTests(unittest.IsolatedAsyncioTestCase):
+    """Exercise real private approval records without a running server."""
+
+    def setUp(self):
+        """Create a disposable protected authorization workspace."""
+        self.scratch = tempfile.TemporaryDirectory()
+        self.root = Path(self.scratch.name)
+        defaults = self.root / "defaults.json"
+        defaults.write_text(json.dumps({"server": {"commands": "automatic", "elevation": "ask"}}))
+        self.paths = patch.multiple(
+            authorization,
+            DEFAULTS_FILE=defaults,
+            STATE_DIR=self.root / "state",
+            APPROVAL_DIR=self.root / "pending",
+            APPROVAL_TIMEOUT=0.5,
+        )
+        self.paths.start()
+
+    def tearDown(self):
+        """Dispose of approval records and policy state."""
+        self.paths.stop()
+        self.scratch.cleanup()
+
+    def ident(self):
+        """Generate a valid one-time operation ID."""
+        return uuid.uuid4().hex
+
+    async def await_pending(self, ident):
+        """Wait for the real operation to appear."""
+        path = authorization.APPROVAL_DIR / "pending" / f"{ident}.json"
+        for _ in range(50):
+            if path.exists():
+                return path
+            await asyncio.sleep(0.01)
+        self.fail("approval request did not appear")
+        return None
+
+    async def test_automatic_and_deny(self):
+        """Normal commands can run without grants; denied operations never proceed."""
+        await authorization.authorize(self.ident(), "server", "commands", "true", None)
+        authorization._set_policy("server", "elevation", "deny", None)
+        with self.assertRaises(PermissionError):
+            await authorization.authorize(self.ident(), "server", "elevation", "true", None)
+
+    async def test_human_approval_single_use(self):
+        """A matching approval authorizes one exact operation and is consumed."""
+        ident = self.ident()
+        operation = asyncio.create_task(authorization.authorize(ident, "server", "elevation", "id -u", "/tmp"))
+        await self.await_pending(ident)
+        authorization._decide(ident, "approve")
+        await operation
+        self.assertFalse((authorization.APPROVAL_DIR / "decisions" / f"{ident}.json").exists())
+        self.assertFalse((authorization.APPROVAL_DIR / "pending" / f"{ident}.json").exists())
+
+    async def test_human_denial_and_timeout(self):
+        """Denials and unanswered requests fail closed."""
+        ident = self.ident()
+        operation = asyncio.create_task(authorization.authorize(ident, "server", "elevation", "true", None))
+        await self.await_pending(ident)
+        authorization._decide(ident, "deny")
+        with self.assertRaises(PermissionError):
+            await operation
+        with self.assertRaisesRegex(PermissionError, "timed out"):
+            await authorization.authorize(self.ident(), "server", "elevation", "true", None)
+
+    async def test_wrong_digest_rejected(self):
+        """A forged approval against another operation is not accepted."""
+        ident = self.ident()
+        operation = asyncio.create_task(authorization.authorize(ident, "server", "elevation", "true", None))
+        await self.await_pending(ident)
+        authorization._write_exclusive(
+            authorization.APPROVAL_DIR / "decisions" / f"{ident}.json",
+            {"decision": "approve", "digest": "0" * 64},
+        )
+        with self.assertRaisesRegex(PermissionError, "does not match"):
+            await operation
+
+    async def test_policy_revocation_during_approval(self):
+        """Changing a host policy to deny revokes a previously submitted approval."""
+        ident = self.ident()
+        operation = asyncio.create_task(authorization.authorize(ident, "server", "elevation", "true", None))
+        await self.await_pending(ident)
+        authorization._decide(ident, "approve")
+        authorization._set_policy("server", "elevation", "deny", None)
+        with self.assertRaisesRegex(PermissionError, "changed to deny"):
+            await operation
+
+    async def test_bounded_elevation_policy(self):
+        """Automatic elevation requires an expiry and falls back to the safe default."""
+        with self.assertRaises(ValueError):
+            authorization._set_policy("server", "elevation", "automatic", None)
+        with self.assertRaises(ValueError):
+            authorization._set_policy("server", "elevation", "automatic", 3601)
+        authorization._set_policy("server", "elevation", "automatic", 1)
+        self.assertEqual(authorization.effective("server", "elevation"), "automatic")
+        with patch.object(authorization.time, "time", return_value=time.time() + 2):
+            self.assertEqual(authorization.effective("server", "elevation"), "ask")
+
+    def test_unknown_host_and_bad_ids(self):
+        """Unknown hosts and invalid identifiers never map into a filesystem request."""
+        with self.assertRaises(ValueError):
+            authorization.effective("attacker", "commands")
+        with self.assertRaises(ValueError):
+            authorization._valid_id("../../other")
+
+
+if __name__ == "__main__":
+    unittest.main()
