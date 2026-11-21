@@ -11,11 +11,9 @@ Item {
     required property PowerProfileState powerProfile
     property bool compact: false
     property bool frameConnected: false
-    property bool displayActionVisible: false
-    readonly property bool frameHover: statusPress.pointerHovered || displayPress.pointerHovered
-    readonly property bool framePressed: statusPress.visualPressed || displayPress.visualPressed
+    readonly property bool frameHover: statusPress.pointerHovered
+    readonly property bool framePressed: statusPress.visualPressed
 
-    signal displaySettingsRequested
     signal activated
     signal inspectRequested
     signal trayMenuRequested(int index)
@@ -46,44 +44,6 @@ Item {
             }
             height: island.theme.barIslandHeight
             spacing: island.compact ? island.theme.spacing1 : island.theme.spacing3
-
-            // The action is transient and shares the status island's layout,
-            // so notifications keep their own hit regions and no toast overlaps.
-            Item {
-                width: visible ? 92 : 0
-                height: 38
-                visible: island.displayActionVisible && !island.compact
-                anchors.verticalCenter: parent.verticalCenter
-                z: 2
-
-                Row {
-                    anchors.centerIn: parent
-                    spacing: island.theme.spacing1
-                    Text {
-                        text: "󰍹"
-                        color: island.theme.roleColor("display")
-                        font.family: "Symbols Nerd Font"
-                        font.pixelSize: island.theme.fontSize(17)
-                    }
-                    Text {
-                        text: "Displays"
-                        color: island.theme.textStrong
-                        font.family: island.runtime.fontMono
-                        font.pixelSize: island.theme.fontSize(10)
-                    }
-                }
-                StateLayer {
-                    id: displayPress
-                    theme: island.theme
-                    motion: island.motion
-                    cornerRadius: island.theme.radiusSmall
-                    showHover: !island.frameConnected
-                    stateColor: island.theme.roleColor("display")
-                    Accessible.role: Accessible.Button
-                    Accessible.name: "Configure newly connected display"
-                    onActivated: island.displaySettingsRequested()
-                }
-            }
 
             // Contextual statuses belong to this single background surface.
             Text {

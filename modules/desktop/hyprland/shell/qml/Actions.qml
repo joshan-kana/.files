@@ -240,6 +240,7 @@ QtObject {
             return;
 
         const geometry = origin || ambientBar.originFor(screen, "activity");
+        notificationState.requestFocusLatest();
         notificationState.hidePopup();
         hideTransient("activity");
         expansionState.show("activity", screen, geometry.center, geometry.width, geometry.height, "");
@@ -255,6 +256,7 @@ QtObject {
         const geometry = origin || ambientBar.originFor(screen, "activity");
         const opening = !(expansionState.hasCurrent && expansionState.currentName === "activity" && expansionState.screen === screen);
         if (opening) {
+            notificationState.requestFocusLatest();
             notificationState.hidePopup();
             hideTransient("activity");
         }

@@ -33,6 +33,8 @@ ShellRoot {
 
     property var statusTargetScreen: null
     property var resizeTargetScreen: null
+    property string captureTextName: ""
+    property int captureTextSerial: 0
     function toggleStatusInspection(targetScreen: var): void {
         if (resizeOverlay.open) {
             resizeOverlay.inspectOpen = !resizeOverlay.inspectOpen;
@@ -176,6 +178,8 @@ ShellRoot {
             windowTransparencyEnabled: qmlAppearance.windowTransparencyEnabled
             shellGlassEnabled: qmlAppearance.shellGlassEnabled
             engaged: qmlExpansionState.currentName === "system"
+            requestedCaptureTextName: root.captureTextName
+            requestedCaptureTextSerial: root.captureTextSerial
             onWallpaperSpectrumToggleRequested: qmlAppearance.toggleWallpaperSpectrum()
             onMusicReactiveToggleRequested: qmlAppearance.toggleMusicReactive()
             onBarToggleRequested: qmlAppearance.toggleBar()
@@ -301,6 +305,19 @@ ShellRoot {
         id: qmlRecording
     }
 
+    EventNotifications {
+        id: eventNotifications
+        runtime: qmlRuntime
+        system: qmlSystem
+        powerProfile: qmlPowerProfile
+        notifications: notifications
+        onDisplaySettingsRequested: if (qmlRuntime.displaySettings.length > 0)
+            Quickshell.execDetached([qmlRuntime.displaySettings])
+        onNetworkSettingsRequested: actions.showSystem(null, null, "network")
+        onAudioSettingsRequested: microphone => actions.toggleAudioMixer()
+        onPowerSettingsRequested: actions.showSystem()
+    }
+
     SpectrumState {
         id: qmlSpectrum
         // No DSP client unless a visible spectrum consumer needs live audio.
@@ -342,8 +359,6 @@ ShellRoot {
 
     AmbientBar {
         id: qmlAmbientBar
-        onDisplaySettingsRequested: if (qmlRuntime.displaySettings.length > 0)
-            Quickshell.execDetached([qmlRuntime.displaySettings])
         onSystemStatusRequested: screen => root.toggleStatusInspection(screen)
         // The expanding hub consumes the clock island throughout the whole
         // opening and closing transition, not only while Controls is active.
@@ -951,6 +966,13 @@ ShellRoot {
         }
     }
 
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "notifications-dismiss"
+        description: "Dismiss latest visible notification"
+        onPressed: notifications.dismissLatestPopup()
+    }
+
     IpcHandler {
         target: "desktop"
 
@@ -1143,6 +1165,14 @@ ShellRoot {
 
         function sessionOpen(): bool {
             return qmlExpansionState.hasCurrent && qmlExpansionState.currentName === "system" && expansionHost.systemContent ? expansionHost.systemContent.sessionOpen : false;
+        }
+
+        function showCaptureText(name: string): void {
+            if (!/^(?:Screenshot-[0-9]{8}-[0-9]{6}-[0-9]+\.png|Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.mp4)$/.test(name))
+                return;
+            root.captureTextName = name;
+            root.captureTextSerial++;
+            actions.showSystem(null, null, "recordings");
         }
 
         function toggleNotifications(): void {

@@ -620,6 +620,13 @@ in
     description = "Activate latest notification, or open Activity";
   })
   (mk {
+    keys = "CTRL + D";
+    id = "notifications.dismissLatest";
+    action = global "linux-desktop:notifications-dismiss";
+    section = "SYSTEM";
+    description = "Dismiss latest visible notification";
+  })
+  (mk {
     keys = "SHIFT + C";
     id = "session.lock";
     action = global "linux-desktop:lock";

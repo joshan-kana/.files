@@ -716,6 +716,7 @@ in
           colourPicker = lib.getExe colourPicker;
           nightLightControl = lib.getExe nightLightControl;
           displaySettings = lib.getExe pkgs.nwg-displays;
+          notifySend = lib.getExe' pkgs.libnotify "notify-send";
         };
       };
 
@@ -833,16 +834,21 @@ in
         name = "linux-desktop-open-capture";
         runtimeInputs = [
           imageMarkup
+          pkgs.quickshell
           pkgs.xdg-utils
           pkgs.losslesscut
         ];
-        text = builtins.readFile ../../../../scripts/linux-desktop/open-capture.sh;
+        text = ''
+          export LINUX_DESKTOP_SHELL_PATH=${lib.escapeShellArg (toString productionShellPath)}
+          ${builtins.readFile ../../../../scripts/linux-desktop/open-capture.sh}
+        '';
       };
 
       captureNotify = pkgs.writeShellApplication {
         name = "linux-desktop-capture-notify";
         runtimeInputs = [
           notificationOpen
+          recordingLibrary
           pkgs.coreutils
           pkgs.libnotify
         ];

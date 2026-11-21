@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 [ "$#" -eq 2 ] || exit 2
 case "$1" in
-screenshot | edit-screenshot)
+screenshot | edit-screenshot | text-screenshot)
   path="$2"
   name="${path##*/}"
   dir="${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots"
   [[ $name =~ ^Screenshot-[0-9]{8}-[0-9]{6}-[0-9]+\.png$ ]] || exit 2
   [[ $path == "$dir/$name" ]] || exit 2
   ;;
-recording | edit-recording)
+recording | edit-recording | text-recording)
   name="$2"
   [[ $name =~ ^Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.mp4$ ]] || exit 2
   path="$HOME/Videos/Screencasts/$name"
@@ -19,5 +19,8 @@ esac
 case "$1" in
 edit-screenshot) exec linux-desktop-markup "$path" ;;
 edit-recording) exec losslesscut --disable-networking "$path" ;;
+text-screenshot | text-recording)
+  exec quickshell ipc --path "$LINUX_DESKTOP_SHELL_PATH" call desktop showCaptureText "$name"
+  ;;
 esac
 exec xdg-open "$path"

@@ -25,6 +25,7 @@ Item {
     property int ocrImageWidth: 1
     property int ocrImageHeight: 1
     property string ocrRequestName: ""
+    property string pendingTextName: ""
     property int wordSelectionStart: -1
     property int wordSelectionEnd: -1
     readonly property bool wordSelectionAvailable: wordSelectionStart >= 0 && wordSelectionEnd >= 0
@@ -65,6 +66,40 @@ Item {
         refresh();
         keyboardRequested();
     }
+    function queueText(name: string): void {
+        if (!/^(?:Screenshot-[0-9]{8}-[0-9]{6}-[0-9]+\.png|Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.mp4)$/.test(name))
+            return;
+        pendingTextName = name;
+        if (open) {
+            if (entries.length > 0)
+                Qt.callLater(openPendingText);
+            else
+                refresh();
+        }
+    }
+
+    function openPendingText(): void {
+        if (!open || !pendingTextName || listProcess.running)
+            return;
+        const name = pendingTextName;
+        const index = entries.findIndex(entry => entry.name === name);
+        if (index < 0) {
+            pendingTextName = "";
+            statusText = "CAPTURE NOT FOUND";
+            statusError = true;
+            return;
+        }
+        pendingTextName = "";
+        choose(index);
+        Qt.callLater(() => {
+            if (open && selectedEntry && selectedEntry.name === name)
+                showText();
+        });
+    }
+
+    onEntriesChanged: if (pendingTextName)
+        Qt.callLater(openPendingText)
+
     function closeView(): void {
         if (!open)
             return;
@@ -315,8 +350,11 @@ Item {
                 // Replacing an identical JS-array model destroys and recreates
                 // its Qt delegate metadata without any visible result. This
                 // was racing recorder state changes and keyboard navigation.
-                if (nextSignature === library.listingSignature)
+                if (nextSignature === library.listingSignature) {
+                    if (library.pendingTextName)
+                        Qt.callLater(library.openPendingText);
                     return;
+                }
                 const previous = library.selectedEntry ? library.selectedEntry.name : "";
                 const same = nextEntries.findIndex(entry => entry.name === previous);
                 const nextIndex = Math.max(0, Math.min(nextEntries.length - 1, same >= 0 ? same : library.selectedIndex));
