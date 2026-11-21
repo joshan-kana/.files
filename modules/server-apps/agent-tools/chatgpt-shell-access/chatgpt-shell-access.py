@@ -66,6 +66,69 @@ _ALLOWED_ENV = {
     "TZ",
 }
 COMMAND_ENV = {key: value for key, value in os.environ.items() if key in _ALLOWED_ENV or key.startswith("LC_")}
+HERDR_LOCAL = os.environ.get("CHATGPT_SHELL_HC", "hc")
+HERDR_SESSION = os.environ.get("CHATGPT_SHELL_HC_SESSION", "chatgpt-shell")
+
+
+def _herdr_argv(host: Host, arguments: list[str]) -> list[str]:
+    """Reach the user's Herdr core without forwarding privileged authentication agents."""
+    if host == LOCAL_HOST:
+        command = shlex.join([HERDR_LOCAL, *arguments])
+        return [
+            *LOCAL,
+            f"export PATH={shlex.quote(COMMAND_PATH)}:$PATH\n"
+            "unset SSH_AUTH_SOCK GH_TOKEN\n"
+            f"export HC_SESSION={shlex.quote(HERDR_SESSION)}\n"
+            f"exec {command}",
+        ]
+    target = REMOTE_TARGETS[host]
+    command = f"unset SSH_AUTH_SOCK GH_TOKEN; export HC_SESSION={shlex.quote(HERDR_SESSION)}; exec {shlex.join(['hc', *arguments])}"
+    return [
+        *SSH,
+        "-oForwardAgent=no",
+        "-i",
+        f"{CREDENTIALS}/{target.credential}",
+        target.ssh_target,
+        f"exec {target.shell} -lc {shlex.quote(command)}",
+    ]
+
+
+async def _herdr(host: Host, arguments: list[str]) -> dict[str, object]:
+    """Invoke the native Herdr CLI with a bounded response and no privileged agent forwarding."""
+    process = await asyncio.create_subprocess_exec(
+        *_herdr_argv(host, arguments),
+        stdin=asyncio.subprocess.DEVNULL,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        env={
+            **{key: value for key, value in _command_env(host).items() if key not in ("SSH_AUTH_SOCK", "GH_TOKEN")},
+            **{key: value for key, value in os.environ.items() if key.startswith("XDG_")},
+        },
+    )
+    try:
+        stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=20)
+    except TimeoutError:
+        process.kill()
+        await process.wait()
+        raise RuntimeError("Herdr did not respond within 20 seconds") from None
+    if process.returncode != 0:
+        raise RuntimeError(f"Herdr failed: {stderr.decode(errors='replace')[:4096]}")
+    try:
+        return json.loads(stdout)
+    except (ValueError, UnicodeDecodeError) as exc:
+        raise RuntimeError("Herdr returned an invalid response") from exc
+
+
+def _terminal_match(terminal: dict[str, object], requested: str) -> bool:
+    """Match a named or addressed terminal without interpreting user input as a shell expression."""
+    return terminal.get("address") == requested or terminal.get("name") == requested
+
+
+async def _herdr_owned(host: Host, terminal: str) -> None:
+    """Require a managed Herdr terminal for agent-initiated interruption."""
+    data = await _herdr(host, ["ls", "--all", "--label", "origin=chatgpt-shell", "--json"])
+    if not any(_terminal_match(item, terminal) for item in data.get("terminals", [])):
+        raise ValueError("unknown ChatGPT shell terminal")
 
 
 def _command_env(host: Host) -> dict[str, str]:
@@ -310,6 +373,64 @@ kill -s {sig} {job.target_pid} $children 2>/dev/null || true
         await asyncio.wait_for(process.wait(), timeout=5)
     except Exception:
         pass
+
+
+@mcp.tool()
+async def session_start(
+    host: Host,
+    command: str,
+    cwd: str | None = None,
+) -> dict[str, object]:
+    """Start an observable persistent Herdr terminal on a configured host.
+
+    Herdr manages the process and lifetime; connect with hc attach --observe or an
+    existing Herdr client. This is a normal-user shell, not a privileged approval.
+    """
+    cwd = _validate_cwd(cwd)
+    session_name = f"chatgpt-{uuid.uuid4().hex[:12]}"
+    arguments = [
+        "run",
+        "--bg",
+        "--json",
+        "--name",
+        session_name,
+        "--label",
+        "origin=chatgpt-shell",
+        "--no-parent",
+    ]
+    if cwd is not None:
+        arguments.extend(["--cwd", cwd])
+    arguments.extend(["bash" if host != "mac" else "/bin/zsh", "-lc", command])
+    result = await _herdr(host, arguments)
+    return {"host": host, "session": HERDR_SESSION, **result}
+
+
+@mcp.tool()
+async def session_list(host: Host) -> dict[str, object]:
+    """List the active and finished Herdr terminals on an approved host."""
+    return await _herdr(host, ["ls", "--all", "--json"])
+
+
+@mcp.tool()
+async def session_read(host: Host, terminal: str, lines: int = 100) -> dict[str, object]:
+    """Read a Herdr terminal's current screen and scrollback."""
+    if not 0 <= lines <= 2000:
+        raise ValueError("lines must be between 0 and 2000")
+    return await _herdr(host, ["read", "--json", "--lines", str(lines), terminal])
+
+
+@mcp.tool()
+async def session_interrupt(host: Host, terminal: str) -> dict[str, object]:
+    """Interrupt a ChatGPT-managed Herdr terminal using its native interrupt action."""
+    await _herdr_owned(host, terminal)
+    return await _herdr(host, ["interrupt", "--json", terminal])
+
+
+@mcp.tool()
+async def session_kill(host: Host, terminal: str) -> dict[str, object]:
+    """Terminate a ChatGPT-managed Herdr process, escalating when needed."""
+    await _herdr_owned(host, terminal)
+    return await _herdr(host, ["kill", "--json", terminal])
 
 
 @mcp.tool()

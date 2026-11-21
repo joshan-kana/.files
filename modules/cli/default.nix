@@ -612,6 +612,12 @@ in
     };
   };
 
+  herdr = _: {
+    home = { pkgs, ... }: {
+      home.packages = [ pkgs.herdr-core ];
+    };
+  };
+
   fzf = _: {
     home = _: {
       programs.fzf = {
