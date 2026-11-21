@@ -223,6 +223,25 @@ Item {
         wordSelectionEnd = index;
     }
 
+    function moveWordSelection(direction: int, extend: bool): void {
+        if (!ocrVisible || ocrWords.length === 0)
+            return;
+        const current = wordSelectionEnd >= 0 ? wordSelectionEnd : direction > 0 ? -1 : ocrWords.length;
+        const next = Math.max(0, Math.min(ocrWords.length - 1, current + direction));
+        recognisedText.deselect();
+        if (!extend || wordSelectionStart < 0)
+            wordSelectionStart = next;
+        wordSelectionEnd = next;
+    }
+
+    function selectAllWords(): void {
+        if (!ocrVisible || ocrWords.length === 0)
+            return;
+        recognisedText.deselect();
+        wordSelectionStart = 0;
+        wordSelectionEnd = ocrWords.length - 1;
+    }
+
     function wordInSelection(index: int): bool {
         return wordSelectionAvailable && index >= Math.min(wordSelectionStart, wordSelectionEnd) && index <= Math.max(wordSelectionStart, wordSelectionEnd);
     }
@@ -796,7 +815,20 @@ Item {
             width: parent.width
             runtime: library.runtime
             theme: library.theme
-            hints: [
+            hints: library.ocrVisible ? [
+                {
+                    shortcut: library.runtime.shellHint("RecordingLibrary.word"),
+                    label: "Word"
+                },
+                {
+                    shortcut: library.runtime.shellHint("RecordingLibrary.extend"),
+                    label: "Extend"
+                },
+                {
+                    shortcut: library.runtime.shellHint("RecordingLibrary.copy"),
+                    label: "Copy selection"
+                }
+            ] : [
                 {
                     shortcut: library.runtime.shellHint("RecordingLibrary.choose"),
                     label: "Choose"
