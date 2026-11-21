@@ -229,7 +229,19 @@ test("Help blur replaces content in place without moving tiles or filling corner
     /sourceRect: Qt\.rect\(0, 0, blurRegion\.width, blurRegion\.height\)/,
   );
   assert.match(help, /hideSource: backdrop\.visible/);
-  assert.match(help, /visible: help\.open && help\.theme\.shellGlassEnabled/);
+  assert.match(
+    help,
+    /visible: help\.visible && help\.theme\.shellGlassEnabled/,
+  );
+  assert.match(help, /anchors\.margins: help\.theme\.borderThin \* 2/);
+  assert.match(
+    help,
+    /cornerRadius: Math\.max\(0, help\.backdropRadius - help\.theme\.borderThin \* 2\)/,
+  );
+  assert.match(
+    help,
+    /MouseArea \{\s+anchors\.fill: parent\s+enabled: help\.open\s+onClicked: help\.dismissed\(\)/,
+  );
   assert.doesNotMatch(help, /maskSource: blurMask|background\.a/);
   assert.doesNotMatch(help, /PanelWindow/);
 });
