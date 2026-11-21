@@ -23,14 +23,9 @@ lib.recursiveUpdate (import ../../profiles/minimal.nix { inherit lib moduleRegis
     };
     scopes.cli = {
       systemCommands.vm.enable = false;
-      stow.enable = false;
       killall.enable = false;
       xdgUtils.enable = false;
       trashCli.enable = false;
-      gnumake.enable = false;
-      devbox.enable = false;
-      has.enable = false;
-      nvd.enable = false;
       nixTree.enable = false;
     };
   };

@@ -767,24 +767,6 @@ in
       };
   };
 
-  vim = _: {
-    home = _: {
-      home.packages = [ pkgs.vim ];
-    };
-  };
-
-  wget = _: {
-    home = _: {
-      home.packages = [ pkgs.wget ];
-    };
-  };
-
-  lshw =
-    _:
-    lib.optionalAttrs isLinux {
-      environment.systemPackages = [ pkgs.lshw ];
-    };
-
   fastfetch = _: {
     home = _: {
       home.packages = [ pkgs.fastfetch ];
@@ -801,12 +783,6 @@ in
   glow = _: {
     home = _: {
       home.packages = [ pkgs.glow ];
-    };
-  };
-
-  stow = _: {
-    home = _: {
-      home.packages = [ pkgs.stow ];
     };
   };
 
@@ -851,30 +827,6 @@ in
   trashCli = _: {
     home = _: {
       home.packages = [ pkgs.trash-cli ];
-    };
-  };
-
-  gnumake = _: {
-    home = _: {
-      home.packages = [ pkgs.gnumake ];
-    };
-  };
-
-  devbox = _: {
-    home = _: {
-      home.packages = [ pkgs.devbox ];
-    };
-  };
-
-  has = _: {
-    home = _: {
-      home.packages = [ pkgs.has ];
-    };
-  };
-
-  nvd = _: {
-    home = _: {
-      home.packages = [ pkgs.nvd ];
     };
   };
 
