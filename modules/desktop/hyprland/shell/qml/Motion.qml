@@ -17,11 +17,8 @@ QtObject {
     }
     readonly property bool enabled: qmlPreferences.preferenceSource === "default" ? runtime.animationsEnabled : qmlPreferences.animationsEnabled
 
-    readonly property int instant: 0
     readonly property int fast: enabled ? 100 : 0
     readonly property int normal: enabled ? 160 : 0
-    readonly property int slow: enabled ? 220 : 0
-    readonly property int pulse: enabled ? 520 : 0
     readonly property int contourLap: enabled ? 1900 : 0
     readonly property int spinnerCycle: enabled ? 1100 : 0
 
@@ -46,7 +43,6 @@ QtObject {
 
     readonly property int enterType: Easing.BezierSpline
     readonly property int exitType: Easing.BezierSpline
-    readonly property int pulseType: Easing.InOutSine
     readonly property int spatialType: Easing.BezierSpline
     readonly property int morphType: Easing.BezierSpline
     readonly property int effectsType: Easing.BezierSpline
