@@ -127,36 +127,31 @@ test("System Status consumes its refresh shortcut before Controls actions", () =
   );
 });
 
-test("displays opens the native editor and contextual island avoids another popup", () => {
+test("displays uses standard notifications and the status island owns only live state", () => {
   const controls = qml("SystemContent.qml");
   const shell = qml("shell.qml");
   const bar = qml("AmbientBar.qml");
   const island = qml("SystemIsland.qml");
+  const notices = qml("EventNotifications.qml");
   assert.match(
     controls,
     /title: "Displays"[\s\S]*?onActivated: root\.displaySettingsRequested\(\)/,
   );
   assert.match(
     shell,
-    /onDisplaySettingsRequested:[\s\S]*?Quickshell\.execDetached\(\[qmlRuntime\.displaySettings\]\)/,
+    /EventNotifications \{[\s\S]*?onDisplaySettingsRequested:/,
   );
-  assert.match(bar, /event\.name === "monitoradded"/);
-  assert.match(bar, /property Timer displayContextTimeout: Timer/);
-  assert.match(bar, /interval: 12000/);
-  assert.match(bar, /bars\.displayContextTimeout\.restart\(\)/);
-  assert.match(bar, /event\.name === "monitorremovedv2"/);
-  assert.match(bar, /bars\.displayContextTimeout\.stop\(\)/);
-  assert.match(
+  assert.match(notices, /"monitoraddedv2"/);
+  assert.match(notices, /"Configure Displays"/);
+  assert.match(notices, /"--action=open=" \+ action/);
+  assert.doesNotMatch(
     bar,
-    /displayActionVisible: bars\.displayContextScreen === bar\.modelData\.name/,
+    /displayContext|displayActionVisible|offerDisplaySettings/,
   );
-  assert.match(bar, /property string displayContextScreen: ""/);
-  assert.match(
-    bar,
-    /function offerDisplaySettings\(outputName: string\): void/,
+  assert.doesNotMatch(
+    island,
+    /displayActionVisible|displayPress|displaySettingsRequested/,
   );
-  assert.match(island, /Accessible\.name: "Configure newly connected display"/);
-  assert.match(island, /onActivated: island\.displaySettingsRequested\(\)/);
   assert.doesNotMatch(bar, /WlrLayershell\.namespace: "linux-desktop-context"/);
 });
 

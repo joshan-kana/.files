@@ -41,6 +41,7 @@ QtObject {
     readonly property string colourPicker: root.configData.tools.colourPicker
     readonly property string nightLightControl: root.configData.tools.nightLightControl
     readonly property string displaySettings: root.configData.tools.displaySettings
+    readonly property string notifySend: root.configData.tools.notifySend
 
     readonly property string fontMono: root.themeAdapter.fonts.mono
 

@@ -46,27 +46,6 @@ Variants {
     }
     property var origins: ({})
     property var frameIslands: ({})
-    property string displayContextScreen: ""
-    property string displayContextOutput: ""
-
-    property Timer displayContextTimeout: Timer {
-        interval: 12000
-        repeat: false
-        onTriggered: {
-            bars.displayContextScreen = "";
-            bars.displayContextOutput = "";
-        }
-    }
-
-    function offerDisplaySettings(outputName: string): void {
-        const existing = Quickshell.screens.find(screen => screen.name !== outputName);
-        if (!existing)
-            return;
-        displayContextOutput = outputName;
-        displayContextScreen = existing.name;
-        bars.displayContextTimeout.restart();
-    }
-
     signal mediaRequested(var screen, var origin)
     signal systemRequested(var screen, var origin)
     signal systemStatusRequested(var screen)
@@ -74,7 +53,6 @@ Variants {
     signal calendarRequested(var screen, var origin)
     signal notificationsRequested(var screen, var origin)
     signal recordingStopRequested
-    signal displaySettingsRequested
 
     function screenKey(screen: var): string {
         return screen && screen.name ? String(screen.name) : "";
@@ -124,25 +102,6 @@ Variants {
         id: bar
 
         required property var modelData
-
-        // The model is recreated on hotplug, so keep the action's lifetime
-        // on the stable bar owner instead of on a disposable screen delegate.
-        Connections {
-            target: Hyprland
-            function onRawEvent(event): void {
-                if (event.name === "monitoradded" || event.name === "monitoraddedv2") {
-                    const added = event.name === "monitoraddedv2" ? String(event.data).split(",")[1] : String(event.data);
-                    bars.offerDisplaySettings(added);
-                } else if (event.name === "monitorremoved" || event.name === "monitorremovedv2") {
-                    const removed = event.name === "monitorremovedv2" ? String(event.data).split(",")[1] : String(event.data);
-                    if (removed === bars.displayContextOutput) {
-                        bars.displayContextScreen = "";
-                        bars.displayContextOutput = "";
-                        bars.displayContextTimeout.stop();
-                    }
-                }
-            }
-        }
 
         screen: modelData
 
@@ -802,13 +761,6 @@ Variants {
                 powerProfile: (bars.powerProfile as PowerProfileState)
                 frameConnected: bars.frameVisible
                 compact: barContent.width - (clockIsland.x + clockIsland.width) < 260
-                displayActionVisible: bars.displayContextScreen === bar.modelData.name && !bar.fullscreen && !bars.controlsExpanded
-                onDisplaySettingsRequested: {
-                    bars.displayContextScreen = "";
-                    bars.displayContextOutput = "";
-                    bars.displayContextTimeout.stop();
-                    bars.displaySettingsRequested();
-                }
                 onXChanged: Qt.callLater(bar.publishOrigins)
                 onWidthChanged: Qt.callLater(bar.publishOrigins)
                 onActivated: bars.systemRequested(bar.modelData, bars.originFor(bar.modelData, "system"))

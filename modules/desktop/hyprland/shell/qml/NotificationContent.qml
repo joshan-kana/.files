@@ -49,10 +49,29 @@ FocusScope {
     implicitHeight: (groups.length === 0 ? 295 : Math.max(360, 235 + Math.min(groups.length, 5) * 116)) + footer.implicitHeight + theme.spacing2
     focus: engaged
 
+    function focusRequested(): void {
+        if (!notificationState.focusRecordId)
+            return;
+        const selected = items.find(item => notificationState.recordKey(item) === notificationState.focusRecordId);
+        const match = NotificationSemantics.findNotification(groups, selected);
+        if (!match)
+            return;
+        restoringSelection = true;
+        selectedIndex = match.groupIndex;
+        selectedMemberIndex = match.memberIndex;
+        selectedNotificationAnchor = selected;
+        restoringSelection = false;
+        Qt.callLater(ensureSelectedVisible);
+        Qt.callLater(focusKeyboard);
+    }
+
+    readonly property int focusRequestSerial: notificationState.focusRequestSerial
+    onFocusRequestSerialChanged: focusRequested()
     onEngagedChanged: {
-        if (engaged)
+        if (engaged) {
+            focusRequested();
             Qt.callLater(focusKeyboard);
-        else {
+        } else {
             replyEditing = false;
             replyOwner = null;
         }

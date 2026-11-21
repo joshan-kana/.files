@@ -38,6 +38,8 @@ QtObject {
     readonly property int unreadCount: journal.filter(record => !record.read).length
     readonly property bool hasCriticalUnread: journal.some(record => record.urgency === NotificationUrgency.Critical && !record.read)
     property string persistenceError: ""
+    property string focusRecordId: ""
+    property int focusRequestSerial: 0
 
     // The native ext-session-lock process publishes only a small, atomic
     // session-state marker. No polling, second notification service, or
@@ -641,16 +643,34 @@ QtObject {
         notification.sendInlineReply(message);
     }
 
+    function latestPopup(): var {
+        for (let i = 0; i < popups.count; ++i) {
+            const item = popups.get(i);
+            if (item.phase === "visible" && !item.evicted && isLive(item.notification))
+                return item.notification;
+        }
+        return null;
+    }
+
+    function requestFocusLatest(): void {
+        const selected = latestPopup() || (history.length > 0 ? history[history.length - 1] : null);
+        focusRecordId = recordKey(selected);
+        focusRequestSerial++;
+    }
+
+    function dismissLatestPopup(): void {
+        if (locked)
+            return;
+        const selected = latestPopup();
+        if (selected)
+            hidePopup(selected);
+    }
+
     function invokeLatest(): bool {
         if (locked)
             return false;
-        for (let i = 0; i < popups.count; ++i) {
-            const item = popups.get(i);
-            if (item.phase === "visible")
-                return invokeDefault(item.notification);
-        }
-        const latest = history.length > 0 ? history[history.length - 1] : null;
-        return latest ? invokeDefault(latest) : false;
+        const selected = latestPopup() || (history.length > 0 ? history[history.length - 1] : null);
+        return selected ? invokeDefault(selected) : false;
     }
 
     function clearAll(): void {
