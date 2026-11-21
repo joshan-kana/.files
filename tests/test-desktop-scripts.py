@@ -101,6 +101,24 @@ exit 1
         self.assertIn("picker.open = true;", picker)
         self.assertIn("RECORDING START FAILED", picker)
 
+    def test_recording_output_is_private(self):
+        """The service and direct recording entry point both restrict file access."""
+        self.env["LINUX_DESKTOP_RECORDING_DIR"] = str(self.home / "recordings")
+        configuration = self.runtime / "linux-desktop-recording.conf"
+        configuration.write_text("Virtual-1\n0,0 1200x800\nnone\n")
+        self.executable(
+            "wf-recorder",
+            'for argument do output="$argument"; done\nprintf "video-frame" > "$output"\n',
+        )
+        result = self.run_script(SCRIPTS / "record-region.sh")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        captures = list((self.home / "recordings").glob("Recording-*.mp4"))
+        self.assertEqual(len(captures), 1)
+        self.assertEqual(captures[0].stat().st_mode & 0o777, 0o600)
+        config = (ROOT / "modules/desktop/hyprland/shell/default.nix").read_text()
+        recording_service = config.split("linux-desktop-recording = {", 1)[1].split("linux-desktop-lock = {", 1)[0]
+        self.assertIn('UMask = "0077";', recording_service)
+
     @unittest.skipUnless(shutil.which("flock"), "GNU flock is required for operation-lock integration")
     def test_theme_cancellation_prevents_worker_build(self):
         """Cancelled work may never re-enter the build or activation phase."""
