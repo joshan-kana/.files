@@ -84,6 +84,44 @@ test("status is a Controls detail with shared data and nested Escape", () => {
   );
 });
 
+test("System Status consumes its refresh shortcut before Controls actions", () => {
+  const controls = qml("SystemContent.qml");
+  const bindings = fs.readFileSync(path.join(root, "keybindings.nix"), "utf8");
+  const input = controls.slice(controls.indexOf("id: keyboardFocus"));
+  const localStatus = input.indexOf("if (root.statusOpen)");
+  const resourcesAction = input.lastIndexOf("root.openResources()");
+  const statusKeys = input.slice(
+    localStatus,
+    input.indexOf("if (root.mixerOpen)", localStatus),
+  );
+
+  assert.ok(localStatus >= 0 && localStatus < resourcesAction);
+  assert.match(
+    statusKeys,
+    /shellMatchesHint\("StatusContent\.refresh", event\.key, event\.modifiers\)/,
+  );
+  assert.match(statusKeys, /root\.refreshStatus\(\)/);
+  assert.match(statusKeys, /root\.backFromDetail\(\)/);
+  assert.match(statusKeys, /return;/);
+  assert.match(
+    controls,
+    /function refreshStatus\(\): void \{[\s\S]*?keyboard\.refresh\("inspect"\);[\s\S]*?brightness\.refresh\(\);/,
+  );
+  assert.match(controls, /onRefreshRequested: root\.refreshStatus\(\)/);
+  assert.match(
+    controls,
+    /readonly property bool sliderNavigationEnabled:[^\n]*!statusOpen/,
+  );
+  assert.match(
+    controls,
+    /readonly property var helpBindings: statusOpen \? \[/,
+  );
+  assert.match(
+    bindings,
+    /"StatusContent\.refresh" = \{\s*scope = "status";\s*template = "R";/,
+  );
+});
+
 test("displays opens the native editor and contextual island avoids another popup", () => {
   const controls = qml("SystemContent.qml");
   const shell = qml("shell.qml");
