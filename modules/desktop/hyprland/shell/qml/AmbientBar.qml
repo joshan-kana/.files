@@ -54,6 +54,30 @@ Variants {
     signal calendarRequested(var screen, var origin)
     signal notificationsRequested(var screen, var origin)
     signal recordingStopRequested
+    signal displaySettingsRequested
+
+    // Contextual actions join an existing bar surface; they do not create
+    // another popup competing with freedesktop notifications and OSDs.
+    property string contextScreen: ""
+    property bool displayContextVisible: false
+    Timer {
+        id: displayContextTimeout
+        interval: 12000
+        repeat: false
+        onTriggered: bars.displayContextVisible = false
+    }
+    Connections {
+        target: Hyprland
+        function onRawEvent(event): void {
+            if (event.name !== "monitoradded" && event.name !== "monitoraddedv2")
+                return;
+            const focused = Hyprland.focusedMonitor;
+            const screen = Quickshell.screens.find(candidate => focused && Hyprland.monitorFor(candidate) === focused);
+            bars.contextScreen = screen ? screen.name : (Quickshell.screens.length > 0 ? Quickshell.screens[0].name : "");
+            bars.displayContextVisible = bars.contextScreen.length > 0;
+            displayContextTimeout.restart();
+        }
+    }
 
     function screenKey(screen: var): string {
         return screen && screen.name ? String(screen.name) : "";
@@ -762,6 +786,11 @@ Variants {
                 powerProfile: (bars.powerProfile as PowerProfileState)
                 frameConnected: bars.frameVisible
                 compact: barContent.width - (clockIsland.x + clockIsland.width) < 260
+                displayActionVisible: bars.displayContextVisible && bars.contextScreen === bar.modelData.name && !bar.fullscreen && !bars.controlsExpanded
+                onDisplaySettingsRequested: {
+                    bars.displayContextVisible = false;
+                    bars.displaySettingsRequested();
+                }
                 onXChanged: Qt.callLater(bar.publishOrigins)
                 onWidthChanged: Qt.callLater(bar.publishOrigins)
                 onActivated: bars.systemRequested(bar.modelData, bars.originFor(bar.modelData, "system"))

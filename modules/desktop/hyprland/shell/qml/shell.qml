@@ -179,6 +179,15 @@ ShellRoot {
             onFrameToggleRequested: qmlAppearance.toggleFrame()
             onWindowTransparencyToggleRequested: qmlAppearance.toggleWindowTransparency()
             onShellGlassToggleRequested: qmlAppearance.toggleShellGlass()
+            onStatusInspectionRequested: {
+                qmlExpansionState.close();
+                root.toggleStatusInspection(qmlScreens.focusedScreen);
+            }
+            onDisplaySettingsRequested: {
+                qmlExpansionState.close();
+                if (qmlRuntime.displaySettings.length > 0)
+                    Quickshell.execDetached([qmlRuntime.displaySettings]);
+            }
             onRestoreDefaultsRequested: {
                 qmlAppearance.resetToDeclared();
                 qmlMotion.resetToDeclared();
@@ -334,6 +343,8 @@ ShellRoot {
 
     AmbientBar {
         id: qmlAmbientBar
+        onDisplaySettingsRequested: if (qmlRuntime.displaySettings.length > 0)
+            Quickshell.execDetached([qmlRuntime.displaySettings])
         onSystemStatusRequested: screen => root.toggleStatusInspection(screen)
         // The expanding hub consumes the clock island throughout the whole
         // opening and closing transition, not only while Controls is active.

@@ -393,6 +393,11 @@ in
           default = 0.70;
           description = "Opacity of translucent shell surfaces, from 0.2 to 1.0 inclusive.";
         };
+        blurSize = lib.mkOption {
+          type = lib.types.ints.between 5 25;
+          default = 15;
+          description = "Compositor-wide backdrop blur radius, adjustable without restarting the shell.";
+        };
         mediaVisualizerMode = lib.mkOption {
           type = lib.types.enum [
             "bars"
@@ -710,6 +715,7 @@ in
           frozenCapture = lib.getExe frozenCapture;
           colourPicker = lib.getExe colourPicker;
           nightLightControl = lib.getExe nightLightControl;
+          displaySettings = lib.getExe pkgs.nwg-displays;
         };
       };
 
@@ -846,6 +852,7 @@ in
       recordingLibrary = pkgs.writeShellApplication {
         name = "linux-desktop-recordings";
         runtimeInputs = [
+          pkgs.tesseract
           imageMarkup
           pkgs.coreutils
           pkgs.findutils
