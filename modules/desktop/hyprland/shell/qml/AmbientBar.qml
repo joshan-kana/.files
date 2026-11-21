@@ -71,9 +71,13 @@ Variants {
         function onRawEvent(event): void {
             if (event.name !== "monitoradded" && event.name !== "monitoraddedv2")
                 return;
-            const focused = Hyprland.focusedMonitor;
-            const screen = Quickshell.screens.find(candidate => focused && Hyprland.monitorFor(candidate) === focused);
-            bars.contextScreen = screen ? screen.name : (Quickshell.screens.length > 0 ? Quickshell.screens[0].name : "");
+            // Prefer an existing bar instead of the display which just
+            // arrived. Monitor objects can be invalid during hotplug, so
+            // resolve names only; never call monitorFor on a departing screen.
+            const added = event.name === "monitoraddedv2" ? String(event.data).split(",")[1] : String(event.data);
+            const names = Quickshell.screens.map(screen => screen.name);
+            const existing = names.find(name => name !== added);
+            bars.contextScreen = existing || names[0] || "";
             bars.displayContextVisible = bars.contextScreen.length > 0;
             displayContextTimeout.restart();
         }
