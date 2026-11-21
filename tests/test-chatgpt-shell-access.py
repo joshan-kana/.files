@@ -9,7 +9,7 @@ import time
 import types
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 
 class MCPServer:
@@ -194,6 +194,50 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         finally:
             self.argv.start()
         self.assertIn("-oForwardAgent=yes", argv)
+
+    async def test_herdr_session_start_uses_native_runtime(self):
+        """Create a labelled session without writing a competing terminal database."""
+        with patch.object(shell, "_herdr", new_callable=AsyncMock, return_value={"address": "t8", "state": "live"}) as invoke:
+            result = await shell.session_start("local", "printf test", cwd="/tmp")
+        self.assertEqual(result["address"], "t8")
+        self.assertEqual(result["session"], shell.HERDR_SESSION)
+        args = invoke.call_args.args[1]
+        self.assertIn("--bg", args)
+        self.assertIn("origin=chatgpt-shell", args)
+        self.assertEqual(args[-3:], ["bash", "-lc", "printf test"])
+        self.assertEqual(args[args.index("--cwd") + 1], "/tmp")
+
+    async def test_herdr_session_start_rejects_relative_cwd(self):
+        """Reject non-absolute working directories before spawning a terminal."""
+        with patch.object(shell, "_herdr", new_callable=AsyncMock) as invoke:
+            with self.assertRaises(ValueError):
+                await shell.session_start("local", "true", cwd="../parent")
+            invoke.assert_not_awaited()
+
+    async def test_herdr_interrupt_is_limited_to_managed_sessions(self):
+        """Never interrupt an unrelated Herdr terminal through the MCP tool."""
+        with patch.object(shell, "_herdr", new_callable=AsyncMock) as invoke:
+            invoke.return_value = {"terminals": []}
+            with self.assertRaises(ValueError):
+                await shell.session_interrupt("local", "t1")
+            invoke.assert_awaited_once()
+            self.assertIn("origin=chatgpt-shell", invoke.call_args.args[1])
+
+    async def test_herdr_read_bounds_scrollback(self):
+        """Bound requested scrollback so a tool cannot request an unlimited response."""
+        with patch.object(shell, "_herdr", new_callable=AsyncMock) as invoke:
+            with self.assertRaises(ValueError):
+                await shell.session_read("local", "t1", lines=100000)
+            invoke.assert_not_awaited()
+
+    def test_herdr_never_forwards_the_elevation_agent(self):
+        """Keep the privileged SSH agent out of newly started Herdr terminals."""
+        local = shell._herdr_argv("local", ["ls", "--json"])
+        self.assertIn("unset SSH_AUTH_SOCK GH_TOKEN", local[-1])
+        with patch.dict(shell.REMOTE_TARGETS, {"remote": shell.RemoteTarget("user@host", "key", "/bin/bash", True)}):
+            remote = shell._herdr_argv("remote", ["ls", "--json"])
+        self.assertIn("-oForwardAgent=no", remote)
+        self.assertNotIn("-oForwardAgent=yes", remote)
 
     def test_output_buffer_bounds(self):
         """Cap retained output without dropping the final result."""
