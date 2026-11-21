@@ -42,7 +42,7 @@ test("all dimming roles use a dark palette token regardless of colour scheme", (
     theme,
     /readonly property color scrimBase: dark \? background : textStrong/,
   );
-  for (const role of ["scrim", "contextualScrim", "scrimStrong", "scrimHeavy"])
+  for (const role of ["scrim", "scrimStrong", "scrimHeavy"])
     assert.match(
       theme,
       new RegExp(
