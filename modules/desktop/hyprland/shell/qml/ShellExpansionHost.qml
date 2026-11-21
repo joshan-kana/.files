@@ -953,6 +953,21 @@ PanelWindow {
             }
         }
 
+        // Feather the blurred content into the surrounding hub on all
+        // sides. The fixed-width nine-slice mask prevents straight texture
+        // edges without altering the scrollable layout or its hit regions.
+        BorderImage {
+            id: helpBlurMask
+            anchors.fill: contentViewport
+            source: "help-edge-mask.png"
+            border.left: 40
+            border.top: 40
+            border.right: 40
+            border.bottom: 40
+            opacity: 0
+            layer.enabled: scopedHelp.visible && host.theme.shellGlassEnabled
+        }
+
         Flickable {
             id: contentViewport
             opacity: shellSurface.contentReveal * (host.theme.shellGlassEnabled ? 1 - scopedHelp.opacity * 0.56 : 1)
@@ -978,6 +993,8 @@ PanelWindow {
                 blurEnabled: true
                 blur: scopedHelp.opacity
                 blurMax: 48
+                maskEnabled: true
+                maskSource: helpBlurMask
                 autoPaddingEnabled: false
             }
             // Retain the last two views while the hub is open, so returning to
