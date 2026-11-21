@@ -115,7 +115,6 @@ Item {
         usageHistory.recent = JSON.stringify([key, ...recentKeys.filter(current => current !== key)].slice(0, 30));
     }
     property var localResults: []
-    property string activeFileQuery: ""
     property string queuedFileQuery: ""
     readonly property var indexedQuicklinks: quicklinks.map(link => indexSearchEntry(Object.assign({}, link)))
     readonly property var indexedWindows: Hyprland.toplevels.values.filter(win => win && win.workspace && win.workspace.id > 0 && (win.lastIpcObject || {}).address).map(win => indexSearchEntry({
