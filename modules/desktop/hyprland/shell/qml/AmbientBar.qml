@@ -49,11 +49,13 @@ Variants {
     property string displayContextScreen: ""
     property string displayContextOutput: ""
 
-    Timer {
-        id: displayContextTimeout
+    property Timer displayContextTimeout: Timer {
         interval: 12000
         repeat: false
-        onTriggered: bars.displayContextScreen = ""
+        onTriggered: {
+            bars.displayContextScreen = "";
+            bars.displayContextOutput = "";
+        }
     }
 
     function offerDisplaySettings(outputName: string): void {
@@ -62,7 +64,7 @@ Variants {
             return;
         displayContextOutput = outputName;
         displayContextScreen = existing.name;
-        displayContextTimeout.restart();
+        bars.displayContextTimeout.restart();
     }
 
     signal mediaRequested(var screen, var origin)
@@ -131,8 +133,13 @@ Variants {
                 if (event.name === "monitoradded" || event.name === "monitoraddedv2") {
                     const added = event.name === "monitoraddedv2" ? String(event.data).split(",")[1] : String(event.data);
                     bars.offerDisplaySettings(added);
-                } else if (event.name === "monitorremoved" && String(event.data) === bars.displayContextOutput) {
-                    bars.displayContextScreen = "";
+                } else if (event.name === "monitorremoved" || event.name === "monitorremovedv2") {
+                    const removed = event.name === "monitorremovedv2" ? String(event.data).split(",")[1] : String(event.data);
+                    if (removed === bars.displayContextOutput) {
+                        bars.displayContextScreen = "";
+                        bars.displayContextOutput = "";
+                        bars.displayContextTimeout.stop();
+                    }
                 }
             }
         }
@@ -798,6 +805,8 @@ Variants {
                 displayActionVisible: bars.displayContextScreen === bar.modelData.name && !bar.fullscreen && !bars.controlsExpanded
                 onDisplaySettingsRequested: {
                     bars.displayContextScreen = "";
+                    bars.displayContextOutput = "";
+                    bars.displayContextTimeout.stop();
                     bars.displaySettingsRequested();
                 }
                 onXChanged: Qt.callLater(bar.publishOrigins)
