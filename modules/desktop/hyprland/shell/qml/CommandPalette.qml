@@ -143,6 +143,7 @@ Item {
     function chooseScope(scope: string): void {
         if (!["unified", "apps", "actions", "emoji"].includes(scope))
             return;
+        invalidateInteraction();
         searchScope = scope;
         actionMode = false;
         parameterTarget = null;
@@ -165,6 +166,7 @@ Item {
             return;
         }
         if (parameterTarget) {
+            invalidateInteraction();
             parameterTarget = null;
             search.text = priorQuery;
             search.forceActiveFocus();
@@ -235,6 +237,13 @@ Item {
     property bool pendingFileOpenWith: false
     property var pendingClipboardLink: null
     property bool pendingQuicklinkKeepOpen: false
+    property int interactionGeneration: 0
+    property int clipboardGeneration: -1
+    property int browserGeneration: -1
+    property bool clipboardPending: false
+    property bool browserPending: false
+    property int fileOpenWithGeneration: -1
+    property int calculationGeneration: -1
 
     Socket {
         id: indexSocket
@@ -402,7 +411,11 @@ Item {
         stdout: quicklinkClipboardOutput
         onExited: (exitCode, exitStatus) => {
             const link = palette.pendingClipboardLink;
+            const current = palette.open && palette.clipboardGeneration === palette.interactionGeneration && palette.parameterTarget === link;
+            palette.clipboardPending = false;
             palette.pendingClipboardLink = null;
+            if (!current)
+                return;
             if (exitCode !== 0 || !link) {
                 palette.copyFeedback = "TEXT CLIPBOARD UNAVAILABLE";
                 return;
@@ -419,6 +432,10 @@ Item {
     Process {
         id: quicklinkBrowserProcess
         onExited: (exitCode, exitStatus) => {
+            const current = palette.open && palette.browserGeneration === palette.interactionGeneration;
+            palette.browserPending = false;
+            if (!current)
+                return;
             if (exitCode === 0) {
                 palette.copyFeedback = "LAUNCH REQUEST SENT";
                 if (!palette.pendingQuicklinkKeepOpen)
@@ -432,6 +449,8 @@ Item {
         id: fileOpenWithProcess
         onExited: (exitCode, exitStatus) => {
             palette.pendingFileOpenWith = false;
+            if (!palette.open || palette.fileOpenWithGeneration !== palette.interactionGeneration)
+                return;
             palette.copyFeedback = exitCode === 0 ? "LAUNCH REQUEST SENT" : "OPEN FAILED";
             if (exitCode === 0)
                 palette.hide();
@@ -441,6 +460,8 @@ Item {
     Process {
         id: calculationCopy
         onExited: (exitCode, exitStatus) => {
+            if (!palette.open || palette.calculationGeneration !== palette.interactionGeneration)
+                return;
             palette.copyFeedback = exitCode === 0 ? "COPIED" : "COPY FAILED";
             if (exitCode === 0 && palette.copyOnSuccessClose)
                 palette.hide();
@@ -722,7 +743,13 @@ Item {
         Hyprland.dispatch(Hyprland.usingLua ? 'hl.dsp.submap("' + (enabled ? "launcher" : "reset") + '")' : "submap " + (enabled ? "launcher" : "reset"));
     }
 
+    function invalidateInteraction(): void {
+        interactionGeneration++;
+        pendingClipboardLink = null;
+    }
+
     function show(): void {
+        invalidateInteraction();
         closeTimer.stop();
         // Preserve visibility when reopening during the exit animation.
         open = true;
@@ -744,6 +771,7 @@ Item {
     function hide(): void {
         if (!open)
             return;
+        invalidateInteraction();
 
         // Do not momentarily unmap the Wayland surface on close. Its exit
         // animation must finish before visible changes to false.
@@ -950,10 +978,12 @@ Item {
         }
         copyFeedback = "COPYING";
         copyOnSuccessClose = !keepOpen;
+        calculationGeneration = interactionGeneration;
         calculationCopy.exec([runtime.clipboardCopy, "--type", "text/plain", value]);
     }
 
     function beginParameter(entry: var, mode: string): void {
+        invalidateInteraction();
         priorQuery = search.text;
         parameterTarget = Object.assign({}, entry, {
             parameterMode: mode
@@ -967,12 +997,14 @@ Item {
     }
 
     function openQuicklinkUrl(link: var, url: string, keepOpen: bool): void {
-        pendingQuicklinkKeepOpen = keepOpen;
         if (link.browser) {
-            if (quicklinkBrowserProcess.running) {
+            if (quicklinkBrowserProcess.running || browserPending) {
                 copyFeedback = "BROWSER IN PROGRESS";
                 return;
             }
+            pendingQuicklinkKeepOpen = keepOpen;
+            browserGeneration = interactionGeneration;
+            browserPending = true;
             copyFeedback = "OPENING";
             quicklinkBrowserProcess.exec([runtime.paletteSearch, "launch-url", link.browser, url]);
             return;
@@ -1120,15 +1152,18 @@ Item {
             if (!desktopId || !runtime.paletteSearch)
                 return;
             pendingFileOpenWith = true;
+            fileOpenWithGeneration = interactionGeneration;
             copyFeedback = "OPENING";
             fileOpenWithProcess.exec([runtime.paletteSearch, "launch", desktopId, parameterTarget.path]);
             return;
         }
         if (parameterTarget && parameterTarget.parameterMode === "confirmClipboard") {
-            if (quicklinkClipboardRead.running)
+            if (quicklinkClipboardRead.running || clipboardPending)
                 return;
             pendingClipboardLink = parameterTarget;
             pendingQuicklinkKeepOpen = keepOpen;
+            clipboardGeneration = interactionGeneration;
+            clipboardPending = true;
             copyFeedback = "READING CLIPBOARD";
             quicklinkClipboardRead.exec([runtime.clipboardPaste, "--no-newline", "--type", "text/plain"]);
             return;
