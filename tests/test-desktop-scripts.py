@@ -75,7 +75,8 @@ class DesktopScriptTests(unittest.TestCase):
             "systemctl",
             """
 if [ "$1" = --user ] && [ "$2" = start ]; then
-  printf 'recording\\n42\\nrecording.mp4\\n' > "$XDG_RUNTIME_DIR/linux-desktop-recording.state"
+  printf "video-frame" > "$XDG_RUNTIME_DIR/recording.mp4"
+  printf 'recording\n42\n%s/recording.mp4\n' "$XDG_RUNTIME_DIR" > "$XDG_RUNTIME_DIR/linux-desktop-recording.state"
   touch "$XDG_RUNTIME_DIR/recording-started"
   exit 0
 fi
@@ -100,6 +101,27 @@ exit 1
         self.assertIn("id: recordingStart", picker)
         self.assertIn("picker.open = true;", picker)
         self.assertIn("RECORDING START FAILED", picker)
+
+    def test_recording_start_waits_for_encoder_output(self):
+        """A phase marker alone is not an initialized recording."""
+        self.executable(
+            "systemctl",
+            """
+if [ "$1" = --user ] && [ "$2" = start ]; then
+  printf 'recording\\n42\\n%s/missing.mp4\\n' "$XDG_RUNTIME_DIR" > "$XDG_RUNTIME_DIR/linux-desktop-recording.state"
+  touch "$XDG_RUNTIME_DIR/recording-started"
+  exit 0
+fi
+if [ "$1" = --user ] && [ "$2" = --quiet ] && [ "$3" = is-active ]; then
+  test -f "$XDG_RUNTIME_DIR/recording-started"
+  exit $?
+fi
+exit 1
+""",
+        )
+        result = self.run_script(SCRIPTS / "recording-toggle.sh", "start", "Virtual-1", "0,0 1200x800", "none")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("did not become active", result.stderr)
 
     def test_recording_output_is_private(self):
         """The service and direct recording entry point both restrict file access."""
