@@ -2,7 +2,6 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import "DesktopIcons.js" as DesktopIcons
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Io
@@ -22,14 +21,14 @@ ShellRoot {
     readonly property BrightnessState brightnessRef: qmlBrightness
     readonly property NightLightState nightLightRef: nightLight
     readonly property WeatherState weatherRef: weather
-    readonly property NotificationState notificationsRef: notifications
+    readonly property NotificationState notificationsRef: qmlNotifications
 
     readonly property bool wallpaperSpectrumEnabled: qmlAppearance.wallpaperSpectrumEnabled
     readonly property bool musicReactiveEnabled: qmlAppearance.musicReactiveEnabled
 
     // A saved appearance preference is not a reason to animate invisible UI.
     // Demand comes from the actual shared shell surfaces that can be seen.
-    readonly property bool musicReactiveSurfaceVisible: musicReactiveEnabled && (desktopFrame.glassExposed || qmlAmbientBar.shown || qmlExpansionState.hasCurrent || expansionHost.closing || modalHost.contentVisible || notifications.popupVisible || qmlOsd.visible || osdPopup.closing || resizeOverlay.open || resizeOverlay.closing)
+    readonly property bool musicReactiveSurfaceVisible: musicReactiveEnabled && (desktopFrame.glassExposed || qmlAmbientBar.shown || qmlExpansionState.hasCurrent || expansionHost.closing || modalHost.contentVisible || qmlNotifications.popupVisible || qmlOsd.visible || osdPopup.closing || resizeOverlay.open || resizeOverlay.closing)
 
     property var statusTargetScreen: null
     property var resizeTargetScreen: null
@@ -59,7 +58,7 @@ ShellRoot {
         modalGlassExposed: modalHost.contentVisible
         // Popup ownership includes closing cards until their exit completes.
         // NotificationPopup has no separate closing property.
-        notificationGlassExposed: notifications.popupVisible
+        notificationGlassExposed: qmlNotifications.popupVisible
         osdGlassExposed: qmlOsd.visible || osdPopup.closing
         resizeGlassExposed: resizeOverlay.open || resizeOverlay.closing
     }
@@ -283,16 +282,16 @@ ShellRoot {
     }
 
     NotificationState {
-        id: notifications
+        id: qmlNotifications
         runtime: qmlRuntime
         preferredOutput: qmlScreens.focusedScreen ? qmlScreens.focusedScreen.name : ""
         outputFullscreen: !!(Hyprland.monitorFor(qmlScreens.focusedScreen)?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 0) ?? false)
     }
 
     Connections {
-        target: notifications
+        target: qmlNotifications
         function onLockedChanged(): void {
-            if (notifications.locked)
+            if (qmlNotifications.locked)
                 actions.hideTransient("");
         }
     }
@@ -306,7 +305,7 @@ ShellRoot {
         runtime: qmlRuntime
         system: qmlSystem
         powerProfile: qmlPowerProfile
-        notifications: notifications
+        notifications: qmlNotifications
         onDisplaySettingsRequested: if (qmlRuntime.displaySettings.length > 0)
             Quickshell.execDetached([qmlRuntime.displaySettings])
         onNetworkSettingsRequested: actions.showSystem(null, null, "network")
@@ -342,7 +341,7 @@ ShellRoot {
         islands: qmlAmbientBar.frameIslands
         hub: expansionHost.frameBounds
         hubScreen: expansionHost.screen
-        toastByOutput: notifications.frameDocksByOutput
+        toastByOutput: qmlNotifications.frameDocksByOutput
         osd: osdPopup.frameBounds
         osdScreen: osdPopup.screen
         resize: resizeOverlay.frameBounds
@@ -372,7 +371,7 @@ ShellRoot {
         spectrum: qmlSpectrum
         system: qmlSystem
         powerProfile: qmlPowerProfile
-        notificationState: notifications
+        notificationState: qmlNotifications
         recordingState: qmlRecording
         onRecordingStopRequested: actions.toggleRecording()
         onMediaRequested: (screen, origin) => actions.toggleMedia(screen, origin)
@@ -507,7 +506,7 @@ ShellRoot {
     // on every compositor output. Existing cards stay on their origin when
     // keyboard focus changes; no popup Wayland surface teleports.
     NotificationPopups {
-        notificationState: notifications
+        notificationState: qmlNotifications
         runtime: qmlRuntime
         theme: qmlTheme
         motion: qmlMotion
@@ -595,7 +594,7 @@ ShellRoot {
         systemState: qmlSystem
         brightnessState: qmlBrightness
         nightLightState: nightLight
-        notificationState: notifications
+        notificationState: qmlNotifications
         motion: qmlMotion
         onFrozenCaptureRequested: copy => screenshotPicker.begin(copy, qmlScreens.focusedScreen, "image")
         onRecordingSelectionRequested: {
@@ -957,7 +956,7 @@ ShellRoot {
         name: "notifications-act"
         description: "Activate latest notification"
         onPressed: {
-            if (!notifications.locked && !notifications.invokeLatest())
+            if (!qmlNotifications.locked && !qmlNotifications.invokeLatest())
                 actions.showNotifications();
         }
     }
@@ -966,7 +965,7 @@ ShellRoot {
         appid: "linux-desktop"
         name: "notifications-dismiss"
         description: "Dismiss latest visible notification"
-        onPressed: notifications.dismissLatestPopup()
+        onPressed: qmlNotifications.dismissLatestPopup()
     }
 
     IpcHandler {
@@ -1174,15 +1173,15 @@ ShellRoot {
         }
 
         function notificationsOpen(): bool {
-            return !notifications.locked && qmlExpansionState.hasCurrent && qmlExpansionState.currentName === "activity";
+            return !qmlNotifications.locked && qmlExpansionState.hasCurrent && qmlExpansionState.currentName === "activity";
         }
 
         function notificationCount(): int {
-            return notifications.locked ? 0 : notifications.count;
+            return qmlNotifications.locked ? 0 : qmlNotifications.count;
         }
 
         function notificationsSilent(): bool {
-            return notifications.silent;
+            return qmlNotifications.silent;
         }
 
         function barShown(): bool {
