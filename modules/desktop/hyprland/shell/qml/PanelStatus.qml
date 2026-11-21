@@ -64,7 +64,7 @@ Item {
                 loops: Animation.Infinite
                 from: 0
                 to: 360
-                duration: 1100
+                duration: status.motion.spinnerCycle
                 onRunningChanged: {
                     if (!running)
                         phaseIcon.rotation = 0;

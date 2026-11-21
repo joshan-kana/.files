@@ -48,7 +48,7 @@ Variants {
         running: frame.busy && frame.motion.enabled
         from: 0
         to: 1
-        duration: 1900
+        duration: frame.motion.contourLap
         loops: Animation.Infinite
         easing.type: Easing.InOutSine
     }
