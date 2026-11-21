@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const zlib = require("node:zlib");
 const qml = (name) =>
   fs.readFileSync(
     path.join(__dirname, "../modules/desktop/hyprland/shell/qml", name),
@@ -54,7 +55,7 @@ test("connected popups borrow the frame material, while overlapping toasts use t
     ["ResizeOverlay.qml", "overlay", "panelBase"],
   ]) {
     const src = qml(file);
-    assert.match(src, new RegExp(`frameConnected: ${owner}\\.frameConnected`));
+    assert.match(src, new RegExp(`frameConnected: ${owner}.frameConnected`));
     assert.ok(src.includes(`fillColor: ${owner}.theme.${base}`));
     assert.doesNotMatch(src, /glassAllowed: !.*frameConnected/);
   }
@@ -103,6 +104,66 @@ test("connected panes do not double-tint the frame, but detached glass still wor
       qml(file),
       /frameConnected && !.*shellGlassEnabled \? "transparent"/,
     );
+});
+
+test("Help feather mask fades the top, bottom, left, right and corners", () => {
+  const host = qml("ShellExpansionHost.qml");
+  assert.match(
+    host,
+    /id: helpBlurMask[\s\S]*?anchors\.fill: contentViewport[\s\S]*?source: "help-edge-mask\.png"/,
+  );
+  for (const side of ["left", "right", "top", "bottom"])
+    assert.match(host, new RegExp("border\\." + side + ": 40"));
+  assert.match(host, /maskEnabled: true[\s\S]*?maskSource: helpBlurMask/);
+  assert.match(
+    host,
+    /id: helpBlurMask[\s\S]*?layer\.enabled: scopedHelp\.visible && host\.theme\.shellGlassEnabled/,
+  );
+
+  const png = fs.readFileSync(
+    path.join(
+      __dirname,
+      "../modules/desktop/hyprland/shell/qml/help-edge-mask.png",
+    ),
+  );
+  assert.equal(png.subarray(0, 8).toString("hex"), "89504e470d0a1a0a");
+  const width = png.readUInt32BE(16);
+  const height = png.readUInt32BE(20);
+  assert.equal(width, 128);
+  assert.equal(height, 128);
+  assert.equal(png[25], 6);
+  const parts = [];
+  for (let offset = 8; offset < png.length;) {
+    const length = png.readUInt32BE(offset);
+    if (png.toString("ascii", offset + 4, offset + 8) === "IDAT")
+      parts.push(png.subarray(offset + 8, offset + 8 + length));
+    offset += length + 12;
+  }
+  const bitmap = zlib.inflateSync(Buffer.concat(parts));
+  const stride = width * 4 + 1;
+  function alpha(x, y) {
+    assert.equal(bitmap[y * stride], 0);
+    return bitmap[y * stride + 1 + x * 4 + 3];
+  }
+
+  assert.equal(alpha(64, 64), 255);
+  for (const [x, y] of [
+    [0, 64],
+    [127, 64],
+    [64, 0],
+    [64, 127],
+    [0, 0],
+    [127, 127],
+  ])
+    assert.equal(alpha(x, y), 0);
+  for (const [x, y] of [
+    [20, 64],
+    [107, 64],
+    [64, 20],
+    [64, 107],
+  ])
+    assert.ok(alpha(x, y) > 60 && alpha(x, y) < 210);
+  assert.ok(alpha(20, 20) < alpha(20, 64));
 });
 
 test("hub Help blurs the original content viewport without a copied backdrop", () => {
