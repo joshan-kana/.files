@@ -29,14 +29,15 @@ QtObject {
         property var actionTarget: null
         signal actionRequested(var target)
 
-        property StdioCollector output: StdioCollector {}
-        property Process sender: Process {
-            stdout: notice.output
-            onExited: (code, status) => {
-                if (code === 0 && notice.output.text.trim() === "open")
+        property StdioCollector output: StdioCollector {
+            onStreamFinished: {
+                if (text.trim() === "open")
                     notice.actionRequested(notice.actionTarget);
                 notice.actionTarget = null;
             }
+        }
+        property Process sender: Process {
+            stdout: notice.output
         }
 
         function emit(icon: string, title: string, body: string, action: string, target: var, critical: bool): void {

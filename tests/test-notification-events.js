@@ -24,6 +24,7 @@ test("service-backed event notifications share the freedesktop server, not islan
   assert.match(events, /required property SystemState system/);
   assert.match(events, /required property PowerProfileState powerProfile/);
   assert.match(events, /"--app-name=Desktop " \+ source/);
+  assert.match(events, /onStreamFinished:[\s\S]*?notice\.actionRequested\(notice\.actionTarget\)/);
   assert.match(events, /"monitoraddedv2"/);
   assert.match(events, /onOutputSignatureChanged: connectedDevice\(false\)/);
   assert.match(events, /onInputSignatureChanged: connectedDevice\(true\)/);
