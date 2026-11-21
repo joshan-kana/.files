@@ -87,7 +87,7 @@ in
   /**
     macOS menu bar item management.
   */
-  jordanbairdIce =
+  iceBar =
     { pkgs, ... }:
     lib.optionalAttrs isDarwin {
       home = _: { home.packages = [ pkgs.ice-bar ]; };
