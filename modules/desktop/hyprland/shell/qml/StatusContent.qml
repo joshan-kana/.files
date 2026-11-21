@@ -12,11 +12,10 @@ Item {
     required property BrightnessState brightness
     required property RecordingState recording
     property string modeName: "Normal"
-    property string closeLabel: "Close"
     signal refreshRequested
 
     implicitWidth: Math.max(340, theme.controlsDetailWidth - theme.spacing4 * 2)
-    implicitHeight: heading.implicitHeight + stateGrid.implicitHeight + footer.implicitHeight + theme.spacing4 * 4
+    implicitHeight: heading.implicitHeight + stateGrid.implicitHeight + theme.spacing4 * 3
 
     Column {
         anchors {
@@ -64,6 +63,9 @@ Item {
                 theme: content.theme
                 motion: content.motion
                 iconOnly: true
+                iconHint: true
+                inlineIconHint: true
+                shortcut: content.runtime.shellHint("StatusContent.refresh")
                 icon: "󰑐"
                 title: "Refresh current status"
                 onActivated: content.refreshRequested()
@@ -171,23 +173,6 @@ Item {
                     }
                 }
             }
-        }
-
-        KeyHintStrip {
-            id: footer
-            width: parent.width
-            runtime: content.runtime
-            theme: content.theme
-            hints: [
-                {
-                    shortcut: content.runtime.shellHint("StatusContent.refresh"),
-                    label: "Refresh"
-                },
-                {
-                    shortcut: content.runtime.shellHint("StatusContent.close"),
-                    label: content.closeLabel
-                }
-            ]
         }
     }
 }
