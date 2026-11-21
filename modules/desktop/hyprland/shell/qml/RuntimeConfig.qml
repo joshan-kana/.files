@@ -40,6 +40,7 @@ QtObject {
     readonly property string frozenCapture: root.configData.tools.frozenCapture
     readonly property string colourPicker: root.configData.tools.colourPicker
     readonly property string nightLightControl: root.configData.tools.nightLightControl
+    readonly property string displaySettings: root.configData.tools.displaySettings
 
     readonly property string fontMono: root.themeAdapter.fonts.mono
 
@@ -243,6 +244,7 @@ QtObject {
                 property bool shellGlassEnabled: false
                 property real windowOpacity: 0.82
                 property real glassOpacity: 0.70
+                property int blurSize: 15
                 property string mediaVisualizerMode: "bars"
                 property bool mediaLyricsVisible: false
                 property int mediaSeekSeconds: 10
@@ -287,6 +289,7 @@ QtObject {
                 property string frozenCapture: ""
                 property string colourPicker: ""
                 property string nightLightControl: ""
+                property string displaySettings: ""
             }
 
             property var keybindings: []

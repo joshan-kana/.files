@@ -43,7 +43,7 @@ clear-preview)
   [ ! -L "$preview_dir" ] || exit 2
   rm -rf -- "$preview_dir"
   ;;
-preview | open | edit | copy | trash)
+preview | open | edit | copy | trash | ocr)
   [ "$#" -eq 2 ] || exit 2
   name="$2"
   if [[ $name =~ ^Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.mp4$ ]]; then
@@ -66,6 +66,27 @@ preview | open | edit | copy | trash)
     exec wl-copy --type image/png <"$path"
   elif [ "$action" = trash ]; then
     exec gio trash "$path"
+  elif [ "$action" = ocr ]; then
+    # Recognise text only when requested from a saved image or the video
+    # preview frame. Any other video frame can be captured normally.
+    if [ "$kind" = recording ]; then
+      umask 077
+      frame="$(mktemp "$XDG_RUNTIME_DIR/desktop-ocr-XXXXXXXX.png")"
+      trap 'rm -f -- "$frame"' EXIT
+      ffmpeg -hide_banner -loglevel error -ss 0.2 -i "$path" -frames:v 1 -y "$frame"
+      path="$frame"
+    fi
+    text="$(tesseract "$path" stdout -l eng 2>/dev/null)" || {
+      printf '%s\n' "Text recognition failed" >&2
+      exit 1
+    }
+    [ -n "$(printf '%s' "$text" | tr -d '[:space:]')" ] || {
+      printf '%s\n' "No readable text in this capture" >&2
+      exit 1
+    }
+    printf '%s' "$text" | wl-copy --type text/plain
+    printf '%s\n' "Text copied to clipboard"
+    exit 0
   fi
   if [ "$kind" = image ]; then
     printf '%s\n' "$path"

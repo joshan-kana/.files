@@ -23,7 +23,7 @@ Item {
     property bool statusError: false
     property bool editorRequestRunning: false
     readonly property var selectedEntry: entries.length > 0 ? entries[Math.max(0, Math.min(selectedIndex, entries.length - 1))] : null
-    readonly property bool isBusy: listProcess.running || actionProcess.running
+    readonly property bool isBusy: listProcess.running || actionProcess.running || ocrProcess.running
 
     implicitHeight: 128 + statusBanner.implicitHeight + theme.spacing4 * 3 + 392 + footer.implicitHeight
     visible: open
@@ -130,6 +130,13 @@ Item {
         statusText = "COPY REQUESTED · " + selectedEntry.name;
         statusError = false;
     }
+    function copyText(): void {
+        if (!selectedEntry || isBusy || runtime.recordingLibrary.length === 0)
+            return;
+        statusText = selectedEntry.isImage ? "READING IMAGE TEXT…" : "READING VIDEO PREVIEW FRAME…";
+        statusError = false;
+        ocrProcess.exec([runtime.recordingLibrary, "ocr", selectedEntry.name]);
+    }
     function requestDelete(): void {
         if (!selectedEntry || isBusy)
             return;
@@ -200,6 +207,16 @@ Item {
                 previewTimer.restart();
             if (!library.open)
                 library.clearPreview();
+        }
+    }
+    property StdioCollector ocrOutput: StdioCollector {}
+    property StdioCollector ocrError: StdioCollector {}
+    property Process ocrProcess: Process {
+        stdout: library.ocrOutput
+        stderr: library.ocrError
+        onExited: (exitCode, exitStatus) => {
+            library.statusError = exitCode !== 0;
+            library.statusText = exitCode === 0 ? "TEXT COPIED TO CLIPBOARD" : (library.ocrError.text.trim() || "TEXT RECOGNITION FAILED");
         }
     }
     property Process actionProcess: Process {
@@ -376,7 +393,7 @@ Item {
                 spacing: library.theme.spacing3
                 ShellSurface {
                     width: parent.width
-                    height: 211
+                    height: 180
                     theme: library.theme
                     motion: library.motion
                     surfaceLayer: ShellSurface.Control
@@ -464,6 +481,19 @@ Item {
                         active: !!library.selectedEntry && library.deletePending === library.selectedEntry.name
                         onActivated: library.requestDelete()
                     }
+                    ShellAction {
+                        width: (previewPane.width - library.theme.spacing3 * 2 - library.theme.spacing2) / 2
+                        height: 34
+                        runtime: library.runtime
+                        theme: library.theme
+                        motion: library.motion
+                        compact: true
+                        horizontalCompact: true
+                        title: library.selectedEntry && library.selectedEntry.isImage ? "Copy text" : "Frame text"
+                        shortcut: library.runtime.shellHint("RecordingLibrary.ocr")
+                        enabled: !!library.selectedEntry && !library.isBusy
+                        onActivated: library.copyText()
+                    }
                 }
             }
         }
@@ -477,6 +507,20 @@ Item {
             bottom: parent.bottom
         }
         spacing: library.theme.spacing2
+        ShellAction {
+            visible: panes.width < 620 && !!library.selectedEntry
+            width: parent.width
+            height: visible ? 34 : 0
+            runtime: library.runtime
+            theme: library.theme
+            motion: library.motion
+            compact: true
+            horizontalCompact: true
+            title: library.selectedEntry && library.selectedEntry.isImage ? "Copy image text" : "Copy video preview text"
+            shortcut: library.runtime.shellHint("RecordingLibrary.ocr")
+            enabled: !!library.selectedEntry && !library.isBusy
+            onActivated: library.copyText()
+        }
         KeyHintStrip {
             width: parent.width
             runtime: library.runtime
