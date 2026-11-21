@@ -104,6 +104,47 @@ test("Safe URL schemes, aliases and clipboard consent remain enforced", () => {
   );
 });
 
+test("Clipboard quicklink authorization expires when the interaction is dismissed", () => {
+  const palette = read("qml/CommandPalette.qml");
+  assert.match(
+    palette,
+    /function invalidateInteraction\(\): void \{\s*interactionGeneration\+\+;\s*pendingClipboardLink = null;/,
+  );
+  assert.match(
+    palette,
+    /function hide\(\): void \{[\s\S]*?invalidateInteraction\(\);/,
+  );
+  assert.match(
+    palette,
+    /if \(parameterTarget\) \{\s*invalidateInteraction\(\);/,
+  );
+  assert.match(palette, /palette\.parameterTarget === link/);
+  assert.match(
+    palette,
+    /palette\.clipboardGeneration === palette\.interactionGeneration/,
+  );
+  assert.match(
+    palette,
+    /palette\.browserGeneration === palette\.interactionGeneration/,
+  );
+  assert.match(
+    palette,
+    /if \(quicklinkClipboardRead\.running \|\| clipboardPending\)/,
+  );
+  assert.match(
+    palette,
+    /if \(quicklinkBrowserProcess\.running \|\| browserPending\)/,
+  );
+  assert.match(
+    palette,
+    /palette\.fileOpenWithGeneration !== palette\.interactionGeneration/,
+  );
+  assert.match(
+    palette,
+    /palette\.calculationGeneration !== palette\.interactionGeneration/,
+  );
+});
+
 test("Indexer and desktop defaults use the generated runtime configuration", () => {
   const nix = read("default.nix");
   const indexer = readScript("palette-search.py");

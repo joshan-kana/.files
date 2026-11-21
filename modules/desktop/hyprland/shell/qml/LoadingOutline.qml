@@ -4,7 +4,7 @@ import "OutlineTrace.js" as OutlineTrace
 
 // Reusable busy feedback for the owner's existing squircle outline. The
 // illuminated segment travels around the real contour using eased motion;
-// reduced motion softly pulses the whole outline without repainting Canvas.
+// reduced motion retains a steady outline without repainting Canvas.
 Item {
     id: outline
 

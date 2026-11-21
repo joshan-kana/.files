@@ -883,3 +883,29 @@ test("Visual Modes tile keycaps use one shared corner and motion convention", ()
     );
   }
 });
+
+test("Status detail keeps Refresh in its owning action and Close in the shared footer", () => {
+  const status = read("StatusContent.qml");
+  assert.match(
+    status,
+    /shortcut: content\.runtime\.shellHint\("StatusContent\.refresh"\)/,
+  );
+  assert.match(status, /inlineIconHint: true/);
+  assert.doesNotMatch(status, /KeyHintStrip\s*\{/);
+  assert.doesNotMatch(status, /StatusContent\.close/);
+  const controls = read("SystemContent.qml");
+  assert.match(controls, /StatusContent\.close/);
+});
+
+test("calendar dates and overview windows expose actionable accessibility semantics", () => {
+  const day = read("CalendarDay.qml");
+  const window = read("OverviewWindow.qml");
+  assert.match(
+    day,
+    /Accessible\.role: header \? Accessible\.StaticText : Accessible\.Button/,
+  );
+  assert.match(day, /Accessible\.onPressAction:[\s\S]*?cell\.activated\(\)/);
+  assert.match(window, /Accessible\.role: Accessible\.Button/);
+  assert.match(window, /Accessible\.name: "Switch to "/);
+  assert.match(window, /Accessible\.onPressAction:[\s\S]*?tile\.activated\(\)/);
+});

@@ -998,7 +998,7 @@ test("moving full-screen loading trace uses a bounded Canvas texture", () => {
   assert.doesNotMatch(qml, /id: busyTrace\s+anchors\.fill: parent/);
 });
 
-test("reduced-motion loading softly pulses the entire outline on both surfaces", () => {
+test("reduced-motion loading keeps a steady visible contour on both surfaces", () => {
   const root = path.join(__dirname, "../modules/desktop/hyprland/shell/qml");
   const frame = fs.readFileSync(path.join(root, "DesktopFrame.qml"), "utf8");
   const outline = fs.readFileSync(
@@ -1019,10 +1019,12 @@ test("reduced-motion loading softly pulses the entire outline on both surfaces",
     outline,
     /contourPath: outline\.surface\.buildPath\(outline\.inset\)/,
   );
-  assert.match(pulse, /SequentialAnimation on intensity/);
-  assert.match(pulse, /running: pulse\.active/);
-  assert.match(pulse, /loops: Animation\.Infinite/);
-  assert.equal((pulse.match(/duration: 1800/g) || []).length, 2);
+  assert.doesNotMatch(
+    pulse,
+    /SequentialAnimation|NumberAnimation|Animation\.Infinite/,
+  );
+  assert.match(pulse, /readonly property real intensity: 0\.72/);
+  assert.match(frame, /duration: frame\.motion\.contourLap/);
   assert.match(pulse, /opacity: pulse\.intensity/);
   assert.match(pulse, /strokeWidth: pulse\.lineWidth \* 4/);
   assert.match(pulse, /strokeWidth: pulse\.lineWidth\s*\n/);

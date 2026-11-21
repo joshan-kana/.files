@@ -22,6 +22,8 @@ QtObject {
     readonly property int normal: enabled ? 160 : 0
     readonly property int slow: enabled ? 220 : 0
     readonly property int pulse: enabled ? 520 : 0
+    readonly property int contourLap: enabled ? 1900 : 0
+    readonly property int spinnerCycle: enabled ? 1100 : 0
 
     readonly property int spatialFast: enabled ? 150 : 0
     // Geometry morphs settle after the shorter content transition.
