@@ -42,7 +42,14 @@ start)
       continue
     fi
     phase="$(head -n 1 "$state" 2>/dev/null || true)"
-    if [ "$phase" = recording ]; then exit 0; fi
+    if [ "$phase" = recording ]; then
+      saved="$(tail -n 1 "$state" 2>/dev/null || true)"
+      # The wrapper sets its phase before starting the encoder. A live
+      # service alone is not proof that the recording file was opened.
+      if [ -s "$saved" ] && [ ! -L "$saved" ] && systemctl --user --quiet is-active "$service"; then
+        exit 0
+      fi
+    fi
     sleep 0.1
   done
   printf 'Recorder did not become active\n' >&2
