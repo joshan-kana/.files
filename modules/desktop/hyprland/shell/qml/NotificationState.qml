@@ -17,7 +17,6 @@ QtObject {
     // Activity records, visual presentation policy, and live action handles.
     property ListModel popups: ListModel {}
     property int popupRevision: 0
-    readonly property int historyLimit: 200
     readonly property int maxToasts: 3
     readonly property bool popupVisible: popups.count > 0 && !locked
     readonly property bool silent: settings.preferenceSource === "default" ? runtime.notificationSilent : settings.silent
