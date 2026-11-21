@@ -44,56 +44,44 @@ Item {
         }
     }
 
-    // Blur the content underneath the scrim once, inside the same rounded
-    // boundary as the hub. The header and footer retain their input ownership.
+    // The captured content viewport has its own geometry inside the hub.
+    // Render the blurred replacement at that same position rather than
+    // stretching a source rectangle across the header, footer and corners.
     Item {
         id: backdrop
         anchors.fill: parent
         visible: help.open && help.theme.shellGlassEnabled && help.blurSource !== null
-        clip: true
 
-        readonly property point sampleOrigin: help.blurSource ? help.blurSource.mapFromItem(backdrop, 0, 0) : Qt.point(0, 0)
+        readonly property point sourceOrigin: help.blurSource ? help.blurSource.mapToItem(backdrop, 0, 0) : Qt.point(0, 0)
 
-        // A translucent source preserves unblurred foreground pixels behind
-        // its transparent regions. Replace the sharp source before painting
-        // the blurred copy, while retaining the hub's rounded silhouette.
-        SquircleSurface {
-            anchors.fill: parent
-            cornerRadius: help.backdropRadius
-            exponent: help.theme.squircleExponent
-            fillColor: Qt.rgba(help.theme.background.r, help.theme.background.g, help.theme.background.b, 1)
-            borderColor: "transparent"
-            borderWidth: 0
-        }
+        Item {
+            id: blurRegion
+            x: backdrop.sourceOrigin.x
+            y: backdrop.sourceOrigin.y
+            width: help.blurSource ? help.blurSource.width : 0
+            height: help.blurSource ? help.blurSource.height : 0
+            clip: true
 
-        ShaderEffectSource {
-            id: blurTexture
-            anchors.fill: parent
-            sourceItem: help.blurSource
-            sourceRect: Qt.rect(backdrop.sampleOrigin.x, backdrop.sampleOrigin.y, backdrop.width, backdrop.height)
-            live: backdrop.visible
-            visible: false
-        }
+            // Source and effect replace the sharp content one-for-one. The
+            // original stays available to keyboard/pointer hit-testing.
+            ShaderEffectSource {
+                id: blurTexture
+                anchors.fill: parent
+                sourceItem: help.blurSource
+                sourceRect: Qt.rect(0, 0, blurRegion.width, blurRegion.height)
+                hideSource: backdrop.visible
+                live: backdrop.visible
+                visible: false
+            }
 
-        SquircleSurface {
-            id: blurMask
-            anchors.fill: parent
-            cornerRadius: help.backdropRadius
-            exponent: help.theme.squircleExponent
-            fillColor: "white"
-            layer.enabled: true
-            visible: false
-        }
-
-        MultiEffect {
-            anchors.fill: parent
-            source: blurTexture
-            blurEnabled: true
-            blurMax: 32
-            blur: 1
-            autoPaddingEnabled: false
-            maskEnabled: true
-            maskSource: blurMask
+            MultiEffect {
+                anchors.fill: parent
+                source: blurTexture
+                blurEnabled: true
+                blurMax: 32
+                blur: 1
+                autoPaddingEnabled: false
+            }
         }
     }
 

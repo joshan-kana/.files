@@ -209,20 +209,27 @@ test("local OCR exposes selectable text and highlighted original-image coordinat
   assert.doesNotMatch(script, /https?:\/\//);
 });
 
-test("Help blur covers the whole rounded scrim with no competing Wayland window", () => {
+test("Help blur replaces content in place without moving tiles or filling corners", () => {
   const help = qml("WidgetHelp.qml");
   assert.match(
     help,
-    /sampleOrigin: help\.blurSource \? help\.blurSource\.mapFromItem\(backdrop, 0, 0\)/,
+    /sourceOrigin: help\.blurSource \? help\.blurSource\.mapToItem\(backdrop, 0, 0\)/,
   );
-  assert.match(help, /maskSource: blurMask/);
-  assert.match(help, /sourceItem: help\.blurSource/);
-  assert.match(help, /id: blurTexture\s+anchors\.fill: parent/);
-  assert.match(help, /id: blurMask[\s\S]*?layer\.enabled: true/);
   assert.match(
     help,
-    /fillColor: Qt\.rgba\(help\.theme\.background\.r, help\.theme\.background\.g, help\.theme\.background\.b, 1\)/,
+    /id: blurRegion\s+x: backdrop\.sourceOrigin\.x\s+y: backdrop\.sourceOrigin\.y/,
   );
+  assert.match(help, /width: help\.blurSource \? help\.blurSource\.width : 0/);
+  assert.match(
+    help,
+    /height: help\.blurSource \? help\.blurSource\.height : 0/,
+  );
+  assert.match(
+    help,
+    /sourceRect: Qt\.rect\(0, 0, blurRegion\.width, blurRegion\.height\)/,
+  );
+  assert.match(help, /hideSource: backdrop\.visible/);
   assert.match(help, /visible: help\.open && help\.theme\.shellGlassEnabled/);
+  assert.doesNotMatch(help, /maskSource: blurMask|background\.a/);
   assert.doesNotMatch(help, /PanelWindow/);
 });
