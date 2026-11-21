@@ -858,6 +858,7 @@ in
           pkgs.findutils
           pkgs.glib
           pkgs.ffmpeg
+          pkgs.jq
           pkgs.gnused
           pkgs.xdg-utils
           pkgs.losslesscut
