@@ -141,7 +141,11 @@ test("displays opens the native editor and contextual island avoids another popu
     /onDisplaySettingsRequested:[\s\S]*?Quickshell\.execDetached\(\[qmlRuntime\.displaySettings\]\)/,
   );
   assert.match(bar, /event\.name === "monitoradded"/);
+  assert.match(bar, /property Timer displayContextTimeout: Timer/);
   assert.match(bar, /interval: 12000/);
+  assert.match(bar, /bars\.displayContextTimeout\.restart\(\)/);
+  assert.match(bar, /event\.name === "monitorremovedv2"/);
+  assert.match(bar, /bars\.displayContextTimeout\.stop\(\)/);
   assert.match(
     bar,
     /displayActionVisible: bars\.displayContextScreen === bar\.modelData\.name/,
