@@ -3,8 +3,11 @@
 import importlib.util
 import json
 import os
+import socket
 import sqlite3
 import tempfile
+import threading
+import time
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -18,6 +21,9 @@ class PaletteIndexTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory(prefix="palette-index-tests-")
         self.addCleanup(self.temp.cleanup)
         self.base = Path(self.temp.name)
+        home_override = mock.patch.object(Path, "home", return_value=self.base)
+        home_override.start()
+        self.addCleanup(home_override.stop)
         self.root = self.base / "roots"
         self.root.mkdir()
         self.config = self.base / "config" / "linux-desktop"
@@ -41,6 +47,53 @@ class PaletteIndexTests(unittest.TestCase):
                 os.environ.pop(key, None)
             else:
                 os.environ[key] = value
+
+    def test_stalled_socket_client_does_not_block_other_searches(self):
+        """A non-reading subscriber cannot hold the socket writer lock."""
+        self.palette.index()
+        with (
+            tempfile.TemporaryDirectory(prefix="palette-sock-", dir="/tmp") as runtime,
+            mock.patch.dict(os.environ, {"XDG_RUNTIME_DIR": runtime}),
+        ):
+            # Drive the test server with a short shutdown poll interval;
+            # production's idle server deliberately does not wake often.
+            with mock.patch("threading.Thread"):
+                server, endpoint = self.palette.start_search_socket()
+            server_thread = threading.Thread(
+                target=server.serve_forever,
+                kwargs={"poll_interval": 0.05},
+                daemon=True,
+            )
+            server_thread.start()
+            reader = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            reader.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 1024)
+            try:
+                reader.connect(str(endpoint))
+                deadline = time.monotonic() + 1.0
+                while not server.clients and time.monotonic() < deadline:
+                    time.sleep(0.01)
+                self.assertTrue(server.clients)
+
+                updates = threading.Thread(
+                    target=lambda: [server.notify() for _ in range(2000)],
+                    daemon=True,
+                )
+                updates.start()
+                updates.join(timeout=0.75)
+                self.assertFalse(updates.is_alive(), "a non-reading client stalled index notifications")
+
+                with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as query:
+                    query.settimeout(0.5)
+                    query.connect(str(endpoint))
+                    query.sendall(b'{"id":7,"query":"fixture"}\n')
+                    reply = query.recv(4096)
+                self.assertEqual(json.loads(reply)["id"], 7)
+            finally:
+                reader.close()
+                server.shutdown()
+                server.server_close()
+                server_thread.join(timeout=1)
+                endpoint.unlink(missing_ok=True)
 
     def test_nix_store_and_ancestors_are_not_indexed(self):
         """Never scan the store through its root, parent, or a nested path."""

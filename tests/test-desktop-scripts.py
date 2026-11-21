@@ -75,7 +75,8 @@ class DesktopScriptTests(unittest.TestCase):
             "systemctl",
             """
 if [ "$1" = --user ] && [ "$2" = start ]; then
-  printf 'recording\\n42\\nrecording.mp4\\n' > "$XDG_RUNTIME_DIR/linux-desktop-recording.state"
+  printf "video-frame" > "$XDG_RUNTIME_DIR/recording.mp4"
+  printf 'recording\n42\n%s/recording.mp4\n' "$XDG_RUNTIME_DIR" > "$XDG_RUNTIME_DIR/linux-desktop-recording.state"
   touch "$XDG_RUNTIME_DIR/recording-started"
   exit 0
 fi
@@ -100,6 +101,45 @@ exit 1
         self.assertIn("id: recordingStart", picker)
         self.assertIn("picker.open = true;", picker)
         self.assertIn("RECORDING START FAILED", picker)
+
+    def test_recording_start_waits_for_encoder_output(self):
+        """A phase marker alone is not an initialized recording."""
+        self.executable(
+            "systemctl",
+            """
+if [ "$1" = --user ] && [ "$2" = start ]; then
+  printf 'recording\\n42\\n%s/missing.mp4\\n' "$XDG_RUNTIME_DIR" > "$XDG_RUNTIME_DIR/linux-desktop-recording.state"
+  touch "$XDG_RUNTIME_DIR/recording-started"
+  exit 0
+fi
+if [ "$1" = --user ] && [ "$2" = --quiet ] && [ "$3" = is-active ]; then
+  test -f "$XDG_RUNTIME_DIR/recording-started"
+  exit $?
+fi
+exit 1
+""",
+        )
+        result = self.run_script(SCRIPTS / "recording-toggle.sh", "start", "Virtual-1", "0,0 1200x800", "none")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("did not become active", result.stderr)
+
+    def test_recording_output_is_private(self):
+        """The service and direct recording entry point both restrict file access."""
+        self.env["LINUX_DESKTOP_RECORDING_DIR"] = str(self.home / "recordings")
+        configuration = self.runtime / "linux-desktop-recording.conf"
+        configuration.write_text("Virtual-1\n0,0 1200x800\nnone\n")
+        self.executable(
+            "wf-recorder",
+            'for argument do output="$argument"; done\nprintf "video-frame" > "$output"\n',
+        )
+        result = self.run_script(SCRIPTS / "record-region.sh")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        captures = list((self.home / "recordings").glob("Recording-*.mp4"))
+        self.assertEqual(len(captures), 1)
+        self.assertEqual(captures[0].stat().st_mode & 0o777, 0o600)
+        config = (ROOT / "modules/desktop/hyprland/shell/default.nix").read_text()
+        recording_service = config.split("linux-desktop-recording = {", 1)[1].split("linux-desktop-lock = {", 1)[0]
+        self.assertIn('UMask = "0077";', recording_service)
 
     @unittest.skipUnless(shutil.which("flock"), "GNU flock is required for operation-lock integration")
     def test_theme_cancellation_prevents_worker_build(self):
@@ -201,6 +241,33 @@ fi
         self.assertEqual(result.returncode, 42)
         self.assertEqual((operation / "phase").read_text().strip(), "failed")
         self.assertFalse((self.home / "activated").exists())
+
+    def test_screenshot_copy_failure_does_not_report_success(self):
+        """Clipboard failure leaves the frozen capture retryable."""
+        snapshot = self.runtime / "linux-desktop-capture-12345678.png"
+        snapshot.write_bytes(b"source-frame")
+        pictures = self.home / "pictures"
+        self.env["XDG_PICTURES_DIR"] = str(pictures)
+        self.executable(
+            "magick",
+            """
+if [ "$1" = identify ]; then
+  printf '120 120\n'
+else
+  for argument do output="$argument"; done
+  printf 'saved-frame' > "$output"
+fi
+""",
+        )
+        self.executable("wl-copy", "exit 47\n")
+        notified = self.runtime / "notified"
+        self.env["CAPTURE_NOTIFY_MARKER"] = str(notified)
+        self.executable("systemd-run", 'touch "$CAPTURE_NOTIFY_MARKER"\n')
+
+        result = self.run_script(SCRIPTS / "frozen-capture.sh", "copy", str(snapshot), "0", "0", "80", "80")
+        self.assertNotEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(snapshot.exists())
+        self.assertFalse(notified.exists())
 
     def test_browser_default_declaration_is_not_program_specific(self):
         """Bookmark navigation delegates to the XDG URL handler."""

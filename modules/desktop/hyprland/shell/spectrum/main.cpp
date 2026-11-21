@@ -94,7 +94,7 @@ public:
     if (sampleRateHz == 0 || channels == 0)
       return;
 
-    sampleRate_ = sampleRateHz;
+    sampleRate_.store(sampleRateHz, std::memory_order_relaxed);
     channels_ = channels;
 
     const float ratio =
@@ -105,7 +105,7 @@ public:
     float frequency = kLowHz;
     for (std::size_t i = 0; i < kBandCount; ++i) {
       centers_[i] = frequency;
-      filters_[i].configure(static_cast<float>(sampleRate_), frequency,
+      filters_[i].configure(static_cast<float>(sampleRateHz), frequency,
                             frequency < kBassCutoffHz ? std::min(q, kBassMaxQ)
                                                       : q);
       envelopes_[i] = 0.0F;
@@ -114,20 +114,20 @@ public:
 
     attackAlpha_ =
         1.0F -
-        std::exp(-1.0F / (static_cast<float>(sampleRate_) * kAttackSeconds));
+        std::exp(-1.0F / (static_cast<float>(sampleRateHz) * kAttackSeconds));
     releaseAlpha_ =
         1.0F -
-        std::exp(-1.0F / (static_cast<float>(sampleRate_) * kReleaseSeconds));
+        std::exp(-1.0F / (static_cast<float>(sampleRateHz) * kReleaseSeconds));
     bassAttackAlpha_ =
-        1.0F - std::exp(-1.0F /
-                        (static_cast<float>(sampleRate_) * kBassAttackSeconds));
+        1.0F - std::exp(-1.0F / (static_cast<float>(sampleRateHz) *
+                                 kBassAttackSeconds));
     bassReleaseAlpha_ =
-        1.0F - std::exp(-1.0F / (static_cast<float>(sampleRate_) *
+        1.0F - std::exp(-1.0F / (static_cast<float>(sampleRateHz) *
                                  kBassReleaseSeconds));
     rmsAlpha_ =
         1.0F -
-        std::exp(-1.0F / (static_cast<float>(sampleRate_) * kRmsSeconds));
-    publishEveryFrames_ = std::max<uint32_t>(1, sampleRate_ / kPublishHz);
+        std::exp(-1.0F / (static_cast<float>(sampleRateHz) * kRmsSeconds));
+    publishEveryFrames_ = std::max<uint32_t>(1, sampleRateHz / kPublishHz);
     framesSincePublish_ = 0;
     configured_.store(true, std::memory_order_release);
   }
@@ -190,7 +190,9 @@ public:
 
   float high() const { return publishedHigh_.load(std::memory_order_relaxed); }
 
-  uint32_t sampleRate() const { return sampleRate_; }
+  uint32_t sampleRate() const {
+    return sampleRate_.load(std::memory_order_relaxed);
+  }
 
   uint64_t nextSequence() {
     return sequence_.fetch_add(1, std::memory_order_relaxed) + 1;
@@ -261,7 +263,7 @@ private:
   std::atomic<std::size_t> clientCount_{0};
   std::atomic<uint64_t> sequence_{0};
 
-  uint32_t sampleRate_ = 48000;
+  std::atomic<uint32_t> sampleRate_{48000};
   uint32_t channels_ = 2;
   uint32_t publishEveryFrames_ = 400;
   uint32_t framesSincePublish_ = 0;
