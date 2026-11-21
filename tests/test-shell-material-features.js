@@ -172,6 +172,25 @@ test("local OCR exposes selectable text and highlighted original-image coordinat
   );
   assert.match(library, /TextArea \{[\s\S]*?selectByMouse: true/);
   assert.match(library, /function copyHighlightedText\(\): void/);
+  assert.match(
+    library,
+    /function moveWordSelection\(direction: int, extend: bool\): void/,
+  );
+  assert.match(library, /function selectAllWords\(\): void/);
+  assert.match(
+    controls,
+    /recordingsPanel\.invoke\("moveWordSelection", 1, shifted\)/,
+  );
+  assert.match(controls, /recordingsPanel\.invoke\("copyHighlightedText"\)/);
+  assert.match(controls, /recordingsPanel\.invoke\("selectAllWords"\)/);
+  assert.match(
+    controls,
+    /else if \(recordingsPanel\.open && recordingsPanel\.panel && recordingsPanel\.panel\.ocrVisible\) \{\s*recordingsPanel\.invoke\("closeText"\)/,
+  );
+  assert.match(
+    shortcuts,
+    /"RecordingLibrary\.extend" = \{\s*scope = "controls";\s*template = "SHIFT\+H\/L";/,
+  );
   assert.match(library, /onActivated: library\.showText\(\)/);
   assert.match(controls, /shellMatchesHint\("RecordingLibrary\.ocr"/);
   assert.match(

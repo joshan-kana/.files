@@ -440,6 +440,14 @@
       scope = "controls";
       template = "U/D";
     };
+    "RecordingLibrary.word" = {
+      scope = "controls";
+      template = "H/L";
+    };
+    "RecordingLibrary.extend" = {
+      scope = "controls";
+      template = "SHIFT+H/L";
+    };
     "RecordingLibrary.refresh" = {
       scope = "controls";
       template = "R";

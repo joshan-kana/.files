@@ -486,6 +486,9 @@ FocusScope {
             audioDeck.handleKey(Qt.Key_Escape, Qt.NoModifier);
         } else if (networkPanel.open && networkPanel.passwordPrompt) {
             networkPanel.invoke("cancelPassword");
+        } else if (recordingsPanel.open && recordingsPanel.panel && recordingsPanel.panel.ocrVisible) {
+            recordingsPanel.invoke("closeText");
+            keyboardFocus.forceActiveFocus();
         } else if (recordingsPanel.open && recordingsPanel.deletePending.length > 0) {
             recordingsPanel.invoke("cancelDelete");
         } else if (sessionPanel.open && sessionPanel.armedAction.length > 0) {
@@ -1849,11 +1852,23 @@ FocusScope {
 
                 if (recordingsPanel.open) {
                     if (recordingsPanel.panel && recordingsPanel.panel.ocrVisible) {
+                        const shifted = !!root.runtime.shellModifier("controls", "Shift", event.modifiers);
+                        const control = !!root.runtime.shellModifier("controls", "Control", event.modifiers);
                         if (event.key === root.runtime.shellKeyCode("controls", "Backspace") || root.runtime.shellMatchesHint("RecordingLibrary.ocr", event.key, event.modifiers)) {
                             recordingsPanel.invoke("closeText");
                             keyboardFocus.forceActiveFocus();
-                            event.accepted = true;
+                        } else if (control && event.key === root.runtime.shellKeyCode("controls", "A")) {
+                            recordingsPanel.invoke("selectAllWords");
+                        } else if (control && event.key === root.runtime.shellKeyCode("controls", "C") || !control && !shifted && event.key === root.runtime.shellKeyCode("controls", "C")) {
+                            recordingsPanel.invoke("copyHighlightedText");
+                        } else if (!control && (event.key === root.runtime.shellKeyCode("controls", "H") || event.key === root.runtime.shellKeyCode("controls", "Left"))) {
+                            recordingsPanel.invoke("moveWordSelection", -1, shifted);
+                        } else if (!control && (event.key === root.runtime.shellKeyCode("controls", "L") || event.key === root.runtime.shellKeyCode("controls", "Right"))) {
+                            recordingsPanel.invoke("moveWordSelection", 1, shifted);
+                        } else {
+                            return;
                         }
+                        event.accepted = true;
                         return;
                     }
                     if (event.key === root.runtime.shellKeyCode("controls", "Backspace")) {
