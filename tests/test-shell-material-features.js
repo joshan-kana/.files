@@ -87,7 +87,7 @@ test("contextual monitor action shares system island rather than competing with 
 
   assert.match(bar, /event\.name !== "monitoradded"/);
   assert.match(bar, /interval: 12000/);
-  assert.match(bar, /displayActionVisible: bars\.displayContextVisible/);
+  assert.match(bar, /displayActionVisible: bar\.displayContextVisible/);
   assert.match(island, /Accessible\.name: "Configure newly connected display"/);
   assert.match(island, /onActivated: island\.displaySettingsRequested\(\)/);
   assert.doesNotMatch(bar, /WlrLayershell\.namespace: "linux-desktop-context"/);

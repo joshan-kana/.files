@@ -56,33 +56,6 @@ Variants {
     signal recordingStopRequested
     signal displaySettingsRequested
 
-    // Contextual actions join an existing bar surface; they do not create
-    // another popup competing with freedesktop notifications and OSDs.
-    property string contextScreen: ""
-    property bool displayContextVisible: false
-    Timer {
-        id: displayContextTimeout
-        interval: 12000
-        repeat: false
-        onTriggered: bars.displayContextVisible = false
-    }
-    Connections {
-        target: Hyprland
-        function onRawEvent(event): void {
-            if (event.name !== "monitoradded" && event.name !== "monitoraddedv2")
-                return;
-            // Prefer an existing bar instead of the display which just
-            // arrived. Monitor objects can be invalid during hotplug, so
-            // resolve names only; never call monitorFor on a departing screen.
-            const added = event.name === "monitoraddedv2" ? String(event.data).split(",")[1] : String(event.data);
-            const names = Quickshell.screens.map(screen => screen.name);
-            const existing = names.find(name => name !== added);
-            bars.contextScreen = existing || names[0] || "";
-            bars.displayContextVisible = bars.contextScreen.length > 0;
-            displayContextTimeout.restart();
-        }
-    }
-
     function screenKey(screen: var): string {
         return screen && screen.name ? String(screen.name) : "";
     }
@@ -131,6 +104,30 @@ Variants {
         id: bar
 
         required property var modelData
+
+        // A newly connected monitor gets a transient configuration action
+        // in an already-visible island, without another notification surface.
+        // Subscribe within the live per-output window: Variants is only the
+        // delegate factory, not the rendered presentation owner.
+        property bool displayContextVisible: false
+        Timer {
+            id: displayContextTimeout
+            interval: 12000
+            repeat: false
+            onTriggered: bar.displayContextVisible = false
+        }
+        Connections {
+            target: Hyprland
+            function onRawEvent(event): void {
+                if (event.name !== "monitoradded" && event.name !== "monitoraddedv2")
+                    return;
+                const added = event.name === "monitoraddedv2" ? String(event.data).split(",")[1] : String(event.data);
+                if (bar.modelData.name !== added) {
+                    bar.displayContextVisible = true;
+                    displayContextTimeout.restart();
+                }
+            }
+        }
 
         screen: modelData
 
@@ -790,9 +787,9 @@ Variants {
                 powerProfile: (bars.powerProfile as PowerProfileState)
                 frameConnected: bars.frameVisible
                 compact: barContent.width - (clockIsland.x + clockIsland.width) < 260
-                displayActionVisible: bars.displayContextVisible && bars.contextScreen === bar.modelData.name && !bar.fullscreen && !bars.controlsExpanded
+                displayActionVisible: bar.displayContextVisible && !bar.fullscreen && !bars.controlsExpanded
                 onDisplaySettingsRequested: {
-                    bars.displayContextVisible = false;
+                    bar.displayContextVisible = false;
                     bars.displaySettingsRequested();
                 }
                 onXChanged: Qt.callLater(bar.publishOrigins)
