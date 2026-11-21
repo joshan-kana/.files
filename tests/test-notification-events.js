@@ -104,7 +104,7 @@ test("saved screenshots and videos keep native actions and open the selectable O
   );
   assert.match(
     qml("SystemContent.qml"),
-    /recordingsPanel\.queueText\(filename\)/,
+    /recordingsPanel\.invoke\("queueText", filename\)/,
   );
   assert.doesNotMatch(shell, /captureTextSerial|captureTextName/);
   assert.match(lib, /function queueText\(name: string\): void/);

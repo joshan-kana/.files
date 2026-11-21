@@ -544,7 +544,7 @@ FocusScope {
         else if (requestedView.startsWith("recordings:")) {
             const filename = requestedView.slice("recordings:".length);
             openRecordings();
-            recordingsPanel.queueText(filename);
+            recordingsPanel.invoke("queueText", filename);
         } else if (requestedView === "recordings")
             openRecordings();
         else if (requestedView.startsWith("tray:")) {
