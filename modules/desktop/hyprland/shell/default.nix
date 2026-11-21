@@ -839,7 +839,7 @@ in
           pkgs.losslesscut
         ];
         text = ''
-          export LINUX_DESKTOP_SHELL_PATH=${lib.escapeShellArg (toString productionShellPath)}
+          export LINUX_DESKTOP_SHELL_PATH=${lib.escapeShellArg "${productionShellPath}"}
           ${builtins.readFile ../../../../scripts/linux-desktop/open-capture.sh}
         '';
       };
