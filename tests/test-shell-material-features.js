@@ -141,6 +141,8 @@ test("Help blur covers the whole rounded scrim with no competing Wayland window"
   );
   assert.match(help, /maskSource: blurMask/);
   assert.match(help, /sourceItem: help\.blurSource/);
+  assert.match(help, /id: blurTexture\s+anchors\.fill: parent/);
+  assert.match(help, /id: blurMask[\s\S]*?layer\.enabled: true/);
   assert.match(help, /visible: help\.open && help\.theme\.shellGlassEnabled/);
   assert.doesNotMatch(help, /PanelWindow/);
 });
