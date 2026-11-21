@@ -87,7 +87,7 @@ test("Visual Modes and Quick Actions have distinct full-width balanced sections"
   );
   assert.equal(
     (actions.match(/width: actionTiles\.cellWidth\(this\)/g) || []).length,
-    6,
+    8,
   );
   assert.equal((visual.match(/OpacitySetting \{/g) || []).length, 2);
   assert.equal((visual.match(/AdjustableSetting \{/g) || []).length, 1);
@@ -537,7 +537,7 @@ test("both Controls sections use the same balanced row width calculation", () =>
   );
   assert.equal(
     (controls.match(/width: actionTiles\.cellWidth\(this\)/g) || []).length,
-    6,
+    8,
   );
 });
 
@@ -719,7 +719,7 @@ test("Quick Actions retain handlers and keep Restore Defaults last", () => {
   assert.match(actions, /onActivated: root.openRecordings\(\)/);
 });
 
-test("all 14 tile heights remain fixed when the categories rebalance separately", () => {
+test("all 16 tile heights remain fixed when the categories rebalance separately", () => {
   const controls = read("SystemContent.qml");
   const visual = controls
     .split("id: visualTiles")[1]
@@ -733,7 +733,7 @@ test("all 14 tile heights remain fixed when the categories rebalance separately"
   );
   assert.equal(
     (actions.match(/height: root.dashboardTileHeight/g) || []).length,
-    6,
+    8,
   );
   assert.match(controls, /readonly property int dashboardTileHeight: 72/);
   for (const count of [1, 2, 5, 6, 8, 9, 15, 20]) {

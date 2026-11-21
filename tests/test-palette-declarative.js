@@ -239,7 +239,7 @@ test("QML runtime defaults match the native Nix shell option declarations", () =
     ].map((match) => [match[2], { type: match[1], value: match[3].trim() }]),
   );
 
-  assert.equal(declared.length, 13);
+  assert.equal(declared.length, 14);
   assert.deepEqual(
     [...adapted.keys()].sort(),
     declared.map((match) => match[1]).sort(),
@@ -247,7 +247,9 @@ test("QML runtime defaults match the native Nix shell option declarations", () =
   );
 
   for (const [, name, definition] of declared) {
-    const type = definition.match(/type = lib\.types\.(bool|str|enum|numbers)/);
+    const type = definition.match(
+      /type = lib\.types\.(bool|str|enum|numbers|ints)/,
+    );
     const defaultValue = definition.match(
       /default = (true|false|"[^"]*"|[0-9.]+);/,
     );
@@ -264,6 +266,7 @@ test("QML runtime defaults match the native Nix shell option declarations", () =
       str: "string",
       enum: typeof JSON.parse(defaultValue[1]) === "string" ? "string" : "int",
       numbers: "real",
+      ints: "int",
     }[type[1]];
     assert.equal(adapted.get(name).type, expectedType, name + " QML type");
     assert.deepEqual(

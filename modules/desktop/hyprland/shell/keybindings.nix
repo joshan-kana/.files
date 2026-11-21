@@ -432,6 +432,10 @@
       scope = "controls";
       template = "ENTER";
     };
+    "RecordingLibrary.ocr" = {
+      scope = "controls";
+      template = "O";
+    };
     "RecordingLibrary.page" = {
       scope = "controls";
       template = "U/D";
@@ -608,6 +612,10 @@
       scope = "controls";
       template = "C";
     };
+    "SystemContent.displays" = {
+      scope = "controls";
+      template = "D";
+    };
     "SystemContent.frame" = {
       scope = "controls";
       template = "SHIFT+S";
@@ -647,6 +655,18 @@
     "SystemContent.resources" = {
       scope = "controls";
       template = "R";
+    };
+    "SystemContent.resetSetting" = {
+      scope = "controls";
+      template = "DELETE";
+    };
+    "SystemContent.undoAppearance" = {
+      scope = "controls";
+      template = "SHIFT+Z";
+    };
+    "SystemContent.statusInspection" = {
+      scope = "controls";
+      template = "SHIFT+I";
     };
     "SystemContent.rowSelect" = {
       scope = "controls";
@@ -1167,7 +1187,7 @@
     };
     "SystemContent.legend.open_corresponding_system_control" = {
       scope = "controls";
-      template = "Q/W/E/F/G/R/C";
+      template = "Q/W/E/F/G/R/C/D/I";
     };
     "SystemContent.legend.open_selected_capture" = {
       scope = "controls";
