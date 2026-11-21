@@ -184,30 +184,40 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("HOME", shell._ALLOWED_ENV)
         self.assertEqual(shell.COMMAND_ENV["HOME"], os.environ["HOME"])
 
-    def test_local_command_uses_restricted_worker_identity(self):
-        """Run local commands as the restricted SSH account, not the controller."""
+    def test_local_command_uses_run0_worker_boundary(self):
+        """Interpret ordinary scripts only after entering the restricted identity."""
         self.argv.stop()
         try:
-            command = shell._build_argv("local", "id -u")
+            argv = shell._build_argv("local", "id -u; touch should-not-be-interpreted")
         finally:
             self.argv.start()
-        self.assertIn("worker@127.0.0.1", command)
-        self.assertIn("-oForwardAgent=no", command)
-        self.assertNotIn("-oForwardAgent=yes", command)
+        self.assertEqual(argv[:2], ["bash", "-lc"])
+        self.assertIn("--user=herdr-worker", argv[-1])
+        self.assertIn("--non-interactive", argv[-1])
+        self.assertIn("SSH_AUTH_SOCK", argv[-1])
+        self.assertIn("id -u; touch should-not-be-interpreted", argv[-1])
 
-    def test_remote_worker_never_forwards_elevation_credentials(self):
-        """Run remote commands without forwarding the controller's SSH agents."""
+    def test_remote_command_changes_identity_before_agent_shell(self):
+        """Use native remote execution without exposing the primary user's shell."""
         self.argv.stop()
         try:
             with patch.dict(
-                shell.WORKER_TARGETS,
-                {"remote": shell.RemoteTarget("worker@example", "key", "/bin/bash", False)},
+                shell.REMOTE_TARGETS,
+                {
+                    "mac": shell.RemoteTarget("owner@mac.home", "mac-key", "/bin/zsh", False),
+                    "nixos-arm-parallels": shell.RemoteTarget("owner@parallels.home", "parallels-key", "/bin/bash", True),
+                },
             ):
-                argv = shell._build_argv("remote", "id -u")
+                mac = shell._build_argv("mac", "id -u")
+                linux = shell._build_argv("nixos-arm-parallels", "id -u")
         finally:
             self.argv.start()
-        self.assertIn("-oForwardAgent=no", argv)
-        self.assertIn("worker@example", argv)
+        self.assertIn("-oForwardAgent=no", mac)
+        self.assertIn("owner@mac.home", mac)
+        self.assertIn("sudo -n -H -u herdr-worker", mac[-1])
+        self.assertIn("-oForwardAgent=yes", linux)
+        self.assertIn("owner@parallels.home", linux)
+        self.assertIn("--user=herdr-worker", linux[-1])
 
     async def test_herdr_session_start_uses_native_runtime(self):
         """Create a labelled session without writing a competing terminal database."""
@@ -244,18 +254,19 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
                 await shell.session_read("local", "t1", lines=100000)
             invoke.assert_not_awaited()
 
-    def test_herdr_never_forwards_the_elevation_agent(self):
-        """Keep the privileged SSH agent out of newly started Herdr terminals."""
+    def test_herdr_runs_under_the_same_restricted_identity(self):
+        """Invoke the native terminal runtime only through the worker launcher."""
         self.argv.stop()
         try:
             local = shell._herdr_argv("local", ["ls", "--json"])
-            with patch.dict(shell.WORKER_TARGETS, {"remote": shell.RemoteTarget("worker@host", "key", "/bin/bash", False)}):
-                remote = shell._herdr_argv("remote", ["ls", "--json"])
+            with patch.dict(shell.REMOTE_TARGETS, {"mac": shell.RemoteTarget("owner@mac", "key", "/bin/zsh", False)}):
+                remote = shell._herdr_argv("mac", ["ls", "--json"])
         finally:
             self.argv.start()
         self.assertIn("unset SSH_AUTH_SOCK GH_TOKEN", local[-1])
+        self.assertIn("--user=herdr-worker", local[-1])
         self.assertIn("-oForwardAgent=no", remote)
-        self.assertNotIn("-oForwardAgent=yes", remote)
+        self.assertIn("sudo -n -H -u herdr-worker", remote[-1])
 
     def test_output_buffer_bounds(self):
         """Cap retained output without dropping the final result."""

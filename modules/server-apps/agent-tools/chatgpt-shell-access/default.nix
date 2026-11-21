@@ -10,39 +10,33 @@ let
   inherit (config.dotfiles.users) primary;
   tunnelSecret = "${server.secretsDir}/chatgpt-shell-tunnel.env";
   macSshKeySecret = "${server.secretsDir}/chatgpt-shell-mac";
+  parallelsSshKeySecret = "${server.secretsDir}/chatgpt-shell-nixos-arm-parallels";
   parallelsSudoSshKeySecret = "${server.secretsDir}/nixos-arm-parallels-sudo";
   sudoSshKeySecret = "${server.secretsDir}/chatgpt-shell-sudo";
   githubSecret = "${server.secretsDir}/github-self-hosted-agents.env";
   knownHostsFile = "${config.users.users.${primary.name}.home}/.ssh/known_hosts";
   remoteAuthAgentSocket = "/run/chatgpt-shell-access/remote-sudo-agent.sock";
-  workerUser = "herdr-worker";
 
   macHost = "mac.home";
   parallelsHost = "nixos-arm-parallels.home";
 
   remoteTargets = {
     mac = {
-      sshTarget = "${workerUser}@${macHost}";
+      sshTarget = "${primary.name}@${macHost}";
       credential = macSshKeySecret;
       shell = "/bin/zsh";
       forwardAgent = false;
     };
     nixos-arm-parallels = {
-      sshTarget = "${workerUser}@${parallelsHost}";
-      credential = macSshKeySecret;
+      sshTarget = "${primary.name}@${parallelsHost}";
+      credential = parallelsSshKeySecret;
       shell = "/run/current-system/sw/bin/bash";
-      forwardAgent = false;
+      forwardAgent = true;
     };
   };
-  localWorker = {
-    ssh_target = "${workerUser}@127.0.0.1";
-    credential = "chatgpt-shell-mac";
-    shell = "/run/current-system/sw/bin/bash";
-    forwardAgent = false;
-  };
-  remoteTargetConfig = lib.mapAttrs (_: target: {
+  remoteTargetConfig = lib.mapAttrs (name: target: {
     ssh_target = target.sshTarget;
-    credential = "chatgpt-shell-mac";
+    credential = "chatgpt-shell-${name}";
     inherit (target) shell forwardAgent;
   }) remoteTargets;
   policyDefaults = pkgs.writeText "chatgpt-shell-policies.json" (
@@ -95,19 +89,6 @@ let
   ];
 in
 {
-  users.groups.${workerUser} = { };
-  users.users.${workerUser} = {
-    isSystemUser = true;
-    group = workerUser;
-    home = "/var/lib/${workerUser}";
-    createHome = true;
-    shell = pkgs.bashInteractive;
-    linger = true;
-    openssh.authorizedKeys.keys = [
-      "restrict ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHgLTjmo6ZPfUNMxnT2/Yp0ZHJTon28vCVDmbxjMRNuS chatgpt-shell@nixos-server"
-    ];
-  };
-
   environment.systemPackages = [
     pkgs.herdr-core
     pkgs.procps
@@ -142,10 +123,10 @@ in
       CHATGPT_SHELL_COMMAND_PATH = lib.makeBinPath shellPackages;
       CHATGPT_SHELL_LOCAL_HOST = config.networking.hostName;
       CHATGPT_SHELL_PRIMARY_USER = primary.name;
-      CHATGPT_SHELL_LOCAL_WORKER = builtins.toJSON localWorker;
+      CHATGPT_SHELL_WORKER = "herdr-worker";
+      CHATGPT_SHELL_RUN0 = "${pkgs.systemd}/bin/run0";
       CHATGPT_SHELL_BASH = "${pkgs.bash}/bin/bash";
       CHATGPT_SHELL_HC = "${pkgs.herdr-core}/bin/hc";
-      CHATGPT_SHELL_KNOWN_HOSTS = "/run/chatgpt-shell-access/known_hosts";
       CHATGPT_SHELL_APPROVAL_DIR = "/run/chatgpt-shell-access/approvals";
       CHATGPT_SHELL_STATE_DIR = "/var/lib/chatgpt-shell-access";
       CHATGPT_SHELL_POLICIES_FILE = toString policyDefaults;
@@ -182,8 +163,6 @@ in
         done
         [ -S "$SSH_AUTH_SOCK" ]
         [ -S "$CHATGPT_SHELL_REMOTE_AUTH_AGENT" ]
-        ${pkgs.coreutils}/bin/install -m 0600 "$CREDENTIALS_DIRECTORY/chatgpt-shell-known-hosts" "$RUNTIME_DIRECTORY/known_hosts"
-        ${pkgs.gawk}/bin/awk '{ print "127.0.0.1 " $1 " " $2 }' /etc/ssh/ssh_host_ed25519_key.pub >> "$RUNTIME_DIRECTORY/known_hosts"
         cat "$CREDENTIALS_DIRECTORY/chatgpt-shell-sudo" | \
           ${pkgs.bash}/bin/bash -c \
             'SSH_AUTH_SOCK="$1" exec ${pkgs.openssh}/bin/ssh-add -' _ "$SSH_AUTH_SOCK"
