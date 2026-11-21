@@ -45,73 +45,6 @@ QtObject {
     function hasOverride(key: string): bool {
         return overrideKeys.includes(key);
     }
-    // One reversible preference change, not a second history or settings backend.
-    property var lastAppearanceChange: null
-    function beginAdjustment(key: string): void {
-        const relatedKey = key === "windowOpacity" ? "windowTransparencyEnabled" : key === "glassOpacity" ? "shellGlassEnabled" : "";
-        lastAppearanceChange = {
-            key,
-            value: effective(key),
-            overridden: hasOverride(key),
-            relatedKey,
-            relatedValue: relatedKey.length > 0 ? effective(relatedKey) : null,
-            relatedOverridden: relatedKey.length > 0 && hasOverride(relatedKey)
-        };
-    }
-    function rememberChange(key: string): void {
-        if (!lastAppearanceChange || lastAppearanceChange.key !== key)
-            beginAdjustment(key);
-    }
-    function undoLastChange(): void {
-        const previous = lastAppearanceChange;
-        if (!previous)
-            return;
-        lastAppearanceChange = null;
-        const keys = new Set(overrideKeys);
-        const originals = [
-            {
-                key: previous.key,
-                value: previous.value,
-                overridden: previous.overridden
-            }
-        ];
-        if (previous.relatedKey.length > 0)
-            originals.push({
-                key: previous.relatedKey,
-                value: previous.relatedValue,
-                overridden: previous.relatedOverridden
-            });
-        for (const original of originals) {
-            if (original.overridden) {
-                saved[original.key] = original.value;
-                saved.setValue(original.key, original.value);
-                keys.add(original.key);
-            } else {
-                keys.delete(original.key);
-            }
-        }
-        saved.userOverrides = JSON.stringify([...keys]);
-        saved.setValue("userOverrides", saved.userOverrides);
-        saved.sync();
-        if (previous.key === "windowOpacity" || previous.key === "windowTransparencyEnabled")
-            applyWindowTransparency();
-        else if (previous.key === "blurSize")
-            applyBlurSize();
-        if (previous.key === "glassOpacity" || previous.key === "shellGlassEnabled")
-            applyShellGlass();
-    }
-    function restoreSetting(key: string): void {
-        if (!["windowOpacity", "glassOpacity", "blurSize"].includes(key) || !hasOverride(key))
-            return;
-        beginAdjustment(key);
-        saved.userOverrides = JSON.stringify(overrideKeys.filter(item => item !== key));
-        saved.setValue("userOverrides", saved.userOverrides);
-        saved.sync();
-        if (key === "windowOpacity")
-            windowOpacityApply.restart();
-        else if (key === "blurSize")
-            blurSizeApply.restart();
-    }
     readonly property string mediaVisualizerMode: effective("mediaVisualizerMode") === "curve" ? "curve" : "bars"
     readonly property bool mediaLyricsVisible: effective("mediaLyricsVisible")
     readonly property var seekIntervals: [5, 10, 15, 30, 60]
@@ -176,7 +109,6 @@ QtObject {
     }
 
     function resetToDeclared(): void {
-        lastAppearanceChange = null;
         saved.userOverrides = "[]";
         saved.setValue("userOverrides", "[]");
         saved.sync();
@@ -273,7 +205,6 @@ QtObject {
         const next = Math.round(Math.max(5, Math.min(25, value)));
         if (next === blurSize)
             return;
-        rememberChange("blurSize");
         saved.blurSize = next;
         storeOverride("blurSize", next);
         saved.sync();
@@ -291,7 +222,6 @@ QtObject {
         const next = Math.round(Math.max(0.20, Math.min(1, value)) * 100) / 100;
         if (next === windowOpacity && windowTransparencyEnabled)
             return;
-        rememberChange("windowOpacity");
         saved.windowOpacity = next;
         saved.windowTransparencyEnabled = true;
         storeOverride("windowOpacity", next);
@@ -305,7 +235,6 @@ QtObject {
         if (next === glassOpacity && shellGlassEnabled)
             return;
         const wasEnabled = shellGlassEnabled;
-        rememberChange("glassOpacity");
         saved.glassOpacity = next;
         saved.shellGlassEnabled = true;
         storeOverride("glassOpacity", next);
@@ -318,7 +247,6 @@ QtObject {
     }
 
     function toggleWindowTransparency(): void {
-        rememberChange("windowTransparencyEnabled");
         saved.windowTransparencyEnabled = !windowTransparencyEnabled;
         storeOverride("windowTransparencyEnabled", saved.windowTransparencyEnabled);
         saved.sync();
@@ -347,7 +275,6 @@ QtObject {
     }
 
     function toggleShellGlass(): void {
-        rememberChange("shellGlassEnabled");
         saved.shellGlassEnabled = !shellGlassEnabled;
         storeOverride("shellGlassEnabled", saved.shellGlassEnabled);
         saved.sync();

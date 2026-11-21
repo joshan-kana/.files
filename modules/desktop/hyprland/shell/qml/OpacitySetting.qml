@@ -13,6 +13,11 @@ ShellSurface {
     property string shortcut: ""
     property bool active: false
     property bool keyboardSelected: false
+    property bool blurAdjustable: false
+    property bool blurEditing: false
+    property int blurValue: 15
+    signal blurActivated
+    signal blurRequested(real value)
     signal sliderActivated
     property color roleAccent: theme.accent
 
@@ -21,7 +26,7 @@ ShellSurface {
 
     height: 78
     Accessible.role: Accessible.Button
-    Accessible.name: label + ", " + Math.round(opacityValue * 100) + "% opacity"
+    Accessible.name: label + ", " + Math.round(opacityValue * 100) + "% opacity" + (blurAdjustable ? ", blur " + blurValue + " pixels" : "")
 
     // Scale inward at rest and fill the allocated bounds on hover.
     // The hub viewport clips content outside its edge during panel morphs.
@@ -103,7 +108,7 @@ ShellSurface {
             spacing: setting.theme.spacing1
 
             Text {
-                width: Math.max(1, parent.width - opacityLabel.implicitWidth - parent.spacing)
+                width: Math.max(1, parent.width - opacityValueButton.width - blurValueButton.width - parent.spacing * (setting.blurAdjustable ? 2 : 1))
                 text: setting.label
                 horizontalAlignment: Text.AlignHCenter
                 elide: Text.ElideRight
@@ -112,13 +117,53 @@ ShellSurface {
                 font.pixelSize: setting.theme.fontSize(9)
                 font.weight: setting.active ? Font.DemiBold : Font.Medium
             }
-            Text {
-                id: opacityLabel
-                text: Math.round(setting.opacityValue * 100) + "%"
-                color: setting.active ? setting.roleAccent : setting.theme.textMuted
-                font.family: setting.runtime.fontMono
-                font.pixelSize: setting.theme.fontSize(9)
-                font.weight: Font.DemiBold
+
+            Item {
+                id: opacityValueButton
+                width: opacityValueLabel.implicitWidth + (setting.blurAdjustable ? setting.theme.spacing2 : 0)
+                height: parent.height
+                Text {
+                    id: opacityValueLabel
+                    anchors.centerIn: parent
+                    text: Math.round(setting.opacityValue * 100) + "%"
+                    color: setting.active && !setting.blurEditing ? setting.roleAccent : setting.theme.textMuted
+                    font.family: setting.runtime.fontMono
+                    font.pixelSize: setting.theme.fontSize(9)
+                    font.weight: Font.DemiBold
+                }
+                StateLayer {
+                    visible: setting.blurAdjustable
+                    theme: setting.theme
+                    motion: setting.motion
+                    cornerRadius: setting.theme.radiusSmall
+                    Accessible.role: Accessible.Button
+                    Accessible.name: "Adjust frosted-glass opacity"
+                    onActivated: setting.sliderActivated()
+                }
+            }
+
+            Item {
+                id: blurValueButton
+                visible: setting.blurAdjustable
+                width: visible ? blurValueLabel.implicitWidth + setting.theme.spacing2 : 0
+                height: parent.height
+                Text {
+                    id: blurValueLabel
+                    anchors.centerIn: parent
+                    text: "Blur " + setting.blurValue
+                    color: setting.blurEditing ? setting.roleAccent : setting.theme.textMuted
+                    font.family: setting.runtime.fontMono
+                    font.pixelSize: setting.theme.fontSize(9)
+                    font.weight: Font.DemiBold
+                }
+                StateLayer {
+                    theme: setting.theme
+                    motion: setting.motion
+                    cornerRadius: setting.theme.radiusSmall
+                    Accessible.role: Accessible.Button
+                    Accessible.name: "Adjust frosted-glass blur softness"
+                    onActivated: setting.blurActivated()
+                }
             }
         }
 
@@ -127,14 +172,24 @@ ShellSurface {
             height: 19
             theme: setting.theme
             motion: setting.motion
-            from: 0.20
-            to: 1
-            value: setting.opacityValue
+            from: setting.blurEditing ? 5 : 0.20
+            to: setting.blurEditing ? 25 : 1
+            value: setting.blurEditing ? setting.blurValue : setting.opacityValue
             trackHeight: 6
             handleSize: 16
             accentColor: setting.roleAccent
-            onInteractionStarted: setting.sliderActivated()
-            onValueRequested: next => setting.opacityRequested(next)
+            onInteractionStarted: {
+                if (setting.blurEditing)
+                    setting.blurActivated();
+                else
+                    setting.sliderActivated();
+            }
+            onValueRequested: next => {
+                if (setting.blurEditing)
+                    setting.blurRequested(next);
+                else
+                    setting.opacityRequested(next);
+            }
         }
     }
 

@@ -16,6 +16,9 @@ FocusScope {
     required property SpectrumState spectrum
     required property NotificationState notificationState
     required property BrightnessState brightness
+    required property KeyboardState keyboard
+    required property RecordingState recording
+    property string statusMode: "Normal"
     required property NightLightState nightLight
     required property ResourceState resourceState
     required property PowerProfileState powerProfile
@@ -32,7 +35,6 @@ FocusScope {
     signal frameToggleRequested
     signal windowTransparencyToggleRequested
     signal shellGlassToggleRequested
-    signal statusInspectionRequested
     signal displaySettingsRequested
     signal restoreDefaultsRequested
 
@@ -41,7 +43,7 @@ FocusScope {
     property real dashboardWidthBudget: theme.controlsDetailWidth
     readonly property int dashboardTileHeight: 72
     readonly property int dashboardBrightnessHeight: 90
-    readonly property bool detailsVisible: trayMenu.open || networkPanel.open || bluetoothPanel.open || themePanel.open || wallpaperPanel.open || sessionPanel.open || resourcesPanel.open || mixerOpen || recordingsPanel.open
+    readonly property bool detailsVisible: trayMenu.open || networkPanel.open || bluetoothPanel.open || themePanel.open || wallpaperPanel.open || sessionPanel.open || resourcesPanel.open || statusOpen || mixerOpen || recordingsPanel.open
     property bool resetConfirmPending: false
     property bool resetRunning: false
     property string resetStatus: ""
@@ -99,16 +101,8 @@ FocusScope {
     property string selectedSlider: ""
     readonly property bool sliderNavigationEnabled: engaged && !resetConfirmPending && !helpOpen && !mixerOpen && !audioChooserOpen && !themeOpen && !wallpaperOpen && !sessionOpen && !networkOpen && !bluetoothOpen && !resourcesOpen && !recordingsOpen && !trayMenuOpen
     readonly property var sliderTargets: (brightness.supported ? ["brightness"] : []).concat(["windows", "glass", "blur"], nightLight.supported ? ["nightLight"] : [])
-    readonly property string selectedAppearanceKey: selectedSlider === "windows" ? "windowOpacity" : selectedSlider === "glass" ? "glassOpacity" : selectedSlider === "blur" ? "blurSize" : ""
-    function resetSelectedAppearance(): void {
-        if (selectedAppearanceKey.length > 0)
-            appearance.restoreSetting(selectedAppearanceKey);
-    }
-
     function selectSlider(target: string): void {
         selectedSlider = target;
-        if (selectedAppearanceKey.length > 0)
-            appearance.beginAdjustment(selectedAppearanceKey);
         keyboardFocus.forceActiveFocus();
     }
 
@@ -165,8 +159,9 @@ FocusScope {
     readonly property bool sessionOpen: sessionPanel.open
     readonly property bool sessionConfirmationPending: sessionPanel.open && sessionPanel.armedAction.length > 0
     readonly property bool resourcesOpen: resourcesPanel.open
+    readonly property bool statusOpen: statusPanel.open
     readonly property bool recordingsOpen: recordingsPanel.open
-    readonly property string helpTitle: recordingsPanel.open ? "Captures" : wallpaperPanel.open ? "Wallpaper library" : mixerOpen ? "Application mixer" : resourcesPanel.open ? "Resource monitor" : (bluetoothPanel.open ? "Bluetooth controls" : (networkPanel.open ? "Network controls" : (themePanel.open ? "Theme controls" : (sessionPanel.open ? "Session controls" : (trayMenu.open ? "Tray menu controls" : "System controls")))))
+    readonly property string helpTitle: statusOpen ? "System status" : recordingsPanel.open ? "Captures" : wallpaperPanel.open ? "Wallpaper library" : mixerOpen ? "Application mixer" : resourcesPanel.open ? "Resource monitor" : (bluetoothPanel.open ? "Bluetooth controls" : (networkPanel.open ? "Network controls" : (themePanel.open ? "Theme controls" : (sessionPanel.open ? "Session controls" : (trayMenu.open ? "Tray menu controls" : "System controls")))))
     readonly property var helpBindings: recordingsPanel.open ? [
         {
             key: root.runtime.shellHint("SystemContent.legend.select_clip_half_page"),
@@ -182,7 +177,7 @@ FocusScope {
         },
         {
             key: root.runtime.shellHint("RecordingLibrary.ocr"),
-            action: "Copy recognised text (video preview frame or image)"
+            action: "Select text or code in this capture"
         },
         {
             key: root.runtime.shellHint("SystemContent.legend.confirm_move_to_trash"),
@@ -440,7 +435,7 @@ FocusScope {
     signal revealContent(real top, real bottom)
 
     implicitWidth: sessionPanel.open ? sessionPanel.implicitWidth : detailsVisible ? theme.controlsDetailWidth : dashboardWidthBudget
-    implicitHeight: recordingsPanel.open ? recordingsPanel.implicitHeight : wallpaperPanel.open ? wallpaperPanel.implicitHeight : mixerOpen ? mixerView.implicitHeight : sessionPanel.open ? sessionPanel.implicitHeight : resourcesPanel.open ? resourcesPanel.implicitHeight : networkPanel.open ? networkPanel.implicitHeight : bluetoothPanel.open ? bluetoothPanel.implicitHeight : themePanel.open ? themePanel.implicitHeight : content.implicitHeight
+    implicitHeight: statusOpen ? statusPanel.implicitHeight : recordingsPanel.open ? recordingsPanel.implicitHeight : wallpaperPanel.open ? wallpaperPanel.implicitHeight : mixerOpen ? mixerView.implicitHeight : sessionPanel.open ? sessionPanel.implicitHeight : resourcesPanel.open ? resourcesPanel.implicitHeight : networkPanel.open ? networkPanel.implicitHeight : bluetoothPanel.open ? bluetoothPanel.implicitHeight : themePanel.open ? themePanel.implicitHeight : content.implicitHeight
     focus: engaged
 
     function closeDetails(): void {
@@ -452,6 +447,7 @@ FocusScope {
         sessionPanel.closeView();
         resourcesPanel.closeView();
         recordingsPanel.closeView();
+        statusPanel.closeView();
         mixerOpen = false;
     }
 
@@ -507,6 +503,8 @@ FocusScope {
     }
 
     function markDetail(view: string): void {
+        if (view !== "status")
+            statusPanel.closeView();
         if (requestedView !== view)
             detailRequested(view);
     }
@@ -525,6 +523,8 @@ FocusScope {
             openBluetooth();
         else if (requestedView === "resources")
             openResources();
+        else if (requestedView === "status")
+            openStatus();
         else if (requestedView === "mixer")
             openMixer();
         else if (requestedView === "wallpaper")
@@ -687,6 +687,14 @@ FocusScope {
         sessionPanel.closeView();
         resourcesPanel.openView();
         markDetail("resources");
+    }
+
+    function openStatus(): void {
+        helpOpen = false;
+        closeDetails();
+        statusPanel.openView();
+        markDetail("status");
+        keyboardFocus.forceActiveFocus();
     }
 
     function openMixer(): void {
@@ -926,53 +934,6 @@ FocusScope {
                             }
                         }
                     }
-                    ShellSurface {
-                        width: parent.width
-                        height: root.dashboardBrightnessHeight
-                        theme: root.theme
-                        motion: root.motion
-                        surfaceLayer: ShellSurface.Group
-                        cornerRadius: theme.radiusLarge
-
-                        ShellSection {
-                            anchors {
-                                fill: parent
-                                margins: theme.spacing4
-                            }
-                            runtime: root.runtime
-                            theme: root.theme
-                            title: "Blur softness"
-                            detail: root.appearance.blurSize + " px · " + (root.appearance.hasOverride("blurSize") ? "User override" : "Nix default")
-
-                            Row {
-                                width: parent.width
-                                spacing: root.theme.spacing2
-                                ShellSlider {
-                                    width: Math.max(1, parent.width - (root.selectedSlider === "blur" ? blurHint.implicitWidth + parent.spacing : 0))
-                                    theme: root.theme
-                                    motion: root.motion
-                                    from: 5
-                                    to: 25
-                                    value: root.appearance.blurSize
-                                    accentColor: root.theme.roleColor("display")
-                                    trackHeight: 12
-                                    handleSize: 20
-                                    onInteractionStarted: root.selectSlider("blur")
-                                    onValueRequested: next => root.appearance.setBlurSize(next)
-                                }
-                                KeyHint {
-                                    id: blurHint
-                                    visible: root.selectedSlider === "blur"
-                                    shortcut: root.runtime.shellHint("SystemContent.audioLevel")
-                                    compact: true
-                                    runtime: root.runtime
-                                    theme: root.theme
-                                    emphasized: true
-                                    emphasisColor: root.theme.positive
-                                }
-                            }
-                        }
-                    }
                 }
 
                 ShellSection {
@@ -1143,8 +1104,13 @@ FocusScope {
                             opacityValue: root.appearance.glassOpacity
                             shortcut: root.runtime.shellHint("SystemContent.shellGlass")
                             active: root.shellGlassEnabled
-                            keyboardSelected: root.selectedSlider === "glass"
+                            keyboardSelected: root.selectedSlider === "glass" || root.selectedSlider === "blur"
+                            blurAdjustable: true
+                            blurValue: root.appearance.blurSize
+                            blurEditing: root.selectedSlider === "blur"
                             onSliderActivated: root.selectSlider("glass")
+                            onBlurActivated: root.selectSlider("blur")
+                            onBlurRequested: value => root.appearance.setBlurSize(value)
                             roleAccent: root.theme.roleColor("connectivity")
                             onToggleRequested: root.shellGlassToggleRequested()
                             onOpacityRequested: value => root.appearance.setGlassOpacity(value)
@@ -1213,38 +1179,6 @@ FocusScope {
                             canAdjust: root.nightLight.supported
                             onToggleRequested: root.nightLight.toggle()
                         }
-                    }
-                }
-
-                Row {
-                    // Keep layout height stable when the first parameter is touched.
-                    width: parent.width
-                    spacing: root.theme.spacing2
-                    ShellAction {
-                        width: Math.max(1, (parent.width - parent.spacing) / 2)
-                        height: 34
-                        runtime: root.runtime
-                        theme: root.theme
-                        motion: root.motion
-                        compact: true
-                        horizontalCompact: true
-                        title: root.selectedAppearanceKey.length === 0 ? "Choose a visual setting" : root.appearance.hasOverride(root.selectedAppearanceKey) ? "User override · Reset" : "Nix default"
-                        shortcut: root.runtime.shellHint("SystemContent.resetSetting")
-                        enabled: root.selectedAppearanceKey.length > 0 && root.appearance.hasOverride(root.selectedAppearanceKey)
-                        onActivated: root.resetSelectedAppearance()
-                    }
-                    ShellAction {
-                        width: Math.max(1, (parent.width - parent.spacing) / 2)
-                        height: 34
-                        runtime: root.runtime
-                        theme: root.theme
-                        motion: root.motion
-                        compact: true
-                        horizontalCompact: true
-                        title: "Undo appearance"
-                        shortcut: root.runtime.shellHint("SystemContent.undoAppearance")
-                        enabled: root.appearance.lastAppearanceChange !== null
-                        onActivated: root.appearance.undoLastChange()
                     }
                 }
 
@@ -1356,7 +1290,7 @@ FocusScope {
                             title: "Status"
                             shortcut: root.runtime.shellHint("SystemContent.statusInspection")
                             activeColor: root.theme.roleColor("resources")
-                            onActivated: root.statusInspectionRequested()
+                            onActivated: root.openStatus()
                         }
 
                         QuickSettingChip {
@@ -1611,6 +1545,41 @@ FocusScope {
             }
         }
 
+        Item {
+            id: statusPanel
+            anchors.fill: parent
+            property bool open: false
+            visible: open
+            implicitWidth: statusContent.implicitWidth
+            implicitHeight: statusContent.implicitHeight
+            function openView(): void {
+                open = true;
+                root.keyboard.refresh("inspect");
+                root.brightness.refresh();
+            }
+            function closeView(): void {
+                open = false;
+            }
+
+            StatusContent {
+                id: statusContent
+                anchors.fill: parent
+                runtime: root.runtime
+                theme: root.theme
+                motion: root.motion
+                system: root.system
+                keyboard: root.keyboard
+                brightness: root.brightness
+                recording: root.recording
+                modeName: root.statusMode
+                onRefreshRequested: {
+                    root.keyboard.refresh("inspect");
+                    root.brightness.refresh();
+                }
+                onCloseRequested: root.backFromDetail()
+            }
+        }
+
         DeferredDetail {
             id: mixerView
             motion: root.motion
@@ -1857,6 +1826,14 @@ FocusScope {
                 }
 
                 if (recordingsPanel.open) {
+                    if (recordingsPanel.panel && recordingsPanel.panel.ocrVisible) {
+                        if (event.key === root.runtime.shellKeyCode("controls", "Backspace") || root.runtime.shellMatchesHint("RecordingLibrary.ocr", event.key, event.modifiers)) {
+                            recordingsPanel.invoke("closeText");
+                            keyboardFocus.forceActiveFocus();
+                            event.accepted = true;
+                        }
+                        return;
+                    }
                     if (event.key === root.runtime.shellKeyCode("controls", "Backspace")) {
                         if (recordingsPanel.deletePending.length > 0)
                             recordingsPanel.invoke("cancelDelete");
@@ -1877,7 +1854,7 @@ FocusScope {
                     } else if (event.key === root.runtime.shellKeyCode("controls", "C")) {
                         recordingsPanel.invoke("copySelected");
                     } else if (root.runtime.shellMatchesHint("RecordingLibrary.ocr", event.key, event.modifiers)) {
-                        recordingsPanel.invoke("copyText");
+                        recordingsPanel.invoke("showText");
                     } else if (event.key === root.runtime.shellKeyCode("controls", "Return") || event.key === root.runtime.shellKeyCode("controls", "Enter")) {
                         recordingsPanel.invoke("openSelected");
                     } else if (event.key === root.runtime.shellKeyCode("controls", "R")) {
@@ -2091,15 +2068,7 @@ FocusScope {
                     return;
                 }
                 if (root.selectedSlider.length > 0) {
-                    if (root.runtime.shellMatchesHint("SystemContent.resetSetting", event.key, event.modifiers) && root.selectedAppearanceKey.length > 0) {
-                        root.resetSelectedAppearance();
-                        event.accepted = true;
-                        return;
-                    } else if (root.runtime.shellMatchesHint("SystemContent.undoAppearance", event.key, event.modifiers) && root.appearance.lastAppearanceChange !== null) {
-                        root.appearance.undoLastChange();
-                        event.accepted = true;
-                        return;
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "Backspace")) {
+                    if (event.key === root.runtime.shellKeyCode("controls", "Backspace")) {
                         root.selectedSlider = "";
                     } else if (!shifted && (event.key === root.runtime.shellKeyCode("controls", "K") || event.key === root.runtime.shellKeyCode("controls", "Up"))) {
                         root.cycleSlider(-1);
@@ -2121,9 +2090,7 @@ FocusScope {
                         return;
                     }
                 }
-                if (root.runtime.shellMatchesHint("SystemContent.undoAppearance", event.key, event.modifiers) && root.appearance.lastAppearanceChange !== null) {
-                    root.appearance.undoLastChange();
-                } else if (shifted && event.key === root.runtime.shellKeyCode("controls", "C")) {
+                if (shifted && event.key === root.runtime.shellKeyCode("controls", "C")) {
                     root.resetConfirmPending = true;
                     root.resetStatus = "";
                 } else if (shifted && event.key === root.runtime.shellKeyCode("controls", "F")) {
@@ -2167,7 +2134,7 @@ FocusScope {
                 } else if (event.key === root.runtime.shellKeyCode("controls", "R")) {
                     root.openResources();
                 } else if (root.runtime.shellMatchesHint("SystemContent.statusInspection", event.key, event.modifiers)) {
-                    root.statusInspectionRequested();
+                    root.openStatus();
                 } else if (root.runtime.shellMatchesHint("SystemContent.displays", event.key, event.modifiers)) {
                     root.displaySettingsRequested();
                 } else if (event.key === root.runtime.shellKeyCode("controls", "F")) {

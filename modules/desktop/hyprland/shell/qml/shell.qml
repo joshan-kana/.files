@@ -163,6 +163,9 @@ ShellRoot {
             spectrum: root.spectrumRef
             notificationState: root.notificationsRef
             brightness: root.brightnessRef
+            keyboard: qmlKeyboard
+            recording: qmlRecording
+            statusMode: qmlInteractionMode.passthroughActive ? "Passthrough" : resizeOverlay.open ? "Resize window" : "Normal"
             nightLight: root.nightLightRef
             resourceState: root.resourcesRef
             powerProfile: root.powerProfileRef
@@ -179,10 +182,6 @@ ShellRoot {
             onFrameToggleRequested: qmlAppearance.toggleFrame()
             onWindowTransparencyToggleRequested: qmlAppearance.toggleWindowTransparency()
             onShellGlassToggleRequested: qmlAppearance.toggleShellGlass()
-            onStatusInspectionRequested: {
-                qmlExpansionState.close();
-                root.toggleStatusInspection(qmlScreens.focusedScreen);
-            }
             onDisplaySettingsRequested: {
                 qmlExpansionState.close();
                 if (qmlRuntime.displaySettings.length > 0)

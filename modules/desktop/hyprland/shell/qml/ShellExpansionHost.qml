@@ -108,7 +108,7 @@ PanelWindow {
     // Hub scrolling is a fallback only for views without their own paging
     // owner. Calendar, Activity, and open details consume PageUp/Down locally.
     readonly property bool hostPageShortcutsEnabled: expansionState.hasCurrent && !helpVisible && (expansionState.currentName === "weather" || expansionState.currentName === "media" || (expansionState.currentName === "system" && !detailVisible))
-    readonly property bool detailVisible: !!systemContent && (systemContent.trayMenuOpen || systemContent.networkOpen || systemContent.bluetoothOpen || systemContent.themeOpen || systemContent.wallpaperOpen || systemContent.sessionOpen || systemContent.resourcesOpen || systemContent.recordingsOpen || systemContent.mixerOpen)
+    readonly property bool detailVisible: !!systemContent && (systemContent.trayMenuOpen || systemContent.networkOpen || systemContent.bluetoothOpen || systemContent.themeOpen || systemContent.wallpaperOpen || systemContent.sessionOpen || systemContent.resourcesOpen || systemContent.recordingsOpen || systemContent.statusOpen || systemContent.mixerOpen)
     readonly property string helpCaption: systemContent ? systemContent.helpTitle : mediaContent ? "Now Playing controls" : expansionState.currentName === "activity" ? "Activity controls" : expansionState.currentName === "weather" ? "Weather controls" : "Home controls"
     readonly property var otherHelpKeys: expansionState.currentName === "activity" ? [
         {
