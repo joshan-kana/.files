@@ -40,6 +40,7 @@ let
     inherit (target) shell forwardAgent;
   }) remoteTargets;
   shellPackages = with pkgs; [
+    herdr-core
     bash
     coreutils
     curl
@@ -94,6 +95,7 @@ in
       CHATGPT_SHELL_COMMAND_PATH = lib.makeBinPath shellPackages;
       CHATGPT_SHELL_LOCAL_HOST = config.networking.hostName;
       CHATGPT_SHELL_BASH = "${pkgs.bash}/bin/bash";
+      CHATGPT_SHELL_HC = "${pkgs.herdr-core}/bin/hc";
       CHATGPT_SHELL_REMOTE_AUTH_AGENT = remoteAuthAgentSocket;
       CHATGPT_SHELL_REMOTE_TARGETS = builtins.toJSON remoteTargetConfig;
     };

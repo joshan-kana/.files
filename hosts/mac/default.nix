@@ -95,6 +95,10 @@ lib.recursiveUpdate (import ../../profiles/workstation.nix { inherit moduleRegis
   };
 
   desktopApps = extendScope moduleRegistry.desktopApps {
+    herdrApp = _: {
+      homebrew.casks = [ "herdr-app" ];
+    };
+
     notion = { pkgs, ... }: {
       home = _: {
         home.packages = [ pkgs.notion-app ];
