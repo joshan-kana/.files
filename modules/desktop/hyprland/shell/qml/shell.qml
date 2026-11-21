@@ -33,8 +33,6 @@ ShellRoot {
 
     property var statusTargetScreen: null
     property var resizeTargetScreen: null
-    property string captureTextName: ""
-    property int captureTextSerial: 0
     function toggleStatusInspection(targetScreen: var): void {
         if (resizeOverlay.open) {
             resizeOverlay.inspectOpen = !resizeOverlay.inspectOpen;
@@ -178,8 +176,6 @@ ShellRoot {
             windowTransparencyEnabled: qmlAppearance.windowTransparencyEnabled
             shellGlassEnabled: qmlAppearance.shellGlassEnabled
             engaged: qmlExpansionState.currentName === "system"
-            requestedCaptureTextName: root.captureTextName
-            requestedCaptureTextSerial: root.captureTextSerial
             onWallpaperSpectrumToggleRequested: qmlAppearance.toggleWallpaperSpectrum()
             onMusicReactiveToggleRequested: qmlAppearance.toggleMusicReactive()
             onBarToggleRequested: qmlAppearance.toggleBar()
@@ -1170,9 +1166,7 @@ ShellRoot {
         function showCaptureText(name: string): void {
             if (!/^(?:Screenshot-[0-9]{8}-[0-9]{6}-[0-9]+\.png|Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.mp4)$/.test(name))
                 return;
-            root.captureTextName = name;
-            root.captureTextSerial++;
-            actions.showSystem(null, null, "recordings");
+            actions.showSystem(null, null, "recordings:" + name);
         }
 
         function toggleNotifications(): void {

@@ -24,7 +24,10 @@ test("service-backed event notifications share the freedesktop server, not islan
   assert.match(events, /required property SystemState system/);
   assert.match(events, /required property PowerProfileState powerProfile/);
   assert.match(events, /"--app-name=Desktop " \+ source/);
-  assert.match(events, /onStreamFinished:[\s\S]*?notice\.actionRequested\(notice\.actionTarget\)/);
+  assert.match(
+    events,
+    /onStreamFinished:[\s\S]*?notice\.actionRequested\(notice\.actionTarget\)/,
+  );
   assert.match(events, /"monitoraddedv2"/);
   assert.match(events, /onOutputSignatureChanged: connectedDevice\(false\)/);
   assert.match(events, /onInputSignatureChanged: connectedDevice\(true\)/);
@@ -91,6 +94,19 @@ test("saved screenshots and videos keep native actions and open the selectable O
     /quickshell ipc --path "\$LINUX_DESKTOP_SHELL_PATH" call desktop showCaptureText "\$name"/,
   );
   assert.match(shell, /function showCaptureText\(name: string\): void/);
+  assert.match(
+    shell,
+    /actions\.showSystem\(null, null, "recordings:" \+ name\)/,
+  );
+  assert.match(
+    qml("SystemContent.qml"),
+    /requestedView\.startsWith\("recordings:"\)/,
+  );
+  assert.match(
+    qml("SystemContent.qml"),
+    /recordingsPanel\.queueText\(filename\)/,
+  );
+  assert.doesNotMatch(shell, /captureTextSerial|captureTextName/);
   assert.match(lib, /function queueText\(name: string\): void/);
   assert.match(lib, /function openPendingText\(\): void/);
   assert.match(lib, /showText\(\)/);
