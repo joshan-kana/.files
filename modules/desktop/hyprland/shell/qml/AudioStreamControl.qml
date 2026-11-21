@@ -83,7 +83,7 @@ Item {
                     font.weight: Font.DemiBold
                 }
 
-                IconShortcutAction {
+                ShellAction {
                     id: muteButton
                     anchors.verticalCenter: parent.verticalCenter
                     width: 48
@@ -91,12 +91,15 @@ Item {
                     runtime: channel.runtime
                     theme: channel.theme
                     motion: channel.motion
+                    iconOnly: true
+                    iconHint: shortcut.length > 0
                     icon: channel.muted ? "󰝟" : "󰕾"
                     title: channel.capture ? "Mute capture stream" : "Mute application"
                     active: channel.muted
                     activeColor: channel.theme.warning
                     enabled: channel.available
                     shortcut: channel.selected ? channel.runtime.shellHint("AudioStreamControl.mute") : ""
+                    Accessible.name: title + (shortcut.length > 0 ? ", " + shortcut : "")
                     onActivated: {
                         channel.selectedRequested();
                         channel.system.toggleStreamMute(channel.stream);

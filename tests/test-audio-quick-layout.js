@@ -66,6 +66,9 @@ test("the same virtualised stream control handles every playback and capture cli
     mixer,
     /onSelectedRequested: mixer\.selectStreamIndex\(streamRow\.index\)/,
   );
+  assert.match(channel, /ShellAction \{[\s\S]*?id: muteButton/);
+  assert.match(channel, /iconOnly: true/);
+  assert.match(channel, /iconHint: shortcut\.length > 0/);
   assert.match(channel, /channel\.system\.toggleStreamMute\(channel\.stream\)/);
   assert.match(
     channel,
