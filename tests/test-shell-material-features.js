@@ -177,6 +177,8 @@ test("local OCR exposes selectable text and highlighted original-image coordinat
     /function moveWordSelection\(direction: int, extend: bool\): void/,
   );
   assert.match(library, /function selectAllWords\(\): void/);
+  assert.match(library, /library\.keyboardRequested\(\);/);
+  assert.doesNotMatch(library, /recognisedText\.forceActiveFocus\(\)/);
   assert.match(
     controls,
     /recordingsPanel\.invoke\("moveWordSelection", 1, shifted\)/,

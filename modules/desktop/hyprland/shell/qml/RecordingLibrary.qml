@@ -374,7 +374,7 @@ Item {
                 library.ocrVisible = true;
                 library.statusError = false;
                 library.statusText = "SELECT TEXT IN THE PREVIEW OR RECOGNISED CONTENT";
-                Qt.callLater(() => recognisedText.forceActiveFocus());
+                library.keyboardRequested();
             } catch (error) {
                 library.statusError = true;
                 library.statusText = "NO READABLE TEXT FOUND";
