@@ -139,7 +139,7 @@ test("inspection is reachable through canonical shortcut, palette and status isl
   );
   assert.match(
     content,
-    /title: "Close status"[\s\S]*?onActivated: content\.closeRequested\(\)/,
+    /title: content\.closeLabel === "Back" \? "Back to Controls" : "Close status"[\s\S]*?onActivated: content\.closeRequested\(\)/,
   );
   assert.match(
     peek,
