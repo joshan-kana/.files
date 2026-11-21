@@ -4,6 +4,7 @@ _: {
   imports = [
     ./bottles
     ./brave
+    ./breeze-icons
     ./comin
     ./kitty
     ./configarr
@@ -40,12 +41,15 @@ _: {
     ./jellyfin-mpv-shim
     ./linear
     ./libreoffice
+    ./linux-desktop-spectrum
+    ./linux-desktop-visuals
     ./notion
     ./open-webui-desktop
     ./open-webui-computer
     ./python-matter-server
     ./prusaslicer
     ./qmk-toolbox
+    ./quickshell
     ./reaper
     ./squirreldisk
     ./spicetify

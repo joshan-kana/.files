@@ -169,6 +169,14 @@
         system:
         let
           pkgs = pkgsFor system;
+          javascriptIncludes = [
+            "*.cjs"
+            "*.js"
+            "*.jsx"
+            "*.mjs"
+            "*.ts"
+            "*.tsx"
+          ];
           typosConfig = pkgs.writeText "typos.toml" ''
             [default.extend-words]
             hass = "hass"
@@ -178,6 +186,7 @@
           projectRootFile = "flake.nix";
 
           programs = {
+            clang-format.enable = true;
             deadnix.enable = true;
             csharpier.enable = true;
             biome = {
@@ -186,6 +195,7 @@
             };
             nixfmt.enable = true;
             prettier.enable = true;
+            qmlformat.enable = true;
             shfmt.enable = true;
             stylua.enable = true;
             taplo.enable = true;
@@ -229,6 +239,34 @@
             formatter = {
               statix.priority = 1;
               nixfmt.priority = 2;
+              clang-format.priority = 1;
+              prettier.priority = 1;
+              quick-lint-js = {
+                command = lib.getExe pkgs.quick-lint-js;
+                includes = javascriptIncludes;
+                priority = 2;
+              };
+
+              qml-lint = {
+                command = lib.getExe' pkgs.kdePackages.qtdeclarative "qmllint";
+                includes = [ "*.qml" ];
+                options =
+                  lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+                    "--max-warnings"
+                    "0"
+                  ]
+                  ++ [
+                    "-I"
+                    "${pkgs.kdePackages.qtdeclarative}/lib/qt-6/qml"
+                  ]
+                  ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+                    "-I"
+                    "${pkgs.quickshell}/lib/qt-6/qml"
+                    "-I"
+                    "${pkgs.linux-desktop-visuals}/lib/qt-6/qml"
+                  ];
+                priority = 2;
+              };
 
               ruff-check.options = [
                 "--isolated"
@@ -246,6 +284,9 @@
                   "format.docstring-code-format = true"
                 ];
               };
+
+              # QML JavaScript exposes functions through the QML engine rather than ES modules.
+              biome.excludes = [ "modules/desktop/hyprland/shell/qml/*.js" ];
 
               prettier = {
                 includes = lib.mkAfter [
@@ -284,6 +325,24 @@
                 includes = [ "*.inc" ];
               };
               typos.priority = 1;
+              cppcheck = {
+                command = lib.getExe' pkgs.cppcheck "cppcheck";
+                priority = 2;
+                includes = [
+                  "*.c"
+                  "*.cc"
+                  "*.cpp"
+                  "*.h"
+                  "*.hh"
+                  "*.hpp"
+                ];
+                options = [
+                  "--library=qt"
+                  "--enable=warning,style,performance,portability"
+                  "--error-exitcode=1"
+                  "--quiet"
+                ];
+              };
               lua-lint = {
                 command = lib.getExe pkgs.lua54Packages.luacheck;
                 includes = [ "*.lua" ];
@@ -714,6 +773,33 @@
           ) self.nixosConfigurations) pkgs.emptyFile;
           docs = self.packages.${system}.docs;
           repo-quality = treefmt.config.build.check self;
+          desktop-regressions =
+            pkgs.runCommand "desktop-regression-tests"
+              {
+                nativeBuildInputs =
+                  with pkgs;
+                  [
+                    nodejs
+                    python3
+                    bash
+                    nix
+                    vdirsyncer
+                  ]
+                  ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [ pkgs.kdePackages.qtdeclarative ];
+              }
+              ''
+                export HOME="$TMPDIR"
+                export NIX_CONFIG='experimental-features = nix-command flakes'
+                cd ${self.outPath}
+                node --test tests/test-*.js
+                ${lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
+                  QT_QPA_PLATFORM=offscreen qmltestrunner -input tests/qml -import ${pkgs.kdePackages.qtdeclarative}/lib/qt-6/qml -platform offscreen
+                ''}
+                python3 tests/test-desktop-scripts.py
+                python3 tests/test-palette-index.py
+                python3 tests/test-calendar-sync.py
+                touch "$out"
+              '';
           git-attributes =
             assert lib.assertMsg (
               builtins.readFile ./.gitattributes == gitAttributesText
