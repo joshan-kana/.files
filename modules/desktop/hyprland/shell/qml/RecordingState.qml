@@ -45,7 +45,7 @@ QtObject {
     }
 
     property FileView statusFile: FileView {
-        path: Quickshell.env("XDG_RUNTIME_DIR") + "/linux-desktop-recording.state"
+        path: Quickshell.env("XDG_RUNTIME_DIR") + "/desktop-shell-recording.state"
         watchChanges: true
         blockLoading: true
         // FileView.loaded is emitted after *each* successful reload; the

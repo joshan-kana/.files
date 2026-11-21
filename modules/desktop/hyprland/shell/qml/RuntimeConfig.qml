@@ -16,9 +16,9 @@ QtObject {
     readonly property string editor: root.configData.defaults.editor
     readonly property string wallpaper: root.themeAdapter.wallpaper
     readonly property string bluetoothctl: root.configData.tools.bluetoothctl
-    readonly property string weatherCurl: Quickshell.env("LINUX_DESKTOP_WEATHER_CURL") || root.configData.tools.weatherCurl
+    readonly property string weatherCurl: Quickshell.env("DESKTOP_SHELL_WEATHER_CURL") || root.configData.tools.weatherCurl
     readonly property string agendaSetup: root.configData.tools.agendaSetup
-    readonly property string agendaQuery: Quickshell.env("LINUX_DESKTOP_AGENDA_QUERY") || root.configData.tools.agendaQuery
+    readonly property string agendaQuery: Quickshell.env("DESKTOP_SHELL_AGENDA_QUERY") || root.configData.tools.agendaQuery
     readonly property string brightnessctl: root.configData.tools.brightnessctl
     readonly property string cliphist: root.configData.tools.cliphist
     readonly property string emojiTest: root.configData.tools.emojiTest
@@ -29,8 +29,8 @@ QtObject {
     readonly property string networkConnectionEditor: root.configData.tools.networkConnectionEditor
     readonly property string nmcli: root.configData.tools.nmcli
     readonly property string hyprctl: root.configData.tools.hyprctl
-    readonly property string sessionCommand: Quickshell.env("LINUX_DESKTOP_SESSION_COMMAND") || root.configData.tools.sessionCommand
-    readonly property string themeSet: Quickshell.env("LINUX_DESKTOP_THEME_SET") || root.themeAdapter.tools.themeSet
+    readonly property string sessionCommand: Quickshell.env("DESKTOP_SHELL_SESSION_COMMAND") || root.configData.tools.sessionCommand
+    readonly property string themeSet: Quickshell.env("DESKTOP_SHELL_THEME_SET") || root.themeAdapter.tools.themeSet
     readonly property string urlOpen: root.configData.tools.urlOpen
     readonly property string paletteSearch: root.configData.tools.paletteSearch
     readonly property string clipboardPaste: root.configData.tools.clipboardPaste
@@ -126,7 +126,7 @@ QtObject {
     }
 
     property FileView themeFile: FileView {
-        path: Quickshell.env("LINUX_DESKTOP_THEME") || root.configFile.path.replace(/runtime\.json$/, "theme.json")
+        path: Quickshell.env("DESKTOP_SHELL_THEME") || root.configFile.path.replace(/runtime\.json$/, "theme.json")
         blockLoading: true
         watchChanges: true
         onFileChanged: {
@@ -200,7 +200,7 @@ QtObject {
     }
 
     property FileView configFile: FileView {
-        path: Quickshell.env("LINUX_DESKTOP_RUNTIME") || ""
+        path: Quickshell.env("DESKTOP_SHELL_RUNTIME") || ""
         blockLoading: true
         watchChanges: true
         onFileChanged: {

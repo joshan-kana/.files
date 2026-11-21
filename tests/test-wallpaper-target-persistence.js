@@ -5,7 +5,7 @@ const path = require("node:path");
 
 const script = (name) =>
   fs.readFileSync(
-    path.join(__dirname, "../scripts/linux-desktop", name),
+    path.join(__dirname, "../scripts/desktop-shell", name),
     "utf8",
   );
 const restoreWallpaper = () => script("wallpaper-apply.sh");
@@ -85,22 +85,22 @@ test("login wallpaper restoration reads the Stylix theme, not the unrelated runt
     "utf8",
   );
   const restore = script("wallpaper-apply.sh");
-  assert.match(restore, /linux-desktop\/theme\.json/);
+  assert.match(restore, /desktop-shell\/theme\.json/);
   assert.match(restore, /wallpaper="\$\(jq -er '\.wallpaper/);
-  assert.match(restore, /linux-desktop\/runtime\.json/);
+  assert.match(restore, /desktop-shell\/runtime\.json/);
   assert.match(restore, /for entry in "\$state_dir"\/\*\.wall;/);
   assert.match(restore, /cmp -s "\$entry" "\$state_dir\/all\.wall"/);
   assert.match(
     restore,
-    /systemctl --user stop --no-block "linux-desktop-wallpaper-video@\$output\.service"/,
+    /systemctl --user stop --no-block "desktop-shell-wallpaper-video@\$output\.service"/,
   );
   assert.match(
     restore,
-    /systemctl --user start --no-block "linux-desktop-wallpaper-video@\$output\.service"/,
+    /systemctl --user start --no-block "desktop-shell-wallpaper-video@\$output\.service"/,
   );
   assert.match(
     nix,
-    /Path\.PathChanged = "%h\/\.config\/linux-desktop\/theme\.json"/,
+    /Path\.PathChanged = "%h\/\.config\/desktop-shell\/theme\.json"/,
   );
 });
 
@@ -118,7 +118,7 @@ test("full-screen video and lock-screen posters retain source resolution", () =>
   assert.match(poster, /scale=380:250:force_original_aspect_ratio=decrease/);
   assert.match(
     restoreWallpaper(),
-    /linux-desktop-wallpaper-library poster "\$image"/,
+    /desktop-shell-wallpaper-library poster "\$image"/,
   );
   assert.match(poster, /still="\$\(\$0 poster "\$image"\)"/);
   assert.match(read("LockScreen.qml"), /"poster", pendingPoster/);
@@ -140,7 +140,7 @@ test("all-display video does not cover explicit monitor overrides", () => {
   assert.match(player, /wait -n/);
   assert.match(
     script("wallpaper-library.sh"),
-    /systemctl --user restart linux-desktop-wallpaper-video@all\.service/,
+    /systemctl --user restart desktop-shell-wallpaper-video@all\.service/,
   );
 });
 
@@ -156,7 +156,7 @@ test("video player launches only on displays not owned by another selection", ()
   const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "wallpaper-owner-"));
   try {
     const bin = path.join(scratch, "bin");
-    const state = path.join(scratch, "state", "linux-desktop", "wallpapers");
+    const state = path.join(scratch, "state", "desktop-shell", "wallpapers");
     fs.mkdirSync(bin, { recursive: true });
     fs.mkdirSync(state, { recursive: true });
     const allVideo = path.join(scratch, "all.mp4");

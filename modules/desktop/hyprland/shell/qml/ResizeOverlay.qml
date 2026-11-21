@@ -88,7 +88,7 @@ PanelWindow {
     margins.top: effectiveTopOffset
     updatesEnabled: surfaceLifecycle.needsRendering
     mask: surfaceLifecycle.inputRegion
-    WlrLayershell.namespace: "linux-desktop-resize-controls"
+    WlrLayershell.namespace: "desktop-shell-resize-controls"
     WlrLayershell.layer: screenFullscreen ? WlrLayer.Overlay : WlrLayer.Top
     WlrLayershell.keyboardFocus: open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 

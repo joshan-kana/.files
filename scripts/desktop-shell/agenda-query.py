@@ -15,11 +15,11 @@ HOME = Path.home()
 CONFIG = Path(os.environ.get("XDG_CONFIG_HOME", str(HOME / ".config")))
 DATA = Path(os.environ.get("XDG_DATA_HOME", str(HOME / ".local/share")))
 STATE = Path(os.environ.get("XDG_STATE_HOME", str(HOME / ".local/state")))
-VDIR_READY = STATE / "linux-desktop/ical-vdir-ready"
+VDIR_READY = STATE / "desktop-shell/ical-vdir-ready"
 SUBSCRIPTIONS = DATA / "calendars/subscriptions"
 SOURCES = HOME / ".secrets/calendar-icals"
 CACHE = DATA / "calendars/personal"
-SETTINGS = CONFIG / "linux-desktop/calendar-visibility.json"
+SETTINGS = CONFIG / "desktop-shell/calendar-visibility.json"
 EVENT_FILENAME = re.compile(r"^google-ical-([a-f0-9]{24})--([a-f0-9]{64})\.ics$")
 DATE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
 
@@ -221,7 +221,7 @@ def main():
         set_enabled(sys.argv[2], sys.argv[3] == "true")
         return
     if len(sys.argv) != 2 or not DATE.fullmatch(sys.argv[1]):
-        raise ValueError("usage: linux-desktop-agenda-query YYYY-MM-DD")
+        raise ValueError("usage: desktop-shell-agenda-query YYYY-MM-DD")
     print(json.dumps(agenda(sys.argv[1])))
 
 

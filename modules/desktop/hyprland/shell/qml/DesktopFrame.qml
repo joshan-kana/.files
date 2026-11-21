@@ -106,7 +106,7 @@ Variants {
                 left: true
                 right: true
             }
-            WlrLayershell.namespace: "linux-desktop-frame"
+            WlrLayershell.namespace: "desktop-shell-frame"
             WlrLayershell.layer: WlrLayer.Top
             WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
             mask: Region {
@@ -272,7 +272,7 @@ Variants {
         implicitWidth: 1
         implicitHeight: 1
         exclusiveZone: active ? inset : 0
-        WlrLayershell.namespace: "linux-desktop-frame-reservation"
+        WlrLayershell.namespace: "desktop-shell-frame-reservation"
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
         mask: Region {
             item: Item {

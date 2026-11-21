@@ -496,16 +496,16 @@ in
                     manifest=${lib.escapeShellArg (toString themeManifest)}
                     expectedUser=${lib.escapeShellArg osConfig.dotfiles.users.primary.name}
                     configurationName=${lib.escapeShellArg configurationName}
-                    operationDir="''${XDG_STATE_HOME:-$HOME/.local/state}/linux-desktop/theme-operation"
-                    operationUnit=linux-desktop-theme-apply.service
+                    operationDir="''${XDG_STATE_HOME:-$HOME/.local/state}/desktop-shell/theme-operation"
+                    operationUnit=desktop-shell-theme-apply.service
                   ''
-                  + builtins.readFile ../../scripts/linux-desktop/theme-set.sh;
+                  + builtins.readFile ../../scripts/desktop-shell/theme-set.sh;
                 };
               in
               {
                 home.packages = [ themeSet ];
-                xdg.configFile."linux-desktop/theme.json".source =
-                  (pkgs.formats.json { }).generate "linux-desktop-theme.json"
+                xdg.configFile."desktop-shell/theme.json".source =
+                  (pkgs.formats.json { }).generate "desktop-shell-theme.json"
                     {
                       theme = {
                         background = colors.base00;

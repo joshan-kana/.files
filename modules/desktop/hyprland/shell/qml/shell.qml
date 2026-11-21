@@ -1,4 +1,4 @@
-//@ pragma ShellId linux-desktop
+//@ pragma ShellId desktop-shell
 pragma ComponentBehavior: Bound
 
 import QtQuick
@@ -413,7 +413,7 @@ ShellRoot {
             top: true
             left: true
         }
-        WlrLayershell.namespace: "linux-desktop-capture"
+        WlrLayershell.namespace: "desktop-shell-capture"
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.keyboardFocus: focusable ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
@@ -438,7 +438,7 @@ ShellRoot {
             top: true
             left: true
         }
-        WlrLayershell.namespace: "linux-desktop-modal-dim"
+        WlrLayershell.namespace: "desktop-shell-modal-dim"
         WlrLayershell.layer: WlrLayer.Top
         mask: Region {
             item: dimInputMask
@@ -605,209 +605,209 @@ ShellRoot {
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "cheatsheet"
         description: "Show Hyprland keyboard shortcuts"
         onPressed: actions.toggleCheatsheet()
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "launcher"
         description: "Open command palette"
         onPressed: actions.toggleLauncher()
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "launcher-slot-1"
         description: "Open command palette result 1"
         onPressed: qmlLauncher.launchIndex(0)
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "launcher-slot-2"
         description: "Open command palette result 2"
         onPressed: qmlLauncher.launchIndex(1)
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "launcher-slot-3"
         description: "Open command palette result 3"
         onPressed: qmlLauncher.launchIndex(2)
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "launcher-slot-4"
         description: "Open command palette result 4"
         onPressed: qmlLauncher.launchIndex(3)
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "launcher-slot-5"
         description: "Open command palette result 5"
         onPressed: qmlLauncher.launchIndex(4)
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "launcher-slot-6"
         description: "Open command palette result 6"
         onPressed: qmlLauncher.launchIndex(5)
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "launcher-slot-7"
         description: "Open command palette result 7"
         onPressed: qmlLauncher.launchIndex(6)
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "launcher-slot-8"
         description: "Open command palette result 8"
         onPressed: qmlLauncher.launchIndex(7)
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "launcher-slot-9"
         description: "Open command palette result 9"
         onPressed: qmlLauncher.launchIndex(8)
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "overview"
         description: "Window and workspace overview"
         onPressed: actions.toggleOverview()
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "keyboard-caps-lock"
         description: "Show Caps Lock state"
         onPressed: qmlOsd.refreshKeyboardLocks("caps")
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "keyboard-num-lock"
         description: "Show Num Lock state"
         onPressed: qmlOsd.refreshKeyboardLocks("num")
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "wallpaper-spectrum"
         description: "Toggle live wallpaper music spectrum"
         onPressed: qmlAppearance.toggleWallpaperSpectrum()
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "music-reactive"
         description: "Toggle music-reactive desktop surfaces"
         onPressed: qmlAppearance.toggleMusicReactive()
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "record-toggle"
         description: "Start or stop a selected screen recording"
         onPressed: actions.toggleRecording()
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "capture-region"
         description: "Copy selected screen region to clipboard"
         onPressed: actions.captureRegion(true)
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "clipboard"
         description: "Open clipboard history"
         onPressed: actions.toggleClipboard()
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "audio-mixer"
         description: "Open application audio mixer"
         onPressed: actions.toggleAudioMixer()
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "lock"
         description: "Lock the current session"
         onPressed: actions.lockSession()
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "session"
         description: "Open power and session controls"
         onPressed: actions.showSession()
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "theme"
         description: "Open theme picker"
         onPressed: actions.showTheme()
     }
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "wallpaper"
         description: "Open wallpaper gallery"
         onPressed: actions.showWallpaper()
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "captures"
         description: "Open capture history"
         onPressed: actions.showCaptures()
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "colour-pick"
         description: "Pick a screen colour and copy its HEX value"
         onPressed: actions.pickColour()
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "window-effects"
         description: "Toggle transparent windows"
         onPressed: qmlAppearance.toggleWindowTransparency()
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "bar"
         description: "Toggle top bar"
         onPressed: root.toggleBar()
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "media"
         description: "Open now playing"
         onPressed: actions.toggleMedia()
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "resize-mode"
         description: "Open keyboard-driven window resize controls"
         onPressed: {
@@ -818,140 +818,140 @@ ShellRoot {
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "microphone-mute"
         description: "Toggle default microphone mute"
         onPressed: qmlSystem.toggleMicrophoneMute()
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "status-peek"
         description: "Inspect current system status without changing it"
         onPressed: root.toggleStatusInspection()
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "media-play-pause"
         description: "Play or pause the selected media player"
         onPressed: actions.mediaPlayPause()
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "media-next"
         description: "Skip to the next track"
         onPressed: actions.mediaNext()
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "media-previous"
         description: "Return to the previous track"
         onPressed: actions.mediaPrevious()
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "media-seek-forward"
         description: "Seek forward by the configured interval"
         onPressed: actions.mediaSeekForward()
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "media-seek-backward"
         description: "Seek backward by the configured interval"
         onPressed: actions.mediaSeekBackward()
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "media-shuffle"
         description: "Toggle shuffle for the selected media player"
         onPressed: actions.mediaToggleShuffle()
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "media-cycle-player"
         description: "Select the next media player"
         onPressed: actions.mediaCyclePlayer()
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "home"
         description: "Open Home"
         onPressed: actions.toggleCalendar()
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "controls"
         description: "Open Controls"
         onPressed: actions.toggleSystem()
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "system"
         description: "Open system controls"
         onPressed: actions.toggleSystem()
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "volume-up"
         description: "Increase output volume"
         onPressed: actions.volumeUp()
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "volume-down"
         description: "Decrease output volume"
         onPressed: actions.volumeDown()
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "volume-mute"
         description: "Toggle output mute"
         onPressed: actions.toggleMute()
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "brightness-up"
         description: "Increase display brightness"
         onPressed: actions.brightnessUp()
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "brightness-down"
         description: "Decrease display brightness"
         onPressed: actions.brightnessDown()
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "animations"
         description: "Toggle desktop animations"
         onPressed: actions.toggleAnimations()
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "notifications"
         description: "Open notification history"
         onPressed: actions.toggleNotifications()
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "notifications-act"
         description: "Activate latest notification"
         onPressed: {
@@ -961,7 +961,7 @@ ShellRoot {
     }
 
     GlobalShortcut {
-        appid: "linux-desktop"
+        appid: "desktop-shell"
         name: "notifications-dismiss"
         description: "Dismiss latest visible notification"
         onPressed: qmlNotifications.dismissLatestPopup()

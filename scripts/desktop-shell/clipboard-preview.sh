@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 action="${1:-}"
 id="${2:-}"
-private_dir="${XDG_RUNTIME_DIR:?}/linux-desktop-clipboard"
+private_dir="${XDG_RUNTIME_DIR:?}/desktop-shell-clipboard"
 case "$action" in
 clear)
   # The thumbnails are disposable previews, never a second store.

@@ -166,7 +166,7 @@ test("native bars consume one shared full-resolution target without per-bar QML 
     "utf8",
   );
 
-  assert.match(bars, /import LinuxDesktop\.Visuals 1\.0/);
+  assert.match(bars, /import DesktopShell\.Visuals 1\.0/);
   assert.match(bars, /SpectrumBarsItem\s*\{/);
   assert.match(bars, /targetBands: root\.spectrum\.targetBands/);
   assert.match(bars, /edges: root\.bandEdges/);

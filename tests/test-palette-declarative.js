@@ -8,7 +8,7 @@ const shell = path.join(__dirname, "../modules/desktop/hyprland/shell");
 const read = (file) => fs.readFileSync(path.join(shell, file), "utf8");
 const readScript = (file) =>
   fs.readFileSync(
-    path.join(__dirname, "../scripts/linux-desktop", file),
+    path.join(__dirname, "../scripts/desktop-shell", file),
     "utf8",
   );
 const utilities = vm.runInNewContext(
@@ -212,7 +212,7 @@ test("Theme-owned shell presentation is applied through the theme app scope", ()
   );
   assert.match(
     themeNix,
-    /xdg\.configFile\."linux-desktop\/theme\.json"\.source =[\s\S]*?visual = \{/,
+    /xdg\.configFile\."desktop-shell\/theme\.json"\.source =[\s\S]*?visual = \{/,
   );
   for (const [name, value] of [
     ["panelOpacity", "1.0"],

@@ -263,7 +263,7 @@
                     "-I"
                     "${pkgs.quickshell}/lib/qt-6/qml"
                     "-I"
-                    "${pkgs.linux-desktop-visuals}/lib/qt-6/qml"
+                    "${pkgs.desktop-shell-visuals}/lib/qt-6/qml"
                   ];
                 priority = 2;
               };

@@ -6,7 +6,7 @@ const { test } = require("node:test");
 const root = path.join(__dirname, "../modules/desktop/hyprland/shell");
 const nix = fs.readFileSync(path.join(root, "default.nix"), "utf8");
 const lockCommand = fs.readFileSync(
-  path.join(__dirname, "../scripts/linux-desktop/lock.sh"),
+  path.join(__dirname, "../scripts/desktop-shell/lock.sh"),
   "utf8",
 );
 const session = fs.readFileSync(
@@ -36,7 +36,7 @@ test("session widget and global keybind use the same lock command", () => {
   assert.match(nix, /lockSession = lib\.getExe lockCommand/);
   assert.match(
     lockCommand,
-    /systemctl --user start linux-desktop-lock\.service/,
+    /systemctl --user start desktop-shell-lock\.service/,
   );
   assert.match(session, /Quickshell\.execDetached\(\[runtime\.lockSession\]\)/);
   assert.match(
@@ -47,7 +47,7 @@ test("session widget and global keybind use the same lock command", () => {
 });
 
 test("Home Manager switches preserve an active session lock without starting a new one", () => {
-  const lock = nix.match(/linux-desktop-lock = \{([\s\S]*?)\n {8}\};/);
+  const lock = nix.match(/desktop-shell-lock = \{([\s\S]*?)\n {8}\};/);
   assert.ok(lock, "the existing on-demand lock service is retained");
   assert.match(lock[1], /X-SwitchMethod = "keep-old"/);
   assert.match(lock[1], /Restart = "no"/);
@@ -55,13 +55,13 @@ test("Home Manager switches preserve an active session lock without starting a n
   assert.doesNotMatch(lock[1], /Install\.WantedBy/);
   assert.match(
     lockCommand,
-    /systemctl --user start linux-desktop-lock\.service/,
+    /systemctl --user start desktop-shell-lock\.service/,
   );
 });
 
 test("the lock service cannot retire during asynchronous acquisition or a rebuild", () => {
   const screen = fs.readFileSync(path.join(root, "qml/LockScreen.qml"), "utf8");
-  const lock = nix.match(/linux-desktop-lock = \{([\s\S]*?)\n {8}\};/);
+  const lock = nix.match(/desktop-shell-lock = \{([\s\S]*?)\n {8}\};/);
   assert.ok(lock);
   assert.match(lock[1], /X-SwitchMethod = "keep-old"/);
   assert.match(lock[1], /Restart = "no"/);
@@ -84,7 +84,7 @@ test("the lock service cannot retire during asynchronous acquisition or a rebuil
   assert.match(qml, /onTriggered: root\.stopLockService\(\)/);
   assert.match(
     qml,
-    /Quickshell\.execDetached\(\["systemctl", "--user", "stop", "--no-block", "linux-desktop-lock\.service"\]\)/,
+    /Quickshell\.execDetached\(\["systemctl", "--user", "stop", "--no-block", "desktop-shell-lock\.service"\]\)/,
   );
   assert.doesNotMatch(qml, /Qt\.quit\(\)/);
   assert.doesNotMatch(qml, /runtime\.lockSession, "unlocked"/);
@@ -141,7 +141,7 @@ test("the shutdown guard ignores transient acquisition states and runs once afte
     "--user",
     "stop",
     "--no-block",
-    "linux-desktop-lock.service",
+    "desktop-shell-lock.service",
   ]);
   stop(state, quickshell);
   assert.equal(calls.length, 1, "retirement is idempotent");

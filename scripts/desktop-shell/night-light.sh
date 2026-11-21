@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/linux-desktop"
+state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/desktop-shell"
 state_file="$state_dir/night-light"
 mode=off
 temperature=4500
@@ -35,15 +35,15 @@ should_run() {
 }
 apply() {
   if should_run; then
-    systemctl --user restart linux-desktop-night-light.service
+    systemctl --user restart desktop-shell-night-light.service
   else
-    systemctl --user stop linux-desktop-night-light.service
+    systemctl --user stop desktop-shell-night-light.service
   fi
 }
 case "${1:-state}" in
 state)
   active=false
-  if systemctl --user --quiet is-active linux-desktop-night-light.service; then active=true; fi
+  if systemctl --user --quiet is-active desktop-shell-night-light.service; then active=true; fi
   printf '{"mode":"%s","temperature":%s,"active":%s,"supported":true}\n' "$mode" "$temperature" "$active"
   ;;
 run)
@@ -71,7 +71,7 @@ warmer | cooler)
   if should_run; then apply; fi
   ;;
 *)
-  printf 'Usage: linux-desktop-night-light {state|run|apply|toggle|set K|warmer|cooler}\n' >&2
+  printf 'Usage: desktop-shell-night-light {state|run|apply|toggle|set K|warmer|cooler}\n' >&2
   exit 2
   ;;
 esac

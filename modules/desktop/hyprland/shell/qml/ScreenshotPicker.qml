@@ -30,7 +30,7 @@ Item {
     property bool liveExportPending: false
     property Settings capturePreferences: Settings {
         id: qmlCapturePreferences
-        location: "file://" + (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/linux-desktop/preferences.ini"
+        location: "file://" + (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/desktop-shell/preferences.ini"
         category: "Capture"
         property bool freezeEnabled: picker.runtime.captureFreezeEnabled
         property string preferenceSource: ""

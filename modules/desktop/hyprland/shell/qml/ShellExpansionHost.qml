@@ -428,7 +428,7 @@ PanelWindow {
         left: screen ? (screen.width - viewportWidth) / 2 : 0
     }
 
-    WlrLayershell.namespace: "linux-desktop-expansion"
+    WlrLayershell.namespace: "desktop-shell-expansion"
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: expansionState.hasCurrent && !themeTerminalActive ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 

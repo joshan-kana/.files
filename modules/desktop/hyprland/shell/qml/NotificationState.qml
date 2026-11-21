@@ -45,7 +45,7 @@ QtObject {
     // lock-screen notifications are needed.
     property FileView sessionLock: FileView {
         id: lockState
-        path: Quickshell.env("XDG_RUNTIME_DIR") + "/linux-desktop-session-lock.state"
+        path: Quickshell.env("XDG_RUNTIME_DIR") + "/desktop-shell-session-lock.state"
         watchChanges: true
         blockLoading: true
         printErrors: false
@@ -57,13 +57,13 @@ QtObject {
     // consulted once to migrate prior choices without losing per-app rules.
     property Settings previousPreferences: Settings {
         id: previousSettings
-        location: "file://" + (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/linux-desktop/notifications.ini"
+        location: "file://" + (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/desktop-shell/notifications.ini"
         category: "Notifications"
     }
 
     property Settings preferences: Settings {
         id: settings
-        location: "file://" + (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/linux-desktop/preferences.ini"
+        location: "file://" + (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/desktop-shell/preferences.ini"
         category: "Notifications"
         property bool legacyMigrated: false
         property bool silent: root.runtime.notificationSilent

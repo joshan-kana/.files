@@ -26,14 +26,14 @@ class PaletteIndexTests(unittest.TestCase):
         self.addCleanup(home_override.stop)
         self.root = self.base / "roots"
         self.root.mkdir()
-        self.config = self.base / "config" / "linux-desktop"
+        self.config = self.base / "config" / "desktop-shell"
         self.config.mkdir(parents=True)
         self.runtime = self.config / "runtime.json"
         self.runtime.write_text(json.dumps({"palette": {"fileRoots": [str(self.root)]}}))
-        self.saved_env = {key: os.environ.get(key) for key in ("LINUX_DESKTOP_RUNTIME", "XDG_CONFIG_HOME")}
-        os.environ["LINUX_DESKTOP_RUNTIME"] = str(self.runtime)
+        self.saved_env = {key: os.environ.get(key) for key in ("DESKTOP_SHELL_RUNTIME", "XDG_CONFIG_HOME")}
+        os.environ["DESKTOP_SHELL_RUNTIME"] = str(self.runtime)
         self.addCleanup(self.restore_env)
-        source = Path(__file__).resolve().parents[1] / "scripts/linux-desktop/palette-search.py"
+        source = Path(__file__).resolve().parents[1] / "scripts/desktop-shell/palette-search.py"
         spec = importlib.util.spec_from_file_location("palette_search_under_test", source)
         self.palette = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(self.palette)

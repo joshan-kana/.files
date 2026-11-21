@@ -220,7 +220,7 @@ Variants {
             right: true
         }
 
-        WlrLayershell.namespace: "linux-desktop-bar"
+        WlrLayershell.namespace: "desktop-shell-bar"
 
         // Wayland manages the inhibitor with the existing bar surface's lifetime.
         IdleInhibitor {

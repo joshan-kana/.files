@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 umask 077
-settings="${XDG_RUNTIME_DIR:?}/linux-desktop-recording.conf"
+settings="${XDG_RUNTIME_DIR:?}/desktop-shell-recording.conf"
 if [ -f "$settings" ]; then
   { IFS= read -r output && IFS= read -r geometry && IFS= read -r audio; } <"$settings" || exit 2
   rm -f -- "$settings"
@@ -15,7 +15,7 @@ else
   args=()
 fi
 [ -n "$geometry" ] || exit 0
-directory="${LINUX_DESKTOP_RECORDING_DIR:-$HOME/Videos/Screencasts}"
+directory="${DESKTOP_SHELL_RECORDING_DIR:-$HOME/Videos/Screencasts}"
 mkdir -p "$directory"
 output="$directory/Recording-$(date +%Y%m%d-%H%M%S)-$$.mp4"
 case "$audio" in
@@ -30,5 +30,5 @@ microphone)
   args+=("--audio=$source")
   ;;
 esac
-printf 'recording\n%s\n%s\n' "$(date +%s)" "$output" >"${XDG_RUNTIME_DIR:?}/linux-desktop-recording.state"
+printf 'recording\n%s\n%s\n' "$(date +%s)" "$output" >"${XDG_RUNTIME_DIR:?}/desktop-shell-recording.state"
 exec wf-recorder "${args[@]}" --geometry "$geometry" --file "$output"

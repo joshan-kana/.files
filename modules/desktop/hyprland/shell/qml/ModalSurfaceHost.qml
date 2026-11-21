@@ -41,7 +41,7 @@ PanelWindow {
         top: !screen ? 0 : Math.max(0, Math.floor((screen.height - implicitHeight) / 2))
         left: !screen ? 0 : Math.max(0, Math.floor((screen.width - implicitWidth) / 2))
     }
-    WlrLayershell.namespace: "linux-desktop-modal"
+    WlrLayershell.namespace: "desktop-shell-modal"
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: focusable ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 

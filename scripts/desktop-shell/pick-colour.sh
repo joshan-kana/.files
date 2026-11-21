@@ -10,4 +10,4 @@ fi
 # shellcheck disable=SC2016
 systemd-run --user --scope --quiet -- \
   bash -c 'printf "%s" "$1" | wl-copy --type text/plain' colour-picker-copy "$selected"
-notify-send --app-name=linux-desktop "Colour copied" "$selected"
+notify-send --app-name=desktop-shell "Colour copied" "$selected"

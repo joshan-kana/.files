@@ -1,4 +1,4 @@
-//@ pragma ShellId linux-desktop-lock
+//@ pragma ShellId desktop-shell-lock
 
 import QtQuick
 import Quickshell
@@ -15,7 +15,7 @@ ShellRoot {
     // service is created.
     FileView {
         id: notificationLockState
-        path: Quickshell.env("XDG_RUNTIME_DIR") + "/linux-desktop-session-lock.state"
+        path: Quickshell.env("XDG_RUNTIME_DIR") + "/desktop-shell-session-lock.state"
         blockWrites: true
         atomicWrites: true
     }
@@ -52,7 +52,7 @@ ShellRoot {
         armed = false;
         // Authentication has released the lock. Keep Quickshell alive briefly
         // so the compositor can process the unlock before systemd retires it.
-        Quickshell.execDetached(["systemctl", "--user", "stop", "--no-block", "linux-desktop-lock.service"]);
+        Quickshell.execDetached(["systemctl", "--user", "stop", "--no-block", "desktop-shell-lock.service"]);
     }
 
     Timer {

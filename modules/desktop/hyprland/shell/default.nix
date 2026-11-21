@@ -9,20 +9,20 @@ let
   sessionTarget = "wayland-session@hyprland.desktop.target";
 
   resourceProbe = pkgs.writeShellApplication {
-    name = "linux-desktop-resource-probe";
-    text = builtins.readFile ../../../../scripts/linux-desktop/resource-probe.sh;
+    name = "desktop-shell-resource-probe";
+    text = builtins.readFile ../../../../scripts/desktop-shell/resource-probe.sh;
   };
 
   palettePython = pkgs.python3.withPackages (packages: [ packages.watchdog ]);
 
   paletteSearch = pkgs.writeShellApplication {
-    name = "linux-desktop-palette-search";
+    name = "desktop-shell-palette-search";
     runtimeInputs = [
       palettePython
       pkgs.glib
     ];
     text = ''
-      exec ${lib.getExe palettePython} ${../../../../scripts/linux-desktop/palette-search.py} "$@"
+      exec ${lib.getExe palettePython} ${../../../../scripts/desktop-shell/palette-search.py} "$@"
     '';
   };
 
@@ -506,7 +506,7 @@ in
       json = pkgs.formats.json { };
 
       applyWallpaper = pkgs.writeShellApplication {
-        name = "linux-desktop-wallpaper-apply";
+        name = "desktop-shell-wallpaper-apply";
         runtimeInputs = [
           wallpaperLibrary
           pkgs.awww
@@ -516,12 +516,12 @@ in
           pkgs.util-linux
         ];
         text =
-          builtins.readFile ../../../../scripts/linux-desktop/wallpaper-common.sh
-          + builtins.readFile ../../../../scripts/linux-desktop/wallpaper-apply.sh;
+          builtins.readFile ../../../../scripts/desktop-shell/wallpaper-common.sh
+          + builtins.readFile ../../../../scripts/desktop-shell/wallpaper-apply.sh;
       };
 
       wallpaperLibrary = pkgs.writeShellApplication {
-        name = "linux-desktop-wallpaper-library";
+        name = "desktop-shell-wallpaper-library";
         runtimeInputs = [
           pkgs.awww
           pkgs.coreutils
@@ -532,27 +532,27 @@ in
           pkgs.util-linux
         ];
         text =
-          builtins.readFile ../../../../scripts/linux-desktop/wallpaper-common.sh
-          + builtins.readFile ../../../../scripts/linux-desktop/wallpaper-library.sh;
+          builtins.readFile ../../../../scripts/desktop-shell/wallpaper-common.sh
+          + builtins.readFile ../../../../scripts/desktop-shell/wallpaper-library.sh;
       };
 
       wallpaperVideoFromState = pkgs.writeShellApplication {
-        name = "linux-desktop-wallpaper-video-from-state";
+        name = "desktop-shell-wallpaper-video-from-state";
         runtimeInputs = [
           pkgs.jq
           pkgs.awww
           pkgs.mpvpaper
           pkgs.coreutils
         ];
-        text = builtins.readFile ../../../../scripts/linux-desktop/wallpaper-video-from-state.sh;
+        text = builtins.readFile ../../../../scripts/desktop-shell/wallpaper-video-from-state.sh;
       };
 
       # The subscribed iCal URL is a runtime-only secret. Google Calendar
       # publishes a standard VCALENDAR feed; khal already owns local event UI.
-      agendaIcalSource = ../../../../scripts/linux-desktop/ical-sync.py;
+      agendaIcalSource = ../../../../scripts/desktop-shell/ical-sync.py;
 
       agendaIcalSync = pkgs.writeShellApplication {
-        name = "linux-desktop-ical-sync";
+        name = "desktop-shell-ical-sync";
         runtimeInputs = [
           pkgs.python3
           pkgs.vdirsyncer
@@ -563,15 +563,15 @@ in
       };
 
       agendaSetup = pkgs.writeShellApplication {
-        name = "linux-desktop-agenda-setup";
+        name = "desktop-shell-agenda-setup";
         runtimeInputs = [ pkgs.coreutils ];
-        text = builtins.readFile ../../../../scripts/linux-desktop/agenda-setup.sh;
+        text = builtins.readFile ../../../../scripts/desktop-shell/agenda-setup.sh;
       };
 
-      agendaQuerySource = ../../../../scripts/linux-desktop/agenda-query.py;
+      agendaQuerySource = ../../../../scripts/desktop-shell/agenda-query.py;
 
       agendaQuery = pkgs.writeShellApplication {
-        name = "linux-desktop-agenda-query";
+        name = "desktop-shell-agenda-query";
         runtimeInputs = [
           pkgs.python3
           pkgs.khal
@@ -582,25 +582,25 @@ in
       };
 
       clipboardPreview = pkgs.writeShellApplication {
-        name = "linux-desktop-clipboard-preview";
+        name = "desktop-shell-clipboard-preview";
         runtimeInputs = [
           pkgs.cliphist
           pkgs.coreutils
           pkgs.imagemagick
         ];
-        text = builtins.readFile ../../../../scripts/linux-desktop/clipboard-preview.sh;
+        text = builtins.readFile ../../../../scripts/desktop-shell/clipboard-preview.sh;
       };
 
       clipboardCopy = pkgs.writeShellApplication {
-        name = "linux-desktop-clipboard-copy";
+        name = "desktop-shell-clipboard-copy";
         runtimeInputs = [
           pkgs.cliphist
           pkgs.wl-clipboard
         ];
-        text = builtins.readFile ../../../../scripts/linux-desktop/clipboard-copy.sh;
+        text = builtins.readFile ../../../../scripts/desktop-shell/clipboard-copy.sh;
       };
 
-      spectrumAnalyzer = pkgs.linux-desktop-spectrum;
+      spectrumAnalyzer = pkgs.desktop-shell-spectrum;
 
       keybindings = import ../keybindings.nix {
         terminal = osConfig.dotfiles.defaults.terminal;
@@ -612,7 +612,7 @@ in
         binding:
         binding.submap == "launcher"
         && binding.action.type == "global"
-        && lib.hasPrefix "linux-desktop:launcher-slot-" binding.action.value
+        && lib.hasPrefix "desktop-shell:launcher-slot-" binding.action.value
       ) keybindings;
       launcherSlotsHint =
         if launcherSlotBindings == [ ] then
@@ -646,7 +646,7 @@ in
         }) (lib.filter (binding: binding.id != null) keybindings)
       );
 
-      runtimeConfig = json.generate "linux-desktop-runtime.json" {
+      runtimeConfig = json.generate "desktop-shell-runtime.json" {
         wallpaperVideoDefault = scopeConfig.videoWallpaper;
         defaults = {
           terminal = osConfig.dotfiles.defaults.terminal;
@@ -721,59 +721,59 @@ in
       };
 
       launcher = pkgs.writeShellApplication {
-        name = "linux-desktop";
+        name = "desktop-shell";
         runtimeInputs = [ pkgs.quickshell ];
         text = ''
-          export LINUX_DESKTOP_RUNTIME="''${XDG_CONFIG_HOME:-$HOME/.config}/linux-desktop/runtime.json"
-          export QML_IMPORT_PATH="${pkgs.linux-desktop-visuals}/lib/qt-6/qml''${QML_IMPORT_PATH:+:$QML_IMPORT_PATH}"
+          export DESKTOP_SHELL_RUNTIME="''${XDG_CONFIG_HOME:-$HOME/.config}/desktop-shell/runtime.json"
+          export QML_IMPORT_PATH="${pkgs.desktop-shell-visuals}/lib/qt-6/qml''${QML_IMPORT_PATH:+:$QML_IMPORT_PATH}"
           export QS_ICON_THEME=${lib.escapeShellArg config.gtk.iconTheme.name}
           exec qs --path "${productionShellPath}" "$@"
         '';
       };
 
       developmentLauncher = pkgs.writeShellApplication {
-        name = "linux-desktop-dev";
+        name = "desktop-shell-dev";
         runtimeInputs = [ pkgs.quickshell ];
         text = ''
-          export LINUX_DESKTOP_RUNTIME="''${XDG_CONFIG_HOME:-$HOME/.config}/linux-desktop/runtime.json"
-          export QML_IMPORT_PATH="${pkgs.linux-desktop-visuals}/lib/qt-6/qml''${QML_IMPORT_PATH:+:$QML_IMPORT_PATH}"
+          export DESKTOP_SHELL_RUNTIME="''${XDG_CONFIG_HOME:-$HOME/.config}/desktop-shell/runtime.json"
+          export QML_IMPORT_PATH="${pkgs.desktop-shell-visuals}/lib/qt-6/qml''${QML_IMPORT_PATH:+:$QML_IMPORT_PATH}"
           export QS_ICON_THEME=${lib.escapeShellArg config.gtk.iconTheme.name}
           exec qs --path ${lib.escapeShellArg developmentShellPath} "$@"
         '';
       };
 
       lockServiceLauncher = pkgs.writeShellApplication {
-        name = "linux-desktop-lock-shell";
+        name = "desktop-shell-lock-shell";
         runtimeInputs = [ pkgs.quickshell ];
         text = ''
-          export LINUX_DESKTOP_RUNTIME="''${XDG_CONFIG_HOME:-$HOME/.config}/linux-desktop/runtime.json"
-          export QML_IMPORT_PATH="${pkgs.linux-desktop-visuals}/lib/qt-6/qml''${QML_IMPORT_PATH:+:$QML_IMPORT_PATH}"
+          export DESKTOP_SHELL_RUNTIME="''${XDG_CONFIG_HOME:-$HOME/.config}/desktop-shell/runtime.json"
+          export QML_IMPORT_PATH="${pkgs.desktop-shell-visuals}/lib/qt-6/qml''${QML_IMPORT_PATH:+:$QML_IMPORT_PATH}"
           export QS_ICON_THEME=${lib.escapeShellArg config.gtk.iconTheme.name}
           exec qs --no-duplicate --path "${productionShellPath}/lock.qml"
         '';
       };
 
       lockCommand = pkgs.writeShellApplication {
-        name = "linux-desktop-lock";
+        name = "desktop-shell-lock";
         runtimeInputs = [
           pkgs.coreutils
           pkgs.systemd
         ];
-        text = builtins.readFile ../../../../scripts/linux-desktop/lock.sh;
+        text = builtins.readFile ../../../../scripts/desktop-shell/lock.sh;
       };
 
       nightLightControl = pkgs.writeShellApplication {
-        name = "linux-desktop-night-light";
+        name = "desktop-shell-night-light";
         runtimeInputs = [
           pkgs.coreutils
           pkgs.systemd
           pkgs.hyprsunset
         ];
-        text = builtins.readFile ../../../../scripts/linux-desktop/night-light.sh;
+        text = builtins.readFile ../../../../scripts/desktop-shell/night-light.sh;
       };
 
       colourPicker = pkgs.writeShellApplication {
-        name = "linux-desktop-pick-colour";
+        name = "desktop-shell-pick-colour";
         runtimeInputs = [
           pkgs.bash
           pkgs.hyprpicker
@@ -781,22 +781,22 @@ in
           pkgs.libnotify
           pkgs.systemd
         ];
-        text = builtins.readFile ../../../../scripts/linux-desktop/pick-colour.sh;
+        text = builtins.readFile ../../../../scripts/desktop-shell/pick-colour.sh;
       };
 
       recordRegion = pkgs.writeShellApplication {
-        name = "linux-desktop-record-region";
+        name = "desktop-shell-record-region";
         runtimeInputs = [
           pkgs.coreutils
           pkgs.slurp
           pkgs.wf-recorder
           pkgs.pulseaudio
         ];
-        text = builtins.readFile ../../../../scripts/linux-desktop/record-region.sh;
+        text = builtins.readFile ../../../../scripts/desktop-shell/record-region.sh;
       };
 
       imageMarkup = pkgs.writeShellApplication {
-        name = "linux-desktop-markup";
+        name = "desktop-shell-markup";
         runtimeInputs = [
           pkgs.coreutils
           pkgs.file
@@ -804,11 +804,11 @@ in
           pkgs.satty
           pkgs.wl-clipboard
         ];
-        text = builtins.readFile ../../../../scripts/linux-desktop/markup.sh;
+        text = builtins.readFile ../../../../scripts/desktop-shell/markup.sh;
       };
 
       frozenCapture = pkgs.writeShellApplication {
-        name = "linux-desktop-frozen-capture";
+        name = "desktop-shell-frozen-capture";
         runtimeInputs = [
           captureNotify
           pkgs.grim
@@ -818,20 +818,20 @@ in
           pkgs.systemd
           pkgs.satty
         ];
-        text = builtins.readFile ../../../../scripts/linux-desktop/frozen-capture.sh;
+        text = builtins.readFile ../../../../scripts/desktop-shell/frozen-capture.sh;
       };
 
       recordingToggle = pkgs.writeShellApplication {
-        name = "linux-desktop-recording-toggle";
+        name = "desktop-shell-recording-toggle";
         runtimeInputs = [
           pkgs.systemd
           pkgs.coreutils
         ];
-        text = builtins.readFile ../../../../scripts/linux-desktop/recording-toggle.sh;
+        text = builtins.readFile ../../../../scripts/desktop-shell/recording-toggle.sh;
       };
 
       notificationOpen = pkgs.writeShellApplication {
-        name = "linux-desktop-open-capture";
+        name = "desktop-shell-open-capture";
         runtimeInputs = [
           imageMarkup
           pkgs.quickshell
@@ -839,24 +839,24 @@ in
           pkgs.losslesscut
         ];
         text = ''
-          export LINUX_DESKTOP_SHELL_PATH=${lib.escapeShellArg "${productionShellPath}"}
-          ${builtins.readFile ../../../../scripts/linux-desktop/open-capture.sh}
+          export DESKTOP_SHELL_SHELL_PATH=${lib.escapeShellArg "${productionShellPath}"}
+          ${builtins.readFile ../../../../scripts/desktop-shell/open-capture.sh}
         '';
       };
 
       captureNotify = pkgs.writeShellApplication {
-        name = "linux-desktop-capture-notify";
+        name = "desktop-shell-capture-notify";
         runtimeInputs = [
           notificationOpen
           recordingLibrary
           pkgs.coreutils
           pkgs.libnotify
         ];
-        text = builtins.readFile ../../../../scripts/linux-desktop/capture-notify.sh;
+        text = builtins.readFile ../../../../scripts/desktop-shell/capture-notify.sh;
       };
 
       recordingLibrary = pkgs.writeShellApplication {
-        name = "linux-desktop-recordings";
+        name = "desktop-shell-recordings";
         runtimeInputs = [
           pkgs.tesseract
           imageMarkup
@@ -870,11 +870,11 @@ in
           pkgs.losslesscut
           pkgs.wl-clipboard
         ];
-        text = builtins.readFile ../../../../scripts/linux-desktop/recordings.sh;
+        text = builtins.readFile ../../../../scripts/desktop-shell/recordings.sh;
       };
 
       recordingFinalize = pkgs.writeShellApplication {
-        name = "linux-desktop-recording-finalize";
+        name = "desktop-shell-recording-finalize";
         runtimeInputs = [
           captureNotify
           pkgs.coreutils
@@ -882,11 +882,11 @@ in
           pkgs.libnotify
           pkgs.systemd
         ];
-        text = builtins.readFile ../../../../scripts/linux-desktop/recording-finalize.sh;
+        text = builtins.readFile ../../../../scripts/desktop-shell/recording-finalize.sh;
       };
 
       sessionCommand = pkgs.writeShellApplication {
-        name = "linux-desktop-session";
+        name = "desktop-shell-session";
         runtimeInputs = [
           pkgs.coreutils
           pkgs.hypr-persist
@@ -894,7 +894,7 @@ in
           pkgs.systemd
           pkgs.uwsm
         ];
-        text = builtins.readFile ../../../../scripts/linux-desktop/session.sh;
+        text = builtins.readFile ../../../../scripts/desktop-shell/session.sh;
       };
     in
     {
@@ -911,7 +911,7 @@ in
         recordingToggle
         imageMarkup
         (pkgs.makeDesktopItem {
-          name = "linux-desktop-markup";
+          name = "desktop-shell-markup";
           desktopName = "Annotate Image";
           genericName = "Screenshot and image markup";
           exec = "${lib.getExe imageMarkup} %f";
@@ -933,28 +933,28 @@ in
         spectrumAnalyzer
       ];
 
-      xdg.configFile."linux-desktop/runtime.json".source = runtimeConfig;
+      xdg.configFile."desktop-shell/runtime.json".source = runtimeConfig;
 
-      systemd.user.paths.linux-desktop-wallpaper-image = {
+      systemd.user.paths.desktop-shell-wallpaper-image = {
         Unit.Description = "Reload wallpaper when the selected theme changes";
         Unit.PartOf = [ sessionTarget ];
-        Path.PathChanged = "%h/.config/linux-desktop/theme.json";
+        Path.PathChanged = "%h/.config/desktop-shell/theme.json";
         Install.WantedBy = [ sessionTarget ];
       };
 
-      systemd.user.timers.linux-desktop-ical-sync = {
+      systemd.user.timers.desktop-shell-ical-sync = {
         Unit.Description = "Refresh the local read-only iCalendar subscription";
         Timer = {
           OnCalendar = "*:0/30";
           RandomizedDelaySec = "90s";
           Persistent = true;
-          Unit = "linux-desktop-ical-sync.service";
+          Unit = "desktop-shell-ical-sync.service";
         };
         Install.WantedBy = [ "timers.target" ];
       };
 
       systemd.user.services = {
-        linux-desktop-palette-index = {
+        desktop-shell-palette-index = {
           Unit = {
             Description = "Watch local files and bookmarks for command palette indexing";
             PartOf = [ sessionTarget ];
@@ -968,7 +968,7 @@ in
           Install.WantedBy = [ sessionTarget ];
         };
 
-        linux-desktop-ical-sync = {
+        desktop-shell-ical-sync = {
           Unit = {
             Description = "Refresh subscribed iCalendar events for khal";
           };
@@ -980,7 +980,7 @@ in
           };
         };
 
-        linux-desktop-wallpaper-image = {
+        desktop-shell-wallpaper-image = {
           Unit = {
             Description = "Apply the Stylix wallpaper with awww transitions";
             Wants = [ "awww.service" ];
@@ -1001,7 +1001,7 @@ in
           Install.WantedBy = [ sessionTarget ];
         };
 
-        "linux-desktop-wallpaper-video@" = {
+        "desktop-shell-wallpaper-video@" = {
           Unit = {
             Description = "Selected video wallpaper on %i";
             PartOf = [ sessionTarget ];
@@ -1018,7 +1018,7 @@ in
           };
         };
 
-        linux-desktop-night-light = {
+        desktop-shell-night-light = {
           Unit = {
             Description = "Manual Hyprland colour temperature";
             After = [ sessionTarget ];
@@ -1037,7 +1037,7 @@ in
           };
         };
 
-        linux-desktop-night-light-apply = {
+        desktop-shell-night-light-apply = {
           Unit = {
             Description = "Restore manual Night Light state at session start";
             After = [ sessionTarget ];
@@ -1049,7 +1049,7 @@ in
           Install.WantedBy = [ sessionTarget ];
         };
 
-        linux-desktop-spectrum = {
+        desktop-shell-spectrum = {
           Unit = {
             Description = "Hyprland desktop audio spectrum analyser";
             PartOf = [ sessionTarget ];
@@ -1068,7 +1068,7 @@ in
           Install.WantedBy = [ sessionTarget ];
         };
 
-        linux-desktop-recording = {
+        desktop-shell-recording = {
           Unit = {
             Description = "Record a selected Wayland screen region";
             PartOf = [ sessionTarget ];
@@ -1084,7 +1084,7 @@ in
           };
         };
 
-        linux-desktop-lock = {
+        desktop-shell-lock = {
           Unit = {
             Description = "Hyprland desktop session lock";
             PartOf = [ sessionTarget ];
@@ -1099,7 +1099,7 @@ in
           };
         };
 
-        linux-desktop = {
+        desktop-shell = {
           Unit = {
             Description = "Hyprland desktop shell";
             # Home Manager replaces both configuration symlinks on theme
@@ -1107,18 +1107,18 @@ in
             # so restart when either evaluated source changes.
             X-Restart-Triggers = [
               runtimeConfig
-              config.xdg.configFile."linux-desktop/theme.json".source
+              config.xdg.configFile."desktop-shell/theme.json".source
             ];
             PartOf = [ sessionTarget ];
-            Wants = [ "linux-desktop-spectrum.service" ];
+            Wants = [ "desktop-shell-spectrum.service" ];
             After = [
               sessionTarget
-              "linux-desktop-spectrum.service"
+              "desktop-shell-spectrum.service"
             ];
           };
 
           Service = {
-            ExecStartPre = "${lib.getExe' pkgs.coreutils "touch"} %t/linux-desktop-recording.state";
+            ExecStartPre = "${lib.getExe' pkgs.coreutils "touch"} %t/desktop-shell-recording.state";
             ExecStart = "${lib.getExe launcher} --no-duplicate";
             UMask = "0077";
             Restart = "on-failure";

@@ -117,7 +117,7 @@ test("inspection is reachable through canonical shortcut, palette and status isl
   const nix = fs.readFileSync(path.join(repo, "shell/default.nix"), "utf8");
   assert.match(
     keybindings,
-    /id = "status\.inspect";\s*action = global "linux-desktop:status-peek"/,
+    /id = "status\.inspect";\s*action = global "desktop-shell:status-peek"/,
   );
   assert.match(nix, /statusInspect = navigationKey "status\.inspect"/);
   assert.match(shell, /name: "status-peek"/);

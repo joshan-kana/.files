@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Shapes
-import LinuxDesktop.Visuals 1.0
+import DesktopShell.Visuals 1.0
 
 Item {
     id: root

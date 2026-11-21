@@ -51,7 +51,7 @@ QtObject {
     // peak monitors for peak monitors. These are not application audio.
     function isUserAudioStream(node: var): bool {
         const name = streamDisplayName(node);
-        return !name.startsWith("linux-desktop-spectrum") && !name.startsWith("Quickshell Peak Detect");
+        return !name.startsWith("desktop-shell-spectrum") && !name.startsWith("Quickshell Peak Detect");
     }
     readonly property var audioApplicationStreams: audioStreams.filter(node => isUserAudioStream(node))
     readonly property var audioCaptureStreams: audioInputStreams.filter(node => isUserAudioStream(node))

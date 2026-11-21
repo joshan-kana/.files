@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-service=linux-desktop-recording.service
+service=desktop-shell-recording.service
 case "${1:-status}" in
 status)
   if systemctl --user --quiet is-active "$service"; then echo active; else echo inactive; fi
   ;;
 stop)
-  state="${XDG_RUNTIME_DIR:?}/linux-desktop-recording.state"
+  state="${XDG_RUNTIME_DIR:?}/desktop-shell-recording.state"
   if systemctl --user --quiet is-active "$service"; then
     if [ -r "$state" ]; then
       { IFS= read -r previous && IFS= read -r started && IFS= read -r savedPath; } <"$state" || true
@@ -15,7 +15,7 @@ stop)
     fi
     systemctl --user stop "$service"
   fi
-  rm -f -- "${XDG_RUNTIME_DIR:?}/linux-desktop-recording.conf"
+  rm -f -- "${XDG_RUNTIME_DIR:?}/desktop-shell-recording.conf"
   ;;
 start)
   [ "$#" -eq 4 ] || exit 2
@@ -24,11 +24,11 @@ start)
   case "$4" in none | system | microphone) ;; *) exit 2 ;; esac
   if systemctl --user --quiet is-active "$service"; then exit 3; fi
   umask 077
-  config="${XDG_RUNTIME_DIR:?}/linux-desktop-recording.conf"
-  temp="$(mktemp "${XDG_RUNTIME_DIR:?}/.linux-desktop-recording.XXXXXXXX")"
+  config="${XDG_RUNTIME_DIR:?}/desktop-shell-recording.conf"
+  temp="$(mktemp "${XDG_RUNTIME_DIR:?}/.desktop-shell-recording.XXXXXXXX")"
   printf '%s\n%s\n%s\n' "$2" "$3" "$4" >"$temp"
   mv -f -- "$temp" "$config"
-  state="${XDG_RUNTIME_DIR:?}/linux-desktop-recording.state"
+  state="${XDG_RUNTIME_DIR:?}/desktop-shell-recording.state"
   printf 'starting\n' >"$state"
   if ! systemctl --user start "$service"; then
     rm -f -- "$config"

@@ -26,7 +26,7 @@ logout) exec uwsm stop ;;
 reboot) exec systemctl reboot ;;
 poweroff) exec systemctl poweroff ;;
 *)
-  printf 'Usage: linux-desktop-session {suspend|logout|reboot|poweroff} [restore|fresh]\n' >&2
+  printf 'Usage: desktop-shell-session {suspend|logout|reboot|poweroff} [restore|fresh]\n' >&2
   exit 2
   ;;
 esac
