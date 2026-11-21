@@ -1217,7 +1217,7 @@ FocusScope {
                 }
 
                 Row {
-                    visible: root.selectedAppearanceKey.length > 0 || root.appearance.lastAppearanceChange !== null
+                    // Keep layout height stable when the first parameter is touched.
                     width: parent.width
                     spacing: root.theme.spacing2
                     ShellAction {
