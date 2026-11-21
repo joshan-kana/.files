@@ -92,12 +92,6 @@ FocusScope {
     }
 
     property string requestedView: ""
-    property string requestedCaptureTextName: ""
-    property int requestedCaptureTextSerial: 0
-    onRequestedCaptureTextSerialChanged: {
-        if (requestedCaptureTextName.length > 0)
-            recordingsPanel.queueText(requestedCaptureTextName);
-    }
     required property bool returnToControls
     property bool helpOpen: false
     property int trayIndex: 0
@@ -547,7 +541,11 @@ FocusScope {
             openMixer();
         else if (requestedView === "wallpaper")
             openWallpaper();
-        else if (requestedView === "recordings")
+        else if (requestedView.startsWith("recordings:")) {
+            const filename = requestedView.slice("recordings:".length);
+            openRecordings();
+            recordingsPanel.queueText(filename);
+        } else if (requestedView === "recordings")
             openRecordings();
         else if (requestedView.startsWith("tray:")) {
             const index = Number(requestedView.slice(5));
