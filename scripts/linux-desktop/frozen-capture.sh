@@ -36,7 +36,7 @@ copy | save | annotate)
   output="$dest/Screenshot-$(date +%Y%m%d-%H%M%S)-$$.png"
   magick "$2" -crop "$geometry" +repage -strip "$output"
   if [ "$mode" = copy ]; then
-    wl-copy --type image/png <"$output"
+    wl-copy --type image/png <"$output" || exit 1
   fi
   systemd-run --user --quiet --collect -- linux-desktop-capture-notify screenshot "$output" || true
   if [ "$mode" = annotate ]; then
