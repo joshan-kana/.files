@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Local filename and bookmark index for the native desktop palette."""
 
+import contextlib
 import json
 import mimetypes
 import os
@@ -445,6 +446,8 @@ def start_search_socket():
     import socketserver
     import stat
     import threading
+    import time
+    from select import select
 
     runtime = Path(os.environ["XDG_RUNTIME_DIR"])
     endpoint = runtime / "linux-desktop-palette.sock"
@@ -466,49 +469,83 @@ def start_search_socket():
             self.write_lock = threading.RLock()
             super().__init__(address, handler)
 
+        @staticmethod
+        def write(client, payload, timeout):
+            """Bound socket writes without changing the reader's blocking mode."""
+            pending = memoryview(payload)
+            deadline = time.monotonic() + timeout
+            while pending:
+                try:
+                    written = client.send(pending)
+                except (BlockingIOError, InterruptedError):
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        return False
+                    select([], [client], [], remaining)
+                    continue
+                except OSError:
+                    return False
+                if written <= 0:
+                    return False
+                pending = pending[written:]
+            return True
+
         def notify(self):
             with self.write_lock:
                 for client in list(self.clients):
-                    try:
-                        client.sendall(b'{"event":"updated"}\n')
-                    except OSError:
+                    # Updates are invalidation hints; a stalled reader can
+                    # reconnect and obtain the complete latest index.
+                    if not self.write(client, b'{"event":"updated"}\n', 0):
                         self.clients.discard(client)
+                        with contextlib.suppress(OSError):
+                            client.shutdown(socket.SHUT_RDWR)
 
-    class Handler(socketserver.StreamRequestHandler):
+    class Handler(socketserver.BaseRequestHandler):
         def setup(self):
-            super().setup()
+            self.request.setblocking(False)
             with self.server.write_lock:
                 self.server.clients.add(self.request)
 
         def handle(self):
+            pending = bytearray()
             while True:
-                line = self.rfile.readline(1025)
-                if not line:
-                    break
-                if len(line) > 1024 or not line.endswith(b"\n"):
-                    break
                 try:
-                    request = json.loads(line)
-                    identifier = request["id"]
-                    phrase = request.get("query")
-                    inspection = request.get("inspect")
-                    if not isinstance(identifier, int) or not 0 <= identifier <= 2147483647:
-                        break
-                    if isinstance(phrase, str) and inspection is None:
-                        payload = json.dumps({"id": identifier, "items": query(phrase)}, ensure_ascii=False)
-                    elif isinstance(inspection, str) and len(inspection) <= 4096 and phrase is None:
-                        payload = json.dumps({"id": identifier, "info": preview_indexed_file(inspection)}, ensure_ascii=False)
-                    else:
-                        break
-                except (KeyError, TypeError, ValueError):
-                    break
-                with self.server.write_lock:
-                    self.request.sendall((payload + "\n").encode())
+                    select([self.request], [], [])
+                    data = self.request.recv(1025)
+                except (OSError, ValueError):
+                    return
+                if not data:
+                    return
+                pending.extend(data)
+                while b"\n" in pending:
+                    line, _, rest = pending.partition(b"\n")
+                    pending = bytearray(rest)
+                    if len(line) + 1 > 1024:
+                        return
+                    try:
+                        request = json.loads(line)
+                        identifier = request["id"]
+                        phrase = request.get("query")
+                        inspection = request.get("inspect")
+                        if not isinstance(identifier, int) or not 0 <= identifier <= 2147483647:
+                            return
+                        if isinstance(phrase, str) and inspection is None:
+                            payload = json.dumps({"id": identifier, "items": query(phrase)}, ensure_ascii=False)
+                        elif isinstance(inspection, str) and len(inspection) <= 4096 and phrase is None:
+                            payload = json.dumps({"id": identifier, "info": preview_indexed_file(inspection)}, ensure_ascii=False)
+                        else:
+                            return
+                    except (KeyError, TypeError, ValueError):
+                        return
+                    with self.server.write_lock:
+                        if not self.server.write(self.request, (payload + "\n").encode(), 0.25):
+                            return
+                if len(pending) >= 1024:
+                    return
 
         def finish(self):
             with self.server.write_lock:
                 self.server.clients.discard(self.request)
-            super().finish()
 
     original_mask = os.umask(0o077)
     try:
