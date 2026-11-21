@@ -78,6 +78,15 @@ test("help dims the entire hub while keeping shared header controls and its own 
     help,
     /height: Math\.min\(\(help\.contentArea \? help\.contentArea\.height : parent\.height\) - theme\.spacing5 \* 2/,
   );
+  assert.match(
+    help,
+    /width: Math\.min\(helpBinding\.width - 110, Math\.max\(180, shortcutHint\.implicitWidth\)\)/,
+  );
+  assert.match(help, /id: shortcutHint\s+anchors\.left: parent\.left/);
+  assert.match(
+    help,
+    /width: Math\.min\(\(help\.contentArea \? help\.contentArea\.width : parent\.width\) - theme\.spacing5 \* 2, 480\)/,
+  );
   assert.match(help, /contentHeight: content\.implicitHeight/);
   assert.match(help, /clip: true/);
 });
