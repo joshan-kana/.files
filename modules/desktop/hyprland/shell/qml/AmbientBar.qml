@@ -46,6 +46,24 @@ Variants {
     }
     property var origins: ({})
     property var frameIslands: ({})
+    property string displayContextScreen: ""
+    property string displayContextOutput: ""
+
+    Timer {
+        id: displayContextTimeout
+        interval: 12000
+        repeat: false
+        onTriggered: bars.displayContextScreen = ""
+    }
+
+    function offerDisplaySettings(outputName: string): void {
+        const existing = Quickshell.screens.find(screen => screen.name !== outputName);
+        if (!existing)
+            return;
+        displayContextOutput = outputName;
+        displayContextScreen = existing.name;
+        displayContextTimeout.restart();
+    }
 
     signal mediaRequested(var screen, var origin)
     signal systemRequested(var screen, var origin)
@@ -105,26 +123,16 @@ Variants {
 
         required property var modelData
 
-        // A newly connected monitor gets a transient configuration action
-        // in an already-visible island, without another notification surface.
-        // Subscribe within the live per-output window: Variants is only the
-        // delegate factory, not the rendered presentation owner.
-        property bool displayContextVisible: false
-        Timer {
-            id: displayContextTimeout
-            interval: 12000
-            repeat: false
-            onTriggered: bar.displayContextVisible = false
-        }
+        // The model is recreated on hotplug, so keep the action's lifetime
+        // on the stable bar owner instead of on a disposable screen delegate.
         Connections {
             target: Hyprland
             function onRawEvent(event): void {
-                if (event.name !== "monitoradded" && event.name !== "monitoraddedv2")
-                    return;
-                const added = event.name === "monitoraddedv2" ? String(event.data).split(",")[1] : String(event.data);
-                if (bar.modelData.name !== added) {
-                    bar.displayContextVisible = true;
-                    displayContextTimeout.restart();
+                if (event.name === "monitoradded" || event.name === "monitoraddedv2") {
+                    const added = event.name === "monitoraddedv2" ? String(event.data).split(",")[1] : String(event.data);
+                    bars.offerDisplaySettings(added);
+                } else if (event.name === "monitorremoved" && String(event.data) === bars.displayContextOutput) {
+                    bars.displayContextScreen = "";
                 }
             }
         }
@@ -787,9 +795,9 @@ Variants {
                 powerProfile: (bars.powerProfile as PowerProfileState)
                 frameConnected: bars.frameVisible
                 compact: barContent.width - (clockIsland.x + clockIsland.width) < 260
-                displayActionVisible: bar.displayContextVisible && !bar.fullscreen && !bars.controlsExpanded
+                displayActionVisible: bars.displayContextScreen === bar.modelData.name && !bar.fullscreen && !bars.controlsExpanded
                 onDisplaySettingsRequested: {
-                    bar.displayContextVisible = false;
+                    bars.displayContextScreen = "";
                     bars.displaySettingsRequested();
                 }
                 onXChanged: Qt.callLater(bar.publishOrigins)

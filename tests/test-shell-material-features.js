@@ -140,9 +140,17 @@ test("displays opens the native editor and contextual island avoids another popu
     shell,
     /onDisplaySettingsRequested:[\s\S]*?Quickshell\.execDetached\(\[qmlRuntime\.displaySettings\]\)/,
   );
-  assert.match(bar, /event\.name !== "monitoradded"/);
+  assert.match(bar, /event\.name === "monitoradded"/);
   assert.match(bar, /interval: 12000/);
-  assert.match(bar, /displayActionVisible: bar\.displayContextVisible/);
+  assert.match(
+    bar,
+    /displayActionVisible: bars\.displayContextScreen === bar\.modelData\.name/,
+  );
+  assert.match(bar, /property string displayContextScreen: ""/);
+  assert.match(
+    bar,
+    /function offerDisplaySettings\(outputName: string\): void/,
+  );
   assert.match(island, /Accessible\.name: "Configure newly connected display"/);
   assert.match(island, /onActivated: island\.displaySettingsRequested\(\)/);
   assert.doesNotMatch(bar, /WlrLayershell\.namespace: "linux-desktop-context"/);
