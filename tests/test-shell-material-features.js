@@ -217,11 +217,14 @@ test("Help effect keeps tile geometry, footer and outline on their existing owne
   );
   assert.match(
     host,
-    /layer\.effect: MultiEffect \{[\s\S]*?blur: scopedHelp\.opacity[\s\S]*?blurMax: 32/,
+    /layer\.effect: MultiEffect \{[\s\S]*?blur: scopedHelp\.opacity[\s\S]*?blurMax: 48/,
   );
   assert.match(help, /help\.contentArea\.mapToItem\(help, 0, 0\)\.x/);
   assert.match(help, /help\.contentArea\.mapToItem\(help, 0, 0\)\.y/);
-  assert.match(help, /visible: !help\.theme\.shellGlassEnabled/);
+  assert.match(help, /help\.theme\.shellGlassEnabled \? 0\.36 : 0\.70/);
+  assert.match(host, /blurMax: 48/);
+  assert.doesNotMatch(host, /blurMultiplier: 1\.5/);
+  assert.match(host, /id: hubFooter\s+z: 250/);
   assert.match(
     help,
     /MouseArea \{\s+anchors\.fill: parent\s+enabled: help\.open\s+onClicked: help\.dismissed\(\)/,

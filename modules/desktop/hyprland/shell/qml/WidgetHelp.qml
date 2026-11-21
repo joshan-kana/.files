@@ -41,14 +41,13 @@ Item {
         }
     }
 
-    // The hub blurs its content in place. Help only owns the
-    // non-glass fallback scrim, dismissal and foreground card.
+    // Use one consistent wash across the hub, so the blurred viewport's
+    // card and clipping edges cannot leave separate rectangular bands.
     SquircleSurface {
         anchors.fill: parent
-        visible: !help.theme.shellGlassEnabled
         exponent: help.theme.squircleExponent
         cornerRadius: help.backdropRadius
-        fillColor: Qt.rgba(help.theme.background.r, help.theme.background.g, help.theme.background.b, 0.70)
+        fillColor: Qt.rgba(help.theme.background.r, help.theme.background.g, help.theme.background.b, help.theme.shellGlassEnabled ? 0.36 : 0.70)
         borderColor: "transparent"
         borderWidth: 0
     }
@@ -62,7 +61,7 @@ Item {
     ShellSurface {
         id: helpCard
 
-        width: Math.min((help.contentArea ? help.contentArea.width : parent.width) - theme.spacing5 * 2, 430)
+        width: Math.min((help.contentArea ? help.contentArea.width : parent.width) - theme.spacing5 * 2, 480)
         height: Math.min((help.contentArea ? help.contentArea.height : parent.height) - theme.spacing5 * 2, Math.max(180, content.implicitHeight + theme.spacing5 * 2))
         x: help.contentArea ? help.contentArea.mapToItem(help, 0, 0).x + (help.contentArea.width - width) / 2 : (parent.width - width) / 2
         y: help.contentArea ? help.contentArea.mapToItem(help, 0, 0).y + (help.contentArea.height - height) / 2 : (parent.height - height) / 2
@@ -120,11 +119,14 @@ Item {
                         spacing: help.theme.spacing3
 
                         Item {
-                            width: 138
+                            id: shortcutCell
+                            width: Math.min(helpBinding.width - 110, Math.max(180, shortcutHint.implicitWidth))
                             height: 34
 
                             KeyHint {
-                                anchors.centerIn: parent
+                                id: shortcutHint
+                                anchors.left: parent.left
+                                anchors.verticalCenter: parent.verticalCenter
                                 runtime: help.runtime
                                 theme: help.theme
                                 shortcut: helpBinding.modelData.key
@@ -132,8 +134,8 @@ Item {
                         }
 
                         Text {
-                            width: parent.width - parent.children[0].width - parent.spacing
-                            anchors.verticalCenter: parent.children[0].verticalCenter
+                            width: parent.width - shortcutCell.width - parent.spacing
+                            anchors.verticalCenter: shortcutCell.verticalCenter
                             text: helpBinding.modelData.action
                             color: help.theme.text
                             font.family: help.runtime.fontMono

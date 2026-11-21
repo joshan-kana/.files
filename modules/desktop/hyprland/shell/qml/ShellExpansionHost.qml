@@ -856,6 +856,7 @@ PanelWindow {
         // a static fill, not another blurred or animated layer.
         Rectangle {
             id: footerSurface
+            z: 250
             opacity: shellSurface.contentReveal
             x: hubFooter.x + (hubFooter.width - width) / 2
             y: hubFooter.y - host.theme.spacing2
@@ -869,6 +870,7 @@ PanelWindow {
 
         Column {
             id: hubFooter
+            z: 250
             opacity: shellSurface.contentReveal
             width: Math.max(1, parent.width - host.theme.spacing3 * 2)
             height: implicitHeight
@@ -975,7 +977,7 @@ PanelWindow {
             layer.effect: MultiEffect {
                 blurEnabled: true
                 blur: scopedHelp.opacity
-                blurMax: 32
+                blurMax: 48
                 autoPaddingEnabled: false
             }
             // Retain the last two views while the hub is open, so returning to

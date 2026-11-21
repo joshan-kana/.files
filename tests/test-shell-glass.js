@@ -117,7 +117,7 @@ test("hub Help blurs the original content viewport without a copied backdrop", (
   assert.match(host, /autoPaddingEnabled: false/);
   assert.match(host, /contentArea: contentViewport/);
   assert.match(help, /property Item contentArea: null/);
-  assert.match(help, /visible: !help\.theme\.shellGlassEnabled/);
+  assert.match(help, /help\.theme\.shellGlassEnabled \? 0\.36 : 0\.70/);
   assert.match(help, /fillColor: Qt\.rgba\(help\.theme\.background\.r/);
   assert.doesNotMatch(
     help,
