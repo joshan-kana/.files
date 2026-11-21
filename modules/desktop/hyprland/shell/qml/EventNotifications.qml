@@ -172,7 +172,7 @@ QtObject {
                 return;
             const previouslyConnected = events.knownConnected;
             events.knownConnected = connected;
-            network.emit(connected ? "network-transmit-receive" : "network-offline", connected ? "Network restored" : "Network disconnected", connected ? events.system.networkName : "Check your connection or open network settings", connected ? "" : "Network settings", null, false);
+            events.network.emit(connected ? "network-transmit-receive" : "network-offline", connected ? "Network restored" : "Network disconnected", connected ? events.system.networkName : "Check your connection or open network settings", connected ? "" : "Network settings", null, false);
         }
     }
     readonly property bool connected: system.networkConnected
