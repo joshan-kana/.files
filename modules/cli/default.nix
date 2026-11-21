@@ -884,12 +884,6 @@ in
     };
   };
 
-  python3 = _: {
-    home = _: {
-      home.packages = [ pkgs.python3 ];
-    };
-  };
-
   ncmpcpp = _: {
     home = _: {
       programs.ncmpcpp = { };
