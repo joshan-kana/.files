@@ -99,7 +99,7 @@ FocusScope {
     // sliders; H/L and arrows edit the selected value without stealing the
     // existing audio keys outside this mode.
     property string selectedSlider: ""
-    readonly property bool sliderNavigationEnabled: engaged && !resetConfirmPending && !helpOpen && !mixerOpen && !audioChooserOpen && !themeOpen && !wallpaperOpen && !sessionOpen && !networkOpen && !bluetoothOpen && !resourcesOpen && !recordingsOpen && !trayMenuOpen
+    readonly property bool sliderNavigationEnabled: engaged && !resetConfirmPending && !helpOpen && !mixerOpen && !audioChooserOpen && !themeOpen && !wallpaperOpen && !sessionOpen && !networkOpen && !bluetoothOpen && !resourcesOpen && !statusOpen && !recordingsOpen && !trayMenuOpen
     readonly property var sliderTargets: (brightness.supported ? ["brightness"] : []).concat(["windows", "glass", "blur"], nightLight.supported ? ["nightLight"] : [])
     function selectSlider(target: string): void {
         selectedSlider = target;
@@ -162,7 +162,16 @@ FocusScope {
     readonly property bool statusOpen: statusPanel.open
     readonly property bool recordingsOpen: recordingsPanel.open
     readonly property string helpTitle: statusOpen ? "System status" : recordingsPanel.open ? "Captures" : wallpaperPanel.open ? "Wallpaper library" : mixerOpen ? "Application mixer" : resourcesPanel.open ? "Resource monitor" : (bluetoothPanel.open ? "Bluetooth controls" : (networkPanel.open ? "Network controls" : (themePanel.open ? "Theme controls" : (sessionPanel.open ? "Session controls" : (trayMenu.open ? "Tray menu controls" : "System controls")))))
-    readonly property var helpBindings: recordingsPanel.open ? [
+    readonly property var helpBindings: statusOpen ? [
+        {
+            key: root.runtime.shellHint("StatusContent.refresh"),
+            action: "Refresh status"
+        },
+        {
+            key: root.runtime.shellHint("StatusContent.close"),
+            action: root.returnToControls ? "Back to Controls" : "Close"
+        }
+    ] : recordingsPanel.open ? [
         {
             key: root.runtime.shellHint("SystemContent.legend.select_clip_half_page"),
             action: "Select clip / half-page"
@@ -687,6 +696,11 @@ FocusScope {
         sessionPanel.closeView();
         resourcesPanel.openView();
         markDetail("resources");
+    }
+
+    function refreshStatus(): void {
+        keyboard.refresh("inspect");
+        brightness.refresh();
     }
 
     function openStatus(): void {
@@ -1554,8 +1568,7 @@ FocusScope {
             implicitHeight: statusContent.implicitHeight
             function openView(): void {
                 open = true;
-                root.keyboard.refresh("inspect");
-                root.brightness.refresh();
+                root.refreshStatus();
             }
             function closeView(): void {
                 open = false;
@@ -1572,10 +1585,7 @@ FocusScope {
                 brightness: root.brightness
                 recording: root.recording
                 modeName: root.statusMode
-                onRefreshRequested: {
-                    root.keyboard.refresh("inspect");
-                    root.brightness.refresh();
-                }
+                onRefreshRequested: root.refreshStatus()
                 onCloseRequested: root.backFromDetail()
             }
         }
@@ -1771,6 +1781,17 @@ FocusScope {
                 if (helpKey) {
                     root.helpOpen = true;
                     event.accepted = true;
+                    return;
+                }
+
+                if (root.statusOpen) {
+                    if (event.key === root.runtime.shellKeyCode("controls", "Backspace")) {
+                        root.backFromDetail();
+                        event.accepted = true;
+                    } else if (root.runtime.shellMatchesHint("StatusContent.refresh", event.key, event.modifiers)) {
+                        root.refreshStatus();
+                        event.accepted = true;
+                    }
                     return;
                 }
 
