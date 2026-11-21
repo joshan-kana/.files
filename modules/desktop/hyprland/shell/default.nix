@@ -1076,6 +1076,7 @@ in
           };
           Service = {
             ExecStart = lib.getExe recordRegion;
+            UMask = "0077";
             ExecStopPost = lib.getExe recordingFinalize;
             KillSignal = "SIGINT";
             TimeoutStopSec = 15;

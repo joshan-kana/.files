@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+umask 077
 settings="${XDG_RUNTIME_DIR:?}/linux-desktop-recording.conf"
 if [ -f "$settings" ]; then
   { IFS= read -r output && IFS= read -r geometry && IFS= read -r audio; } <"$settings" || exit 2
