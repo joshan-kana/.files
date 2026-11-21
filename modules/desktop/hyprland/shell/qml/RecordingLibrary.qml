@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import QtQuick.Controls
 import "DesktopIcons.js" as DesktopIcons
 import Quickshell
 import Quickshell.Io
@@ -18,6 +19,15 @@ Item {
     property int selectedIndex: 0
     property string previewName: ""
     property string previewPath: ""
+    property bool ocrVisible: false
+    property string ocrText: ""
+    property var ocrWords: []
+    property int ocrImageWidth: 1
+    property int ocrImageHeight: 1
+    property string ocrRequestName: ""
+    property int wordSelectionStart: -1
+    property int wordSelectionEnd: -1
+    readonly property bool wordSelectionAvailable: wordSelectionStart >= 0 && wordSelectionEnd >= 0
     property string deletePending: ""
     property string statusText: ""
     property bool statusError: false
@@ -51,6 +61,7 @@ Item {
         statusText = "";
         editorRequestRunning = false;
         editorRequestTimeout.stop();
+        closeText();
         refresh();
         keyboardRequested();
     }
@@ -63,6 +74,7 @@ Item {
         deletePending = "";
         previewName = "";
         previewPath = "";
+        closeText();
         if (!previewProcess.running)
             clearPreview();
         keyboardRequested();
@@ -99,6 +111,7 @@ Item {
         selectedIndex = Math.max(0, Math.min(entries.length - 1, index));
         deletePending = "";
         statusText = "";
+        closeText();
     }
     function moveSelection(delta: int): void {
         choose(selectedIndex + delta);
@@ -130,13 +143,116 @@ Item {
         statusText = "COPY REQUESTED · " + selectedEntry.name;
         statusError = false;
     }
-    function copyText(): void {
+    function closeText(): void {
+        ocrVisible = false;
+        ocrText = "";
+        ocrWords = [];
+        wordSelectionStart = -1;
+        wordSelectionEnd = -1;
+        ocrRequestName = "";
+    }
+
+    function parseWords(tsv: string): var {
+        const words = [];
+        for (const row of tsv.trim().split("\n").slice(1)) {
+            const fields = row.split("\t");
+            if (fields.length < 12 || fields[0] !== "5" || Number(fields[10]) < 0)
+                continue;
+            const [left, top, width, height] = fields.slice(6, 10).map(Number);
+            const label = fields.slice(11).join("\t").trim();
+            if (!label || ![left, top, width, height].every(Number.isFinite) || width <= 0 || height <= 0)
+                continue;
+            words.push({
+                left,
+                top,
+                width,
+                height,
+                text: label,
+                line: fields.slice(1, 5).join(":")
+            });
+        }
+        return words;
+    }
+
+    function showText(): void {
+        if (ocrVisible) {
+            closeText();
+            keyboardRequested();
+            return;
+        }
         if (!selectedEntry || isBusy || runtime.recordingLibrary.length === 0)
             return;
         statusText = selectedEntry.isImage ? "READING IMAGE TEXT…" : "READING VIDEO PREVIEW FRAME…";
         statusError = false;
+        ocrRequestName = selectedEntry.name;
         ocrProcess.exec([runtime.recordingLibrary, "ocr", selectedEntry.name]);
     }
+
+    function wordAt(x: real, y: real): int {
+        if (ocrWords.length === 0 || previewImage.paintedWidth <= 0 || previewImage.paintedHeight <= 0)
+            return -1;
+        const px = x / Math.max(1, previewImage.paintedWidth) * ocrImageWidth;
+        const py = y / Math.max(1, previewImage.paintedHeight) * ocrImageHeight;
+        let closest = -1;
+        let distance = Infinity;
+        for (let i = 0; i < ocrWords.length; i++) {
+            const word = ocrWords[i];
+            const dx = Math.max(word.left - px, 0, px - word.left - word.width);
+            const dy = Math.max(word.top - py, 0, py - word.top - word.height);
+            const d = dx * dx + dy * dy;
+            if (d < distance) {
+                distance = d;
+                closest = i;
+            }
+        }
+        return distance <= (ocrImageWidth / Math.max(1, previewImage.paintedWidth) * 14) ** 2 ? closest : -1;
+    }
+
+    function selectWordAt(x: real, y: real, extend: bool): void {
+        const index = wordAt(x, y);
+        if (index < 0) {
+            if (!extend) {
+                wordSelectionStart = -1;
+                wordSelectionEnd = -1;
+            }
+            return;
+        }
+        if (!extend || wordSelectionStart < 0)
+            wordSelectionStart = index;
+        wordSelectionEnd = index;
+    }
+
+    function wordInSelection(index: int): bool {
+        return wordSelectionAvailable && index >= Math.min(wordSelectionStart, wordSelectionEnd) && index <= Math.max(wordSelectionStart, wordSelectionEnd);
+    }
+
+    function highlightedText(): string {
+        if (!wordSelectionAvailable)
+            return "";
+        const start = Math.min(wordSelectionStart, wordSelectionEnd);
+        const end = Math.max(wordSelectionStart, wordSelectionEnd);
+        let result = "";
+        for (let i = start; i <= end; i++) {
+            const word = ocrWords[i];
+            result += i === start ? "" : word.line === ocrWords[i - 1].line ? " " : "\n";
+            result += word.text;
+        }
+        return result;
+    }
+
+    function copyHighlightedText(): void {
+        if (recognisedText.selectedText.length > 0) {
+            recognisedText.copy();
+        } else if (wordSelectionAvailable) {
+            wordCopyBuffer.selectAll();
+            wordCopyBuffer.copy();
+        } else {
+            return;
+        }
+        statusText = "SELECTED TEXT COPIED";
+        statusError = false;
+    }
+
     function requestDelete(): void {
         if (!selectedEntry || isBusy)
             return;
@@ -215,8 +331,32 @@ Item {
         stdout: library.ocrOutput
         stderr: library.ocrError
         onExited: (exitCode, exitStatus) => {
-            library.statusError = exitCode !== 0;
-            library.statusText = exitCode === 0 ? "TEXT COPIED TO CLIPBOARD" : (library.ocrError.text.trim() || "TEXT RECOGNITION FAILED");
+            if (!library.open || !library.selectedEntry || library.selectedEntry.name !== library.ocrRequestName)
+                return;
+            if (exitCode !== 0) {
+                library.statusError = true;
+                library.statusText = library.ocrError.text.trim() || "TEXT RECOGNITION FAILED";
+                return;
+            }
+            try {
+                const result = JSON.parse(library.ocrOutput.text);
+                const words = library.parseWords(result.tsv);
+                if (!result.text.trim() || words.length === 0)
+                    throw new Error("No readable text in this capture");
+                library.ocrImageWidth = result.width;
+                library.ocrImageHeight = result.height;
+                library.ocrText = result.text;
+                library.ocrWords = words;
+                library.wordSelectionStart = -1;
+                library.wordSelectionEnd = -1;
+                library.ocrVisible = true;
+                library.statusError = false;
+                library.statusText = "SELECT TEXT IN THE PREVIEW OR RECOGNISED CONTENT";
+                Qt.callLater(() => recognisedText.forceActiveFocus());
+            } catch (error) {
+                library.statusError = true;
+                library.statusText = "NO READABLE TEXT FOUND";
+            }
         }
     }
     property Process actionProcess: Process {
@@ -295,6 +435,7 @@ Item {
 
         ShellSurface {
             id: listPane
+            visible: !library.ocrVisible || panes.width >= 620
             width: previewPane.visible ? Math.max(290, parent.width * 0.52) : parent.width
             height: parent.height
             theme: library.theme
@@ -376,8 +517,8 @@ Item {
 
         ShellSurface {
             id: previewPane
-            visible: panes.width >= 620
-            width: Math.max(1, panes.width - listPane.width - panes.spacing)
+            visible: library.ocrVisible || panes.width >= 620
+            width: Math.max(1, listPane.visible ? panes.width - listPane.width - panes.spacing : panes.width)
             height: parent.height
             theme: library.theme
             motion: library.motion
@@ -393,19 +534,56 @@ Item {
                 spacing: library.theme.spacing3
                 ShellSurface {
                     width: parent.width
-                    height: 180
+                    height: library.ocrVisible ? 162 : 180
                     theme: library.theme
                     motion: library.motion
                     surfaceLayer: ShellSurface.Control
                     cornerRadius: library.theme.radiusMedium
                     clip: true
                     Image {
+                        id: previewImage
                         anchors.fill: parent
                         source: library.previewPath.length > 0 ? "file://" + library.previewPath : ""
                         visible: library.previewPath.length > 0
                         asynchronous: true
                         cache: false
                         fillMode: Image.PreserveAspectFit
+                    }
+                    // Word rectangles use original pixel coordinates and are mapped
+                    // through PreserveAspectFit, including the letterboxed margins.
+                    Item {
+                        id: textHighlights
+                        visible: library.ocrVisible && previewImage.status === Image.Ready
+                        x: previewImage.x + (previewImage.width - previewImage.paintedWidth) / 2
+                        y: previewImage.y + (previewImage.height - previewImage.paintedHeight) / 2
+                        width: previewImage.paintedWidth
+                        height: previewImage.paintedHeight
+                        clip: true
+                        Repeater {
+                            model: library.ocrWords
+                            delegate: Rectangle {
+                                id: wordHighlight
+                                required property int index
+                                required property var modelData
+                                x: modelData.left / Math.max(1, library.ocrImageWidth) * textHighlights.width
+                                y: modelData.top / Math.max(1, library.ocrImageHeight) * textHighlights.height
+                                width: modelData.width / Math.max(1, library.ocrImageWidth) * textHighlights.width
+                                height: modelData.height / Math.max(1, library.ocrImageHeight) * textHighlights.height
+                                color: library.wordInSelection(index) ? Qt.rgba(library.theme.accent.r, library.theme.accent.g, library.theme.accent.b, 0.50) : Qt.rgba(library.theme.accent.r, library.theme.accent.g, library.theme.accent.b, 0.10)
+                                border.width: library.wordInSelection(index) ? 1 : 0
+                                border.color: library.theme.accent
+                            }
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.IBeamCursor
+                            onPressed: mouse => library.selectWordAt(mouse.x, mouse.y, false)
+                            onPositionChanged: mouse => {
+                                if (pressed)
+                                    library.selectWordAt(mouse.x, mouse.y, true);
+                            }
+                        }
                     }
                     Text {
                         anchors.centerIn: parent
@@ -424,7 +602,87 @@ Item {
                     font.pixelSize: library.theme.fontSize(11)
                     font.weight: Font.DemiBold
                 }
+                ShellSurface {
+                    visible: library.ocrVisible
+                    width: parent.width
+                    height: Math.max(76, previewPane.height - 162 - 160)
+                    theme: library.theme
+                    motion: library.motion
+                    surfaceLayer: ShellSurface.Control
+                    cornerRadius: library.theme.radiusMedium
+                    clip: true
+                    Flickable {
+                        id: ocrViewport
+                        anchors {
+                            fill: parent
+                            margins: library.theme.spacing2
+                        }
+                        clip: true
+                        contentWidth: Math.max(width, recognisedText.contentWidth)
+                        contentHeight: Math.max(height, recognisedText.contentHeight)
+                        boundsBehavior: Flickable.StopAtBounds
+                        ScrollBar.vertical: ScrollBar {}
+                        ScrollBar.horizontal: ScrollBar {}
+                        TextArea {
+                            id: recognisedText
+                            width: Math.max(ocrViewport.width, implicitWidth)
+                            height: Math.max(ocrViewport.height, contentHeight)
+                            text: library.ocrText
+                            readOnly: true
+                            selectByMouse: true
+                            persistentSelection: true
+                            wrapMode: TextEdit.NoWrap
+                            textFormat: TextEdit.PlainText
+                            color: library.theme.textStrong
+                            selectionColor: library.theme.accent
+                            selectedTextColor: library.theme.background
+                            font.family: library.runtime.fontMono
+                            font.pixelSize: library.theme.fontSize(12)
+                            background: null
+                            Keys.onEscapePressed: library.closeText()
+                        }
+                    }
+                    TextEdit {
+                        id: wordCopyBuffer
+                        visible: false
+                        text: library.highlightedText()
+                    }
+                }
+                Row {
+                    visible: library.ocrVisible
+                    width: parent.width
+                    height: visible ? 34 : 0
+                    spacing: library.theme.spacing2
+                    ShellAction {
+                        width: (parent.width - parent.spacing) / 2
+                        height: 34
+                        runtime: library.runtime
+                        theme: library.theme
+                        motion: library.motion
+                        compact: true
+                        horizontalCompact: true
+                        title: "Copy selection"
+                        enabled: recognisedText.selectedText.length > 0 || library.wordSelectionAvailable
+                        onActivated: library.copyHighlightedText()
+                    }
+                    ShellAction {
+                        width: (parent.width - parent.spacing) / 2
+                        height: 34
+                        runtime: library.runtime
+                        theme: library.theme
+                        motion: library.motion
+                        compact: true
+                        horizontalCompact: true
+                        title: "Done"
+                        shortcut: library.runtime.shellHint("RecordingLibrary.ocr")
+                        onActivated: {
+                            library.closeText();
+                            library.keyboardRequested();
+                        }
+                    }
+                }
                 Grid {
+                    visible: !library.ocrVisible
                     width: parent.width
                     columns: 2
                     spacing: library.theme.spacing2
@@ -489,10 +747,10 @@ Item {
                         motion: library.motion
                         compact: true
                         horizontalCompact: true
-                        title: library.selectedEntry && library.selectedEntry.isImage ? "Copy text" : "Frame text"
+                        title: library.selectedEntry && library.selectedEntry.isImage ? "Select text" : "Frame text"
                         shortcut: library.runtime.shellHint("RecordingLibrary.ocr")
                         enabled: !!library.selectedEntry && !library.isBusy
-                        onActivated: library.copyText()
+                        onActivated: library.showText()
                     }
                 }
             }
@@ -516,10 +774,10 @@ Item {
             motion: library.motion
             compact: true
             horizontalCompact: true
-            title: library.selectedEntry && library.selectedEntry.isImage ? "Copy image text" : "Copy video preview text"
+            title: library.ocrVisible ? "Back to captures" : library.selectedEntry && library.selectedEntry.isImage ? "Select image text" : "Select frame text"
             shortcut: library.runtime.shellHint("RecordingLibrary.ocr")
             enabled: !!library.selectedEntry && !library.isBusy
-            onActivated: library.copyText()
+            onActivated: library.showText()
         }
         KeyHintStrip {
             width: parent.width

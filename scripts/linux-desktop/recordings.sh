@@ -84,8 +84,15 @@ preview | open | edit | copy | trash | ocr)
       printf '%s\n' "No readable text in this capture" >&2
       exit 1
     }
-    printf '%s' "$text" | wl-copy --type text/plain
-    printf '%s\n' "Text copied to clipboard"
+    dimensions="$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=x "$path")"
+    [[ $dimensions =~ ^([0-9]+)x([0-9]+)$ ]] || exit 1
+    width="${BASH_REMATCH[1]}"
+    height="${BASH_REMATCH[2]}"
+    # Keep word locations in the original image coordinates. The viewer
+    # scales their highlight rectangles alongside the existing preview.
+    tesseract "$path" stdout -l eng tsv 2>/dev/null |
+      jq -Rs --arg text "$text" --argjson width "$width" --argjson height "$height" \
+        '{text: $text, width: $width, height: $height, tsv: .}'
     exit 0
   fi
   if [ "$kind" = image ]; then

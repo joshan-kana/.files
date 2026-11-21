@@ -6,9 +6,10 @@ const path = require("node:path");
 const root = path.join(__dirname, "../modules/desktop/hyprland/shell");
 const qml = (name) => fs.readFileSync(path.join(root, "qml", name), "utf8");
 
-test("blur uses the native compositor with persisted Nix precedence and bounded updates", () => {
+test("blur uses one live compositor parameter within the frosted-glass tile", () => {
   const settings = qml("AppearancePreferences.qml");
   const controls = qml("SystemContent.qml");
+  const tile = qml("OpacitySetting.qml");
   const runtime = qml("RuntimeConfig.qml");
   const nix = fs.readFileSync(path.join(root, "default.nix"), "utf8");
 
@@ -16,75 +17,86 @@ test("blur uses the native compositor with persisted Nix precedence and bounded 
     nix,
     /blurSize = lib\.mkOption \{\s*type = lib\.types\.ints\.between 5 25;/,
   );
-  assert.match(nix, /default = 15;/);
   assert.match(runtime, /property int blurSize: 15/);
   assert.match(
     settings,
     /readonly property int blurSize: .*effective\("blurSize"\)/,
   );
   assert.match(settings, /function setBlurSize\(value: real\): void/);
-  assert.match(settings, /function applyBlurSize\(\): void/);
   assert.match(settings, /"hl\.config\(\{ decoration = \{ blur = \{ size = "/);
   assert.match(
     settings,
     /property Timer blurSizeApply: Timer \{\s*interval: 75/,
   );
-  assert.match(controls, /title: "Blur softness"/);
+  assert.doesNotMatch(controls, /title: "Blur softness"/);
   assert.match(
     controls,
-    /onValueRequested: next => root\.appearance\.setBlurSize\(next\)/,
+    /label: "Frosted glass"[\s\S]*?blurAdjustable: true[\s\S]*?onBlurRequested: value => root\.appearance\.setBlurSize\(value\)/,
   );
-  assert.match(controls, /readonly property var sliderTargets:.*"blur"/);
+  assert.match(tile, /property bool blurAdjustable: false/);
+  assert.match(tile, /Accessible\.name: "Adjust frosted-glass blur softness"/);
+  assert.match(
+    tile,
+    /value: setting\.blurEditing \? setting\.blurValue : setting\.opacityValue/,
+  );
+  assert.match(
+    controls,
+    /readonly property var sliderTargets:.*"glass", "blur"/,
+  );
 });
 
-test("settings inspection and one-step undo share the existing appearance owner", () => {
+test("visual parameter controls do not add a separate appearance action row", () => {
+  const controls = qml("SystemContent.qml");
   const settings = qml("AppearancePreferences.qml");
-  const controls = qml("SystemContent.qml");
-
-  assert.match(settings, /function hasOverride\(key: string\): bool/);
-  assert.match(settings, /function restoreSetting\(key: string\): void/);
-  assert.match(settings, /function beginAdjustment\(key: string\): void/);
-  assert.match(settings, /function undoLastChange\(\): void/);
-  assert.match(settings, /relatedOverridden/);
-  assert.match(controls, /"User override" : "Nix default"/);
-  assert.match(controls, /appearance\.restoreSetting\(selectedAppearanceKey\)/);
-  assert.match(controls, /appearance\.undoLastChange\(\)/);
-  assert.doesNotMatch(settings, /while\s*\(|setInterval\s*\(/);
+  const shortcuts = fs.readFileSync(path.join(root, "keybindings.nix"), "utf8");
+  assert.doesNotMatch(
+    controls,
+    /Undo appearance|Choose a visual setting|selectedAppearanceKey|resetSelectedAppearance/,
+  );
+  assert.doesNotMatch(
+    settings,
+    /lastAppearanceChange|beginAdjustment|undoLastChange/,
+  );
+  assert.doesNotMatch(
+    shortcuts,
+    /SystemContent\.undoAppearance|SystemContent\.resetSetting/,
+  );
+  assert.doesNotMatch(controls, /opacitySettingsButton|openTransparency/);
 });
 
-test("status and displays are direct Controls actions with one shared entry point", () => {
+test("status is a Controls detail with shared data and nested Escape", () => {
   const controls = qml("SystemContent.qml");
+  const host = qml("ShellExpansionHost.qml");
   const shell = qml("shell.qml");
-  const runtime = qml("RuntimeConfig.qml");
   const bindings = fs.readFileSync(path.join(root, "keybindings.nix"), "utf8");
-
   assert.match(
     controls,
-    /title: "Status"[\s\S]*?onActivated: root\.statusInspectionRequested\(\)/,
+    /title: "Status"[\s\S]*?onActivated: root\.openStatus\(\)/,
   );
-  assert.match(
-    controls,
-    /title: "Displays"[\s\S]*?onActivated: root\.displaySettingsRequested\(\)/,
-  );
-  assert.match(
-    shell,
-    /onStatusInspectionRequested:[\s\S]*?root\.toggleStatusInspection\(qmlScreens\.focusedScreen\)/,
-  );
-  assert.match(
-    shell,
-    /onDisplaySettingsRequested:[\s\S]*?Quickshell\.execDetached\(\[qmlRuntime\.displaySettings\]\)/,
-  );
-  assert.match(runtime, /readonly property string displaySettings:/);
+  assert.match(controls, /function openStatus\(\): void/);
+  assert.match(controls, /StatusContent \{[\s\S]*?keyboard: root\.keyboard/);
+  assert.match(controls, /onCloseRequested: root\.backFromDetail\(\)/);
+  assert.match(host, /systemContent\.statusOpen/);
+  assert.match(shell, /keyboard: qmlKeyboard[\s\S]*?recording: qmlRecording/);
   assert.match(
     bindings,
     /"SystemContent\.statusInspection" = \{\s*scope = "controls";\s*template = "SHIFT\+I";/,
   );
 });
 
-test("contextual monitor action shares system island rather than competing with notifications", () => {
+test("displays opens the native editor and contextual island avoids another popup", () => {
+  const controls = qml("SystemContent.qml");
+  const shell = qml("shell.qml");
   const bar = qml("AmbientBar.qml");
   const island = qml("SystemIsland.qml");
-
+  assert.match(
+    controls,
+    /title: "Displays"[\s\S]*?onActivated: root\.displaySettingsRequested\(\)/,
+  );
+  assert.match(
+    shell,
+    /onDisplaySettingsRequested:[\s\S]*?Quickshell\.execDetached\(\[qmlRuntime\.displaySettings\]\)/,
+  );
   assert.match(bar, /event\.name !== "monitoradded"/);
   assert.match(bar, /interval: 12000/);
   assert.match(bar, /displayActionVisible: bar\.displayContextVisible/);
@@ -93,23 +105,42 @@ test("contextual monitor action shares system island rather than competing with 
   assert.doesNotMatch(bar, /WlrLayershell\.namespace: "linux-desktop-context"/);
 });
 
-test("local OCR remains an action on saved images and video frames", () => {
+test("local OCR exposes selectable text and highlighted original-image coordinates", () => {
   const library = qml("RecordingLibrary.qml");
   const controls = qml("SystemContent.qml");
   const script = fs.readFileSync(
     path.join(__dirname, "../scripts/linux-desktop/recordings.sh"),
     "utf8",
   );
-
-  assert.match(library, /function copyText\(\): void/);
+  const shortcuts = fs.readFileSync(path.join(root, "keybindings.nix"), "utf8");
+  assert.match(library, /function showText\(\): void/);
+  assert.match(library, /function parseWords\(tsv: string\): var/);
   assert.match(
     library,
-    /ocrProcess\.exec\(\[runtime\.recordingLibrary, "ocr", selectedEntry\.name\]\)/,
+    /function selectWordAt\(x: real, y: real, extend: bool\): void/,
   );
+  assert.match(library, /TextArea \{[\s\S]*?selectByMouse: true/);
+  assert.match(library, /function copyHighlightedText\(\): void/);
+  assert.match(library, /onActivated: library\.showText\(\)/);
   assert.match(controls, /shellMatchesHint\("RecordingLibrary\.ocr"/);
-  assert.match(script, /preview \| open \| edit \| copy \| trash \| ocr\)/);
-  assert.match(script, /tesseract "\$path" stdout -l eng/);
-  assert.match(script, /wl-copy --type text\/plain/);
+  assert.match(
+    shortcuts,
+    /"RecordingLibrary\.ocr" = \{\s*scope = "controls";\s*template = "SHIFT\+O";/,
+  );
+  assert.match(script, /tesseract "\$path" stdout -l eng tsv/);
+  assert.match(script, /jq -Rs --arg text "\$text"/);
   assert.match(script, /trap 'rm -f -- "\$frame"' EXIT/);
   assert.doesNotMatch(script, /https?:\/\//);
+});
+
+test("Help blur covers the whole rounded scrim with no competing Wayland window", () => {
+  const help = qml("WidgetHelp.qml");
+  assert.match(
+    help,
+    /sampleOrigin: help\.blurSource \? help\.blurSource\.mapFromItem\(backdrop, 0, 0\)/,
+  );
+  assert.match(help, /maskSource: blurMask/);
+  assert.match(help, /sourceItem: help\.blurSource/);
+  assert.match(help, /visible: help\.open && help\.theme\.shellGlassEnabled/);
+  assert.doesNotMatch(help, /PanelWindow/);
 });

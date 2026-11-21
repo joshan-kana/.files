@@ -434,7 +434,7 @@
     };
     "RecordingLibrary.ocr" = {
       scope = "controls";
-      template = "O";
+      template = "SHIFT+O";
     };
     "RecordingLibrary.page" = {
       scope = "controls";
@@ -655,14 +655,6 @@
     "SystemContent.resources" = {
       scope = "controls";
       template = "R";
-    };
-    "SystemContent.resetSetting" = {
-      scope = "controls";
-      template = "DELETE";
-    };
-    "SystemContent.undoAppearance" = {
-      scope = "controls";
-      template = "SHIFT+Z";
     };
     "SystemContent.statusInspection" = {
       scope = "controls";

@@ -44,49 +44,28 @@ Item {
         }
     }
 
-    SquircleSurface {
-        anchors.fill: parent
-        exponent: help.theme.squircleExponent
-        cornerRadius: help.backdropRadius
-        // One panel-shaped scrim across the whole hub, not a rectangle that
-        // abruptly stops below the header and above the footer.
-        fillColor: Qt.rgba(help.theme.background.r, help.theme.background.g, help.theme.background.b, 0.56)
-        borderColor: "transparent"
-        borderWidth: 0
-
-        MouseArea {
-            anchors.fill: parent
-            enabled: help.open
-            // The owner binds `open` to its helpOpen state. Do not assign to
-            // `open` here: imperative assignment destroys that QML binding.
-            onClicked: help.dismissed()
-        }
-    }
-
-    // Blur only the modal glass itself. The full-hub scrim stays uniform;
-    // sampling the entire content viewport made a rectangular blur boundary.
+    // Blur the content underneath the scrim once, inside the same rounded
+    // boundary as the hub. The header and footer retain their input ownership.
     Item {
-        id: glassBackdrop
+        id: backdrop
+        anchors.fill: parent
         visible: help.open && help.theme.shellGlassEnabled && help.blurSource !== null
-        x: helpCard.x
-        y: helpCard.y
-        width: helpCard.width
-        height: helpCard.height
         clip: true
+
+        readonly property point sampleOrigin: help.blurSource ? help.blurSource.mapFromItem(backdrop, 0, 0) : Qt.point(0, 0)
 
         ShaderEffectSource {
             id: blurTexture
-            anchors.fill: parent
             sourceItem: help.blurSource
-            sourceRect: help.blurSource ? Qt.rect(glassBackdrop.x - help.blurSource.x, glassBackdrop.y - help.blurSource.y, glassBackdrop.width, glassBackdrop.height) : Qt.rect(0, 0, 0, 0)
-            live: help.open
+            sourceRect: Qt.rect(backdrop.sampleOrigin.x, backdrop.sampleOrigin.y, backdrop.width, backdrop.height)
+            live: backdrop.visible
             visible: false
         }
 
         SquircleSurface {
             id: blurMask
             anchors.fill: parent
-            cornerRadius: helpCard.cornerRadius
+            cornerRadius: help.backdropRadius
             exponent: help.theme.squircleExponent
             fillColor: "white"
             visible: false
@@ -97,9 +76,25 @@ Item {
             source: blurTexture
             blurEnabled: true
             blurMax: 32
-            blur: 0.75
+            blur: 1
+            autoPaddingEnabled: false
             maskEnabled: true
             maskSource: blurMask
+        }
+    }
+
+    SquircleSurface {
+        anchors.fill: parent
+        exponent: help.theme.squircleExponent
+        cornerRadius: help.backdropRadius
+        fillColor: Qt.rgba(help.theme.background.r, help.theme.background.g, help.theme.background.b, help.theme.shellGlassEnabled ? 0.48 : 0.70)
+        borderColor: "transparent"
+        borderWidth: 0
+
+        MouseArea {
+            anchors.fill: parent
+            enabled: help.open
+            onClicked: help.dismissed()
         }
     }
 

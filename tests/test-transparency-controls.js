@@ -89,13 +89,16 @@ test("opacity sliders live in visual-mode tiles with normal keyhints, not a sepa
     setting,
     /shortcut: setting\.keyboardSelected \? setting\.runtime\.shellHint\("OpacitySetting.level"\) : setting\.shortcut/,
   );
-  assert.match(setting, /from: 0\.20/);
-  assert.match(setting, /to: 1/);
-  assert.match(setting, /value: setting\.opacityValue/);
+  assert.match(setting, /from: setting\.blurEditing \? 5 : 0\.20/);
+  assert.match(setting, /to: setting\.blurEditing \? 25 : 1/);
+  assert.match(
+    setting,
+    /value: setting\.blurEditing \? setting\.blurValue : setting\.opacityValue/,
+  );
   assert.match(setting, /Math\.round\(setting\.opacityValue \* 100\) \+ "%"/);
   assert.match(
     setting,
-    /onValueRequested: next => setting\.opacityRequested\(next\)/,
+    /onValueRequested: next => \{[\s\S]*?setting\.opacityRequested\(next\)/,
   );
   assert.match(setting, /onActivated: setting\.toggleRequested\(\)/);
   assert.match(
