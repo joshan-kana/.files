@@ -221,6 +221,7 @@ def _worker_command(host: Host, script: str) -> str:
         "--non-interactive",
         "--pipe",
         f"--user={WORKER_USER}",
+        "--chdir=/tmp",
         "--setenv=HOME=/var/lib/herdr-worker",
         f"--setenv=HC_SESSION={HERDR_SESSION}",
         "--setenv=XDG_RUNTIME_DIR=/run/herdr-worker",
@@ -248,7 +249,7 @@ def _build_argv(host: Host, script: str) -> list[str]:
         "-i",
         f"{CREDENTIALS}/{target.credential}",
         target.ssh_target,
-        f"exec {target.shell} -lc {shlex.quote(worker_command)}",
+        f"cd /tmp && exec {target.shell} -lc {shlex.quote(worker_command)}",
     ]
 
 
