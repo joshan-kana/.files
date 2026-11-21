@@ -50,7 +50,7 @@ Item {
     Item {
         id: backdrop
         anchors.fill: parent
-        visible: help.open && help.theme.shellGlassEnabled && help.blurSource !== null
+        visible: help.visible && help.theme.shellGlassEnabled && help.blurSource !== null
 
         readonly property point sourceOrigin: help.blurSource ? help.blurSource.mapToItem(backdrop, 0, 0) : Qt.point(0, 0)
 
@@ -85,19 +85,23 @@ Item {
         }
     }
 
+    // The host owns the outer outline. Keep the dark wash just inside its
+    // antialiased edge so overlapping squircle contours cannot create
+    // streaks at the lower corners.
     SquircleSurface {
         anchors.fill: parent
+        anchors.margins: help.theme.borderThin * 2
         exponent: help.theme.squircleExponent
-        cornerRadius: help.backdropRadius
+        cornerRadius: Math.max(0, help.backdropRadius - help.theme.borderThin * 2)
         fillColor: Qt.rgba(help.theme.background.r, help.theme.background.g, help.theme.background.b, help.theme.shellGlassEnabled ? 0.48 : 0.70)
         borderColor: "transparent"
         borderWidth: 0
+    }
 
-        MouseArea {
-            anchors.fill: parent
-            enabled: help.open
-            onClicked: help.dismissed()
-        }
+    MouseArea {
+        anchors.fill: parent
+        enabled: help.open
+        onClicked: help.dismissed()
     }
 
     ShellSurface {
