@@ -71,19 +71,21 @@ Item {
             return;
         pendingTextName = name;
         if (open) {
-            if (entries.length > 0)
+            refresh();
+            if (entries.some(entry => entry.name === name))
                 Qt.callLater(openPendingText);
-            else
-                refresh();
         }
     }
 
     function openPendingText(): void {
-        if (!open || !pendingTextName || listProcess.running)
+        if (!open || !pendingTextName || entries.length === 0)
             return;
         const name = pendingTextName;
         const index = entries.findIndex(entry => entry.name === name);
         if (index < 0) {
+            // A refresh may still be replacing an older gallery snapshot.
+            if (listProcess.running)
+                return;
             pendingTextName = "";
             statusText = "CAPTURE NOT FOUND";
             statusError = true;

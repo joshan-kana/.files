@@ -743,7 +743,8 @@ FocusScope {
         themePanel.closeView();
         sessionPanel.closeView();
         recordingsPanel.openView();
-        markDetail("recordings");
+        if (!requestedView.startsWith("recordings:"))
+            markDetail("recordings");
     }
 
     function selectedMixerStream(): var {
