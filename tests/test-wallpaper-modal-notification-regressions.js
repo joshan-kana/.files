@@ -9,7 +9,7 @@ const shell = fs.readFileSync(
 );
 const wallpaper = (name) =>
   fs.readFileSync(
-    path.join(__dirname, "../scripts/linux-desktop", name),
+    path.join(__dirname, "../scripts/desktop-shell", name),
     "utf8",
   );
 const qml = (name) =>
@@ -26,7 +26,7 @@ test("all-display wallpaper supersedes older output selections and players", () 
   );
   assert.match(
     set,
-    /if \[ "\$output" = all \]; then\s+# Applying to all displays[\s\S]*systemctl --user stop "linux-desktop-wallpaper-video@\$monitor\.service"/,
+    /if \[ "\$output" = all \]; then\s+# Applying to all displays[\s\S]*systemctl --user stop "desktop-shell-wallpaper-video@\$monitor\.service"/,
   );
   assert.match(
     set,
@@ -110,7 +110,7 @@ test("selecting an all-display video clears stale output ownership before playba
       wallpaper("wallpaper-library.sh");
     const scriptFile = path.join(scratch, "library.sh");
     const bin = path.join(scratch, "bin");
-    const state = path.join(scratch, "state", "linux-desktop", "wallpapers");
+    const state = path.join(scratch, "state", "desktop-shell", "wallpapers");
     fs.mkdirSync(bin, { recursive: true });
     fs.mkdirSync(state, { recursive: true });
     const bash = spawnSync("bash", ["-c", "command -v bash"], {
@@ -166,11 +166,11 @@ test("selecting an all-display video clears stale output ownership before playba
     assert.equal(fs.existsSync(path.join(state, "Virtual-1.wall")), false);
     const commands = fs.readFileSync(log, "utf8");
     const stopOverride = commands.indexOf(
-      "systemctl --user stop linux-desktop-wallpaper-video@Virtual-1.service",
+      "systemctl --user stop desktop-shell-wallpaper-video@Virtual-1.service",
     );
     const paint = commands.lastIndexOf("awww img");
     const restartAll = commands.lastIndexOf(
-      "systemctl --user restart linux-desktop-wallpaper-video@all.service",
+      "systemctl --user restart desktop-shell-wallpaper-video@all.service",
     );
     assert.ok(
       stopOverride >= 0 && paint > stopOverride && restartAll > paint,

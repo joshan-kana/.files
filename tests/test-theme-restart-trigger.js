@@ -10,7 +10,7 @@ test("Quickshell restarts on the generated theme as well as runtime source", () 
   );
   assert.match(
     moduleText,
-    /X-Restart-Triggers = \[\s+runtimeConfig\s+config\.xdg\.configFile\."linux-desktop\/theme\.json"\.source\s+\];/,
+    /X-Restart-Triggers = \[\s+runtimeConfig\s+config\.xdg\.configFile\."desktop-shell\/theme\.json"\.source\s+\];/,
   );
-  assert.doesNotMatch(moduleText, /systemd\.user\.paths\.linux-desktop-theme/);
+  assert.doesNotMatch(moduleText, /systemd\.user\.paths\.desktop-shell-theme/);
 });

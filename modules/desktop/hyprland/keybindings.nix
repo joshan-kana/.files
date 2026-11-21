@@ -67,7 +67,7 @@ let
     index:
     mk {
       keys = toString (index + 1);
-      action = global "linux-desktop:launcher-slot-${toString (index + 1)}";
+      action = global "desktop-shell:launcher-slot-${toString (index + 1)}";
       section = "LAUNCHERS";
       description = "Open launcher result ${toString (index + 1)}";
       cheatsheet = false;
@@ -164,7 +164,7 @@ in
   (mk {
     keys = "M";
     id = "audio.mixer";
-    action = global "linux-desktop:audio-mixer";
+    action = global "desktop-shell:audio-mixer";
     section = "AUDIO & MEDIA";
     description = "Application mixer";
   })
@@ -179,28 +179,28 @@ in
     keys = "SUPER + SPACE";
     mainMod = false;
     id = "launcher.toggle";
-    action = global "linux-desktop:launcher";
+    action = global "desktop-shell:launcher";
     section = "LAUNCHERS";
     description = "App & command launcher";
   })
   (mk {
     keys = "W";
     id = "wallpaper.toggle";
-    action = global "linux-desktop:wallpaper";
+    action = global "desktop-shell:wallpaper";
     section = "SYSTEM";
     description = "Wallpaper gallery";
   })
   (mk {
     keys = "ALT + P";
     id = "capture.history";
-    action = global "linux-desktop:captures";
+    action = global "desktop-shell:captures";
     section = "UTILITIES";
     description = "Capture history";
   })
   (mk {
     keys = "C";
     id = "clipboard.toggle";
-    action = global "linux-desktop:clipboard";
+    action = global "desktop-shell:clipboard";
     section = "LAUNCHERS";
     description = "Clipboard history";
   })
@@ -208,28 +208,28 @@ in
     keys = "SUPER + TAB";
     mainMod = false;
     id = "overview.toggle";
-    action = global "linux-desktop:overview";
+    action = global "desktop-shell:overview";
     section = "WORKSPACES";
     description = "Workspaces & window overview";
   })
   (mk {
     keys = "SHIFT + P";
     id = "capture.recordToggle";
-    action = global "linux-desktop:record-toggle";
+    action = global "desktop-shell:record-toggle";
     section = "UTILITIES";
     description = "Screen record";
   })
   (mk {
     keys = "P";
     id = "capture.region";
-    action = global "linux-desktop:capture-region";
+    action = global "desktop-shell:capture-region";
     section = "UTILITIES";
     description = "Screenshot";
   })
   (mk {
     keys = "SUPER + SPACE";
     mainMod = false;
-    action = global "linux-desktop:launcher";
+    action = global "desktop-shell:launcher";
     section = "LAUNCHERS";
     description = "Close app & command launcher";
     cheatsheet = false;
@@ -368,7 +368,7 @@ in
   (mk {
     keys = "R";
     id = "window.resizeMode";
-    action = global "linux-desktop:resize-mode";
+    action = global "desktop-shell:resize-mode";
     section = "WINDOWS";
     description = "Resize window with a visual keyboard mode";
   })
@@ -423,13 +423,13 @@ in
   })
   (mk {
     keys = "E";
-    action = exec "linux-desktop-local-scratchpad move";
+    action = exec "desktop-shell-local-scratchpad move";
     section = "WORKSPACES";
     description = "Park or restore window in this workspace's scratchpad";
   })
   (mk {
     keys = "SHIFT + E";
-    action = exec "linux-desktop-local-scratchpad toggle";
+    action = exec "desktop-shell-local-scratchpad toggle";
     section = "WORKSPACES";
     description = "Open or leave this workspace's scratchpad";
   })
@@ -463,7 +463,7 @@ in
   (mk {
     keys = "SHIFT + Z";
     id = "status.inspect";
-    action = global "linux-desktop:status-peek";
+    action = global "desktop-shell:status-peek";
     section = "SYSTEM";
     description = "Inspect current system and input state";
   })
@@ -471,7 +471,7 @@ in
     keys = "Caps_Lock";
     mainMod = false;
     id = "keyboard.capsLock";
-    action = global "linux-desktop:keyboard-caps-lock";
+    action = global "desktop-shell:keyboard-caps-lock";
     flags.non_consuming = true;
     section = "KEYBOARD";
     description = "Report compositor Caps Lock state";
@@ -481,7 +481,7 @@ in
     keys = "Num_Lock";
     mainMod = false;
     id = "keyboard.numLock";
-    action = global "linux-desktop:keyboard-num-lock";
+    action = global "desktop-shell:keyboard-num-lock";
     flags.non_consuming = true;
     section = "KEYBOARD";
     description = "Report compositor Num Lock state";
@@ -490,7 +490,7 @@ in
   (mk {
     keys = "ALT + M";
     id = "audio.microphoneMute";
-    action = global "linux-desktop:microphone-mute";
+    action = global "desktop-shell:microphone-mute";
     section = "AUDIO & MEDIA";
     description = "Toggle default microphone mute";
   })
@@ -498,7 +498,7 @@ in
     keys = "XF86AudioMicMute";
     mainMod = false;
     id = "audio.microphoneMuteHardware";
-    action = global "linux-desktop:microphone-mute";
+    action = global "desktop-shell:microphone-mute";
     section = "AUDIO & MEDIA";
     description = "Toggle default microphone mute from hardware key";
     cheatsheet = false;
@@ -507,7 +507,7 @@ in
     keys = "XF86AudioRaiseVolume";
     mainMod = false;
     id = "audio.volumeUp";
-    action = global "linux-desktop:volume-up";
+    action = global "desktop-shell:volume-up";
     flags.repeating = true;
     section = "AUDIO & MEDIA";
     description = "Volume up";
@@ -517,7 +517,7 @@ in
     keys = "XF86AudioLowerVolume";
     mainMod = false;
     id = "audio.volumeDown";
-    action = global "linux-desktop:volume-down";
+    action = global "desktop-shell:volume-down";
     flags.repeating = true;
     section = "AUDIO & MEDIA";
     description = "Volume down";
@@ -527,7 +527,7 @@ in
     keys = "XF86AudioMute";
     mainMod = false;
     id = "audio.toggleMute";
-    action = global "linux-desktop:volume-mute";
+    action = global "desktop-shell:volume-mute";
     section = "AUDIO & MEDIA";
     description = "Mute";
     label = "MUTE";
@@ -535,14 +535,14 @@ in
   (mk {
     keys = "N";
     id = "media.toggle";
-    action = global "linux-desktop:media";
+    action = global "desktop-shell:media";
     section = "AUDIO & MEDIA";
     description = "Now playing";
   })
   (mk {
     keys = "bracketleft";
     id = "media.seekBackward";
-    action = global "linux-desktop:media-seek-backward";
+    action = global "desktop-shell:media-seek-backward";
     flags.repeating = true;
     section = "AUDIO & MEDIA";
     description = "Seek backward by configured interval";
@@ -551,7 +551,7 @@ in
   (mk {
     keys = "bracketright";
     id = "media.seekForward";
-    action = global "linux-desktop:media-seek-forward";
+    action = global "desktop-shell:media-seek-forward";
     flags.repeating = true;
     section = "AUDIO & MEDIA";
     description = "Seek forward by configured interval";
@@ -561,7 +561,7 @@ in
     keys = "XF86AudioPlay";
     mainMod = false;
     id = "media.playPause";
-    action = global "linux-desktop:media-play-pause";
+    action = global "desktop-shell:media-play-pause";
     section = "AUDIO & MEDIA";
     description = "Play / pause";
     cheatsheet = false;
@@ -570,7 +570,7 @@ in
     keys = "XF86AudioNext";
     mainMod = false;
     id = "media.next";
-    action = global "linux-desktop:media-next";
+    action = global "desktop-shell:media-next";
     section = "AUDIO & MEDIA";
     description = "Next track";
     cheatsheet = false;
@@ -579,7 +579,7 @@ in
     keys = "XF86AudioPrev";
     mainMod = false;
     id = "media.previous";
-    action = global "linux-desktop:media-previous";
+    action = global "desktop-shell:media-previous";
     section = "AUDIO & MEDIA";
     description = "Previous track";
     cheatsheet = false;
@@ -589,7 +589,7 @@ in
     keys = "XF86MonBrightnessUp";
     mainMod = false;
     id = "brightness.up";
-    action = global "linux-desktop:brightness-up";
+    action = global "desktop-shell:brightness-up";
     flags.repeating = true;
     section = "DISPLAY";
     description = "Brightness up";
@@ -599,7 +599,7 @@ in
     keys = "XF86MonBrightnessDown";
     mainMod = false;
     id = "brightness.down";
-    action = global "linux-desktop:brightness-down";
+    action = global "desktop-shell:brightness-down";
     flags.repeating = true;
     section = "DISPLAY";
     description = "Brightness down";
@@ -608,28 +608,28 @@ in
   (mk {
     keys = "D";
     id = "notifications.toggle";
-    action = global "linux-desktop:notifications";
+    action = global "desktop-shell:notifications";
     section = "SYSTEM";
     description = "Open Activity tab";
   })
   (mk {
     keys = "SHIFT + D";
     id = "notifications.act";
-    action = global "linux-desktop:notifications-act";
+    action = global "desktop-shell:notifications-act";
     section = "SYSTEM";
     description = "Activate latest notification, or open Activity";
   })
   (mk {
     keys = "CTRL + D";
     id = "notifications.dismissLatest";
-    action = global "linux-desktop:notifications-dismiss";
+    action = global "desktop-shell:notifications-dismiss";
     section = "SYSTEM";
     description = "Dismiss latest visible notification";
   })
   (mk {
     keys = "SHIFT + C";
     id = "session.lock";
-    action = global "linux-desktop:lock";
+    action = global "desktop-shell:lock";
     section = "SYSTEM";
     description = "Lock";
   })
@@ -637,7 +637,7 @@ in
     keys = "CTRL + ALT + DELETE";
     mainMod = false;
     id = "session.toggle";
-    action = global "linux-desktop:session";
+    action = global "desktop-shell:session";
     section = "SYSTEM";
     description = "Session menu";
     label = "CTRL + ALT + DELETE";
@@ -651,70 +651,70 @@ in
   (mk {
     keys = "A";
     id = "home.toggle";
-    action = global "linux-desktop:home";
+    action = global "desktop-shell:home";
     section = "SYSTEM";
     description = "Open Home tab";
   })
   (mk {
     keys = "S";
     id = "controls.toggle";
-    action = global "linux-desktop:controls";
+    action = global "desktop-shell:controls";
     section = "SYSTEM";
     description = "Open Controls tab";
   })
   (mk {
     keys = "Y";
     id = "theme.toggle";
-    action = global "linux-desktop:theme";
+    action = global "desktop-shell:theme";
     section = "SYSTEM";
     description = "Theme picker";
   })
   (mk {
     keys = "SHIFT + Y";
     id = "colour.pick";
-    action = global "linux-desktop:colour-pick";
+    action = global "desktop-shell:colour-pick";
     section = "UTILITIES";
     description = "Pick colour to clipboard";
   })
   (mk {
     keys = "SHIFT + M";
     id = "animations.toggle";
-    action = global "linux-desktop:animations";
+    action = global "desktop-shell:animations";
     section = "SYSTEM";
     description = "Toggle animations";
   })
   (mk {
     keys = "SHIFT + W";
     id = "media.wallpaperSpectrum";
-    action = global "linux-desktop:wallpaper-spectrum";
+    action = global "desktop-shell:wallpaper-spectrum";
     section = "AUDIO & MEDIA";
     description = "Toggle wallpaper spectrum";
   })
   (mk {
     keys = "SHIFT + N";
     id = "media.reactiveShell";
-    action = global "linux-desktop:music-reactive";
+    action = global "desktop-shell:music-reactive";
     section = "AUDIO & MEDIA";
     description = "Toggle music-reactive shell";
   })
   (mk {
     keys = "ALT + Y";
     id = "window.effects.toggle";
-    action = global "linux-desktop:window-effects";
+    action = global "desktop-shell:window-effects";
     section = "WINDOWS";
     description = "Toggle window transparency";
   })
   (mk {
     keys = "SHIFT + B";
     id = "bar.toggle";
-    action = global "linux-desktop:bar";
+    action = global "desktop-shell:bar";
     section = "SYSTEM";
     description = "Toggle top bar";
   })
   (mk {
     keys = "slash";
     id = "shortcuts.toggle";
-    action = global "linux-desktop:cheatsheet";
+    action = global "desktop-shell:cheatsheet";
     section = "SYSTEM";
     description = "Show keyboard shortcuts";
     label = "/";

@@ -71,7 +71,7 @@ switch)
   fi
   if [ "${3:-}" != "--worker" ]; then
     # Serialize launch before the transient service becomes visible.
-    exec 8>"${XDG_RUNTIME_DIR:?}/linux-desktop-theme-switch.lock"
+    exec 8>"${XDG_RUNTIME_DIR:?}/desktop-shell-theme-switch.lock"
     if ! flock -n 8 || systemctl --user --quiet is-active "$operationUnit"; then
       printf 'A theme activation is already running.\n' >&2
       exit 1
@@ -85,7 +85,7 @@ switch)
     chmod 600 "$operationDir/output.log" "$operationDir/target"
     set_phase preparing
     flock -u 9
-    if ! systemd-run --user --quiet --collect --service-type=exec --unit=linux-desktop-theme-apply --description="Apply desktop theme $selected" -- "$0" switch "$selected" --worker; then
+    if ! systemd-run --user --quiet --collect --service-type=exec --unit=desktop-shell-theme-apply --description="Apply desktop theme $selected" -- "$0" switch "$selected" --worker; then
       flock -x 9
       if [ "$(cat "$operationDir/phase" 2>/dev/null || :)" != cancelled ]; then
         set_phase failed

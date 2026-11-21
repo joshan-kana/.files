@@ -35,7 +35,7 @@ Variants {
             left: screen ? (screen.width - implicitWidth) / 2 : 0
         }
 
-        WlrLayershell.namespace: "linux-desktop-wallpaper-spectrum"
+        WlrLayershell.namespace: "desktop-shell-wallpaper-spectrum"
         WlrLayershell.layer: WlrLayer.Bottom
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 

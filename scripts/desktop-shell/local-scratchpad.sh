@@ -35,7 +35,7 @@ move)
   hyprctl dispatch "hl.dsp.window.move({ workspace = \"$destination\", window = \"address:$address\", follow = false })" >/dev/null
   ;;
 *)
-  printf 'Usage: linux-desktop-local-scratchpad {move|toggle}\n' >&2
+  printf 'Usage: desktop-shell-local-scratchpad {move|toggle}\n' >&2
   exit 2
   ;;
 esac

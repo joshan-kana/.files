@@ -11,7 +11,7 @@ const qml = (name) =>
     path.join(root, "modules/desktop/hyprland/shell/qml", name),
     "utf8",
   );
-const script = (name) => path.join(root, "scripts/linux-desktop", name);
+const script = (name) => path.join(root, "scripts/desktop-shell", name);
 
 test("service-backed event notifications share the freedesktop server, not island or popup code", () => {
   const events = qml("EventNotifications.qml");
@@ -72,7 +72,7 @@ test("a visible notification can be targeted from the global keyboard without gr
   );
   assert.match(
     registry,
-    /id = "notifications\.dismissLatest";\s*action = global "linux-desktop:notifications-dismiss"/,
+    /id = "notifications\.dismissLatest";\s*action = global "desktop-shell:notifications-dismiss"/,
   );
   assert.doesNotMatch(
     qml("NotificationPopup.qml"),
@@ -91,7 +91,7 @@ test("saved screenshots and videos keep native actions and open the selectable O
   assert.match(notice, /--action=edit=Trim/);
   assert.match(
     open,
-    /quickshell ipc --path "\$LINUX_DESKTOP_SHELL_PATH" call desktop showCaptureText "\$name"/,
+    /quickshell ipc --path "\$DESKTOP_SHELL_SHELL_PATH" call desktop showCaptureText "\$name"/,
   );
   assert.match(shell, /function showCaptureText\(name: string\): void/);
   assert.match(
@@ -136,7 +136,7 @@ test("OCR notification action rejects unrelated files and preserves the capture 
       ...process.env,
       PATH: bin + ":" + process.env.PATH,
       XDG_PICTURES_DIR: pictures,
-      LINUX_DESKTOP_SHELL_PATH: "/nix/store/valid-qml",
+      DESKTOP_SHELL_SHELL_PATH: "/nix/store/valid-qml",
     };
     const valid = spawnSync(
       "bash",

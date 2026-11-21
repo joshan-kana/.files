@@ -22,7 +22,7 @@ WlSessionLock {
     signal unlockAuthorized
 
     property PamContext pamContext: PamContext {
-        config: "linux-desktop"
+        config: "desktop-shell"
 
         onPamMessage: {
             if (!responseRequired) {

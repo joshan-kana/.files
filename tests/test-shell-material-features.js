@@ -158,14 +158,14 @@ test("displays uses standard notifications and the status island owns only live 
     island,
     /displayActionVisible|displayPress|displaySettingsRequested/,
   );
-  assert.doesNotMatch(bar, /WlrLayershell\.namespace: "linux-desktop-context"/);
+  assert.doesNotMatch(bar, /WlrLayershell\.namespace: "desktop-shell-context"/);
 });
 
 test("local OCR exposes selectable text and highlighted original-image coordinates", () => {
   const library = qml("RecordingLibrary.qml");
   const controls = qml("SystemContent.qml");
   const script = fs.readFileSync(
-    path.join(__dirname, "../scripts/linux-desktop/recordings.sh"),
+    path.join(__dirname, "../scripts/desktop-shell/recordings.sh"),
     "utf8",
   );
   const shortcuts = fs.readFileSync(path.join(root, "keybindings.nix"), "utf8");

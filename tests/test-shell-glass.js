@@ -21,13 +21,13 @@ test("frosted glass blurs the active connected frame as one visible layer", () =
   assert.match(preferences, /property bool frameGlassExposed: false/);
   assert.match(
     preferences,
-    /applyGlassRule\("linux-desktop-shell-glass-frame", "\^linux-desktop-frame\$", frameGlassExposed\)/,
+    /applyGlassRule\("desktop-shell-shell-glass-frame", "\^desktop-shell-frame\$", frameGlassExposed\)/,
   );
   // Bar islands and the shared contour live in different Wayland layers.
   // Both require conditional blur for the complete connected glass surface.
   assert.match(
     preferences,
-    /applyGlassRule\("linux-desktop-shell-glass", "\^linux-desktop-bar\$", barVisible\)/,
+    /applyGlassRule\("desktop-shell-shell-glass", "\^desktop-shell-bar\$", barVisible\)/,
   );
 });
 
@@ -44,7 +44,7 @@ test("connected hub borrows a single glass material from the shared contour", ()
   );
   assert.match(
     qml("AppearancePreferences.qml"),
-    /applyGlassRule\("linux-desktop-shell-glass-expansion", "\^linux-desktop-expansion\$", expansionGlassExposed\)/,
+    /applyGlassRule\("desktop-shell-shell-glass-expansion", "\^desktop-shell-expansion\$", expansionGlassExposed\)/,
   );
 });
 
@@ -70,7 +70,7 @@ test("connected popups borrow the frame material, while overlapping toasts use t
   const shell = qml("shell.qml");
   assert.match(
     prefs,
-    /applyGlassRule\("linux-desktop-shell-glass-resize", "\^linux-desktop-resize-controls\$", resizeGlassExposed\)/,
+    /applyGlassRule\("desktop-shell-shell-glass-resize", "\^desktop-shell-resize-controls\$", resizeGlassExposed\)/,
   );
   assert.match(
     shell,

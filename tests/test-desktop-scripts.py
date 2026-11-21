@@ -8,8 +8,8 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPTS = ROOT / "scripts/linux-desktop"
-THEME = ROOT / "scripts/linux-desktop/theme-set.sh"
+SCRIPTS = ROOT / "scripts/desktop-shell"
+THEME = ROOT / "scripts/desktop-shell/theme-set.sh"
 
 
 class DesktopScriptTests(unittest.TestCase):
@@ -64,7 +64,7 @@ class DesktopScriptTests(unittest.TestCase):
             "configuredTheme=carbon\nrepoPath=/tmp/theme\n"
             "themeFlakeRef=path:/tmp/theme\nmanifest=/tmp/unused\n"
             "expectedUser=fixture\nconfigurationName=fixture\n"
-            f"operationDir={operation}\noperationUnit=linux-desktop-theme-apply.service\n" + THEME.read_text()
+            f"operationDir={operation}\noperationUnit=desktop-shell-theme-apply.service\n" + THEME.read_text()
         )
         source.chmod(0o700)
         return source
@@ -76,7 +76,7 @@ class DesktopScriptTests(unittest.TestCase):
             """
 if [ "$1" = --user ] && [ "$2" = start ]; then
   printf "video-frame" > "$XDG_RUNTIME_DIR/recording.mp4"
-  printf 'recording\n42\n%s/recording.mp4\n' "$XDG_RUNTIME_DIR" > "$XDG_RUNTIME_DIR/linux-desktop-recording.state"
+  printf 'recording\n42\n%s/recording.mp4\n' "$XDG_RUNTIME_DIR" > "$XDG_RUNTIME_DIR/desktop-shell-recording.state"
   touch "$XDG_RUNTIME_DIR/recording-started"
   exit 0
 fi
@@ -89,14 +89,14 @@ exit 1
         )
         result = self.run_script(SCRIPTS / "recording-toggle.sh", "start", "Virtual-1", "0,0 1200x800", "none")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual((self.runtime / "linux-desktop-recording.state").read_text().splitlines()[0], "recording")
+        self.assertEqual((self.runtime / "desktop-shell-recording.state").read_text().splitlines()[0], "recording")
 
     def test_recording_start_failure_preserves_retry_contract(self):
         """A failed start returns nonzero instead of a false successful action."""
         self.executable("systemctl", "exit 1\n")
         result = self.run_script(SCRIPTS / "recording-toggle.sh", "start", "Virtual-1", "0,0 1200x800", "none")
         self.assertNotEqual(result.returncode, 0)
-        self.assertFalse((self.runtime / "linux-desktop-recording.conf").exists())
+        self.assertFalse((self.runtime / "desktop-shell-recording.conf").exists())
         picker = (ROOT / "modules/desktop/hyprland/shell/qml/ScreenshotPicker.qml").read_text()
         self.assertIn("id: recordingStart", picker)
         self.assertIn("picker.open = true;", picker)
@@ -108,7 +108,7 @@ exit 1
             "systemctl",
             """
 if [ "$1" = --user ] && [ "$2" = start ]; then
-  printf 'recording\\n42\\n%s/missing.mp4\\n' "$XDG_RUNTIME_DIR" > "$XDG_RUNTIME_DIR/linux-desktop-recording.state"
+  printf 'recording\\n42\\n%s/missing.mp4\\n' "$XDG_RUNTIME_DIR" > "$XDG_RUNTIME_DIR/desktop-shell-recording.state"
   touch "$XDG_RUNTIME_DIR/recording-started"
   exit 0
 fi
@@ -125,8 +125,8 @@ exit 1
 
     def test_recording_output_is_private(self):
         """The service and direct recording entry point both restrict file access."""
-        self.env["LINUX_DESKTOP_RECORDING_DIR"] = str(self.home / "recordings")
-        configuration = self.runtime / "linux-desktop-recording.conf"
+        self.env["DESKTOP_SHELL_RECORDING_DIR"] = str(self.home / "recordings")
+        configuration = self.runtime / "desktop-shell-recording.conf"
         configuration.write_text("Virtual-1\n0,0 1200x800\nnone\n")
         self.executable(
             "wf-recorder",
@@ -138,13 +138,13 @@ exit 1
         self.assertEqual(len(captures), 1)
         self.assertEqual(captures[0].stat().st_mode & 0o777, 0o600)
         config = (ROOT / "modules/desktop/hyprland/shell/default.nix").read_text()
-        recording_service = config.split("linux-desktop-recording = {", 1)[1].split("linux-desktop-lock = {", 1)[0]
+        recording_service = config.split("desktop-shell-recording = {", 1)[1].split("desktop-shell-lock = {", 1)[0]
         self.assertIn('UMask = "0077";', recording_service)
 
     @unittest.skipUnless(shutil.which("flock"), "GNU flock is required for operation-lock integration")
     def test_theme_cancellation_prevents_worker_build(self):
         """Cancelled work may never re-enter the build or activation phase."""
-        operation = self.state / "linux-desktop/theme-operation"
+        operation = self.state / "desktop-shell/theme-operation"
         operation.mkdir(parents=True)
         (operation / "phase").write_text("cancelled\n")
         (operation / "output.log").touch()
@@ -161,7 +161,7 @@ exit 1
     @unittest.skipUnless(shutil.which("flock"), "GNU flock is required for operation-lock integration")
     def test_theme_cancellation_after_build_blocks_activation(self):
         """A cancelled builder cannot cross the activation boundary."""
-        operation = self.state / "linux-desktop/theme-operation"
+        operation = self.state / "desktop-shell/theme-operation"
         operation.mkdir(parents=True)
         (operation / "phase").write_text("preparing\n")
         (operation / "output.log").touch()
@@ -188,7 +188,7 @@ fi
     @unittest.skipUnless(shutil.which("flock"), "GNU flock is required for theme launch")
     def test_theme_launcher_starts_independent_user_service(self):
         """The chooser returns after systemd accepts an independent worker."""
-        operation = self.state / "linux-desktop/theme-operation"
+        operation = self.state / "desktop-shell/theme-operation"
         self.executable("jq", "exit 0\n")
         self.executable("systemctl", "exit 1\n")
         arguments = self.home / "systemd-run-arguments"
@@ -203,14 +203,14 @@ fi
         self.assertIn("--user", invocation)
         self.assertIn("--service-type=exec", invocation)
         self.assertIn("--collect", invocation)
-        self.assertIn("--unit=linux-desktop-theme-apply", invocation)
+        self.assertIn("--unit=desktop-shell-theme-apply", invocation)
         self.assertNotIn("--scope", invocation)
         self.assertEqual(invocation[-3:], ["switch", "carbon", "--worker"])
 
     @unittest.skipUnless(shutil.which("flock"), "GNU flock is required for theme cancellation")
     def test_theme_cancel_publishes_state_before_stopping_service(self):
         """The worker observes cancellation before systemd stops its service."""
-        operation = self.state / "linux-desktop/theme-operation"
+        operation = self.state / "desktop-shell/theme-operation"
         operation.mkdir(parents=True)
         (operation / "phase").write_text("building\n")
         self.executable(
@@ -223,12 +223,12 @@ fi
         result = self.run_script(source, "cancel")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual((operation / "phase").read_text().strip(), "cancelled")
-        self.assertEqual((self.runtime / "stopped-unit").read_text().strip(), "--user stop linux-desktop-theme-apply.service")
+        self.assertEqual((self.runtime / "stopped-unit").read_text().strip(), "--user stop desktop-shell-theme-apply.service")
 
     @unittest.skipUnless(shutil.which("flock"), "GNU flock is required for theme build")
     def test_theme_failed_build_does_not_attempt_activation(self):
         """A real build failure remains an error and never switches systems."""
-        operation = self.state / "linux-desktop/theme-operation"
+        operation = self.state / "desktop-shell/theme-operation"
         operation.mkdir(parents=True)
         (operation / "phase").write_text("preparing\n")
         (operation / "output.log").touch()
@@ -244,7 +244,7 @@ fi
 
     def test_screenshot_copy_failure_does_not_report_success(self):
         """Clipboard failure leaves the frozen capture retryable."""
-        snapshot = self.runtime / "linux-desktop-capture-12345678.png"
+        snapshot = self.runtime / "desktop-shell-capture-12345678.png"
         snapshot.write_bytes(b"source-frame")
         pictures = self.home / "pictures"
         self.env["XDG_PICTURES_DIR"] = str(pictures)

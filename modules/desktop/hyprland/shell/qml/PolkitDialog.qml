@@ -85,7 +85,7 @@ Scope {
             bottom: true
             left: true
         }
-        WlrLayershell.namespace: "linux-desktop-authentication"
+        WlrLayershell.namespace: "desktop-shell-authentication"
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.keyboardFocus: agent.isActive ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 

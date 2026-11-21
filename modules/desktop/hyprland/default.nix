@@ -9,12 +9,12 @@ let
   xwaylandEnabled = true;
   terminal = config.dotfiles.defaults.terminal;
   localScratchpad = pkgs.writeShellApplication {
-    name = "linux-desktop-local-scratchpad";
+    name = "desktop-shell-local-scratchpad";
     runtimeInputs = [
       pkgs.jq
       pkgs.libnotify
     ];
-    text = builtins.readFile ../../../scripts/linux-desktop/local-scratchpad.sh;
+    text = builtins.readFile ../../../scripts/desktop-shell/local-scratchpad.sh;
   };
 in
 {
@@ -105,7 +105,7 @@ in
   shell = import ./shell;
 
   lock = _: {
-    security.pam.services.linux-desktop = { };
+    security.pam.services.desktop-shell = { };
   };
 
   cliphist = _: {
@@ -343,7 +343,7 @@ in
           # widgets. The persistent Overlay-level modal host stays undimmed.
           layer_rule = [
             {
-              match.namespace = "^linux-desktop-modal-dim$";
+              match.namespace = "^desktop-shell-modal-dim$";
               dim_around = true;
             }
           ];
@@ -365,7 +365,7 @@ in
             {
               # The theme prompt must coexist with the centre picker and the
               # desktop, even on the system-owned special workspace.
-              match.class = "LinuxDesktopThemeSwitch";
+              match.class = "DesktopShellThemeSwitch";
               float = true;
               size = [
                 640

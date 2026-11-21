@@ -2,13 +2,13 @@
 mode="${1:-}"
 private_dir="${XDG_RUNTIME_DIR:?}"
 ensure_snapshot() {
-  [[ $1 == "$private_dir"/linux-desktop-capture-*.png ]] && [ -f "$1" ] && [ ! -L "$1" ]
+  [[ $1 == "$private_dir"/desktop-shell-capture-*.png ]] && [ -f "$1" ] && [ ! -L "$1" ]
 }
 case "$mode" in
 snapshot)
   [ "$#" -eq 2 ] && [ -n "$2" ] || exit 2
   umask 077
-  snapshot="$(mktemp "$private_dir/linux-desktop-capture-XXXXXXXX.png")"
+  snapshot="$(mktemp "$private_dir/desktop-shell-capture-XXXXXXXX.png")"
   if grim -o "$2" "$snapshot"; then printf '%s\n' "$snapshot"; else
     rm -f -- "$snapshot"
     exit 1
@@ -38,9 +38,9 @@ copy | save | annotate)
   if [ "$mode" = copy ]; then
     wl-copy --type image/png <"$output" || exit 1
   fi
-  systemd-run --user --quiet --collect -- linux-desktop-capture-notify screenshot "$output" || true
+  systemd-run --user --quiet --collect -- desktop-shell-capture-notify screenshot "$output" || true
   if [ "$mode" = annotate ]; then
-    linux-desktop-markup "$output"
+    desktop-shell-markup "$output"
   fi
   printf '%s\n' "$output"
   # Keep the source available for retry if either export fails.

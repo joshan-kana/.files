@@ -69,7 +69,7 @@ Item {
 
     Settings {
         id: launcherPreferences
-        location: "file://" + (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/linux-desktop/palette.ini"
+        location: "file://" + (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/desktop-shell/palette.ini"
         category: "Launcher"
         property string favourites: "[]"
         property string recent: "[]" // Read only for the one-time state migration.
@@ -78,7 +78,7 @@ Item {
 
     Settings {
         id: usageHistory
-        location: "file://" + (Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state") + "/linux-desktop/palette.ini"
+        location: "file://" + (Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state") + "/desktop-shell/palette.ini"
         category: "Usage"
         property string recent: "[]"
         property bool migrated: false
@@ -218,7 +218,7 @@ Item {
 
     FileView {
         id: snippetsFile
-        path: (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/linux-desktop/snippets.json"
+        path: (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/desktop-shell/snippets.json"
         blockLoading: false
         printErrors: false
         watchChanges: true
@@ -246,7 +246,7 @@ Item {
 
     Socket {
         id: indexSocket
-        path: Quickshell.env("XDG_RUNTIME_DIR") + "/linux-desktop-palette.sock"
+        path: Quickshell.env("XDG_RUNTIME_DIR") + "/desktop-shell-palette.sock"
         connected: false
 
         parser: SplitParser {

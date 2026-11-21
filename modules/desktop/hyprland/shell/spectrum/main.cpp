@@ -605,7 +605,7 @@ int main() {
   }
 
   const std::string socketPath =
-      std::string(runtimeDir) + "/linux-desktop-spectrum.sock";
+      std::string(runtimeDir) + "/desktop-shell-spectrum.sock";
 
   const int eventFd = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
   if (eventFd < 0) {
@@ -653,7 +653,7 @@ int main() {
     pw_loop_signal_event(loop, app.captureChangeEvent);
   });
 
-  app.stream = pw_stream_new_simple(loop, "linux-desktop-spectrum", properties,
+  app.stream = pw_stream_new_simple(loop, "desktop-shell-spectrum", properties,
                                     &kStreamEvents, &app);
 
   if (!app.stream) {

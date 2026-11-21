@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 output="${1:?Output required}"
-state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/linux-desktop/wallpapers"
+state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/desktop-shell/wallpapers"
 file="$state_dir/$output.wall"
 if [ -r "$file" ]; then
   { IFS= read -r resize && IFS= read -r video; } <"$file" || exit 1
 elif [ "$output" = all ]; then
-  runtime="${XDG_CONFIG_HOME:-$HOME/.config}/linux-desktop/runtime.json"
+  runtime="${XDG_CONFIG_HOME:-$HOME/.config}/desktop-shell/runtime.json"
   video="$(jq -r '.wallpaperVideoDefault // empty' "$runtime")"
   [ -n "$video" ] || exit 0
   resize=fit
@@ -14,7 +14,7 @@ else
 fi
 [ -f "$video" ] || exit 1
 case "${video,,}" in *.mp4 | *.webm | *.mkv | *.mov) ;; *) exit 0 ;; esac
-[ ! -f "$XDG_RUNTIME_DIR/linux-desktop-wallpaper-motion-disabled" ] || exit 0
+[ ! -f "$XDG_RUNTIME_DIR/desktop-shell-wallpaper-motion-disabled" ] || exit 0
 options='no-audio loop-file=inf hwdec=auto'
 [ "$resize" != crop ] || options="$options panscan=1"
 if [ "$output" != all ]; then

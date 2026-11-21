@@ -52,7 +52,7 @@ PanelWindow {
     anchors.top: true
     readonly property real effectiveTopOffset: hubVisible && hubBounds.visible && hubBounds.y + hubBounds.height + implicitHeight + theme.spacing3 < (screen ? screen.height : 1000) ? hubBounds.y + hubBounds.height + theme.spacing3 : topOffset
     margins.top: effectiveTopOffset
-    WlrLayershell.namespace: "linux-desktop-status-inspection"
+    WlrLayershell.namespace: "desktop-shell-status-inspection"
     WlrLayershell.layer: screenFullscreen ? WlrLayer.Overlay : WlrLayer.Top
     // Inspection owns the keyboard while visible, including when opened from
     // an application rather than by pointer interaction.

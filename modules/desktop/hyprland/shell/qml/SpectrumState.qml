@@ -145,7 +145,7 @@ QtObject {
         Socket {
             id: spectrumSocket
 
-            path: Quickshell.env("XDG_RUNTIME_DIR") + "/linux-desktop-spectrum.sock"
+            path: Quickshell.env("XDG_RUNTIME_DIR") + "/desktop-shell-spectrum.sock"
             connected: false
 
             Component.onCompleted: Qt.callLater(() => {

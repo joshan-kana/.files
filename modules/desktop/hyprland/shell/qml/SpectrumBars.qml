@@ -1,6 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import LinuxDesktop.Visuals 1.0
+import DesktopShell.Visuals 1.0
 
 Item {
     id: root

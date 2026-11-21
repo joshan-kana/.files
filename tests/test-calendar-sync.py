@@ -12,7 +12,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 def module(name, filename):
     """Load an executable calendar helper into the isolated test process."""
-    spec = importlib.util.spec_from_file_location(name, ROOT / "scripts/linux-desktop" / filename)
+    spec = importlib.util.spec_from_file_location(name, ROOT / "scripts/desktop-shell" / filename)
     loaded = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(loaded)
     return loaded
@@ -116,7 +116,7 @@ class CalendarSyncTests(unittest.TestCase):
             self.assertEqual(sync.main(), 0)
         self.assertTrue((original / filename).exists())
         self.assertTrue((original / "local.ics").exists())
-        self.assertTrue((self.state / "linux-desktop/ical-vdir-ready").exists())
+        self.assertTrue((self.state / "desktop-shell/ical-vdir-ready").exists())
 
     def test_sync_is_repeatable_and_keeps_legacy_cache(self):
         """Resynchronize unchanged feeds without disturbing legacy events."""
@@ -157,7 +157,7 @@ class CalendarSyncTests(unittest.TestCase):
         original = self.data / "calendars/personal"
         original.mkdir(parents=True)
         (original / ("google-ical-" + identity + "--" + query.hashlib.sha256(legacy_uid.encode()).hexdigest() + ".ics")).touch()
-        marker = self.state / "linux-desktop/ical-vdir-ready"
+        marker = self.state / "desktop-shell/ical-vdir-ready"
         marker.parent.mkdir(parents=True)
         marker.touch()
         (self.data / "calendars/subscriptions" / identity).mkdir(parents=True)
@@ -193,7 +193,7 @@ class CalendarSyncTests(unittest.TestCase):
 
     def test_missing_new_collection_uses_legacy_khal_view(self):
         """Keep the old data view available after an incomplete migration."""
-        marker = self.state / "linux-desktop/ical-vdir-ready"
+        marker = self.state / "desktop-shell/ical-vdir-ready"
         marker.parent.mkdir(parents=True)
         marker.touch()
         identity = "c" * 24
@@ -211,7 +211,7 @@ class CalendarSyncTests(unittest.TestCase):
         original = (self.config / "khal/config").read_text()
         identity = "b" * 24
         (self.data / "calendars/subscriptions" / identity).mkdir(parents=True)
-        marker = self.state / "linux-desktop/ical-vdir-ready"
+        marker = self.state / "desktop-shell/ical-vdir-ready"
         marker.parent.mkdir(parents=True)
         marker.touch()
         with (

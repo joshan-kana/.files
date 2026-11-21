@@ -43,8 +43,8 @@ _: {
     ./jellyfin-mpv-shim
     ./linear
     ./libreoffice
-    ./linux-desktop-spectrum
-    ./linux-desktop-visuals
+    ./desktop-shell-spectrum
+    ./desktop-shell-visuals
     ./notion
     ./open-webui-desktop
     ./open-webui-computer

@@ -132,7 +132,7 @@ PanelWindow {
         right: qmlPopup.frameConnected ? qmlPopup.theme.frameThickness : theme.panelSideOffset
     }
 
-    WlrLayershell.namespace: "linux-desktop-notification-popup"
+    WlrLayershell.namespace: "desktop-shell-notification-popup"
     // The hub is an Overlay layer surface; toast cards must paint above it.
     WlrLayershell.layer: WlrLayer.Overlay
 

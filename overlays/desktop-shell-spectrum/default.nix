@@ -3,8 +3,8 @@ _: {
     (
       final: prev:
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isLinux {
-        linux-desktop-spectrum = final.stdenv.mkDerivation {
-          pname = "linux-desktop-spectrum";
+        desktop-shell-spectrum = final.stdenv.mkDerivation {
+          pname = "desktop-shell-spectrum";
           version = "0.1.0";
           src = ../../modules/desktop/hyprland/shell/spectrum;
 
@@ -13,16 +13,16 @@ _: {
 
           buildPhase = ''
             runHook preBuild
-            $CXX -std=c++20 -O3 -DNDEBUG -Wall -Wextra main.cpp -o linux-desktop-spectrum $(pkg-config --cflags --libs libpipewire-0.3) -pthread
+            $CXX -std=c++20 -O3 -DNDEBUG -Wall -Wextra main.cpp -o desktop-shell-spectrum $(pkg-config --cflags --libs libpipewire-0.3) -pthread
             runHook postBuild
           '';
 
           installPhase = ''
             runHook preInstall
-            install -Dm755 linux-desktop-spectrum "$out/bin/linux-desktop-spectrum"
+            install -Dm755 desktop-shell-spectrum "$out/bin/desktop-shell-spectrum"
             runHook postInstall
           '';
-          meta.mainProgram = "linux-desktop-spectrum";
+          meta.mainProgram = "desktop-shell-spectrum";
         };
       }
     )

@@ -24,7 +24,7 @@ test("notification toasts render above the Controls hub without changing popup g
   assert.match(popup, /WlrLayershell\.layer: WlrLayer\.Overlay/);
   assert.match(
     popup,
-    /WlrLayershell\.namespace: "linux-desktop-notification-popup"/,
+    /WlrLayershell\.namespace: "desktop-shell-notification-popup"/,
   );
   assert.match(popup, /mask: surfaceLifecycle\.inputRegion/);
   assert.match(popup, /interactiveItem: toastInputArea/);

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 library="$HOME/wallpapers"
-state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/linux-desktop/wallpapers"
-runtime="${XDG_CONFIG_HOME:-$HOME/.config}/linux-desktop/runtime.json"
+state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/desktop-shell/wallpapers"
+runtime="${XDG_CONFIG_HOME:-$HOME/.config}/desktop-shell/runtime.json"
 action="${1:-}"
 output="${2:-all}"
 if [ "$action" = thumbnail-animated ]; then
@@ -11,7 +11,7 @@ if [ "$action" = thumbnail-animated ]; then
   # The selected item alone gets a short, muted cached motion
   # preview. No decoding or background player when the gallery is
   # closed or global reduced motion is active.
-  cache="${XDG_CACHE_HOME:-$HOME/.cache}/linux-desktop/wallpaper-thumbnails"
+  cache="${XDG_CACHE_HOME:-$HOME/.cache}/desktop-shell/wallpaper-thumbnails"
   mkdir -p "$cache"
   key="$(printf '%s:%s' "$image" "$(stat -c '%Y:%s' "$image")" | sha256sum | cut -d' ' -f1)"
   thumb="$cache/$key-motion.gif"
@@ -41,7 +41,7 @@ if [ "$action" = thumbnail ] || [ "$action" = poster ]; then
       ;;
     esac
   fi
-  cache="${XDG_CACHE_HOME:-$HOME/.cache}/linux-desktop/wallpaper-thumbnails"
+  cache="${XDG_CACHE_HOME:-$HOME/.cache}/desktop-shell/wallpaper-thumbnails"
   mkdir -p "$cache"
   key="$(printf '%s:%s' "$image" "$(stat -c '%Y:%s' "$image")" | sha256sum | cut -d' ' -f1)"
   suffix=""
@@ -72,7 +72,7 @@ esac
 state_file="$state_dir/$output.wall"
 
 if [ "$action" = motion ]; then
-  quiet="$XDG_RUNTIME_DIR/linux-desktop-wallpaper-motion-disabled"
+  quiet="$XDG_RUNTIME_DIR/desktop-shell-wallpaper-motion-disabled"
   case "$output" in
   off) touch "$quiet" ;;
   on) rm -f "$quiet" ;;
@@ -82,14 +82,14 @@ if [ "$action" = motion ]; then
   # Only animated wallpapers need reconfiguration to a still/video.
   default_video="$(jq -r '.wallpaperVideoDefault // empty' "$runtime" 2>/dev/null || true)"
   if [ -n "$default_video" ] && [ -f "$default_video" ]; then
-    systemctl --user start --no-block linux-desktop-wallpaper-image.service
+    systemctl --user start --no-block desktop-shell-wallpaper-image.service
   fi
   for selection in "$state_dir"/*.wall; do
     [ -f "$selection" ] || continue
     image="$(tail -n 1 "$selection")"
     case "${image,,}" in
     *.gif | *.mp4 | *.webm | *.mkv | *.mov)
-      systemctl --user start --no-block linux-desktop-wallpaper-image.service
+      systemctl --user start --no-block desktop-shell-wallpaper-image.service
       break
       ;;
     esac
@@ -148,10 +148,10 @@ set)
     printf 'Wallpaper must be an existing absolute file path\n' >&2
     exit 2
   fi
-  exec 9>"${XDG_RUNTIME_DIR:?}/linux-desktop-wallpaper.lock"
+  exec 9>"${XDG_RUNTIME_DIR:?}/desktop-shell-wallpaper.lock"
   flock -x 9
   wallpaper_transition
-  unit="linux-desktop-wallpaper-video@$output.service"
+  unit="desktop-shell-wallpaper-video@$output.service"
   args=()
   [ "$output" = all ] || args=(--outputs "$output")
   previous_file="$state_dir/$output.wall"
@@ -172,7 +172,7 @@ set)
     still="$($0 poster "$image")"
   else
     still="$image"
-    if [ -f "$XDG_RUNTIME_DIR/linux-desktop-wallpaper-motion-disabled" ] && [[ ${image,,} == *.gif ]]; then
+    if [ -f "$XDG_RUNTIME_DIR/desktop-shell-wallpaper-motion-disabled" ] && [[ ${image,,} == *.gif ]]; then
       still="$($0 poster "$image")"
     fi
   fi
@@ -184,7 +184,7 @@ set)
     for selection in "$state_dir"/*.wall; do
       [ -f "$selection" ] && [ "$selection" != "$state_file" ] || continue
       monitor="$(basename "$selection" .wall)"
-      systemctl --user stop "linux-desktop-wallpaper-video@$monitor.service" || true
+      systemctl --user stop "desktop-shell-wallpaper-video@$monitor.service" || true
     done
   fi
   # shellcheck disable=SC2154 # Populated by wallpaper_transition in the shared source.
@@ -205,12 +205,12 @@ set)
     # Recompute global video coverage after an override changes.
     case "$(tail -n 1 "$state_dir/all.wall")" in
     *.mp4 | *.webm | *.mkv | *.mov)
-      systemctl --user restart linux-desktop-wallpaper-video@all.service || true
+      systemctl --user restart desktop-shell-wallpaper-video@all.service || true
       ;;
     esac
   fi
   if [ "$kind" = video ]; then
-    if [ ! -f "$XDG_RUNTIME_DIR/linux-desktop-wallpaper-motion-disabled" ]; then
+    if [ ! -f "$XDG_RUNTIME_DIR/desktop-shell-wallpaper-motion-disabled" ]; then
       # Let the eased poster transition finish before playing the
       # same first frame as video, avoiding an abrupt hard swap.
       # shellcheck disable=SC2154 # The shared wallpaper source owns the duration.
@@ -224,19 +224,19 @@ set)
   fi
   ;;
 reset)
-  systemctl --user stop "linux-desktop-wallpaper-video@$output.service" || true
+  systemctl --user stop "desktop-shell-wallpaper-video@$output.service" || true
   rm -f "$state_file"
   if [ "$output" != all ] && [ -f "$state_dir/all.wall" ]; then
     case "$(tail -n 1 "$state_dir/all.wall")" in
     *.mp4 | *.webm | *.mkv | *.mov)
-      systemctl --user restart linux-desktop-wallpaper-video@all.service || true
+      systemctl --user restart desktop-shell-wallpaper-video@all.service || true
       ;;
     esac
   fi
-  systemctl --user start --no-block linux-desktop-wallpaper-image.service
+  systemctl --user start --no-block desktop-shell-wallpaper-image.service
   ;;
 *)
-  printf 'Usage: linux-desktop-wallpaper-library {list|current [output]|set output crop\|fit /abs/file|reset [output]|thumbnail /abs/file|poster /abs/file|thumbnail-animated /abs/file|motion on\|off}\n' >&2
+  printf 'Usage: desktop-shell-wallpaper-library {list|current [output]|set output crop\|fit /abs/file|reset [output]|thumbnail /abs/file|poster /abs/file|thumbnail-animated /abs/file|motion on\|off}\n' >&2
   exit 2
   ;;
 esac

@@ -18,7 +18,7 @@ test("native squircle fill retains outlines while reusing premultiplied scene-gr
     "utf8",
   );
 
-  assert.match(surface, /import LinuxDesktop\.Visuals 1\.0/);
+  assert.match(surface, /import DesktopShell\.Visuals 1\.0/);
   assert.match(surface, /SquircleFillItem\s*\{/);
   assert.match(surface, /lightStrength: root\.lightStrength/);
   // Flat translucent tiles use one antialiased contour, not a triangle fan

@@ -70,7 +70,7 @@ def sync_source(identity, source, data_home, state_home, runtime):
     if collection.is_symlink():
         raise ValueError("calendar collection cannot be a symlink")
     collection.mkdir(parents=True, exist_ok=True, mode=0o700)
-    status_root = state_home / "linux-desktop" / "vdirsyncer"
+    status_root = state_home / "desktop-shell" / "vdirsyncer"
     if status_root.is_symlink():
         raise ValueError("calendar status directory cannot be a symlink")
     status_root.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -144,7 +144,7 @@ def main():
     try:
         # The previous khal vdir is retained as a rollback source. Agenda
         # queries suppress its subscription copies after vdir activation.
-        marker = state_home / "linux-desktop" / "ical-vdir-ready"
+        marker = state_home / "desktop-shell" / "ical-vdir-ready"
         marker.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         temporary = marker.with_suffix(".tmp")
         temporary.write_text("1\n", encoding="utf-8")

@@ -17,10 +17,10 @@ recording | edit-recording | text-recording)
 esac
 [ -f "$path" ] && [ ! -L "$path" ] || exit 1
 case "$1" in
-edit-screenshot) exec linux-desktop-markup "$path" ;;
+edit-screenshot) exec desktop-shell-markup "$path" ;;
 edit-recording) exec losslesscut --disable-networking "$path" ;;
 text-screenshot | text-recording)
-  exec quickshell ipc --path "$LINUX_DESKTOP_SHELL_PATH" call desktop showCaptureText "$name"
+  exec quickshell ipc --path "$DESKTOP_SHELL_SHELL_PATH" call desktop showCaptureText "$name"
   ;;
 esac
 exec xdg-open "$path"

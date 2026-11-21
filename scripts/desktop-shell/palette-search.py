@@ -13,7 +13,7 @@ from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlsplit
 
-BASE = Path(os.environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache"))) / "linux-desktop"
+BASE = Path(os.environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache"))) / "desktop-shell"
 DB = BASE / "search.sqlite3"
 MAX_ITEMS = 80000
 EXCLUDED = {
@@ -43,7 +43,7 @@ def declared_roots():
     home = Path.home()
     config = Path(
         os.environ.get(
-            "LINUX_DESKTOP_RUNTIME", str(Path(os.environ.get("XDG_CONFIG_HOME", str(home / ".config"))) / "linux-desktop/runtime.json")
+            "DESKTOP_SHELL_RUNTIME", str(Path(os.environ.get("XDG_CONFIG_HOME", str(home / ".config"))) / "desktop-shell/runtime.json")
         )
     )
     try:
@@ -450,7 +450,7 @@ def start_search_socket():
     from select import select
 
     runtime = Path(os.environ["XDG_RUNTIME_DIR"])
-    endpoint = runtime / "linux-desktop-palette.sock"
+    endpoint = runtime / "desktop-shell-palette.sock"
     if endpoint.exists() or endpoint.is_symlink():
         info = endpoint.lstat()
         if not stat.S_ISSOCK(info.st_mode) or info.st_uid != os.getuid():
@@ -565,7 +565,7 @@ def watch():
     home = Path.home()
     config = Path(
         os.environ.get(
-            "LINUX_DESKTOP_RUNTIME", str(Path(os.environ.get("XDG_CONFIG_HOME", str(home / ".config"))) / "linux-desktop/runtime.json")
+            "DESKTOP_SHELL_RUNTIME", str(Path(os.environ.get("XDG_CONFIG_HOME", str(home / ".config"))) / "desktop-shell/runtime.json")
         )
     )
     search_server, search_endpoint = start_search_socket()

@@ -56,7 +56,7 @@ PanelWindow {
     readonly property real effectiveTopOffset: frameConnected ? (barVisible ? theme.barInsetTop : theme.frameThickness) : theme.panelTopOffset
     margins.top: effectiveTopOffset
 
-    WlrLayershell.namespace: "linux-desktop-osd"
+    WlrLayershell.namespace: "desktop-shell-osd"
     WlrLayershell.layer: screenFullscreen ? WlrLayer.Overlay : WlrLayer.Top
 
     Timer {

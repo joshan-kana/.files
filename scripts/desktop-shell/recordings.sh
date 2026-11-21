@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 action="${1:-}"
 recordings="$HOME/Videos/Screencasts"
-preview_dir="${XDG_RUNTIME_DIR:?}/linux-desktop-recordings-preview"
+preview_dir="${XDG_RUNTIME_DIR:?}/desktop-shell-recordings-preview"
 case "$action" in
 list)
   umask 077
-  metadata_dir="${XDG_RUNTIME_DIR:?}/linux-desktop-recordings-metadata"
+  metadata_dir="${XDG_RUNTIME_DIR:?}/desktop-shell-recordings-metadata"
   [ ! -L "$metadata_dir" ] || exit 2
   mkdir -p -- "$metadata_dir"
   chmod 700 -- "$metadata_dir"
@@ -59,7 +59,7 @@ preview | open | edit | copy | trash | ocr)
   if [ "$action" = open ]; then
     exec xdg-open "$path"
   elif [ "$action" = edit ]; then
-    if [ "$kind" = image ]; then exec linux-desktop-markup "$path"; fi
+    if [ "$kind" = image ]; then exec desktop-shell-markup "$path"; fi
     exec losslesscut --disable-networking "$path"
   elif [ "$action" = copy ]; then
     [ "$kind" = image ] || exit 2
