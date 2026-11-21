@@ -92,6 +92,12 @@ FocusScope {
     }
 
     property string requestedView: ""
+    property string requestedCaptureTextName: ""
+    property int requestedCaptureTextSerial: 0
+    onRequestedCaptureTextSerialChanged: {
+        if (requestedCaptureTextName.length > 0)
+            recordingsPanel.queueText(requestedCaptureTextName);
+    }
     required property bool returnToControls
     property bool helpOpen: false
     property int trayIndex: 0
