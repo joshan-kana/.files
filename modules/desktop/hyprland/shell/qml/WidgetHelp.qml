@@ -54,6 +54,18 @@ Item {
 
         readonly property point sampleOrigin: help.blurSource ? help.blurSource.mapFromItem(backdrop, 0, 0) : Qt.point(0, 0)
 
+        // A translucent source preserves unblurred foreground pixels behind
+        // its transparent regions. Replace the sharp source before painting
+        // the blurred copy, while retaining the hub's rounded silhouette.
+        SquircleSurface {
+            anchors.fill: parent
+            cornerRadius: help.backdropRadius
+            exponent: help.theme.squircleExponent
+            fillColor: Qt.rgba(help.theme.background.r, help.theme.background.g, help.theme.background.b, 1)
+            borderColor: "transparent"
+            borderWidth: 0
+        }
+
         ShaderEffectSource {
             id: blurTexture
             anchors.fill: parent
