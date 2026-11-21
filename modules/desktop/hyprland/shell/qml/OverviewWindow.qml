@@ -13,6 +13,13 @@ ShellSurface {
     signal dragMoved(real pointerX, real pointerY)
     signal dropped(real pointerX, real pointerY)
 
+    Accessible.role: Accessible.Button
+    Accessible.name: "Switch to " + (toplevel ? toplevel.title || (toplevel.lastIpcObject || {}).class || "window" : "window")
+    Accessible.onPressAction: {
+        if (tile.enabled)
+            tile.activated();
+    }
+
     surfaceLayer: ShellSurface.Control
     cornerRadius: theme.radiusMedium
     fillColor: selected ? theme.blend(theme.layer2, theme.accent, theme.dark ? 0.075 : 0.045) : theme.layer2

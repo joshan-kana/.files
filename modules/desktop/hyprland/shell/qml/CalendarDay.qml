@@ -11,6 +11,13 @@ ShellSurface {
 
     signal activated
 
+    Accessible.role: header ? Accessible.StaticText : Accessible.Button
+    Accessible.name: header ? heading : "Day " + day + (picked ? ", selected" : "") + (dayState === 1 ? ", today" : "")
+    Accessible.onPressAction: {
+        if (!cell.header && cell.enabled)
+            cell.activated();
+    }
+
     implicitWidth: 42
     implicitHeight: 42
     surfaceLayer: ShellSurface.Control
