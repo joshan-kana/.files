@@ -883,3 +883,16 @@ test("Visual Modes tile keycaps use one shared corner and motion convention", ()
     );
   }
 });
+
+test("Status detail keeps Refresh in its owning action and Close in the shared footer", () => {
+  const status = read("StatusContent.qml");
+  assert.match(
+    status,
+    /shortcut: content\.runtime\.shellHint\("StatusContent\.refresh"\)/,
+  );
+  assert.match(status, /inlineIconHint: true/);
+  assert.doesNotMatch(status, /KeyHintStrip\s*\{/);
+  assert.doesNotMatch(status, /StatusContent\.close/);
+  const controls = read("SystemContent.qml");
+  assert.match(controls, /StatusContent\.close/);
+});

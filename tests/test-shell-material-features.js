@@ -114,11 +114,11 @@ test("System Status consumes its refresh shortcut before Controls actions", () =
     /function refreshStatus\(\): void \{[\s\S]*?keyboard\.refresh\("inspect"\);[\s\S]*?brightness\.refresh\(\);/,
   );
   assert.match(controls, /onRefreshRequested: root\.refreshStatus\(\)/);
+  assert.doesNotMatch(qml("StatusContent.qml"), /KeyHintStrip\s*\{/);
   assert.match(
-    controls,
-    /closeLabel: root\.returnToControls \? "Back" : "Close"/,
+    qml("StatusContent.qml"),
+    /shortcut: content\.runtime\.shellHint\("StatusContent\.refresh"\)/,
   );
-  assert.match(qml("StatusContent.qml"), /label: content\.closeLabel/);
   assert.match(
     controls,
     /readonly property bool sliderNavigationEnabled:[^\n]*!statusOpen/,

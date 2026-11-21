@@ -139,7 +139,11 @@ test("inspection is reachable through canonical shortcut, palette and status isl
   );
   assert.doesNotMatch(content, /title: content\.closeLabel ===/);
   assert.doesNotMatch(content, /onActivated: content\.closeRequested\(\)/);
-  assert.match(content, /label: content\.closeLabel/);
+  assert.doesNotMatch(content, /KeyHintStrip\s*\{/);
+  assert.match(
+    content,
+    /shortcut: content\.runtime\.shellHint\("StatusContent\.refresh"\)/,
+  );
   assert.match(
     peek,
     /onRefreshRequested: \{[\s\S]*?keyboard\.refresh\("inspect"\)/,
