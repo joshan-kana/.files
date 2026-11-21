@@ -130,7 +130,7 @@ test("hub Help uses a single panel-shaped scrim with live, demand-driven glass b
   assert.match(help, /anchors\.fill: parent/);
   assert.match(
     help,
-    /visible: help\.open && help\.theme\.shellGlassEnabled && help\.blurSource !== null/,
+    /visible: help\.visible && help\.theme\.shellGlassEnabled && help\.blurSource !== null/,
   );
   assert.match(help, /MultiEffect \{[\s\S]*?blurEnabled: true/);
   assert.match(help, /fillColor: Qt\.rgba\(help\.theme\.background\.r/);
