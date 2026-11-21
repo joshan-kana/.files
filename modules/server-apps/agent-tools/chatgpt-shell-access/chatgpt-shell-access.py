@@ -352,6 +352,7 @@ async def _run(job: Job, command: str, cwd: str | None, stdin: str | None) -> No
     except Exception as exc:
         job.error = str(exc)
     finally:
+        job.awaiting_approval = False
         job.completed_at = time.monotonic()
 
 
@@ -480,8 +481,8 @@ async def session_start(
 
 @mcp.tool()
 async def session_list(host: Host) -> dict[str, object]:
-    """List the active and finished Herdr terminals on an approved host."""
-    return await _herdr(host, ["ls", "--all", "--json"])
+    """List the ChatGPT-owned Herdr terminals on an approved host."""
+    return await _herdr(host, ["ls", "--all", "--label", "origin=chatgpt-shell", "--json"])
 
 
 @mcp.tool()
@@ -489,19 +490,24 @@ async def session_read(host: Host, terminal: str, lines: int = 100) -> dict[str,
     """Read a Herdr terminal's current screen and scrollback."""
     if not 0 <= lines <= 2000:
         raise ValueError("lines must be between 0 and 2000")
+    await _herdr_owned(host, terminal)
     return await _herdr(host, ["read", "--json", "--lines", str(lines), terminal])
 
 
 @mcp.tool()
 async def session_interrupt(host: Host, terminal: str) -> dict[str, object]:
-    """Interrupt a ChatGPT-managed Herdr terminal using its native interrupt action."""
+    """Interrupt a ChatGPT-managed terminal only when command control is enabled."""
+    if authorization.effective(host, "commands") != "automatic":
+        raise PermissionError("agent terminal mutation is disabled by the command policy")
     await _herdr_owned(host, terminal)
     return await _herdr(host, ["interrupt", "--json", terminal])
 
 
 @mcp.tool()
 async def session_kill(host: Host, terminal: str) -> dict[str, object]:
-    """Terminate a ChatGPT-managed Herdr process, escalating when needed."""
+    """Terminate a managed terminal only when the command policy permits it."""
+    if authorization.effective(host, "commands") != "automatic":
+        raise PermissionError("agent terminal mutation is disabled by the command policy")
     await _herdr_owned(host, terminal)
     return await _herdr(host, ["kill", "--json", terminal])
 
@@ -534,7 +540,11 @@ async def shell_exec(
         jobs.pop(finished.request_id, None)
 
     request_id = uuid.uuid4().hex
-    job = Job(request_id=request_id, host=host)
+    job = Job(
+        request_id=request_id,
+        host=host,
+        awaiting_approval=authorization.effective(host, "commands") == "ask",
+    )
     jobs[request_id] = job
     job.task = asyncio.create_task(_run(job, command, cwd, stdin))
     return await _result(job, wait_seconds)
@@ -565,7 +575,12 @@ async def shell_elevated_exec(
         finished = next(item for item in jobs.values() if item.completed_at is not None)
         jobs.pop(finished.request_id)
 
-    job = Job(request_id=uuid.uuid4().hex, host=host, elevated=True)
+    job = Job(
+        request_id=uuid.uuid4().hex,
+        host=host,
+        elevated=True,
+        awaiting_approval=authorization.effective(host, "elevation") == "ask",
+    )
     jobs[job.request_id] = job
     run0_args = ["run0", "--non-interactive", "--pipe", f"--unit=chatgpt-shell-{job.request_id}"]
     if cwd:
