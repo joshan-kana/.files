@@ -68,7 +68,7 @@ test("a visible notification can be targeted from the global keyboard without gr
   );
   assert.match(
     shell,
-    /name: "notifications-dismiss"[\s\S]*?onPressed: notifications\.dismissLatestPopup\(\)/,
+    /name: "notifications-dismiss"[\s\S]*?onPressed: qmlNotifications\.dismissLatestPopup\(\)/,
   );
   assert.match(
     registry,

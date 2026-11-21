@@ -77,7 +77,7 @@ test("global notification action uses compositor global shortcut", () => {
     "utf8",
   );
   assert.match(root, /name: "notifications-act"/);
-  assert.match(root, /notifications\.invokeLatest\(\)/);
+  assert.match(root, /qmlNotifications\.invokeLatest\(\)/);
   assert.match(keybind, /id = "notifications\.act";/);
 });
 
