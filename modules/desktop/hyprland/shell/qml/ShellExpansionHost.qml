@@ -953,6 +953,13 @@ PanelWindow {
             }
         }
 
+        // Feather the actual viewport without a stored raster mask.
+        EdgeFeatherMask {
+            id: helpBlurMask
+            anchors.fill: contentViewport
+            active: scopedHelp.visible && host.theme.shellGlassEnabled
+        }
+
         Flickable {
             id: contentViewport
             opacity: shellSurface.contentReveal * (host.theme.shellGlassEnabled ? 1 - scopedHelp.opacity * 0.56 : 1)
@@ -978,6 +985,8 @@ PanelWindow {
                 blurEnabled: true
                 blur: scopedHelp.opacity
                 blurMax: 48
+                maskEnabled: true
+                maskSource: helpBlurMask
                 autoPaddingEnabled: false
             }
             // Retain the last two views while the hub is open, so returning to

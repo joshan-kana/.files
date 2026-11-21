@@ -54,7 +54,7 @@ test("connected popups borrow the frame material, while overlapping toasts use t
     ["ResizeOverlay.qml", "overlay", "panelBase"],
   ]) {
     const src = qml(file);
-    assert.match(src, new RegExp(`frameConnected: ${owner}\\.frameConnected`));
+    assert.match(src, new RegExp(`frameConnected: ${owner}.frameConnected`));
     assert.ok(src.includes(`fillColor: ${owner}.theme.${base}`));
     assert.doesNotMatch(src, /glassAllowed: !.*frameConnected/);
   }
@@ -103,6 +103,44 @@ test("connected panes do not double-tint the frame, but detached glass still wor
       qml(file),
       /frameConnected && !.*shellGlassEnabled \? "transparent"/,
     );
+});
+
+test("Help feather mask fades all four edges and multiplies their corner alpha", () => {
+  const host = qml("ShellExpansionHost.qml");
+  const mask = qml("EdgeFeatherMask.qml");
+  assert.match(
+    host,
+    /EdgeFeatherMask \{\s*id: helpBlurMask\s*anchors\.fill: contentViewport\s*active: scopedHelp\.visible && host\.theme\.shellGlassEnabled/,
+  );
+  assert.match(host, /maskEnabled: true[\s\S]*?maskSource: helpBlurMask/);
+  assert.match(mask, /property real feather: 40/);
+  assert.match(mask, /layer\.enabled: active/);
+  assert.match(mask, /globalCompositeOperation = "destination-in"/);
+  assert.match(mask, /if \(active && available\)\s*requestPaint\(\)/);
+
+  const { gradientStops } = require("node:vm").runInNewContext(
+    qml("EdgeFeather.js") + "\n({ gradientStops })",
+  );
+  for (const extent of [24, 80, 128, 720, 1600]) {
+    const stops = gradientStops(extent, 40);
+    assert.equal(stops[0][0], 0);
+    assert.equal(stops[0][1], 0);
+    assert.equal(stops.at(-1)[0], 1);
+    assert.equal(stops.at(-1)[1], 0);
+    assert.ok(
+      stops.every(
+        ([x, a], i) =>
+          x >= 0 && x <= 1 && a >= 0 && a <= 1 && (!i || x > stops[i - 1][0]),
+      ),
+    );
+    const fraction = Math.min(0.5, 40 / extent);
+    assert.ok(
+      stops.some(([x, a]) => Math.abs(x - fraction / 2) < 1e-9 && a === 0.5),
+    );
+    assert.ok(stops.some(([x, a]) => Math.abs(x - fraction) < 1e-9 && a === 1));
+    const sideAlpha = stops.find(([x]) => Math.abs(x - fraction / 2) < 1e-9)[1];
+    assert.equal(sideAlpha * sideAlpha, 0.25);
+  }
 });
 
 test("hub Help blurs the original content viewport without a copied backdrop", () => {
