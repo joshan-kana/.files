@@ -202,6 +202,33 @@ fi
         self.assertEqual((operation / "phase").read_text().strip(), "failed")
         self.assertFalse((self.home / "activated").exists())
 
+    def test_screenshot_copy_failure_does_not_report_success(self):
+        """Clipboard failure leaves the frozen capture retryable."""
+        snapshot = self.runtime / "linux-desktop-capture-12345678.png"
+        snapshot.write_bytes(b"source-frame")
+        pictures = self.home / "pictures"
+        self.env["XDG_PICTURES_DIR"] = str(pictures)
+        self.executable(
+            "magick",
+            """
+if [ "$1" = identify ]; then
+  printf '120 120\n'
+else
+  for argument do output="$argument"; done
+  printf 'saved-frame' > "$output"
+fi
+""",
+        )
+        self.executable("wl-copy", "exit 47\n")
+        notified = self.runtime / "notified"
+        self.env["CAPTURE_NOTIFY_MARKER"] = str(notified)
+        self.executable("systemd-run", 'touch "$CAPTURE_NOTIFY_MARKER"\n')
+
+        result = self.run_script(SCRIPTS / "frozen-capture.sh", "copy", str(snapshot), "0", "0", "80", "80")
+        self.assertNotEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(snapshot.exists())
+        self.assertFalse(notified.exists())
+
     def test_browser_default_declaration_is_not_program_specific(self):
         """Bookmark navigation delegates to the XDG URL handler."""
         palette = (ROOT / "modules/desktop/hyprland/shell/qml/CommandPalette.qml").read_text()
