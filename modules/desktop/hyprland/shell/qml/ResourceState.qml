@@ -13,10 +13,6 @@ QtObject {
     property real memoryAvailable: 0
     readonly property real memoryUsed: Math.max(0, memoryTotal - memoryAvailable)
     readonly property real memoryPercent: memoryTotal > 0 ? memoryUsed / memoryTotal : 0
-    property real swapTotal: 0
-    property real swapFree: 0
-    readonly property real swapUsed: Math.max(0, swapTotal - swapFree)
-    readonly property real swapPercent: swapTotal > 0 ? swapUsed / swapTotal : 0
     property real cpuPercent: 0
     property bool cpuSampleReady: false
     property var previousCpuStats: null
@@ -122,8 +118,6 @@ QtObject {
 
         memoryTotal = Number(mem.match(/^MemTotal:\s*(\d+)/m)?.[1] || 0);
         memoryAvailable = Number(mem.match(/^MemAvailable:\s*(\d+)/m)?.[1] || 0);
-        swapTotal = Number(mem.match(/^SwapTotal:\s*(\d+)/m)?.[1] || 0);
-        swapFree = Number(mem.match(/^SwapFree:\s*(\d+)/m)?.[1] || 0);
 
         memoryHistory = updateHistory(memoryHistory, memoryPercent);
 
