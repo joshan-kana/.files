@@ -247,6 +247,24 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
             invoke.assert_awaited_once()
             self.assertIn("origin=chatgpt-shell", invoke.call_args.args[1])
 
+    async def test_herdr_mutations_respect_strict_mode(self):
+        """Read-only and strict policy modes cannot be bypassed via Herdr controls."""
+        self.effective.stop()
+        try:
+            with (
+                patch.object(shell.authorization, "effective", return_value="ask"),
+                patch.object(shell, "_herdr", new_callable=AsyncMock) as invoke,
+            ):
+                with self.assertRaises(PermissionError):
+                    await shell.session_interrupt("local", "t1")
+                with self.assertRaises(PermissionError):
+                    await shell.session_kill("local", "t1")
+                with self.assertRaises(PermissionError):
+                    await shell.session_start("local", "true")
+                invoke.assert_not_awaited()
+        finally:
+            self.effective.start()
+
     async def test_herdr_read_bounds_scrollback(self):
         """Bound requested scrollback so a tool cannot request an unlimited response."""
         with patch.object(shell, "_herdr", new_callable=AsyncMock) as invoke:
