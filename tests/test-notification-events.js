@@ -109,6 +109,11 @@ test("saved screenshots and videos keep native actions and open the selectable O
   assert.doesNotMatch(shell, /captureTextSerial|captureTextName/);
   assert.match(lib, /function queueText\(name: string\): void/);
   assert.match(lib, /function openPendingText\(\): void/);
+  assert.match(lib, /if \(listProcess\.running\)\s+return;/);
+  assert.match(
+    qml("SystemContent.qml"),
+    /if \(!requestedView\.startsWith\("recordings:"\)\)\s+markDetail\("recordings"\)/,
+  );
   assert.match(lib, /showText\(\)/);
 });
 
