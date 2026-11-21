@@ -54,7 +54,7 @@ test("connected popups borrow the frame material, while overlapping toasts use t
     ["ResizeOverlay.qml", "overlay", "panelBase"],
   ]) {
     const src = qml(file);
-    assert.match(src, new RegExp(`frameConnected: ${owner}.frameConnected`));
+    assert.match(src, new RegExp(`frameConnected: ${owner}\\.frameConnected`));
     assert.ok(src.includes(`fillColor: ${owner}.theme.${base}`));
     assert.doesNotMatch(src, /glassAllowed: !.*frameConnected/);
   }
