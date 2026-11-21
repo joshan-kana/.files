@@ -77,6 +77,9 @@ Item {
             MultiEffect {
                 anchors.fill: parent
                 source: blurTexture
+                // Darken the sampled content against the hub's existing
+                // material without painting another outer contour.
+                opacity: 0.44
                 blurEnabled: true
                 blurMax: 32
                 blur: 1
@@ -85,15 +88,15 @@ Item {
         }
     }
 
-    // The host owns the outer outline. Keep the dark wash just inside its
-    // antialiased edge so overlapping squircle contours cannot create
-    // streaks at the lower corners.
+    // The live blur fills only the content viewport. Its darkened copy is
+    // sufficient for Help contrast; never overlay a second rounded contour
+    // against the host border. Other Help surfaces still use the plain scrim.
     SquircleSurface {
         anchors.fill: parent
-        anchors.margins: help.theme.borderThin * 2
+        visible: !backdrop.visible
         exponent: help.theme.squircleExponent
-        cornerRadius: Math.max(0, help.backdropRadius - help.theme.borderThin * 2)
-        fillColor: Qt.rgba(help.theme.background.r, help.theme.background.g, help.theme.background.b, help.theme.shellGlassEnabled ? 0.48 : 0.70)
+        cornerRadius: help.backdropRadius
+        fillColor: Qt.rgba(help.theme.background.r, help.theme.background.g, help.theme.background.b, 0.70)
         borderColor: "transparent"
         borderWidth: 0
     }

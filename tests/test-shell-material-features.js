@@ -233,11 +233,8 @@ test("Help blur replaces content in place without moving tiles or filling corner
     help,
     /visible: help\.visible && help\.theme\.shellGlassEnabled/,
   );
-  assert.match(help, /anchors\.margins: help\.theme\.borderThin \* 2/);
-  assert.match(
-    help,
-    /cornerRadius: Math\.max\(0, help\.backdropRadius - help\.theme\.borderThin \* 2\)/,
-  );
+  assert.match(help, /opacity: 0\.44/);
+  assert.match(help, /visible: !backdrop\.visible/);
   assert.match(
     help,
     /MouseArea \{\s+anchors\.fill: parent\s+enabled: help\.open\s+onClicked: help\.dismissed\(\)/,
