@@ -71,12 +71,12 @@ test("help dims the entire hub while keeping shared header controls and its own 
     ),
   );
   assert.match(overlay, /anchors\.fill: parent/);
-  assert.match(overlay, /blurSource: contentViewport/);
+  assert.match(overlay, /contentArea: contentViewport/);
   assert.match(host, /HubTabs \{[\s\S]*?z: 250/);
   assert.match(overlay, /WidgetHelp \{[\s\S]*?anchors\.fill: parent/);
   assert.match(
     help,
-    /height: Math\.min\(\(help\.blurSource \? help\.blurSource\.height : parent\.height\) - theme\.spacing5 \* 2/,
+    /height: Math\.min\(\(help\.contentArea \? help\.contentArea\.height : parent\.height\) - theme\.spacing5 \* 2/,
   );
   assert.match(help, /contentHeight: content\.implicitHeight/);
   assert.match(help, /clip: true/);

@@ -105,36 +105,24 @@ test("connected panes do not double-tint the frame, but detached glass still wor
     );
 });
 
-test("hub Help uses a single panel-shaped scrim with live, demand-driven glass blur", () => {
+test("hub Help blurs the original content viewport without a copied backdrop", () => {
   const host = qml("ShellExpansionHost.qml");
   const help = qml("WidgetHelp.qml");
+  assert.match(host, /import QtQuick\.Effects/);
   assert.match(
     host,
-    /z: 200[\s\S]*?anchors\.fill: parent[\s\S]*?WidgetHelp \{/,
+    /layer\.enabled: scopedHelp\.visible && host\.theme\.shellGlassEnabled/,
   );
-  assert.match(host, /blurSource: contentViewport/);
-  assert.match(help, /import QtQuick\.Effects/);
-  assert.match(help, /sourceItem: help\.blurSource/);
-  assert.match(help, /source: blurTexture/);
-  assert.match(
-    help,
-    /sourceOrigin: help\.blurSource \? help\.blurSource\.mapToItem\(backdrop, 0, 0\)/,
-  );
-  assert.match(
-    help,
-    /sourceRect: Qt\.rect\(0, 0, blurRegion\.width, blurRegion\.height\)/,
-  );
-  assert.match(help, /hideSource: backdrop\.visible/);
-  assert.match(help, /autoPaddingEnabled: false/);
-  assert.doesNotMatch(help, /maskEnabled: true|maskSource: blurMask/);
-  assert.match(help, /anchors\.fill: parent/);
-  assert.match(
-    help,
-    /visible: help\.visible && help\.theme\.shellGlassEnabled && help\.blurSource !== null/,
-  );
-  assert.match(help, /MultiEffect \{[\s\S]*?blurEnabled: true/);
+  assert.match(host, /layer\.effect: MultiEffect \{[\s\S]*?blurEnabled: true/);
+  assert.match(host, /autoPaddingEnabled: false/);
+  assert.match(host, /contentArea: contentViewport/);
+  assert.match(help, /property Item contentArea: null/);
+  assert.match(help, /visible: !help\.theme\.shellGlassEnabled/);
   assert.match(help, /fillColor: Qt\.rgba\(help\.theme\.background\.r/);
-  // Back/Help remain clickable; no duplicate full-screen Wayland overlay.
+  assert.doesNotMatch(
+    help,
+    /ShaderEffectSource|MultiEffect|hideSource|blurSource|maskSource/,
+  );
   assert.match(host, /HubTabs \{[\s\S]*?z: 250/);
   assert.doesNotMatch(help, /PanelWindow/);
 });
