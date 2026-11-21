@@ -32,7 +32,6 @@ lib.recursiveUpdate (import ../../profiles/minimal.nix { inherit lib moduleRegis
       has.enable = false;
       nvd.enable = false;
       nixTree.enable = false;
-      python3.enable = false;
     };
   };
 
