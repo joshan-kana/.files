@@ -56,6 +56,7 @@ Item {
 
         ShaderEffectSource {
             id: blurTexture
+            anchors.fill: parent
             sourceItem: help.blurSource
             sourceRect: Qt.rect(backdrop.sampleOrigin.x, backdrop.sampleOrigin.y, backdrop.width, backdrop.height)
             live: backdrop.visible
@@ -68,6 +69,7 @@ Item {
             cornerRadius: help.backdropRadius
             exponent: help.theme.squircleExponent
             fillColor: "white"
+            layer.enabled: true
             visible: false
         }
 

@@ -145,10 +145,10 @@ Item {
     }
     function closeText(): void {
         ocrVisible = false;
-        ocrText = "";
-        ocrWords = [];
         wordSelectionStart = -1;
         wordSelectionEnd = -1;
+        ocrText = "";
+        ocrWords = [];
         ocrRequestName = "";
     }
 
@@ -217,6 +217,7 @@ Item {
             }
             return;
         }
+        recognisedText.deselect();
         if (!extend || wordSelectionStart < 0)
             wordSelectionStart = index;
         wordSelectionEnd = index;
@@ -234,6 +235,8 @@ Item {
         let result = "";
         for (let i = start; i <= end; i++) {
             const word = ocrWords[i];
+            if (!word)
+                break;
             result += i === start ? "" : word.line === ocrWords[i - 1].line ? " " : "\n";
             result += word.text;
         }
@@ -241,11 +244,11 @@ Item {
     }
 
     function copyHighlightedText(): void {
-        if (recognisedText.selectedText.length > 0) {
-            recognisedText.copy();
-        } else if (wordSelectionAvailable) {
+        if (wordSelectionAvailable) {
             wordCopyBuffer.selectAll();
             wordCopyBuffer.copy();
+        } else if (recognisedText.selectedText.length > 0) {
+            recognisedText.copy();
         } else {
             return;
         }
@@ -631,6 +634,12 @@ Item {
                             readOnly: true
                             selectByMouse: true
                             persistentSelection: true
+                            onSelectedTextChanged: {
+                                if (selectedText.length > 0) {
+                                    library.wordSelectionStart = -1;
+                                    library.wordSelectionEnd = -1;
+                                }
+                            }
                             wrapMode: TextEdit.NoWrap
                             textFormat: TextEdit.PlainText
                             color: library.theme.textStrong
@@ -639,7 +648,11 @@ Item {
                             font.family: library.runtime.fontMono
                             font.pixelSize: library.theme.fontSize(12)
                             background: null
-                            Keys.onEscapePressed: library.closeText()
+                            Keys.onEscapePressed: event => {
+                                library.closeText();
+                                library.keyboardRequested();
+                                event.accepted = true;
+                            }
                         }
                     }
                     TextEdit {
