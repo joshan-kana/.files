@@ -381,12 +381,14 @@ FocusScope {
             }
         }
 
-        Row {
+        Item {
             width: parent.width
-            spacing: calendar.theme.spacing2
+            height: Math.max(calendarHints.implicitHeight, resetButton.height)
 
             KeyHintStrip {
-                width: Math.max(1, parent.width - resetButton.width - parent.spacing)
+                id: calendarHints
+                width: Math.max(1, parent.width - 2 * (resetButton.width + calendar.theme.spacing2))
+                anchors.horizontalCenter: parent.horizontalCenter
                 anchors.verticalCenter: parent.verticalCenter
                 runtime: calendar.runtime
                 theme: calendar.theme
@@ -414,6 +416,8 @@ FocusScope {
                 id: resetButton
                 width: 76
                 height: 30
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
                 iconOnly: true
                 icon: "󰃰"
                 title: "Today"
