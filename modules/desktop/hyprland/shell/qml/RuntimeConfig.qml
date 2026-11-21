@@ -291,6 +291,7 @@ QtObject {
                 property string colourPicker: ""
                 property string nightLightControl: ""
                 property string displaySettings: ""
+                property string notifySend: ""
             }
 
             property var keybindings: []
