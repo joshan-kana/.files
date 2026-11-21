@@ -14,13 +14,7 @@ QtObject {
     readonly property color warning: runtime.warning
     readonly property color positive: runtime.positive
     readonly property color accent: runtime.accent
-    readonly property color accentSecondary: runtime.accentSecondary
     readonly property color accentTertiary: runtime.accentTertiary
-    readonly property color accentWarm: runtime.accentWarm
-    readonly property color accentWorkspace: runtime.accentWorkspace
-    readonly property color accentUtility: runtime.accentUtility
-    readonly property color accentEnergy: runtime.accentEnergy
-    readonly property color accentNature: runtime.accentNature
 
     // The theme scope assigns Stylix colors to semantic roles.
     // Components select a role without embedding palette policy.
@@ -53,7 +47,6 @@ QtObject {
     property real glassOpacity: 0.70
     property real musicReactiveEnergy: 0
     property real musicReactiveBeat: 0
-    property real musicReactiveTreble: 0
     // Share the spectrum's red/blue/cyan ramp with the shell, without
     // creating per-frame colour arrays or a second audio signal pipeline.
     // Music changes tint strength; the palette stays anchored to bass/treble.
@@ -131,14 +124,11 @@ QtObject {
 
     readonly property real borderThin: 1
     readonly property real borderFocus: 2
-    readonly property color panelFill: panelBase
-    readonly property color panelBorder: Qt.rgba(accent.r, accent.g, accent.b, dark ? 0.26 : 0.31)
     readonly property color focusFill: Qt.rgba(surfaceRaised.r, surfaceRaised.g, surfaceRaised.b, runtime.focusOpacity)
     // A light palette must not produce a light veil over authentication or
     // modal content. Use a dark Stylix role for every shared dimming level.
     readonly property color scrimBase: dark ? background : textStrong
     readonly property color scrim: Qt.rgba(scrimBase.r, scrimBase.g, scrimBase.b, runtime.scrimOpacity)
-    readonly property color contextualScrim: Qt.rgba(scrimBase.r, scrimBase.g, scrimBase.b, Math.min(0.18, runtime.scrimOpacity))
     readonly property color scrimStrong: Qt.rgba(scrimBase.r, scrimBase.g, scrimBase.b, Math.min(1, runtime.scrimOpacity + 0.06))
     readonly property color scrimHeavy: Qt.rgba(scrimBase.r, scrimBase.g, scrimBase.b, Math.min(1, runtime.scrimOpacity + 0.12))
     readonly property color subtleBorder: Qt.rgba(textStrong.r, textStrong.g, textStrong.b, dark ? 0.12 : 0.17)
@@ -172,5 +162,4 @@ QtObject {
     readonly property int spacing3: 12
     readonly property int spacing4: 16
     readonly property int spacing5: 24
-    readonly property int spacing6: 32
 }

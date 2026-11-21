@@ -75,7 +75,6 @@ ShellRoot {
         glassOpacity: qmlAppearance.glassOpacity
         musicReactiveEnergy: reactive.sustain
         musicReactiveBeat: reactive.beatPulse
-        musicReactiveTreble: reactive.treble
     }
 
     Motion {
