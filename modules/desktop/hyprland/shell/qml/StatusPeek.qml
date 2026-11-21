@@ -131,7 +131,6 @@ PanelWindow {
                 peek.keyboard.refresh("inspect");
                 peek.brightness.refresh();
             }
-            onCloseRequested: peek.closeRequested()
         }
     }
 }

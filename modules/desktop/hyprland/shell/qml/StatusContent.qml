@@ -14,7 +14,6 @@ Item {
     property string modeName: "Normal"
     property string closeLabel: "Close"
     signal refreshRequested
-    signal closeRequested
 
     implicitWidth: Math.max(340, theme.controlsDetailWidth - theme.spacing4 * 2)
     implicitHeight: heading.implicitHeight + stateGrid.implicitHeight + footer.implicitHeight + theme.spacing4 * 4
@@ -37,7 +36,7 @@ Item {
                 font.pixelSize: content.theme.fontSize(23)
             }
             Column {
-                width: Math.max(1, heading.width - content.theme.fontSize(23) - 2 * 44 - heading.spacing * 3)
+                width: Math.max(1, heading.width - content.theme.fontSize(23) - 44 - heading.spacing * 2)
                 spacing: content.theme.spacing1
                 Text {
                     width: parent.width
@@ -68,18 +67,6 @@ Item {
                 icon: "󰑐"
                 title: "Refresh current status"
                 onActivated: content.refreshRequested()
-            }
-            ShellAction {
-                width: 44
-                height: 40
-                anchors.verticalCenter: parent.verticalCenter
-                runtime: content.runtime
-                theme: content.theme
-                motion: content.motion
-                iconOnly: true
-                icon: "󰅖"
-                title: content.closeLabel === "Back" ? "Back to Controls" : "Close status"
-                onActivated: content.closeRequested()
             }
         }
 
