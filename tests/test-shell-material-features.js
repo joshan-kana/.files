@@ -204,36 +204,31 @@ test("local OCR exposes selectable text and highlighted original-image coordinat
   assert.doesNotMatch(script, /https?:\/\//);
 });
 
-test("Help blur replaces content in place without moving tiles or filling corners", () => {
+test("Help effect keeps tile geometry, footer and outline on their existing owners", () => {
+  const host = qml("ShellExpansionHost.qml");
   const help = qml("WidgetHelp.qml");
   assert.match(
-    help,
-    /sourceOrigin: help\.blurSource \? help\.blurSource\.mapToItem\(backdrop, 0, 0\)/,
+    host,
+    /id: contentViewport[\s\S]*?layer\.enabled: scopedHelp\.visible && host\.theme\.shellGlassEnabled/,
   );
   assert.match(
-    help,
-    /id: blurRegion\s+x: backdrop\.sourceOrigin\.x\s+y: backdrop\.sourceOrigin\.y/,
-  );
-  assert.match(help, /width: help\.blurSource \? help\.blurSource\.width : 0/);
-  assert.match(
-    help,
-    /height: help\.blurSource \? help\.blurSource\.height : 0/,
+    host,
+    /opacity: shellSurface\.contentReveal \* \(host\.theme\.shellGlassEnabled \? 1 - scopedHelp\.opacity \* 0\.56 : 1\)/,
   );
   assert.match(
-    help,
-    /sourceRect: Qt\.rect\(0, 0, blurRegion\.width, blurRegion\.height\)/,
+    host,
+    /layer\.effect: MultiEffect \{[\s\S]*?blur: scopedHelp\.opacity[\s\S]*?blurMax: 32/,
   );
-  assert.match(help, /hideSource: backdrop\.visible/);
-  assert.match(
-    help,
-    /visible: help\.visible && help\.theme\.shellGlassEnabled/,
-  );
-  assert.match(help, /opacity: 0\.44/);
-  assert.match(help, /visible: !backdrop\.visible/);
+  assert.match(help, /help\.contentArea\.mapToItem\(help, 0, 0\)\.x/);
+  assert.match(help, /help\.contentArea\.mapToItem\(help, 0, 0\)\.y/);
+  assert.match(help, /visible: !help\.theme\.shellGlassEnabled/);
   assert.match(
     help,
     /MouseArea \{\s+anchors\.fill: parent\s+enabled: help\.open\s+onClicked: help\.dismissed\(\)/,
   );
-  assert.doesNotMatch(help, /maskSource: blurMask|background\.a/);
+  assert.doesNotMatch(
+    help,
+    /ShaderEffectSource|MultiEffect|hideSource|blurSource|maskSource/,
+  );
   assert.doesNotMatch(help, /PanelWindow/);
 });

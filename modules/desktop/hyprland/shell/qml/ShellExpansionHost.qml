@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import QtQuick.Effects
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Wayland
@@ -952,7 +953,7 @@ PanelWindow {
 
         Flickable {
             id: contentViewport
-            opacity: shellSurface.contentReveal
+            opacity: shellSurface.contentReveal * (host.theme.shellGlassEnabled ? 1 - scopedHelp.opacity * 0.56 : 1)
             enabled: !host.otherHelpOpen
             anchors {
                 top: tabs.bottom
@@ -966,6 +967,17 @@ PanelWindow {
                 bottomMargin: host.theme.spacing3 + host.theme.spacing4
             }
             clip: true
+            // Blur the viewport's own composited output. An offscreen copy
+            // drawn elsewhere changes the relative geometry of scaled and
+            // scrolling children, and can expose the hub's corner contour.
+            layer.enabled: scopedHelp.visible && host.theme.shellGlassEnabled
+            layer.smooth: true
+            layer.effect: MultiEffect {
+                blurEnabled: true
+                blur: scopedHelp.opacity
+                blurMax: 32
+                autoPaddingEnabled: false
+            }
             // Retain the last two views while the hub is open, so returning to
             // Home or Controls does not reconstruct their expensive models.
             // Scaling only compensates while the animated viewport narrows.
@@ -1129,7 +1141,7 @@ PanelWindow {
                 title: host.helpCaption
                 bindings: host.helpKeys
                 backdropRadius: host.theme.radiusPanel
-                blurSource: contentViewport
+                contentArea: contentViewport
                 onDismissed: {
                     if (host.systemContent)
                         host.systemContent.helpOpen = false;

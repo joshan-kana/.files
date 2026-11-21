@@ -1,6 +1,5 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import QtQuick.Effects
 
 Item {
     id: help
@@ -13,9 +12,7 @@ Item {
     property string title: "Controls"
     property var bindings: []
     property real backdropRadius: theme.radiusLarge
-    // Sample the hub beneath the translucent Help card, not the wallpaper
-    // behind its Wayland layer or the Help overlay itself.
-    property Item blurSource: null
+    property Item contentArea: null
     property bool keyboardScroll: false
 
     function scrollHints(rows: int): void {
@@ -44,56 +41,11 @@ Item {
         }
     }
 
-    // The captured content viewport has its own geometry inside the hub.
-    // Render the blurred replacement at that same position rather than
-    // stretching a source rectangle across the header, footer and corners.
-    Item {
-        id: backdrop
-        anchors.fill: parent
-        visible: help.visible && help.theme.shellGlassEnabled && help.blurSource !== null
-
-        readonly property point sourceOrigin: help.blurSource ? help.blurSource.mapToItem(backdrop, 0, 0) : Qt.point(0, 0)
-
-        Item {
-            id: blurRegion
-            x: backdrop.sourceOrigin.x
-            y: backdrop.sourceOrigin.y
-            width: help.blurSource ? help.blurSource.width : 0
-            height: help.blurSource ? help.blurSource.height : 0
-            clip: true
-
-            // Source and effect replace the sharp content one-for-one. The
-            // original stays available to keyboard/pointer hit-testing.
-            ShaderEffectSource {
-                id: blurTexture
-                anchors.fill: parent
-                sourceItem: help.blurSource
-                sourceRect: Qt.rect(0, 0, blurRegion.width, blurRegion.height)
-                hideSource: backdrop.visible
-                live: backdrop.visible
-                visible: false
-            }
-
-            MultiEffect {
-                anchors.fill: parent
-                source: blurTexture
-                // Darken the sampled content against the hub's existing
-                // material without painting another outer contour.
-                opacity: 0.44
-                blurEnabled: true
-                blurMax: 32
-                blur: 1
-                autoPaddingEnabled: false
-            }
-        }
-    }
-
-    // The live blur fills only the content viewport. Its darkened copy is
-    // sufficient for Help contrast; never overlay a second rounded contour
-    // against the host border. Other Help surfaces still use the plain scrim.
+    // The hub blurs its content in place. Help only owns the
+    // non-glass fallback scrim, dismissal and foreground card.
     SquircleSurface {
         anchors.fill: parent
-        visible: !backdrop.visible
+        visible: !help.theme.shellGlassEnabled
         exponent: help.theme.squircleExponent
         cornerRadius: help.backdropRadius
         fillColor: Qt.rgba(help.theme.background.r, help.theme.background.g, help.theme.background.b, 0.70)
@@ -110,10 +62,10 @@ Item {
     ShellSurface {
         id: helpCard
 
-        width: Math.min((help.blurSource ? help.blurSource.width : parent.width) - theme.spacing5 * 2, 430)
-        height: Math.min((help.blurSource ? help.blurSource.height : parent.height) - theme.spacing5 * 2, Math.max(180, content.implicitHeight + theme.spacing5 * 2))
-        x: help.blurSource ? help.blurSource.x + (help.blurSource.width - width) / 2 : (parent.width - width) / 2
-        y: help.blurSource ? help.blurSource.y + (help.blurSource.height - height) / 2 : (parent.height - height) / 2
+        width: Math.min((help.contentArea ? help.contentArea.width : parent.width) - theme.spacing5 * 2, 430)
+        height: Math.min((help.contentArea ? help.contentArea.height : parent.height) - theme.spacing5 * 2, Math.max(180, content.implicitHeight + theme.spacing5 * 2))
+        x: help.contentArea ? help.contentArea.mapToItem(help, 0, 0).x + (help.contentArea.width - width) / 2 : (parent.width - width) / 2
+        y: help.contentArea ? help.contentArea.mapToItem(help, 0, 0).y + (help.contentArea.height - height) / 2 : (parent.height - height) / 2
         theme: help.theme
         motion: help.motion
         surfaceLayer: ShellSurface.Group
