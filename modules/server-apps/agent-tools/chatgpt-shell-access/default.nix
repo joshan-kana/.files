@@ -10,35 +10,63 @@ let
   inherit (config.dotfiles.users) primary;
   tunnelSecret = "${server.secretsDir}/chatgpt-shell-tunnel.env";
   macSshKeySecret = "${server.secretsDir}/chatgpt-shell-mac";
-  parallelsSshKeySecret = "${server.secretsDir}/chatgpt-shell-nixos-arm-parallels";
   parallelsSudoSshKeySecret = "${server.secretsDir}/nixos-arm-parallels-sudo";
   sudoSshKeySecret = "${server.secretsDir}/chatgpt-shell-sudo";
   githubSecret = "${server.secretsDir}/github-self-hosted-agents.env";
   knownHostsFile = "${config.users.users.${primary.name}.home}/.ssh/known_hosts";
   remoteAuthAgentSocket = "/run/chatgpt-shell-access/remote-sudo-agent.sock";
+  workerUser = "herdr-worker";
 
   macHost = "mac.home";
   parallelsHost = "nixos-arm-parallels.home";
 
   remoteTargets = {
     mac = {
-      sshTarget = "${primary.name}@${macHost}";
+      sshTarget = "${workerUser}@${macHost}";
       credential = macSshKeySecret;
       shell = "/bin/zsh";
       forwardAgent = false;
     };
     nixos-arm-parallels = {
-      sshTarget = "${primary.name}@${parallelsHost}";
-      credential = parallelsSshKeySecret;
+      sshTarget = "${workerUser}@${parallelsHost}";
+      credential = macSshKeySecret;
       shell = "/run/current-system/sw/bin/bash";
-      forwardAgent = true;
+      forwardAgent = false;
     };
   };
-  remoteTargetConfig = lib.mapAttrs (name: target: {
+  localWorker = {
+    ssh_target = "${workerUser}@127.0.0.1";
+    credential = "chatgpt-shell-mac";
+    shell = "/run/current-system/sw/bin/bash";
+    forwardAgent = false;
+  };
+  remoteTargetConfig = lib.mapAttrs (_: target: {
     ssh_target = target.sshTarget;
-    credential = "chatgpt-shell-${name}";
+    credential = "chatgpt-shell-mac";
     inherit (target) shell forwardAgent;
   }) remoteTargets;
+  policyDefaults = pkgs.writeText "chatgpt-shell-policies.json" (
+    builtins.toJSON {
+      "${config.networking.hostName}" = {
+        commands = "automatic";
+        elevation = "ask";
+      };
+      mac = {
+        commands = "ask";
+        elevation = "deny";
+      };
+      nixos-arm-parallels = {
+        commands = "automatic";
+        elevation = "ask";
+      };
+    }
+  );
+  approvalCommand = pkgs.writeShellScriptBin "chatgpt-shell-approval" ''
+    export CHATGPT_SHELL_APPROVAL_DIR=/run/chatgpt-shell-access/approvals
+    export CHATGPT_SHELL_STATE_DIR=/var/lib/chatgpt-shell-access
+    export CHATGPT_SHELL_POLICIES_FILE=${policyDefaults}
+    exec ${pkgs.python3}/bin/python3 ${./.}/authorization.py "$@"
+  '';
   shellPackages = with pkgs; [
     herdr-core
     bash
@@ -68,6 +96,25 @@ let
 
 in
 {
+  users.groups.${workerUser} = { };
+  users.users.${workerUser} = {
+    isSystemUser = true;
+    group = workerUser;
+    home = "/var/lib/${workerUser}";
+    createHome = true;
+    shell = pkgs.bashInteractive;
+    linger = true;
+    openssh.authorizedKeys.keys = [
+      "restrict ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHgLTjmo6ZPfUNMxnT2/Yp0ZHJTon28vCVDmbxjMRNuS chatgpt-shell@nixos-server"
+    ];
+  };
+
+  environment.systemPackages = [
+    pkgs.herdr-core
+    pkgs.procps
+    approvalCommand
+  ];
+
   systemd.tmpfiles.rules = [
     "f+ /etc/chatgpt-shell-sudo-authorized-key 0444 root root - ssh-ed25519\\x20AAAAC3NzaC1lZDI1NTE5AAAAIEp/T7PcjFts+DbMZnJrMle2UhBtWhJ2ycLYIlFMNkIu\\x20chatgpt-shell-sudo\\n"
   ];
@@ -92,11 +139,17 @@ in
     environment = {
       HEALTH_LISTEN_ADDR = "127.0.0.1:18792";
       SSH_AUTH_SOCK = "/run/chatgpt-shell-access/sudo-agent.sock";
-      MCP_COMMAND = "${pkgs.coreutils}/bin/env -u CONTROL_PLANE_API_KEY -u CONTROL_PLANE_TUNNEL_ID ${pkgs.chatgpt-shell-mcp-python}/bin/python3 ${./chatgpt-shell-access.py}";
+      MCP_COMMAND = "${pkgs.coreutils}/bin/env -u CONTROL_PLANE_API_KEY -u CONTROL_PLANE_TUNNEL_ID ${pkgs.chatgpt-shell-mcp-python}/bin/python3 ${./.}/chatgpt-shell-access.py";
       CHATGPT_SHELL_COMMAND_PATH = lib.makeBinPath shellPackages;
       CHATGPT_SHELL_LOCAL_HOST = config.networking.hostName;
+      CHATGPT_SHELL_PRIMARY_USER = primary.name;
+      CHATGPT_SHELL_LOCAL_WORKER = builtins.toJSON localWorker;
       CHATGPT_SHELL_BASH = "${pkgs.bash}/bin/bash";
       CHATGPT_SHELL_HC = "${pkgs.herdr-core}/bin/hc";
+      CHATGPT_SHELL_KNOWN_HOSTS = "/run/chatgpt-shell-access/known_hosts";
+      CHATGPT_SHELL_APPROVAL_DIR = "/run/chatgpt-shell-access/approvals";
+      CHATGPT_SHELL_STATE_DIR = "/var/lib/chatgpt-shell-access";
+      CHATGPT_SHELL_POLICIES_FILE = toString policyDefaults;
       CHATGPT_SHELL_REMOTE_AUTH_AGENT = remoteAuthAgentSocket;
       CHATGPT_SHELL_REMOTE_TARGETS = builtins.toJSON remoteTargetConfig;
     };
@@ -105,7 +158,9 @@ in
       Type = "simple";
       User = primary.name;
       RuntimeDirectory = "chatgpt-shell-access";
-      RuntimeDirectoryMode = "0770";
+      RuntimeDirectoryMode = "0700";
+      StateDirectory = "chatgpt-shell-access";
+      StateDirectoryMode = "0700";
       EnvironmentFile = [
         tunnelSecret
         githubSecret
@@ -128,6 +183,8 @@ in
         done
         [ -S "$SSH_AUTH_SOCK" ]
         [ -S "$CHATGPT_SHELL_REMOTE_AUTH_AGENT" ]
+        ${pkgs.coreutils}/bin/install -m 0600 "$CREDENTIALS_DIRECTORY/chatgpt-shell-known-hosts" "$RUNTIME_DIRECTORY/known_hosts"
+        ${pkgs.gawk}/bin/awk '{ print "127.0.0.1 " $1 " " $2 }' /etc/ssh/ssh_host_ed25519_key.pub >> "$RUNTIME_DIRECTORY/known_hosts"
         cat "$CREDENTIALS_DIRECTORY/chatgpt-shell-sudo" | \
           ${pkgs.bash}/bin/bash -c \
             'SSH_AUTH_SOCK="$1" exec ${pkgs.openssh}/bin/ssh-add -' _ "$SSH_AUTH_SOCK"

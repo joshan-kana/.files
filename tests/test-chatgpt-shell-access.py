@@ -33,13 +33,16 @@ os.environ.update(
     CREDENTIALS_DIRECTORY="/tmp",
     SSH_AUTH_SOCK="/tmp/agent.sock",
     CHATGPT_SHELL_REMOTE_AUTH_AGENT="/tmp/remote-agent.sock",
+    CHATGPT_SHELL_LOCAL_WORKER='{"ssh_target":"worker@127.0.0.1","credential":"worker-key","shell":"/bin/bash","forwardAgent":false}',
     CHATGPT_SHELL_COMMAND_PATH="/bin",
     CHATGPT_SHELL_BASH="bash",
     CHATGPT_SHELL_LOCAL_HOST="local",
     CHATGPT_SHELL_REMOTE_TARGETS="{}",
 )
 
-spec = importlib.util.spec_from_file_location("shell_access", Path(sys.argv.pop(1)))
+shell_path = Path(sys.argv.pop(1)).resolve()
+sys.path.insert(0, str(shell_path.parent))
+spec = importlib.util.spec_from_file_location("shell_access", shell_path)
 shell = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = shell
 spec.loader.exec_module(shell)
@@ -53,11 +56,19 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         shell.jobs.clear()
         self.argv = patch.object(shell, "_build_argv", side_effect=lambda _host, script: ["bash", "-c", script])
         self.argv.start()
-        self.env = patch.object(shell, "_command_env", side_effect=lambda _host: {**shell.COMMAND_ENV, "HOME": os.environ["HOME"]})
+        self.env = patch.object(
+            shell, "_command_env", side_effect=lambda _host, **_kwargs: {**shell.COMMAND_ENV, "HOME": os.environ["HOME"]}
+        )
         self.env.start()
+        self.auth = patch.object(shell.authorization, "authorize", new_callable=AsyncMock)
+        self.auth.start()
+        self.effective = patch.object(shell.authorization, "effective", return_value="automatic")
+        self.effective.start()
 
     def tearDown(self):
         """Restore patched process and server state after each test."""
+        self.effective.stop()
+        self.auth.stop()
         self.env.stop()
         self.argv.stop()
 
@@ -173,27 +184,30 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("HOME", shell._ALLOWED_ENV)
         self.assertEqual(shell.COMMAND_ENV["HOME"], os.environ["HOME"])
 
-    def test_local_command_uses_unprivileged_shell(self):
-        """Execute local commands without accidental privilege escalation."""
-        command = shell.LOCAL
-        self.assertEqual(command[0], "bash")
-        self.assertEqual(command[1], "-lc")
-        self.assertNotIn("sudo", command)
+    def test_local_command_uses_restricted_worker_identity(self):
+        """Run local commands as the restricted SSH account, not the controller."""
+        self.argv.stop()
+        try:
+            command = shell._build_argv("local", "id -u")
+        finally:
+            self.argv.start()
+        self.assertIn("worker@127.0.0.1", command)
+        self.assertIn("-oForwardAgent=no", command)
+        self.assertNotIn("-oForwardAgent=yes", command)
 
-    def test_remote_agent_forwarding_is_explicit(self):
-        """Forward the authentication agent only when configured."""
+    def test_remote_worker_never_forwards_elevation_credentials(self):
+        """Run remote commands without forwarding the controller's SSH agents."""
         self.argv.stop()
         try:
             with patch.dict(
-                shell.REMOTE_TARGETS,
-                {
-                    "remote": shell.RemoteTarget("joshan@example", "key", "/bin/bash", True),
-                },
+                shell.WORKER_TARGETS,
+                {"remote": shell.RemoteTarget("worker@example", "key", "/bin/bash", False)},
             ):
                 argv = shell._build_argv("remote", "id -u")
         finally:
             self.argv.start()
-        self.assertIn("-oForwardAgent=yes", argv)
+        self.assertIn("-oForwardAgent=no", argv)
+        self.assertIn("worker@example", argv)
 
     async def test_herdr_session_start_uses_native_runtime(self):
         """Create a labelled session without writing a competing terminal database."""
@@ -232,10 +246,14 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
 
     def test_herdr_never_forwards_the_elevation_agent(self):
         """Keep the privileged SSH agent out of newly started Herdr terminals."""
-        local = shell._herdr_argv("local", ["ls", "--json"])
+        self.argv.stop()
+        try:
+            local = shell._herdr_argv("local", ["ls", "--json"])
+            with patch.dict(shell.WORKER_TARGETS, {"remote": shell.RemoteTarget("worker@host", "key", "/bin/bash", False)}):
+                remote = shell._herdr_argv("remote", ["ls", "--json"])
+        finally:
+            self.argv.start()
         self.assertIn("unset SSH_AUTH_SOCK GH_TOKEN", local[-1])
-        with patch.dict(shell.REMOTE_TARGETS, {"remote": shell.RemoteTarget("user@host", "key", "/bin/bash", True)}):
-            remote = shell._herdr_argv("remote", ["ls", "--json"])
         self.assertIn("-oForwardAgent=no", remote)
         self.assertNotIn("-oForwardAgent=yes", remote)
 

@@ -3,11 +3,23 @@
   extendScope,
   lib,
   moduleRegistry,
+  pkgs,
   ...
 }:
 
 lib.recursiveUpdate (import ../../profiles/workstation.nix { inherit moduleRegistry; }) {
   dotfiles.users.primary.homeRoot = "/Users";
+
+  users.knownUsers = [ "herdr-worker" ];
+  users.users.herdr-worker = {
+    uid = 620;
+    gid = 20;
+    home = "/Users/herdr-worker";
+    createHome = true;
+    isHidden = true;
+    shell = "/bin/zsh";
+    packages = [ pkgs.herdr-core ];
+  };
 
   nix = editScope moduleRegistry.nix {
     builders = { inherited, ... }: {

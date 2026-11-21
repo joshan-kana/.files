@@ -738,7 +738,8 @@
               }
               ''
                 export HOME="$TMPDIR"
-                python3 ${./tests/test-chatgpt-shell-access.py} ${./modules/server-apps/agent-tools/chatgpt-shell-access/chatgpt-shell-access.py}
+                python3 ${./tests/test-chatgpt-shell-access.py} ${./modules/server-apps/agent-tools/chatgpt-shell-access}/chatgpt-shell-access.py
+                python3 ${./tests/test-shell-authorization.py} ${./modules/server-apps/agent-tools/chatgpt-shell-access}/authorization.py
                 touch "$out"
               '';
           roaming-dns-build =

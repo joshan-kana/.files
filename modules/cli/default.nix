@@ -612,10 +612,8 @@ in
     };
   };
 
-  herdr = _: {
-    home = { pkgs, ... }: {
-      home.packages = [ pkgs.herdr-core ];
-    };
+  herdr = { pkgs, ... }: {
+    environment.systemPackages = [ pkgs.herdr-core ];
   };
 
   fzf = _: {
