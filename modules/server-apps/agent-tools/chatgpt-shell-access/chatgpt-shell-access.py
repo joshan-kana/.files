@@ -39,7 +39,6 @@ CREDENTIALS = os.environ["CREDENTIALS_DIRECTORY"]
 SUDO_AGENT = os.environ["SSH_AUTH_SOCK"]
 REMOTE_AUTH_AGENT = os.environ["CHATGPT_SHELL_REMOTE_AUTH_AGENT"]
 LOCAL = [os.environ["CHATGPT_SHELL_BASH"], "-lc"]
-LOCAL_WORKER = RemoteTarget(**json.loads(os.environ["CHATGPT_SHELL_LOCAL_WORKER"]))
 COMMAND_PATH = os.environ["CHATGPT_SHELL_COMMAND_PATH"]
 SSH = [
     "ssh",
@@ -51,7 +50,6 @@ SSH = [
 ]
 LOCAL_HOST = os.environ["CHATGPT_SHELL_LOCAL_HOST"]
 REMOTE_TARGETS = {name: RemoteTarget(**target) for name, target in json.loads(os.environ["CHATGPT_SHELL_REMOTE_TARGETS"]).items()}
-WORKER_TARGETS = {**REMOTE_TARGETS, LOCAL_HOST: LOCAL_WORKER}
 if not LOCAL_HOST or LOCAL_HOST in REMOTE_TARGETS:
     raise RuntimeError("local host must be nonempty and distinct from remote targets")
 
@@ -71,6 +69,8 @@ _ALLOWED_ENV = {
 COMMAND_ENV = {key: value for key, value in os.environ.items() if key in _ALLOWED_ENV or key.startswith("LC_")}
 HERDR_LOCAL = os.environ.get("CHATGPT_SHELL_HC", "hc")
 HERDR_SESSION = os.environ.get("CHATGPT_SHELL_HC_SESSION", "chatgpt-shell")
+WORKER_USER = os.environ.get("CHATGPT_SHELL_WORKER", "herdr-worker")
+RUN0 = os.environ.get("CHATGPT_SHELL_RUN0", "run0")
 
 
 def _herdr_argv(host: Host, arguments: list[str]) -> list[str]:
@@ -122,9 +122,11 @@ async def _herdr_owned(host: Host, terminal: str) -> None:
 
 
 def _command_env(host: Host, *, elevated: bool = False) -> dict[str, str]:
-    """Keep credentials out of workers and forward only trusted remote elevation credentials."""
+    """Give the trusted launcher only the SSH signature needed to enter the worker."""
     environment = {key: value for key, value in COMMAND_ENV.items() if key not in ("SSH_AUTH_SOCK", "GH_TOKEN")}
-    if elevated and host == "nixos-arm-parallels":
+    if host == LOCAL_HOST:
+        environment["SSH_AUTH_SOCK"] = SUDO_AGENT
+    elif host == "nixos-arm-parallels":
         environment["SSH_AUTH_SOCK"] = REMOTE_AUTH_AGENT
     return environment
 
@@ -196,16 +198,57 @@ def _validate_cwd(cwd: str | None) -> str | None:
     return cwd
 
 
+def _worker_command(host: Host, script: str) -> str:
+    """Enter a non-admin identity before interpreting any agent-provided script."""
+    if host == "mac":
+        return shlex.join(
+            [
+                "sudo",
+                "-n",
+                "-H",
+                "-u",
+                WORKER_USER,
+                "--",
+                "/usr/bin/env",
+                f"HC_SESSION={HERDR_SESSION}",
+                "/bin/zsh",
+                "-lc",
+                script,
+            ]
+        )
+    arguments = [
+        RUN0 if host == LOCAL_HOST else "run0",
+        "--non-interactive",
+        "--pipe",
+        f"--user={WORKER_USER}",
+        "--setenv=HOME=/var/lib/herdr-worker",
+        f"--setenv=HC_SESSION={HERDR_SESSION}",
+        "--setenv=XDG_RUNTIME_DIR=/run/herdr-worker",
+        "--setenv=XDG_CONFIG_HOME=/var/lib/herdr-worker/.config",
+        "--setenv=XDG_STATE_HOME=/var/lib/herdr-worker/.local/state",
+    ]
+    if host == LOCAL_HOST:
+        arguments.append(f"--setenv=PATH={COMMAND_PATH}")
+    arguments.extend(["--", "bash", "-lc", script])
+    return shlex.join(arguments)
+
+
 def _build_argv(host: Host, script: str) -> list[str]:
-    """Execute only through the approved unprivileged SSH worker identity."""
-    target = WORKER_TARGETS[host]
+    """Use native authorization only to launch commands under a restricted user."""
+    worker_command = _worker_command(host, script)
+    if host == LOCAL_HOST:
+        return [
+            *LOCAL,
+            f"export PATH={shlex.quote(COMMAND_PATH)}:$PATH\nexport SSH_AUTH_SOCK={shlex.quote(SUDO_AGENT)}\nexec {worker_command}",
+        ]
+    target = REMOTE_TARGETS[host]
     return [
         *SSH,
-        "-oForwardAgent=no",
+        f"-oForwardAgent={'yes' if target.forwardAgent else 'no'}",
         "-i",
         f"{CREDENTIALS}/{target.credential}",
         target.ssh_target,
-        f"exec {target.shell} -lc {shlex.quote(script)}",
+        f"exec {target.shell} -lc {shlex.quote(worker_command)}",
     ]
 
 
@@ -359,7 +402,22 @@ def _prune_jobs() -> None:
 
 
 async def _signal_target(job: Job, sig: str) -> None:
-    if job.target_pid is not None:
+    if job.elevated:
+        script = shlex.join(
+            [
+                "run0",
+                "--non-interactive",
+                "--pipe",
+                "systemctl",
+                "kill",
+                f"--signal={sig}",
+                "--kill-whom=all",
+                f"chatgpt-shell-{job.request_id}.service",
+            ]
+        )
+        build = _build_elevated_argv
+    elif job.target_pid is not None:
+        build = _build_argv
         script = f"""
 descendants() {{
   for child in $(pgrep -P "$1" 2>/dev/null); do
@@ -375,11 +433,11 @@ kill -s {sig} {job.target_pid} $children 2>/dev/null || true
 
     try:
         process = await asyncio.create_subprocess_exec(
-            *_build_argv(job.host, script),
+            *build(job.host, script),
             stdin=asyncio.subprocess.DEVNULL,
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.DEVNULL,
-            env=_command_env(job.host),
+            env=_command_env(job.host, elevated=job.elevated),
             start_new_session=True,
         )
         await asyncio.wait_for(process.wait(), timeout=5)
@@ -455,7 +513,7 @@ async def shell_exec(
     wait_seconds: float = WAIT_SECONDS,
     stdin: str | None = None,
 ) -> dict[str, object]:
-    """Run a command on an allowed host as the configured user.
+    """Run a submitted command on a permitted host under a restricted identity.
 
     Use cwd (an absolute path) instead of prepending cd; default is the user's home.
     Pass multiline input via stdin, not shell interpolation. wait_seconds (0-30)
@@ -490,8 +548,8 @@ async def shell_elevated_exec(
 ) -> dict[str, object]:
     """Run an explicitly approved native Linux run0 operation.
 
-    Commands are executed without shell argument interpolation. All elevation
-    policies and one-use operator decisions are enforced before execution.
+    Exact argv values are shell-quoted before reaching run0. The operating
+    system independently authorizes the elevated transient service.
     """
     cwd = _validate_cwd(cwd)
     wait_seconds = _validate_wait_seconds(wait_seconds)

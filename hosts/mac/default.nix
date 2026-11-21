@@ -1,4 +1,5 @@
 {
+  config,
   editScope,
   extendScope,
   lib,
@@ -48,6 +49,27 @@ lib.recursiveUpdate (import ../../profiles/workstation.nix { inherit moduleRegis
       {
         authentication = _: {
           security.pam.services.sudo_local.touchIdAuth = true;
+          security.sudo.extraConfig = ''
+            ${config.dotfiles.users.primary.name} ALL=(herdr-worker) NOPASSWD: /usr/bin/env
+          '';
+        };
+
+        herdrWorker = _: {
+          launchd.daemons.herdr-worker-core.serviceConfig = {
+            ProgramArguments = [
+              "${pkgs.herdr-core}/bin/herdr-core"
+              "serve"
+            ];
+            UserName = "herdr-worker";
+            GroupName = "staff";
+            WorkingDirectory = "/Users/herdr-worker";
+            EnvironmentVariables = {
+              HOME = "/Users/herdr-worker";
+              HC_SESSION = "chatgpt-shell";
+            };
+            RunAtLoad = true;
+            KeepAlive = true;
+          };
         };
 
         preferences = _: {
