@@ -387,3 +387,36 @@ test("footer only contains shared navigation and keyboard controls", () => {
     /enabled: host.expansionState.hasCurrent && host.recordingState.capturing/,
   );
 });
+
+test("detail hint footers finish at their measured content boundary", () => {
+  const session = source("SessionPanel.qml");
+  const host = source("ShellExpansionHost.qml");
+  assert.match(
+    session,
+    /implicitHeight: header\.implicitHeight \+ buttonGrid\.implicitHeight \+ footer\.implicitHeight \+ theme\.spacing5 \+ theme\.spacing4/,
+  );
+  assert.match(
+    session,
+    /top: buttonGrid\.bottom\s*topMargin: panel\.theme\.spacing4/,
+  );
+  assert.match(
+    host,
+    /bottomMargin: host\.theme\.spacing3 \+ host\.theme\.spacing4/,
+  );
+});
+
+test("Home action hints are centered across the entire page independently of Today", () => {
+  const calendar = source("CalendarContent.qml");
+  assert.match(
+    calendar,
+    /id: calendarHints[\s\S]*?anchors\.horizontalCenter: parent\.horizontalCenter/,
+  );
+  assert.match(
+    calendar,
+    /parent\.width - 2 \* \(resetButton\.width \+ calendar\.theme\.spacing2\)/,
+  );
+  assert.match(
+    calendar,
+    /id: resetButton[\s\S]*?anchors\.right: parent\.right/,
+  );
+});

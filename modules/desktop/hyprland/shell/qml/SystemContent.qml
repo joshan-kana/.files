@@ -1019,6 +1019,176 @@ FocusScope {
                 width: parent.width
                 spacing: root.theme.spacing4
 
+                ShellSection {
+                    id: quickActionsSection
+                    width: parent.width
+                    runtime: root.runtime
+                    theme: root.theme
+                    title: "Quick Actions"
+                    emphasized: true
+                    accentRole: "attention"
+
+                    BalancedTileFlow {
+                        id: actionTiles
+                        width: parent.width
+                        spacing: root.theme.spacing2
+                        textScale: root.theme.textScale
+
+                        QuickSettingChip {
+                            width: actionTiles.cellWidth(this)
+                            height: root.dashboardTileHeight
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: root.notificationState.silent ? "󰂛" : "󰂚"
+                            title: root.notificationState.silent ? "Silent" : "Alerts"
+                            shortcut: root.runtime.shellHint("SystemContent.alerts")
+                            active: root.notificationState.silent
+                            activeColor: root.notificationState.silent ? root.theme.roleColor("warning") : root.theme.roleColor("attention")
+                            onActivated: root.notificationState.toggleSilent()
+                        }
+
+                        QuickSettingChip {
+                            width: actionTiles.cellWidth(this)
+                            height: root.dashboardTileHeight
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: root.system.idleInhibited ? "󰅶" : "󰒲"
+                            title: root.system.idleInhibited ? "Stay awake" : "Idle allowed"
+                            shortcut: root.runtime.shellHint("SystemContent.stayAwake")
+                            active: root.system.idleInhibited
+                            activeColor: root.theme.roleColor("warmth")
+                            onActivated: root.system.toggleIdleInhibited()
+                        }
+
+                        QuickSettingChip {
+                            width: actionTiles.cellWidth(this)
+                            height: root.dashboardTileHeight
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: root.system.batteryAvailable ? root.system.batteryLevelIcon : "󰐥"
+                            title: (root.powerProfile.available ? root.powerProfile.label(root.powerProfile.current) : "Power") + (root.system.batteryAvailable ? " " + root.system.batteryPercent + "%" : "")
+                            shortcut: root.runtime.shellHint("SystemContent.powerProfile")
+                            enabled: root.powerProfile.available && !root.powerProfile.applying
+                            active: root.powerProfile.current === "power-saver"
+                            activeColor: root.theme.powerProfileColor(root.powerProfile.current)
+                            onActivated: root.powerProfile.cycle()
+                        }
+
+                        QuickSettingChip {
+                            width: actionTiles.cellWidth(this)
+                            height: root.dashboardTileHeight
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: DesktopIcons.glyphFor("resources")
+                            title: "Resources"
+                            shortcut: root.runtime.shellHint("SystemContent.resources")
+                            activeColor: root.theme.roleColor("resources")
+                            onActivated: root.openResources()
+                        }
+
+                        QuickSettingChip {
+                            width: actionTiles.cellWidth(this)
+                            height: root.dashboardTileHeight
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: DesktopIcons.glyphFor("captures")
+                            title: "Captures"
+                            shortcut: root.runtime.shellHint("SystemContent.captures")
+                            activeColor: root.theme.roleColor("capture")
+                            onActivated: root.openRecordings()
+                        }
+
+                        QuickSettingChip {
+                            width: actionTiles.cellWidth(this)
+                            height: root.dashboardTileHeight
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: "󰍹"
+                            title: "Displays"
+                            shortcut: root.runtime.shellHint("SystemContent.displays")
+                            activeColor: root.theme.roleColor("display")
+                            enabled: root.runtime.displaySettings.length > 0
+                            onActivated: root.displaySettingsRequested()
+                        }
+
+                        QuickSettingChip {
+                            width: actionTiles.cellWidth(this)
+                            height: root.dashboardTileHeight
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: "󰍛"
+                            title: "Status"
+                            shortcut: root.runtime.shellHint("SystemContent.statusInspection")
+                            activeColor: root.theme.roleColor("resources")
+                            onActivated: root.openStatus()
+                        }
+
+                        QuickSettingChip {
+                            width: actionTiles.cellWidth(this)
+                            height: root.dashboardTileHeight
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: "󰑓"
+                            title: root.resetRunning ? "Restoring…" : "Restore defaults"
+                            shortcut: root.runtime.shellHint("SystemContent.reset")
+                            active: root.resetConfirmPending
+                            enabled: !root.resetRunning
+                            activeColor: root.theme.roleColor("warning")
+                            onActivated: root.resetConfirmPending = !root.resetConfirmPending
+                        }
+                    }
+
+                    ShellSurface {
+                        visible: root.resetConfirmPending || root.resetRunning || root.resetStatus.length > 0
+                        width: parent.width
+                        height: visible ? resetContents.implicitHeight + root.theme.spacing3 * 2 : 0
+                        theme: root.theme
+                        motion: root.motion
+                        surfaceLayer: ShellSurface.Group
+                        cornerRadius: root.theme.radiusMedium
+                        fillColor: root.theme.groupBase
+
+                        Column {
+                            id: resetContents
+                            width: parent.width - root.theme.spacing3 * 2
+                            anchors.centerIn: parent
+                            spacing: root.theme.spacing2
+                            Text {
+                                width: parent.width
+                                wrapMode: Text.WordWrap
+                                text: root.resetConfirmPending ? "Restore Nix defaults for appearance, motion, notifications, captures and wallpapers? Personal files and the active system generation stay intact." : root.resetStatus
+                                color: root.resetConfirmPending ? root.theme.textStrong : root.theme.textMuted
+                                font.family: root.runtime.fontMono
+                                font.pixelSize: root.theme.fontSize(11)
+                            }
+                            KeyHintStrip {
+                                visible: root.resetConfirmPending
+                                width: parent.width
+                                runtime: root.runtime
+                                theme: root.theme
+                                hints: [
+                                    {
+                                        shortcut: root.runtime.shellHint("SystemContent.resetConfirm"),
+                                        label: "Restore"
+                                    },
+                                    {
+                                        shortcut: root.runtime.shellHint("SystemContent.resetCancel"),
+                                        label: "Cancel"
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                }
+
                 Column {
                     id: visualModesGroup
                     width: parent.width
@@ -1200,176 +1370,6 @@ FocusScope {
                             canToggle: root.nightLight.supported && !root.nightLight.busy
                             canAdjust: root.nightLight.supported
                             onToggleRequested: root.nightLight.toggle()
-                        }
-                    }
-                }
-
-                ShellSection {
-                    id: quickActionsSection
-                    width: parent.width
-                    runtime: root.runtime
-                    theme: root.theme
-                    title: "Quick Actions"
-                    emphasized: true
-                    accentRole: "attention"
-
-                    BalancedTileFlow {
-                        id: actionTiles
-                        width: parent.width
-                        spacing: root.theme.spacing2
-                        textScale: root.theme.textScale
-
-                        QuickSettingChip {
-                            width: actionTiles.cellWidth(this)
-                            height: root.dashboardTileHeight
-                            runtime: root.runtime
-                            theme: root.theme
-                            motion: root.motion
-                            icon: root.notificationState.silent ? "󰂛" : "󰂚"
-                            title: root.notificationState.silent ? "Silent" : "Alerts"
-                            shortcut: root.runtime.shellHint("SystemContent.alerts")
-                            active: root.notificationState.silent
-                            activeColor: root.notificationState.silent ? root.theme.roleColor("warning") : root.theme.roleColor("attention")
-                            onActivated: root.notificationState.toggleSilent()
-                        }
-
-                        QuickSettingChip {
-                            width: actionTiles.cellWidth(this)
-                            height: root.dashboardTileHeight
-                            runtime: root.runtime
-                            theme: root.theme
-                            motion: root.motion
-                            icon: root.system.idleInhibited ? "󰅶" : "󰒲"
-                            title: root.system.idleInhibited ? "Stay awake" : "Idle allowed"
-                            shortcut: root.runtime.shellHint("SystemContent.stayAwake")
-                            active: root.system.idleInhibited
-                            activeColor: root.theme.roleColor("warmth")
-                            onActivated: root.system.toggleIdleInhibited()
-                        }
-
-                        QuickSettingChip {
-                            width: actionTiles.cellWidth(this)
-                            height: root.dashboardTileHeight
-                            runtime: root.runtime
-                            theme: root.theme
-                            motion: root.motion
-                            icon: root.system.batteryAvailable ? root.system.batteryLevelIcon : "󰐥"
-                            title: (root.powerProfile.available ? root.powerProfile.label(root.powerProfile.current) : "Power") + (root.system.batteryAvailable ? " " + root.system.batteryPercent + "%" : "")
-                            shortcut: root.runtime.shellHint("SystemContent.powerProfile")
-                            enabled: root.powerProfile.available && !root.powerProfile.applying
-                            active: root.powerProfile.current === "power-saver"
-                            activeColor: root.theme.powerProfileColor(root.powerProfile.current)
-                            onActivated: root.powerProfile.cycle()
-                        }
-
-                        QuickSettingChip {
-                            width: actionTiles.cellWidth(this)
-                            height: root.dashboardTileHeight
-                            runtime: root.runtime
-                            theme: root.theme
-                            motion: root.motion
-                            icon: DesktopIcons.glyphFor("resources")
-                            title: "Resources"
-                            shortcut: root.runtime.shellHint("SystemContent.resources")
-                            activeColor: root.theme.roleColor("resources")
-                            onActivated: root.openResources()
-                        }
-
-                        QuickSettingChip {
-                            width: actionTiles.cellWidth(this)
-                            height: root.dashboardTileHeight
-                            runtime: root.runtime
-                            theme: root.theme
-                            motion: root.motion
-                            icon: DesktopIcons.glyphFor("captures")
-                            title: "Captures"
-                            shortcut: root.runtime.shellHint("SystemContent.captures")
-                            activeColor: root.theme.roleColor("capture")
-                            onActivated: root.openRecordings()
-                        }
-
-                        QuickSettingChip {
-                            width: actionTiles.cellWidth(this)
-                            height: root.dashboardTileHeight
-                            runtime: root.runtime
-                            theme: root.theme
-                            motion: root.motion
-                            icon: "󰍹"
-                            title: "Displays"
-                            shortcut: root.runtime.shellHint("SystemContent.displays")
-                            activeColor: root.theme.roleColor("display")
-                            enabled: root.runtime.displaySettings.length > 0
-                            onActivated: root.displaySettingsRequested()
-                        }
-
-                        QuickSettingChip {
-                            width: actionTiles.cellWidth(this)
-                            height: root.dashboardTileHeight
-                            runtime: root.runtime
-                            theme: root.theme
-                            motion: root.motion
-                            icon: "󰍛"
-                            title: "Status"
-                            shortcut: root.runtime.shellHint("SystemContent.statusInspection")
-                            activeColor: root.theme.roleColor("resources")
-                            onActivated: root.openStatus()
-                        }
-
-                        QuickSettingChip {
-                            width: actionTiles.cellWidth(this)
-                            height: root.dashboardTileHeight
-                            runtime: root.runtime
-                            theme: root.theme
-                            motion: root.motion
-                            icon: "󰑓"
-                            title: root.resetRunning ? "Restoring…" : "Restore defaults"
-                            shortcut: root.runtime.shellHint("SystemContent.reset")
-                            active: root.resetConfirmPending
-                            enabled: !root.resetRunning
-                            activeColor: root.theme.roleColor("warning")
-                            onActivated: root.resetConfirmPending = !root.resetConfirmPending
-                        }
-                    }
-
-                    ShellSurface {
-                        visible: root.resetConfirmPending || root.resetRunning || root.resetStatus.length > 0
-                        width: parent.width
-                        height: visible ? resetContents.implicitHeight + root.theme.spacing3 * 2 : 0
-                        theme: root.theme
-                        motion: root.motion
-                        surfaceLayer: ShellSurface.Group
-                        cornerRadius: root.theme.radiusMedium
-                        fillColor: root.theme.groupBase
-
-                        Column {
-                            id: resetContents
-                            width: parent.width - root.theme.spacing3 * 2
-                            anchors.centerIn: parent
-                            spacing: root.theme.spacing2
-                            Text {
-                                width: parent.width
-                                wrapMode: Text.WordWrap
-                                text: root.resetConfirmPending ? "Restore Nix defaults for appearance, motion, notifications, captures and wallpapers? Personal files and the active system generation stay intact." : root.resetStatus
-                                color: root.resetConfirmPending ? root.theme.textStrong : root.theme.textMuted
-                                font.family: root.runtime.fontMono
-                                font.pixelSize: root.theme.fontSize(11)
-                            }
-                            KeyHintStrip {
-                                visible: root.resetConfirmPending
-                                width: parent.width
-                                runtime: root.runtime
-                                theme: root.theme
-                                hints: [
-                                    {
-                                        shortcut: root.runtime.shellHint("SystemContent.resetConfirm"),
-                                        label: "Restore"
-                                    },
-                                    {
-                                        shortcut: root.runtime.shellHint("SystemContent.resetCancel"),
-                                        label: "Cancel"
-                                    }
-                                ]
-                            }
                         }
                     }
                 }
@@ -1595,7 +1595,6 @@ FocusScope {
                 modeName: root.statusMode
                 closeLabel: root.returnToControls ? "Back" : "Close"
                 onRefreshRequested: root.refreshStatus()
-                onCloseRequested: root.backFromDetail()
             }
         }
 

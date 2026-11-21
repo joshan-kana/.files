@@ -77,7 +77,7 @@ test("Visual Modes and Quick Actions have distinct full-width balanced sections"
   const controls = read("SystemContent.qml");
   const visual = controls
     .split("id: visualTiles")[1]
-    .split("id: quickActionsSection")[0];
+    .split("id: mediaMatrix")[0];
   const actions = controls
     .split("id: actionTiles")[1]
     .split("ShellSurface {")[0];
@@ -95,6 +95,10 @@ test("Visual Modes and Quick Actions have distinct full-width balanced sections"
   assert.match(controls, /id: quickActionsSection/);
   assert.match(controls, /text: "VISUAL MODES"/);
   assert.match(controls, /title: "Quick Actions"/);
+  assert.ok(
+    controls.indexOf("id: quickActionsSection") <
+      controls.indexOf("id: visualModesGroup"),
+  );
   assert.match(controls, /accentRole: "attention"/);
   assert.match(
     actions,
@@ -458,11 +462,9 @@ test("Dashboard hierarchy puts the shared tile canvas between top controls and m
   const audio = controls.indexOf("id: audioSection");
   const media = controls.indexOf("ControlsMediaCard {");
   assert.ok(
-    appearance >= 0 && appearance < connectivity && connectivity < modes,
+    appearance >= 0 && appearance < connectivity && connectivity < actions,
   );
-  assert.ok(
-    modes < actions && actions < lower && lower < audio && audio < media,
-  );
+  assert.ok(actions < modes && modes < lower && lower < audio && audio < media);
   assert.match(controls, /title: "Connectivity"/);
   assert.match(
     controls,
@@ -723,7 +725,7 @@ test("all 16 tile heights remain fixed when the categories rebalance separately"
   const controls = read("SystemContent.qml");
   const visual = controls
     .split("id: visualTiles")[1]
-    .split("id: quickActionsSection")[0];
+    .split("id: mediaMatrix")[0];
   const actions = controls
     .split("id: actionTiles")[1]
     .split("ShellSurface {")[0];

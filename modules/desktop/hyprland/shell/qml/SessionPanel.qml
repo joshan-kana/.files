@@ -274,7 +274,7 @@ Item {
     }
 
     implicitWidth: 3 * 154 + 2 * theme.spacing3 + theme.spacing5 * 2
-    implicitHeight: header.implicitHeight + buttonGrid.implicitHeight + footer.implicitHeight + theme.spacing5 * 3
+    implicitHeight: header.implicitHeight + buttonGrid.implicitHeight + footer.implicitHeight + theme.spacing5 + theme.spacing4
 
     DetailHero {
         id: header

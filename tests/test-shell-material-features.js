@@ -75,7 +75,13 @@ test("status is a Controls detail with shared data and nested Escape", () => {
   );
   assert.match(controls, /function openStatus\(\): void/);
   assert.match(controls, /StatusContent \{[\s\S]*?keyboard: root\.keyboard/);
-  assert.match(controls, /onCloseRequested: root\.backFromDetail\(\)/);
+  assert.doesNotMatch(
+    controls.slice(
+      controls.indexOf("StatusContent {"),
+      controls.indexOf("DeferredDetail {", controls.indexOf("StatusContent {")),
+    ),
+    /onCloseRequested: root\.backFromDetail\(\)/,
+  );
   assert.match(host, /systemContent\.statusOpen/);
   assert.match(shell, /keyboard: qmlKeyboard[\s\S]*?recording: qmlRecording/);
   assert.match(

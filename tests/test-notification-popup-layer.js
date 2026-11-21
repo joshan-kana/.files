@@ -81,7 +81,7 @@ test("one notification server routes output-specific toast masks and frame docks
     root,
     /preferredOutput: qmlScreens\.focusedScreen \? qmlScreens\.focusedScreen\.name/,
   );
-  assert.match(root, /toastByOutput: notifications\.frameDocksByOutput/);
+  assert.match(root, /toastByOutput: qmlNotifications\.frameDocksByOutput/);
   assert.match(frame, /frame\.toastByOutput\[modelData\.name\]/);
   assert.match(qml("NotificationPopups.qml"), /model: Quickshell.screens/);
   assert.doesNotMatch(root, /NotificationPopup \{\s*id: notificationPopup/);

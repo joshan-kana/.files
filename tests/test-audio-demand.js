@@ -19,7 +19,7 @@ test("reactive styling is driven by observed shell surfaces, not a saved toggle 
     "qmlExpansionState.hasCurrent",
     "expansionHost.closing",
     "modalHost.contentVisible",
-    "notifications.popupVisible",
+    "qmlNotifications.popupVisible",
     "qmlOsd.visible",
     "osdPopup.closing",
     "resizeOverlay.open",
