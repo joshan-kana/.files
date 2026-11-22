@@ -55,6 +55,48 @@ def _write_atomic(path: Path, value: dict) -> None:
             os.unlink(temporary)
 
 
+def register_terminal(address: str, name: str, metadata: dict) -> None:
+    """Bind agent-owned terminal control to private controller state, not labels."""
+    if (
+        not isinstance(address, str)
+        or not isinstance(name, str)
+        or not name.startswith("chatgpt-")
+        or metadata.get("address") != address
+        or metadata.get("name") != name
+        or not isinstance(metadata.get("created_ms"), int)
+    ):
+        raise ValueError("Herdr returned invalid terminal identity")
+    path = STATE_DIR / "managed-terminals.json"
+    records = _read_json(path, {})
+    if address in records:
+        raise ValueError("terminal address already registered")
+    records[address] = {"name": name, "created_ms": metadata["created_ms"]}
+    _write_atomic(path, records)
+
+
+def owns_terminal(address: str, metadata: dict) -> bool:
+    """Only the controller can claim a session; client-provided labels are ignored."""
+    record = _read_json(STATE_DIR / "managed-terminals.json", {}).get(address)
+    return (
+        record is not None
+        and record
+        == {
+            "name": metadata.get("name"),
+            "created_ms": metadata.get("created_ms"),
+        }
+        and metadata.get("address") == address
+    )
+
+
+def release_terminal(address: str) -> None:
+    """Drop controller mutation authority when a managed terminal is killed."""
+    path = STATE_DIR / "managed-terminals.json"
+    records = _read_json(path, {})
+    if address in records:
+        del records[address]
+        _write_atomic(path, records)
+
+
 def _digest(request: dict) -> str:
     """Bind a human decision to the precise, unmodified submitted operation."""
     payload = json.dumps(request, sort_keys=True, separators=(",", ":")).encode()

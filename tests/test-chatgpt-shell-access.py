@@ -370,16 +370,48 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(result["success"])
 
     async def test_herdr_session_start_uses_native_runtime(self):
-        """Create a labelled session without writing a competing terminal database."""
-        with patch.object(shell, "_herdr", new_callable=AsyncMock, return_value={"address": "t8", "state": "live"}) as invoke:
+        """Create a native session and register the verified identity privately."""
+        session_name = None
+
+        async def native(_host, arguments):
+            nonlocal session_name
+            if arguments[0] == "run":
+                session_name = arguments[arguments.index("--name") + 1]
+                return {"address": "t8", "state": "live"}
+            self.assertEqual(arguments, ["get", "--json", "t8"])
+            return {"address": "t8", "name": session_name, "created_ms": 100}
+
+        with (
+            patch.object(shell, "_herdr", side_effect=native) as invoke,
+            patch.object(shell.authorization, "register_terminal") as register,
+        ):
             result = await shell.session_start("local", "printf test", cwd="/tmp")
         self.assertEqual(result["address"], "t8")
         self.assertEqual(result["session"], shell.HERDR_SESSION)
-        args = invoke.call_args.args[1]
+        args = invoke.call_args_list[0].args[1]
         self.assertIn("--bg", args)
         self.assertIn("origin=chatgpt-shell", args)
         self.assertEqual(args[-3:], ["bash", "-lc", "printf test"])
         self.assertEqual(args[args.index("--cwd") + 1], "/tmp")
+        register.assert_called_once_with("t8", session_name, {"address": "t8", "name": session_name, "created_ms": 100})
+
+    async def test_herdr_registration_failure_terminates_untracked_terminal(self):
+        """An invalid native terminal identity cannot leave a managed shell running."""
+
+        async def native(_host, arguments):
+            if arguments[0] == "run":
+                return {"address": "t9"}
+            if arguments[0] == "get":
+                return {"address": "t9", "name": "not-the-created-session", "created_ms": 1}
+            return {"killed": "t9"}
+
+        with (
+            patch.object(shell, "_herdr", side_effect=native) as invoke,
+            patch.object(shell.authorization, "register_terminal", side_effect=ValueError("invalid identity")),
+            self.assertRaisesRegex(ValueError, "invalid identity"),
+        ):
+            await shell.session_start("local", "sleep 30")
+        self.assertEqual(invoke.call_args.args[1], ["kill", "--json", "t9"])
 
     async def test_remote_sessions_are_rejected_without_remote_core(self):
         """Do not manufacture remote terminal addresses for SSH-only hosts."""
@@ -398,34 +430,58 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
             invoke.assert_not_awaited()
 
     async def test_herdr_mutations_only_target_managed_sessions(self):
-        """Observe worker terminals but mutate only agent-labelled sessions."""
+        """Mutation requires controller-registered ownership, not metadata labels."""
 
         async def native(_host, arguments):
             if arguments[0] == "get":
-                return {"name": "chatgpt-test", "labels": {"origin": "chatgpt-shell"}}
+                return {"address": "t1", "name": "chatgpt-test", "created_ms": 100, "labels": {}}
             return {"address": "t1"}
 
-        with patch.object(shell, "_herdr", side_effect=native) as invoke:
+        with (
+            patch.object(shell, "_herdr", side_effect=native) as invoke,
+            patch.object(shell.authorization, "owns_terminal", return_value=True) as owns,
+            patch.object(shell.authorization, "release_terminal") as released,
+        ):
             await shell.session_read("local", "t1")
             invoke.assert_awaited_once_with("local", ["read", "--json", "--lines", "100", "t1"])
             invoke.reset_mock()
             await shell.session_interrupt("local", "t1")
             self.assertEqual(invoke.await_args_list[-1].args[1], ["interrupt", "--json", "t1"])
+            released.assert_not_called()
             invoke.reset_mock()
             await shell.session_kill("local", "t1")
             self.assertEqual(invoke.await_args_list[-1].args[1], ["kill", "--json", "t1"])
+            released.assert_called_once_with("t1")
+        self.assertEqual(owns.call_count, 4)
         self.assertEqual(shell.authorization.authorize.await_count, 2)
         self.assertEqual(shell.authorization.authorize.call_args.kwargs["session"], "chatgpt-test")
 
     async def test_herdr_mutations_reject_other_terminals(self):
-        """Ordinary operator terminals cannot be killed by the agent tool."""
+        """A forged ChatGPT name and origin label do not confer controller ownership."""
+        spoof = {"address": "t2", "name": "chatgpt-forged", "created_ms": 200, "labels": {"origin": "chatgpt-shell"}}
         with (
-            patch.object(shell, "_herdr", new_callable=AsyncMock, return_value={"name": "operator", "labels": {}}) as invoke,
+            patch.object(shell, "_herdr", new_callable=AsyncMock, return_value=spoof) as invoke,
+            patch.object(shell.authorization, "owns_terminal", return_value=False),
             self.assertRaisesRegex(PermissionError, "not an agent-managed"),
         ):
             await shell.session_kill("local", "t2")
         invoke.assert_awaited_once_with("local", ["get", "--json", "t2"])
         shell.authorization.authorize.assert_not_awaited()
+
+    async def test_terminal_replacement_during_approval_is_denied(self):
+        """Mutation rechecks identity after an asynchronous approval delay."""
+
+        async def native(_host, arguments):
+            return {"address": "t1", "name": "chatgpt-test", "created_ms": 100}
+
+        with (
+            patch.object(shell, "_herdr", side_effect=native) as invoke,
+            patch.object(shell.authorization, "owns_terminal", side_effect=[True, False]),
+            self.assertRaisesRegex(PermissionError, "identity changed"),
+        ):
+            await shell.session_kill("local", "t1")
+        self.assertEqual(invoke.await_count, 2)
+        shell.authorization.authorize.assert_awaited_once()
 
     async def test_herdr_mutations_respect_denied_approvals(self):
         """A strict host policy requires actual approval for all terminal mutations."""
@@ -435,6 +491,7 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
 
         with (
             patch.object(shell.authorization, "authorize", new_callable=AsyncMock, side_effect=PermissionError("not approved")),
+            patch.object(shell.authorization, "owns_terminal", return_value=True),
             patch.object(shell, "_herdr", side_effect=native) as invoke,
         ):
             with self.assertRaises(PermissionError):

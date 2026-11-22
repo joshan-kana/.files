@@ -190,6 +190,27 @@ class AuthorizationTests(unittest.IsolatedAsyncioTestCase):
         authorization._decide(ident, "approve")
         await operation
 
+    def test_controller_registry_rejects_forged_terminal_metadata(self):
+        """Client labels and names cannot create controller-owned authority."""
+        metadata = {
+            "address": "t8",
+            "name": "chatgpt-owned",
+            "created_ms": 100,
+            "labels": {"origin": "chatgpt-shell"},
+        }
+        self.assertFalse(authorization.owns_terminal("t8", metadata))
+        authorization.register_terminal("t8", "chatgpt-owned", metadata)
+        record = authorization.STATE_DIR / "managed-terminals.json"
+        self.assertEqual(record.stat().st_mode & 0o777, 0o600)
+        self.assertTrue(authorization.owns_terminal("t8", metadata))
+        self.assertFalse(authorization.owns_terminal("t8", {**metadata, "created_ms": 101}))
+        self.assertFalse(authorization.owns_terminal("t8", {**metadata, "address": "t9"}))
+        self.assertFalse(authorization.owns_terminal("t9", {**metadata, "address": "t9"}))
+        with self.assertRaises(ValueError):
+            authorization.register_terminal("t8", "chatgpt-owned", metadata)
+        authorization.release_terminal("t8")
+        self.assertFalse(authorization.owns_terminal("t8", metadata))
+
     def test_unknown_host_and_bad_ids(self):
         """Unknown hosts and invalid identifiers never map into a filesystem request."""
         with self.assertRaises(ValueError):

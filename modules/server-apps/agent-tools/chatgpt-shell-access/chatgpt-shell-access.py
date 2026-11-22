@@ -572,6 +572,17 @@ async def session_start(
     arguments.extend(["bash", "-lc", command])
     await authorization.authorize(uuid.uuid4().hex, host, "commands", shlex.join(arguments), cwd, session=session_name)
     result = await _herdr(host, arguments)
+    address = result.get("address")
+    if not isinstance(address, str):
+        raise RuntimeError("Herdr did not return a terminal address")
+    try:
+        metadata = await _herdr(host, ["get", "--json", address])
+        authorization.register_terminal(address, session_name, metadata)
+    except (Exception, asyncio.CancelledError):
+        # Do not leave an untracked command running when registration fails.
+        with suppress(Exception):
+            await _herdr(host, ["kill", "--json", address])
+        raise
     return {"host": host, "session": HERDR_SESSION, **result}
 
 
@@ -595,18 +606,18 @@ async def _managed_session_action(host: Host, terminal: str, action: str) -> dic
     """Allow only recorded agent terminals through the approval broker."""
     _require_local_herdr(host)
     metadata = await _herdr(host, ["get", "--json", terminal])
-    name = metadata.get("name")
-    labels = metadata.get("labels")
-    if (
-        not isinstance(name, str)
-        or not name.startswith("chatgpt-")
-        or not isinstance(labels, dict)
-        or labels.get("origin") != "chatgpt-shell"
-    ):
+    if not authorization.owns_terminal(terminal, metadata):
         raise PermissionError("terminal is not an agent-managed workspace")
     arguments = [action, "--json", terminal]
-    await authorization.authorize(uuid.uuid4().hex, host, "commands", shlex.join(arguments), None, session=name)
-    return await _herdr(host, arguments)
+    await authorization.authorize(uuid.uuid4().hex, host, "commands", shlex.join(arguments), None, session=metadata["name"])
+    # An operator approval may take minutes; reject replacement sessions.
+    current = await _herdr(host, ["get", "--json", terminal])
+    if not authorization.owns_terminal(terminal, current):
+        raise PermissionError("terminal identity changed during approval")
+    result = await _herdr(host, arguments)
+    if action == "kill":
+        authorization.release_terminal(terminal)
+    return result
 
 
 @mcp.tool()
