@@ -219,6 +219,100 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("owner@parallels.home", linux)
         self.assertIn("--user=herdr-worker", linux[-1])
 
+    async def test_native_herdr_command_tracks_exit_and_output(self):
+        """Observe one terminal, retaining the real nonzero exit status."""
+        response = iter(
+            [
+                {"address": "t17", "state": "live"},
+                {"state": "live"},
+                {"text": "first"},
+                {"state": "finished", "exit_code": 9},
+                {"text": "firstsecond"},
+            ]
+        )
+
+        async def native(_host, _arguments):
+            return next(response)
+
+        job = shell.Job(request_id="a" * 32, host="local")
+        with patch.object(shell, "_herdr", side_effect=native) as invoke:
+            await shell._run_herdr(job, "printf first; printf second; exit 9", "/tmp")
+        self.assertEqual(job.herdr_terminal, "t17")
+        self.assertEqual(job.exit_code, 9)
+        self.assertEqual(job.output.drain()[0], "firstsecond")
+        launched = invoke.call_args_list[0].args[1]
+        self.assertEqual(launched[:3], ["run", "--bg", "--json"])
+        self.assertIn("origin=chatgpt-shell", launched)
+
+    async def test_shell_exec_uses_herdr_for_no_stdin(self):
+        """Route normal commands into persistent native terminals by default."""
+
+        async def mock_terminal(job, command, cwd):
+            self.assertEqual(command, "printf session")
+            self.assertEqual(cwd, "/tmp")
+            job.herdr_terminal = "t10"
+            job.exit_code = 0
+
+        with (
+            patch.object(shell, "HERDR_COMMANDS", True),
+            patch.object(shell, "_run_herdr", side_effect=mock_terminal) as terminal,
+        ):
+            result = await shell.shell_exec("local", "printf session", cwd="/tmp")
+        terminal.assert_awaited_once()
+        self.assertEqual(result["terminal"], "t10")
+        self.assertTrue(result["success"])
+
+    async def test_cancel_during_herdr_creation_does_not_orphan_terminal(self):
+        """Interrupt the created native terminal even if cancellation arrives first."""
+        creation_allowed = asyncio.Event()
+        interrupted = asyncio.Event()
+        calls = []
+
+        async def fake_herdr(_host, args):
+            calls.append(args)
+            if args[0] == "run":
+                await creation_allowed.wait()
+                return {"address": "t17"}
+            if args[0] == "interrupt":
+                interrupted.set()
+                return {"state": "finished"}
+            if args[0] == "get":
+                return {"state": "finished", "exit_code": 130} if interrupted.is_set() else {"state": "live"}
+            if args[0] == "read":
+                return {"text": ""}
+            raise AssertionError(args)
+
+        with (
+            patch.object(shell, "HERDR_COMMANDS", True),
+            patch.object(shell, "_herdr", side_effect=fake_herdr),
+        ):
+            started = await shell.shell_exec("local", "sleep 60", wait_seconds=0)
+            job = shell.jobs[started["request_id"]]
+            for _ in range(100):
+                if job.herdr_starting:
+                    break
+                await asyncio.sleep(0.01)
+            self.assertTrue(job.herdr_starting)
+            cancellation = asyncio.create_task(shell.shell_cancel(started["request_id"]))
+            await asyncio.sleep(0.02)
+            creation_allowed.set()
+            result = await asyncio.wait_for(cancellation, timeout=5)
+        self.assertEqual(result["status"], "cancelled")
+        self.assertTrue(interrupted.is_set())
+        self.assertEqual(result["terminal"], "t17")
+        self.assertIn(["interrupt", "--json", "t17"], calls)
+
+    async def test_stdin_keeps_exact_pipe_semantics(self):
+        """Use the exact-input path when supplied stdin cannot be represented by Herdr run."""
+        with (
+            patch.object(shell, "HERDR_COMMANDS", True),
+            patch.object(shell, "_run_herdr", new_callable=AsyncMock) as terminal,
+        ):
+            result = await shell.shell_exec("local", "cat", stdin="line\n")
+        terminal.assert_not_awaited()
+        self.assertEqual(result["output"], "line\n")
+        self.assertTrue(result["success"])
+
     async def test_herdr_session_start_uses_native_runtime(self):
         """Create a labelled session without writing a competing terminal database."""
         with patch.object(shell, "_herdr", new_callable=AsyncMock, return_value={"address": "t8", "state": "live"}) as invoke:

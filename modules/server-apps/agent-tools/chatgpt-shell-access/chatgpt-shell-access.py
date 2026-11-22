@@ -71,6 +71,7 @@ HERDR_LOCAL = os.environ.get("CHATGPT_SHELL_HC", "hc")
 HERDR_SESSION = os.environ.get("CHATGPT_SHELL_HC_SESSION", "chatgpt-shell")
 WORKER_USER = os.environ.get("CHATGPT_SHELL_WORKER", "herdr-worker")
 RUN0 = os.environ.get("CHATGPT_SHELL_RUN0", "run0")
+HERDR_COMMANDS = os.environ.get("CHATGPT_SHELL_HERDR_COMMANDS", "") == "1"
 
 
 def _herdr_argv(host: Host, arguments: list[str]) -> list[str]:
@@ -168,6 +169,10 @@ class Job:
     cancel_requested: bool = False
     awaiting_approval: bool = False
     elevated: bool = False
+    herdr_terminal: str | None = None
+    herdr_screen: str = ""
+    herdr_starting: bool = False
+    herdr_ready: asyncio.Event = field(default_factory=asyncio.Event)
 
 
 jobs: dict[str, Job] = {}
@@ -304,6 +309,69 @@ async def _write_stdin(process: asyncio.subprocess.Process, stdin: str | None) -
             await process.stdin.wait_closed()
 
 
+async def _run_herdr(job: Job, command: str, cwd: str | None) -> None:
+    """Use Herdr's native persistent PTY for observable, interruptible commands."""
+    name = f"chatgpt-{job.request_id[:12]}"
+    arguments = [
+        "run",
+        "--bg",
+        "--json",
+        "--name",
+        name,
+        "--label",
+        "origin=chatgpt-shell",
+        "--no-parent",
+        "--cwd",
+        cwd or ("/Users/herdr-worker" if job.host == "mac" else "/var/lib/herdr-worker"),
+        "/bin/zsh" if job.host == "mac" else "bash",
+        "-lc",
+        command,
+    ]
+    job.herdr_starting = True
+    try:
+        created = await _herdr(job.host, arguments)
+        address = created.get("address")
+        if not isinstance(address, str):
+            raise RuntimeError("Herdr did not return a terminal address")
+        job.herdr_terminal = address
+    finally:
+        job.herdr_starting = False
+        job.herdr_ready.set()
+    while True:
+        snapshot = await _herdr(job.host, ["get", "--json", address])
+        screen = await _herdr(job.host, ["read", "--json", "--lines", "2000", address])
+        current = screen.get("text")
+        if not isinstance(current, str):
+            raise RuntimeError("Herdr returned invalid terminal output")
+        if current.startswith(job.herdr_screen):
+            delta = current[len(job.herdr_screen) :]
+        elif current == job.herdr_screen:
+            delta = ""
+        else:
+            # Readbacks are terminal snapshots, not raw stdout. Reuse overlap
+            # when the scrollback window has moved to avoid duplicate output.
+            overlap = next(
+                (
+                    size
+                    for size in range(min(len(job.herdr_screen), len(current), 4096), 0, -1)
+                    if job.herdr_screen.endswith(current[:size])
+                ),
+                0,
+            )
+            delta = current[overlap:] if overlap else "\n" + current
+        if delta:
+            job.output.append(delta.encode())
+        job.herdr_screen = current
+
+        if snapshot.get("state") == "finished":
+            code = snapshot.get("exit_code")
+            job.exit_code = int(code) if code is not None else 128
+            return
+        if snapshot.get("state") != "live":
+            raise RuntimeError(f"Herdr terminal lost: {snapshot.get('state')}")
+        await asyncio.sleep(0.5)
+
+
 async def _run(job: Job, command: str, cwd: str | None, stdin: str | None) -> None:
     marker = f"__CHATGPT_SHELL_PID_{job.request_id}__="
     try:
@@ -317,6 +385,9 @@ async def _run(job: Job, command: str, cwd: str | None, stdin: str | None) -> No
             stdin,
         )
         job.awaiting_approval = False
+        if HERDR_COMMANDS and not job.elevated and stdin is None:
+            await _run_herdr(job, command, cwd)
+            return
         build = _build_elevated_argv if job.elevated else _build_argv
         job.process = await asyncio.create_subprocess_exec(
             *build(job.host, _command_script(command, cwd, marker)),
@@ -368,6 +439,8 @@ def _payload(job: Job, *, include_output: bool = True) -> dict[str, object]:
             payload["omitted_bytes"] = omitted
     if job.awaiting_approval:
         payload["approval_id"] = job.request_id
+    if job.herdr_terminal:
+        payload["terminal"] = job.herdr_terminal
     if job.target_pid is not None:
         payload["pid"] = job.target_pid
     payload["request_id"] = job.request_id
@@ -619,6 +692,34 @@ async def shell_cancel(request_id: str) -> dict[str, object]:
         return _payload(job)
 
     job.cancel_requested = True
+    if job.herdr_starting:
+        try:
+            await asyncio.wait_for(job.herdr_ready.wait(), timeout=20)
+        except TimeoutError:
+            if job.task is not None:
+                job.task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await job.task
+            return _payload(job)
+        if job.completed_at is not None:
+            return _payload(job)
+    if job.herdr_terminal is not None:
+        try:
+            await _herdr(job.host, ["interrupt", "--json", job.herdr_terminal])
+            if job.task is not None and not job.task.done():
+                with suppress(TimeoutError):
+                    await asyncio.wait_for(asyncio.shield(job.task), timeout=CANCEL_GRACE_SECONDS)
+            if job.task is not None and not job.task.done():
+                await _herdr(job.host, ["kill", "--json", job.herdr_terminal])
+                await job.task
+        except Exception as exc:
+            if job.task is not None:
+                job.task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await job.task
+            job.error = str(exc)
+            job.completed_at = time.monotonic()
+        return _payload(job)
     if job.process is None and job.task is not None:
         job.task.cancel()
         with suppress(asyncio.CancelledError):
