@@ -109,18 +109,6 @@ async def _herdr(host: Host, arguments: list[str]) -> dict[str, object]:
         raise RuntimeError("Herdr returned an invalid response") from exc
 
 
-def _terminal_match(terminal: dict[str, object], requested: str) -> bool:
-    """Match a named or addressed terminal without interpreting user input as a shell expression."""
-    return terminal.get("address") == requested or terminal.get("name") == requested
-
-
-async def _herdr_owned(host: Host, terminal: str) -> None:
-    """Require a managed Herdr terminal for agent-initiated interruption."""
-    data = await _herdr(host, ["ls", "--all", "--label", "origin=chatgpt-shell", "--json"])
-    if not any(_terminal_match(item, terminal) for item in data.get("terminals", [])):
-        raise ValueError("unknown ChatGPT shell terminal")
-
-
 def _command_env(host: Host, *, elevated: bool = False) -> dict[str, str]:
     """Give the trusted launcher only the SSH signature needed to enter the worker."""
     environment = {key: value for key, value in COMMAND_ENV.items() if key not in ("SSH_AUTH_SOCK", "GH_TOKEN")}
@@ -482,8 +470,8 @@ async def session_start(
 
 @mcp.tool()
 async def session_list(host: Host) -> dict[str, object]:
-    """List the ChatGPT-owned Herdr terminals on an approved host."""
-    return await _herdr(host, ["ls", "--all", "--label", "origin=chatgpt-shell", "--json"])
+    """List all terminals within the restricted worker's Herdr core."""
+    return await _herdr(host, ["ls", "--all", "--json"])
 
 
 @mcp.tool()
@@ -491,7 +479,6 @@ async def session_read(host: Host, terminal: str, lines: int = 100) -> dict[str,
     """Read a Herdr terminal's current screen and scrollback."""
     if not 0 <= lines <= 2000:
         raise ValueError("lines must be between 0 and 2000")
-    await _herdr_owned(host, terminal)
     return await _herdr(host, ["read", "--json", "--lines", str(lines), terminal])
 
 
@@ -500,7 +487,6 @@ async def session_interrupt(host: Host, terminal: str) -> dict[str, object]:
     """Interrupt a ChatGPT-managed terminal only when command control is enabled."""
     if authorization.effective(host, "commands") != "automatic":
         raise PermissionError("agent terminal mutation is disabled by the command policy")
-    await _herdr_owned(host, terminal)
     return await _herdr(host, ["interrupt", "--json", terminal])
 
 
@@ -509,7 +495,6 @@ async def session_kill(host: Host, terminal: str) -> dict[str, object]:
     """Terminate a managed terminal only when the command policy permits it."""
     if authorization.effective(host, "commands") != "automatic":
         raise PermissionError("agent terminal mutation is disabled by the command policy")
-    await _herdr_owned(host, terminal)
     return await _herdr(host, ["kill", "--json", terminal])
 
 

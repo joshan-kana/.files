@@ -238,14 +238,17 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
                 await shell.session_start("local", "true", cwd="../parent")
             invoke.assert_not_awaited()
 
-    async def test_herdr_interrupt_is_limited_to_managed_sessions(self):
-        """Never interrupt an unrelated Herdr terminal through the MCP tool."""
-        with patch.object(shell, "_herdr", new_callable=AsyncMock) as invoke:
-            invoke.return_value = {"terminals": []}
-            with self.assertRaises(ValueError):
-                await shell.session_interrupt("local", "t1")
-            invoke.assert_awaited_once()
-            self.assertIn("origin=chatgpt-shell", invoke.call_args.args[1])
+    async def test_herdr_ownership_is_the_worker_identity_not_mutable_labels(self):
+        """Use the restricted Unix account as the authorization boundary."""
+        with patch.object(shell, "_herdr", new_callable=AsyncMock, return_value={"address": "t1"}) as invoke:
+            await shell.session_read("local", "t1")
+            invoke.assert_awaited_once_with("local", ["read", "--json", "--lines", "100", "t1"])
+            invoke.reset_mock()
+            await shell.session_interrupt("local", "t1")
+            invoke.assert_awaited_once_with("local", ["interrupt", "--json", "t1"])
+            invoke.reset_mock()
+            await shell.session_kill("local", "t1")
+            invoke.assert_awaited_once_with("local", ["kill", "--json", "t1"])
 
     async def test_herdr_mutations_respect_strict_mode(self):
         """Read-only and strict policy modes cannot be bypassed via Herdr controls."""
