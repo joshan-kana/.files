@@ -741,7 +741,7 @@ in
         };
       in
       {
-        home.shellAliases.p = "mpv --audio-pitch-correction=no --loop=yes";
+        home.shellAliases.p = "mpv --audio-pitch-correction=no";
         programs.mpv = {
           scripts = lib.optionals isLinux (with pkgs; [ mpvScripts.mpris ]);
           config = {
