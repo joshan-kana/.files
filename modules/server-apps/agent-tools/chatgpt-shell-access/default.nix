@@ -8,6 +8,8 @@
 let
   inherit (config.dotfiles) server;
   inherit (config.dotfiles.users) primary;
+  stateRoot = "${server.storage.appData.root}/chatgpt-shell-access";
+  workspaces = config.systemd.services.agent-workspaces;
   tunnelSecret = "${server.secretsDir}/chatgpt-shell-tunnel.env";
   macSshKeySecret = "${server.secretsDir}/chatgpt-shell-mac";
   parallelsSshKeySecret = "${server.secretsDir}/chatgpt-shell-nixos-arm-parallels";
@@ -56,44 +58,20 @@ let
   );
   approvalCommand = pkgs.writeShellScriptBin "chatgpt-shell-approval" ''
     export CHATGPT_SHELL_APPROVAL_DIR=/run/chatgpt-shell-access/approvals
-    export CHATGPT_SHELL_STATE_DIR=/var/lib/chatgpt-shell-access
+    export CHATGPT_SHELL_STATE_DIR=${lib.escapeShellArg stateRoot}
     export CHATGPT_SHELL_POLICIES_FILE=${policyDefaults}
     exec ${pkgs.python3}/bin/python3 ${./.}/authorization.py "$@"
   '';
-  shellPackages = with pkgs; [
-    herdr-core
-    bash
-    coreutils
-    curl
-    diffutils
-    file
-    findutils
-    gawk
-    gh
-    git
-    gnugrep
-    gnupatch
-    gnused
-    iproute2
-    jq
-    nix
-    openssh
-    procps
-    psmisc
-    python3
-    ripgrep
-    rsync
-    systemd
-    util-linux
-  ];
+  shellPackages = workspaces.path;
+
 in
 {
   environment.systemPackages = [
-    pkgs.procps
     approvalCommand
   ];
 
   systemd.tmpfiles.rules = [
+    "d ${stateRoot} 0700 ${primary.name} ${config.users.users.${primary.name}.group} - -"
     "f+ /etc/chatgpt-shell-sudo-authorized-key 0444 root root - ssh-ed25519\\x20AAAAC3NzaC1lZDI1NTE5AAAAIEp/T7PcjFts+DbMZnJrMle2UhBtWhJ2ycLYIlFMNkIu\\x20chatgpt-shell-sudo\\n"
   ];
 
@@ -102,13 +80,14 @@ in
     wantedBy = [ "multi-user.target" ];
     after = [
       "network-online.target"
-      "herdr-worker-core.service"
+      "agent-workspaces.service"
     ];
     wants = [
       "network-online.target"
-      "herdr-worker-core.service"
+      "agent-workspaces.service"
     ];
 
+    unitConfig.RequiresMountsFor = [ stateRoot ];
     unitConfig.AssertPathExists = [
       tunnelSecret
       sudoSshKeySecret
@@ -127,13 +106,13 @@ in
       CHATGPT_SHELL_COMMAND_PATH = lib.makeBinPath shellPackages;
       CHATGPT_SHELL_LOCAL_HOST = config.networking.hostName;
       CHATGPT_SHELL_PRIMARY_USER = primary.name;
-      CHATGPT_SHELL_WORKER = "herdr-worker";
+      CHATGPT_SHELL_WORKER = workspaces.serviceConfig.User;
+      CHATGPT_SHELL_WORKER_ENV = builtins.toJSON workspaces.environment;
       CHATGPT_SHELL_RUN0 = "${pkgs.systemd}/bin/run0";
       CHATGPT_SHELL_BASH = "${pkgs.bash}/bin/bash";
       CHATGPT_SHELL_HC = "${pkgs.herdr-core}/bin/hc";
-      CHATGPT_SHELL_HERDR_COMMANDS = "1";
       CHATGPT_SHELL_APPROVAL_DIR = "/run/chatgpt-shell-access/approvals";
-      CHATGPT_SHELL_STATE_DIR = "/var/lib/chatgpt-shell-access";
+      CHATGPT_SHELL_STATE_DIR = stateRoot;
       CHATGPT_SHELL_POLICIES_FILE = toString policyDefaults;
       CHATGPT_SHELL_REMOTE_AUTH_AGENT = remoteAuthAgentSocket;
       CHATGPT_SHELL_REMOTE_TARGETS = builtins.toJSON remoteTargetConfig;
@@ -144,8 +123,6 @@ in
       User = primary.name;
       RuntimeDirectory = "chatgpt-shell-access";
       RuntimeDirectoryMode = "0700";
-      StateDirectory = "chatgpt-shell-access";
-      StateDirectoryMode = "0700";
       EnvironmentFile = [
         tunnelSecret
         githubSecret

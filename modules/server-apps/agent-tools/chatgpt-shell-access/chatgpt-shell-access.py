@@ -67,8 +67,9 @@ _ALLOWED_ENV = {
 }
 COMMAND_ENV = {key: value for key, value in os.environ.items() if key in _ALLOWED_ENV or key.startswith("LC_")}
 HERDR_LOCAL = os.environ.get("CHATGPT_SHELL_HC", "hc")
-HERDR_SESSION = os.environ.get("CHATGPT_SHELL_HC_SESSION", "chatgpt-shell")
-WORKER_USER = os.environ.get("CHATGPT_SHELL_WORKER", "herdr-worker")
+WORKER_ENV = json.loads(os.environ["CHATGPT_SHELL_WORKER_ENV"])
+HERDR_SESSION = WORKER_ENV["HC_SESSION"]
+WORKER_USER = os.environ["CHATGPT_SHELL_WORKER"]
 RUN0 = os.environ.get("CHATGPT_SHELL_RUN0", "run0")
 HERDR_COMMANDS = os.environ.get("CHATGPT_SHELL_HERDR_COMMANDS", "") == "1"
 
@@ -200,13 +201,8 @@ def _worker_command(script: str) -> str:
         "--non-interactive",
         "--pipe",
         f"--user={WORKER_USER}",
-        "--chdir=/tmp",
-        "--setenv=HOME=/var/lib/herdr-worker",
-        f"--setenv=HC_SESSION={HERDR_SESSION}",
-        "--setenv=XDG_RUNTIME_DIR=/run/herdr-worker",
-        "--setenv=XDG_CONFIG_HOME=/var/lib/herdr-worker/.config",
-        "--setenv=XDG_STATE_HOME=/var/lib/herdr-worker/.local/state",
-        f"--setenv=PATH={COMMAND_PATH}",
+        f"--chdir={WORKER_ENV['HOME']}",
+        *(f"--setenv={key}={value}" for key, value in WORKER_ENV.items()),
         "--",
         "bash",
         "-lc",
@@ -311,7 +307,7 @@ async def _run_herdr(job: Job, command: str, cwd: str | None) -> None:
         "origin=chatgpt-shell",
         "--no-parent",
         "--cwd",
-        cwd or "/var/lib/herdr-worker",
+        cwd or WORKER_ENV["HOME"],
         "bash",
         "-lc",
         command,

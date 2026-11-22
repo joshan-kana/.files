@@ -9,9 +9,9 @@ import tempfile
 import time
 from pathlib import Path
 
-APPROVAL_DIR = Path(os.environ.get("CHATGPT_SHELL_APPROVAL_DIR", "/run/chatgpt-shell-access/approvals"))
-STATE_DIR = Path(os.environ.get("CHATGPT_SHELL_STATE_DIR", "/var/lib/chatgpt-shell-access"))
-DEFAULTS_FILE = Path(os.environ.get("CHATGPT_SHELL_POLICIES_FILE", "/etc/chatgpt-shell-policies.json"))
+APPROVAL_DIR = Path(os.environ["CHATGPT_SHELL_APPROVAL_DIR"])
+STATE_DIR = Path(os.environ["CHATGPT_SHELL_STATE_DIR"])
+DEFAULTS_FILE = Path(os.environ["CHATGPT_SHELL_POLICIES_FILE"])
 APPROVAL_TIMEOUT = 300
 MAX_REVIEW_STDIN_BYTES = 16 * 1024
 MODES = {"automatic", "ask", "deny"}

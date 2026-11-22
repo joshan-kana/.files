@@ -37,6 +37,11 @@ os.environ.update(
     CHATGPT_SHELL_BASH="bash",
     CHATGPT_SHELL_LOCAL_HOST="local",
     CHATGPT_SHELL_REMOTE_TARGETS="{}",
+    CHATGPT_SHELL_APPROVAL_DIR="/tmp/shell-gateway-test-approvals",
+    CHATGPT_SHELL_STATE_DIR="/tmp/shell-gateway-test-state",
+    CHATGPT_SHELL_POLICIES_FILE="/tmp/shell-gateway-test-policies",
+    CHATGPT_SHELL_WORKER="agent-workspaces",
+    CHATGPT_SHELL_WORKER_ENV='{"HOME":"/var/lib/apps/agent-workspaces","HC_SESSION":"chatgpt-shell","XDG_RUNTIME_DIR":"/run/agent-workspaces","XDG_CONFIG_HOME":"/var/lib/apps/agent-workspaces/.config","XDG_STATE_HOME":"/var/lib/apps/agent-workspaces/.local/state"}',
 )
 
 shell_path = Path(sys.argv.pop(1)).resolve()
@@ -191,7 +196,7 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         finally:
             self.argv.start()
         self.assertEqual(argv[:2], ["bash", "-lc"])
-        self.assertIn("--user=herdr-worker", argv[-1])
+        self.assertIn("--user=agent-workspaces", argv[-1])
         self.assertIn("--non-interactive", argv[-1])
         self.assertIn("SSH_AUTH_SOCK", argv[-1])
         self.assertIn("id -u; touch should-not-be-interpreted", argv[-1])
@@ -217,7 +222,7 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("owner@parallels.home", linux)
         self.assertIn("exec /bin/zsh -lc", mac[-1])
         self.assertIn("exec /bin/bash -lc", linux[-1])
-        self.assertNotIn("herdr-worker", " ".join(mac + linux))
+        self.assertNotIn("agent-workspaces", " ".join(mac + linux))
         self.assertNotIn("run0", " ".join(mac + linux))
         self.assertNotIn("sudo", " ".join(mac + linux))
 
@@ -420,7 +425,7 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         finally:
             self.argv.start()
         self.assertIn("unset SSH_AUTH_SOCK GH_TOKEN", local[-1])
-        self.assertIn("--user=herdr-worker", local[-1])
+        self.assertIn("--user=agent-workspaces", local[-1])
 
     def test_output_buffer_bounds(self):
         """Cap retained output without dropping the final result."""

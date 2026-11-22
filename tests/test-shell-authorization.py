@@ -5,6 +5,7 @@ import contextlib
 import importlib.util
 import io
 import json
+import os
 import sys
 import tempfile
 import time
@@ -12,6 +13,12 @@ import unittest
 import uuid
 from pathlib import Path
 from unittest.mock import patch
+
+os.environ.update(
+    CHATGPT_SHELL_APPROVAL_DIR="/tmp/authorization-test-approvals",
+    CHATGPT_SHELL_STATE_DIR="/tmp/authorization-test-state",
+    CHATGPT_SHELL_POLICIES_FILE="/tmp/authorization-test-policies",
+)
 
 spec = importlib.util.spec_from_file_location("authorization", Path(sys.argv.pop(1)))
 authorization = importlib.util.module_from_spec(spec)

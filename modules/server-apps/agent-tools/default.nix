@@ -19,7 +19,7 @@ in
 
   agentMail = import ./agent-mail;
   chatgptSharedTools = import ./chatgpt-shared-tools;
-  herdr = import ./herdr;
+  workspaces = import ./workspaces;
   chatgptShellAccess = import ./chatgpt-shell-access;
   mcpGateway = import ./mcp-gateway;
 }
