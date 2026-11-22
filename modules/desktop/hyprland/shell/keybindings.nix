@@ -86,11 +86,11 @@
   hints = {
     "AudioMixerContent.level" = {
       scope = "mixer";
-      template = "H/L";
+      template = "H/L · ←/→";
     };
     "AudioMixerContent.select" = {
       scope = "mixer";
-      template = "J/K";
+      template = "J/K · ↓/↑";
     };
     "BluetoothPanel.activate" = {
       scope = "controls";
@@ -114,7 +114,7 @@
     };
     "BluetoothPanel.select" = {
       scope = "controls";
-      template = "J/K";
+      template = "J/K · ↓/↑";
     };
     "BluetoothPanel.trust" = {
       scope = "controls";
@@ -130,7 +130,7 @@
     };
     "CalendarContent.days" = {
       scope = "calendar";
-      template = "H/L";
+      template = "H/L · ←/→";
     };
     "CalendarContent.events" = {
       scope = "calendar";
@@ -138,11 +138,11 @@
     };
     "CalendarContent.months" = {
       scope = "calendar";
-      template = "J/K";
+      template = "J/K · ↓/↑ · PGUP/PGDN";
     };
     "CalendarContent.selectCalendar" = {
       scope = "calendar";
-      template = "J/K";
+      template = "J/K · ↓/↑";
     };
     "CalendarContent.today" = {
       scope = "calendar";
@@ -168,9 +168,13 @@
       scope = "clipboard";
       template = "U/D · PGUP/PGDN";
     };
+    "ClipboardPanel.navigateList" = {
+      scope = "clipboard";
+      template = "J/K · ↓/↑";
+    };
     "ClipboardPanel.navigateSearch" = {
       scope = "clipboard";
-      template = "J/K";
+      template = "↓/↑";
     };
     "CommandPalette.actionMenu" = {
       scope = "palette";
@@ -218,11 +222,15 @@
     };
     "CommandPalette.select" = {
       scope = "palette";
-      template = "J/K";
+      template = "J/K · ↓/↑";
+    };
+    "CommandPalette.navigateSearch" = {
+      scope = "palette";
+      template = "↓/↑";
     };
     "CommandPalette.selectResults" = {
       scope = "palette";
-      template = "J/K";
+      template = "J/K · ↓/↑";
     };
     "CommandPalette.unified" = {
       scope = "palette";
@@ -290,7 +298,7 @@
     };
     "NetworkPanel.listScroll" = {
       scope = "controls";
-      template = "J/K";
+      template = "J/K · ↓/↑";
     };
     "NetworkPanel.passwordCancel" = {
       scope = "controls";
@@ -310,7 +318,7 @@
     };
     "NetworkPanel.select" = {
       scope = "controls";
-      template = "J/K";
+      template = "J/K · ↓/↑";
     };
     "NetworkPanel.toggleWifi" = {
       scope = "controls";
@@ -326,7 +334,7 @@
     };
     "NotificationContent.groups" = {
       scope = "activity";
-      template = "H/L · ARROWS";
+      template = "H/L · ←/→";
     };
     "NotificationContent.history" = {
       scope = "activity";
@@ -342,7 +350,7 @@
     };
     "NotificationContent.navigate" = {
       scope = "activity";
-      template = "J/K · ARROWS";
+      template = "J/K · ↓/↑";
     };
     "NotificationContent.presentation" = {
       scope = "activity";
@@ -378,7 +386,7 @@
     };
     "OverviewPanel.navigate" = {
       scope = "overview";
-      template = "H/J/K/L";
+      template = "H/J/K/L · ←/↓/↑/→";
     };
     "OverviewPanel.open" = {
       scope = "overview";
@@ -386,7 +394,7 @@
     };
     "OverviewPanel.target" = {
       scope = "overview";
-      template = "H/L";
+      template = "H/L · ←/→";
     };
     "OverviewPanel.toggleFloating" = {
       scope = "overview";
@@ -502,11 +510,11 @@
     };
     "ScreenshotPicker.move" = {
       scope = "capture";
-      template = "H/J/K/L · ARROWS";
+      template = "H/J/K/L · ←/↓/↑/→";
     };
     "ScreenshotPicker.resize" = {
       scope = "capture";
-      template = "SHIFT+HJKL/ARROWS";
+      template = "SHIFT+H/J/K/L · SHIFT+←/↓/↑/→";
     };
     "SessionPanel.confirm" = {
       scope = "controls";
@@ -522,7 +530,7 @@
     };
     "SessionPanel.move" = {
       scope = "controls";
-      template = "HJKL";
+      template = "H/J/K/L · ←/↓/↑/→";
     };
     "SessionPanel.reboot" = {
       scope = "controls";
@@ -576,9 +584,13 @@
       scope = "help";
       template = "PGUP/PGDN";
     };
+    "ShortcutCheatsheet.scrollSearch" = {
+      scope = "help";
+      template = "↓/↑";
+    };
     "ShortcutCheatsheet.scroll" = {
       scope = "help";
-      template = "J/K";
+      template = "J/K · ↓/↑";
     };
     "ShortcutCheatsheet.search" = {
       scope = "help";
@@ -598,15 +610,15 @@
     };
     "SystemContent.audioAdjust" = {
       scope = "controls";
-      template = "H/L";
+      template = "H/L · ←/→";
     };
     "SystemContent.audioLevel" = {
       scope = "controls";
-      template = "H/L";
+      template = "H/L · ←/→";
     };
     "SystemContent.audioSelect" = {
       scope = "controls";
-      template = "J/K";
+      template = "J/K · ↓/↑";
     };
     "SystemContent.bar" = {
       scope = "controls";
@@ -670,7 +682,7 @@
     };
     "SystemContent.rowSelect" = {
       scope = "controls";
-      template = "J/K";
+      template = "J/K · ↓/↑";
     };
     "SystemContent.session" = {
       scope = "controls";
@@ -722,7 +734,7 @@
     };
     "ThemePanel.columns" = {
       scope = "controls";
-      template = "H/L";
+      template = "H/L · ←/→";
     };
     "ThemePanel.page" = {
       scope = "controls";
@@ -730,7 +742,7 @@
     };
     "ThemePanel.rows" = {
       scope = "controls";
-      template = "J/K";
+      template = "J/K · ↓/↑";
     };
     "ThemePanel.search" = {
       scope = "controls";
@@ -738,7 +750,7 @@
     };
     "WallpaperPanel.columns" = {
       scope = "controls";
-      template = "H/L";
+      template = "H/L · ←/→";
     };
     "WallpaperPanel.default" = {
       scope = "controls";
@@ -758,7 +770,7 @@
     };
     "WallpaperPanel.rows" = {
       scope = "controls";
-      template = "J/K";
+      template = "J/K · ↓/↑";
     };
     "WallpaperPanel.search" = {
       scope = "controls";
@@ -774,7 +786,7 @@
     };
     "WeatherContent.days" = {
       scope = "weather";
-      template = "J/K";
+      template = "H/J/K/L · ←/↓/↑/→";
     };
     "WeatherContent.refresh" = {
       scope = "weather";
@@ -896,6 +908,10 @@
       scope = "hub";
       template = "Esc";
     };
+    "ShellExpansionHost.helpScroll" = {
+      scope = "hub";
+      template = "J/K · ↓/↑";
+    };
     "ShellExpansionHost.helpDown" = {
       scope = "hub";
       template = "J";
@@ -926,7 +942,7 @@
     };
     "ShellExpansionHost.legend.browse_forecast_days" = {
       scope = "hub";
-      template = "H/L · J/K · ARROWS";
+      template = "H/J/K/L · ←/↓/↑/→";
     };
     "ShellExpansionHost.legend.choose_visible_calendars" = {
       scope = "hub";
@@ -958,7 +974,7 @@
     };
     "ShellExpansionHost.legend.navigate_notifications" = {
       scope = "hub";
-      template = "J/K · ↑/↓";
+      template = "J/K · ↓/↑";
     };
     "ShellExpansionHost.legend.open_forecast" = {
       scope = "hub";
@@ -970,7 +986,7 @@
     };
     "ShellExpansionHost.legend.previous_next_month" = {
       scope = "hub";
-      template = "J/K · ↑/↓ · PGUP/PGDN";
+      template = "J/K · ↓/↑ · PGUP/PGDN";
     };
     "ShellExpansionHost.legend.refresh_agenda" = {
       scope = "hub";
@@ -1026,7 +1042,7 @@
     };
     "ShortcutCheatsheet.legend.scroll_down_up" = {
       scope = "help";
-      template = "J / K";
+      template = "J/K · ↓/↑";
     };
     "ShortcutCheatsheet.legend.switch_search_navigation" = {
       scope = "help";
@@ -1090,11 +1106,11 @@
     };
     "SystemContent.legend.choose_theme_in_the_grid" = {
       scope = "controls";
-      template = "H/J/K/L · ARROWS";
+      template = "H/J/K/L · ←/↓/↑/→";
     };
     "SystemContent.legend.choose_thumbnail" = {
       scope = "controls";
-      template = "H/J/K/L · ARROWS";
+      template = "H/J/K/L · ←/↓/↑/→";
     };
     "SystemContent.legend.close" = {
       scope = "controls";
@@ -1175,7 +1191,7 @@
     };
     "SystemContent.legend.navigate_actions" = {
       scope = "controls";
-      template = "H/J/K/L · ARROWS";
+      template = "H/J/K/L · ←/↓/↑/→";
     };
     "SystemContent.legend.night_light_warmer_cooler" = {
       scope = "controls";
@@ -1315,7 +1331,7 @@
     };
     "CommandPalette.legendSelect" = {
       scope = "palette";
-      template = "J/K";
+      template = "J/K · ↓/↑";
     };
     "CommandPalette.legendShiftEnter" = {
       scope = "palette";
@@ -1367,7 +1383,7 @@
     };
     "SystemContent.legend.audio_selection" = {
       scope = "controls";
-      template = "J/K · ↑/↓";
+      template = "J/K · ↓/↑";
     };
   };
 }

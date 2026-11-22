@@ -106,29 +106,29 @@ function hint(registry, action) {
       ? keys.join("")
       : keys.join("/");
   };
-  // Long special-key names and action descriptions must never be split into
-  // independently remappable letters. Only registered key tokens are resolved.
-  const text = entry.template.replace(/[↑↓←→⇧]/g, (glyph) => {
-    const slot = {
-      "↑": "Up",
-      "↓": "Down",
-      "←": "Left",
-      "→": "Right",
-      "⇧": "Shift",
-    }[glyph];
-    const value = render(slot);
-    const original = {
-      Up: "UP",
-      Down: "DOWN",
-      Left: "LEFT",
-      Right: "RIGHT",
-      Shift: "SHIFT",
-    }[slot];
-    return value === original ? glyph : value;
-  });
-  return text.replace(
-    /BACKSPACE|ARROWS|HJKL|PGUP|PGDN|SHIFT|CTRL|ALT|ESC|ENTER|SPACE|TAB|DEL|[A-Z0-9]/g,
+  // Resolve every original token once. Replacing an arrow glyph before
+  // positional keys could remap its replacement a second time.
+  return entry.template.replace(
+    /BACKSPACE|ARROWS|HJKL|PGUP|PGDN|SHIFT|CTRL|ALT|ESC|ENTER|SPACE|TAB|DEL|[↑↓←→⇧]|[A-Z0-9]/g,
     (token) => {
+      const direction = {
+        "↑": "Up",
+        "↓": "Down",
+        "←": "Left",
+        "→": "Right",
+        "⇧": "Shift",
+      }[token];
+      if (direction) {
+        const rendered = render(direction);
+        const original = {
+          Up: "UP",
+          Down: "DOWN",
+          Left: "LEFT",
+          Right: "RIGHT",
+          Shift: "SHIFT",
+        }[direction];
+        return rendered === original ? token : rendered;
+      }
       if (token === "ARROWS")
         return arrows.join("/") === "LEFT/UP/DOWN/RIGHT"
           ? "ARROWS"
