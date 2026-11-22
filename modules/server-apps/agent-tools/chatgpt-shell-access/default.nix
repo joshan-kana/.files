@@ -20,40 +20,39 @@ let
   macHost = "mac.home";
   parallelsHost = "nixos-arm-parallels.home";
 
+  defaultPolicy = {
+    commands = "automatic";
+    elevation = "ask";
+  };
   remoteTargets = {
     mac = {
       sshTarget = "${primary.name}@${macHost}";
       credential = macSshKeySecret;
       shell = "/bin/zsh";
-      forwardAgent = false;
+      policy = {
+        commands = "ask";
+        elevation = "deny";
+      };
     };
     nixos-arm-parallels = {
       sshTarget = "${primary.name}@${parallelsHost}";
       credential = parallelsSshKeySecret;
       shell = "/run/current-system/sw/bin/bash";
-      forwardAgent = true;
+      policy = defaultPolicy;
     };
   };
   remoteTargetConfig = lib.mapAttrs (name: target: {
     ssh_target = target.sshTarget;
     credential = "chatgpt-shell-${name}";
-    inherit (target) shell forwardAgent;
+    inherit (target) shell;
   }) remoteTargets;
   policyDefaults = pkgs.writeText "chatgpt-shell-policies.json" (
-    builtins.toJSON {
-      "${config.networking.hostName}" = {
-        commands = "automatic";
-        elevation = "ask";
-      };
-      mac = {
-        commands = "ask";
-        elevation = "deny";
-      };
-      nixos-arm-parallels = {
-        commands = "automatic";
-        elevation = "ask";
-      };
-    }
+    builtins.toJSON (
+      lib.mapAttrs (_: target: target.policy) remoteTargets
+      // {
+        "${config.networking.hostName}" = defaultPolicy;
+      }
+    )
   );
   approvalCommand = pkgs.writeShellScriptBin "chatgpt-shell-approval" ''
     export CHATGPT_SHELL_APPROVAL_DIR=/run/chatgpt-shell-access/approvals

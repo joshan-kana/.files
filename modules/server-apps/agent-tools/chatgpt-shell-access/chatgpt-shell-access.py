@@ -27,12 +27,11 @@ CANCEL_GRACE_SECONDS = 2.0
 
 @dataclass(frozen=True)
 class RemoteTarget:
-    """Connection and agent-forwarding settings for a remote host."""
+    """SSH connection settings for a configured remote host."""
 
     ssh_target: str
     credential: str
     shell: str
-    forwardAgent: bool  # noqa: N815 - matches the serialized remote target schema
 
 
 CREDENTIALS = os.environ["CREDENTIALS_DIRECTORY"]
@@ -74,14 +73,17 @@ RUN0 = os.environ.get("CHATGPT_SHELL_RUN0", "run0")
 HERDR_COMMANDS = os.environ.get("CHATGPT_SHELL_HERDR_COMMANDS", "") == "1"
 
 
+def _require_local_herdr(host: Host) -> None:
+    """Reject attempts to treat existing SSH targets as Herdr Core servers."""
+    if host != LOCAL_HOST:
+        raise ValueError(f"Herdr sessions are hosted on {LOCAL_HOST}; remote commands use SSH")
+
+
 def _herdr_argv(host: Host, arguments: list[str]) -> list[str]:
-    """Use the restricted SSH worker for native Herdr commands on every host."""
-    command = (
-        "unset SSH_AUTH_SOCK GH_TOKEN; "
-        f"export HC_SESSION={shlex.quote(HERDR_SESSION)}; "
-        f"exec {shlex.join([HERDR_LOCAL if host == LOCAL_HOST else 'hc', *arguments])}"
-    )
-    return _build_argv(host, command)
+    """Herdr Core lives only on the server, under its restricted worker identity."""
+    _require_local_herdr(host)
+    command = f"unset SSH_AUTH_SOCK GH_TOKEN; export HC_SESSION={shlex.quote(HERDR_SESSION)}; exec {shlex.join([HERDR_LOCAL, *arguments])}"
+    return _build_argv(LOCAL_HOST, command)
 
 
 async def _herdr(host: Host, arguments: list[str]) -> dict[str, object]:
@@ -111,11 +113,11 @@ async def _herdr(host: Host, arguments: list[str]) -> dict[str, object]:
 
 
 def _command_env(host: Host, *, elevated: bool = False) -> dict[str, str]:
-    """Give the trusted launcher only the SSH signature needed to enter the worker."""
+    """Keep credential forwarding separate from ordinary remote SSH commands."""
     environment = {key: value for key, value in COMMAND_ENV.items() if key not in ("SSH_AUTH_SOCK", "GH_TOKEN")}
     if host == LOCAL_HOST:
         environment["SSH_AUTH_SOCK"] = SUDO_AGENT
-    elif host == "nixos-arm-parallels":
+    elif elevated and host == "nixos-arm-parallels":
         environment["SSH_AUTH_SOCK"] = REMOTE_AUTH_AGENT
     return environment
 
@@ -191,26 +193,10 @@ def _validate_cwd(cwd: str | None) -> str | None:
     return cwd
 
 
-def _worker_command(host: Host, script: str) -> str:
-    """Enter a non-admin identity before interpreting any agent-provided script."""
-    if host == "mac":
-        return shlex.join(
-            [
-                "sudo",
-                "-n",
-                "-H",
-                "-u",
-                WORKER_USER,
-                "--",
-                "/usr/bin/env",
-                f"HC_SESSION={HERDR_SESSION}",
-                "/bin/zsh",
-                "-lc",
-                script,
-            ]
-        )
+def _worker_command(script: str) -> str:
+    """Enter the server's restricted identity before interpreting an agent script."""
     arguments = [
-        RUN0 if host == LOCAL_HOST else "run0",
+        RUN0,
         "--non-interactive",
         "--pipe",
         f"--user={WORKER_USER}",
@@ -220,29 +206,32 @@ def _worker_command(host: Host, script: str) -> str:
         "--setenv=XDG_RUNTIME_DIR=/run/herdr-worker",
         "--setenv=XDG_CONFIG_HOME=/var/lib/herdr-worker/.config",
         "--setenv=XDG_STATE_HOME=/var/lib/herdr-worker/.local/state",
+        f"--setenv=PATH={COMMAND_PATH}",
+        "--",
+        "bash",
+        "-lc",
+        script,
     ]
-    if host == LOCAL_HOST:
-        arguments.append(f"--setenv=PATH={COMMAND_PATH}")
-    arguments.extend(["--", "bash", "-lc", script])
     return shlex.join(arguments)
 
 
 def _build_argv(host: Host, script: str) -> list[str]:
-    """Use native authorization only to launch commands under a restricted user."""
-    worker_command = _worker_command(host, script)
+    """Run server commands in Herdr's worker; other hosts use existing SSH targets."""
     if host == LOCAL_HOST:
         return [
             *LOCAL,
-            f"export PATH={shlex.quote(COMMAND_PATH)}:$PATH\nexport SSH_AUTH_SOCK={shlex.quote(SUDO_AGENT)}\nexec {worker_command}",
+            f"export PATH={shlex.quote(COMMAND_PATH)}:$PATH\n"
+            f"export SSH_AUTH_SOCK={shlex.quote(SUDO_AGENT)}\n"
+            f"exec {_worker_command(script)}",
         ]
     target = REMOTE_TARGETS[host]
     return [
         *SSH,
-        f"-oForwardAgent={'yes' if target.forwardAgent else 'no'}",
+        "-oForwardAgent=no",
         "-i",
         f"{CREDENTIALS}/{target.credential}",
         target.ssh_target,
-        f"cd /tmp && exec {target.shell} -lc {shlex.quote(worker_command)}",
+        f"exec {target.shell} -lc {shlex.quote(script)}",
     ]
 
 
@@ -322,8 +311,8 @@ async def _run_herdr(job: Job, command: str, cwd: str | None) -> None:
         "origin=chatgpt-shell",
         "--no-parent",
         "--cwd",
-        cwd or ("/Users/herdr-worker" if job.host == "mac" else "/var/lib/herdr-worker"),
-        "/bin/zsh" if job.host == "mac" else "bash",
+        cwd or "/var/lib/herdr-worker",
+        "bash",
         "-lc",
         command,
     ]
@@ -385,7 +374,7 @@ async def _run(job: Job, command: str, cwd: str | None, stdin: str | None) -> No
             stdin,
         )
         job.awaiting_approval = False
-        if HERDR_COMMANDS and not job.elevated and stdin is None:
+        if HERDR_COMMANDS and job.host == LOCAL_HOST and not job.elevated and stdin is None:
             await _run_herdr(job, command, cwd)
             return
         build = _build_elevated_argv if job.elevated else _build_argv
@@ -517,10 +506,11 @@ async def session_start(
 ) -> dict[str, object]:
     """Start an observable persistent Herdr terminal on a configured host.
 
-    Herdr manages the process and lifetime; connect with hc attach --observe or an
-    existing Herdr client. This is a normal-user shell, not a privileged approval.
+    The server owns every Herdr terminal; remote hosts use the existing SSH
+    command path instead. This is a normal-user shell, not a privileged approval.
     """
     cwd = _validate_cwd(cwd)
+    _require_local_herdr(host)
     if authorization.effective(host, "commands") != "automatic":
         raise PermissionError("interactive session creation requires automatic command permission")
     session_name = f"chatgpt-{uuid.uuid4().hex[:12]}"
@@ -536,14 +526,15 @@ async def session_start(
     ]
     if cwd is not None:
         arguments.extend(["--cwd", cwd])
-    arguments.extend(["bash" if host != "mac" else "/bin/zsh", "-lc", command])
+    arguments.extend(["bash", "-lc", command])
     result = await _herdr(host, arguments)
     return {"host": host, "session": HERDR_SESSION, **result}
 
 
 @mcp.tool()
 async def session_list(host: Host) -> dict[str, object]:
-    """List all terminals within the restricted worker's Herdr core."""
+    """List all terminals within the server worker's Herdr core."""
+    _require_local_herdr(host)
     return await _herdr(host, ["ls", "--all", "--json"])
 
 
@@ -552,12 +543,14 @@ async def session_read(host: Host, terminal: str, lines: int = 100) -> dict[str,
     """Read a Herdr terminal's current screen and scrollback."""
     if not 0 <= lines <= 2000:
         raise ValueError("lines must be between 0 and 2000")
+    _require_local_herdr(host)
     return await _herdr(host, ["read", "--json", "--lines", str(lines), terminal])
 
 
 @mcp.tool()
 async def session_interrupt(host: Host, terminal: str) -> dict[str, object]:
     """Interrupt a ChatGPT-managed terminal only when command control is enabled."""
+    _require_local_herdr(host)
     if authorization.effective(host, "commands") != "automatic":
         raise PermissionError("agent terminal mutation is disabled by the command policy")
     return await _herdr(host, ["interrupt", "--json", terminal])
@@ -566,6 +559,7 @@ async def session_interrupt(host: Host, terminal: str) -> dict[str, object]:
 @mcp.tool()
 async def session_kill(host: Host, terminal: str) -> dict[str, object]:
     """Terminate a managed terminal only when the command policy permits it."""
+    _require_local_herdr(host)
     if authorization.effective(host, "commands") != "automatic":
         raise PermissionError("agent terminal mutation is disabled by the command policy")
     return await _herdr(host, ["kill", "--json", terminal])
@@ -579,8 +573,10 @@ async def shell_exec(
     wait_seconds: float = WAIT_SECONDS,
     stdin: str | None = None,
 ) -> dict[str, object]:
-    """Run a submitted command on a permitted host under a restricted identity.
+    """Run on the server's restricted worker or a configured remote SSH host.
 
+    Remote SSH commands retain their configured user identity and are not
+    Herdr-backed; only server commands get persistent terminal addresses.
     Use cwd (an absolute path) instead of prepending cd; default is the user's home.
     Pass multiline input via stdin, not shell interpolation. wait_seconds (0-30)
     bounds the wait for both startup and completion; 0 returns immediately.

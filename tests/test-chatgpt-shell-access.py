@@ -33,7 +33,6 @@ os.environ.update(
     CREDENTIALS_DIRECTORY="/tmp",
     SSH_AUTH_SOCK="/tmp/agent.sock",
     CHATGPT_SHELL_REMOTE_AUTH_AGENT="/tmp/remote-agent.sock",
-    CHATGPT_SHELL_LOCAL_WORKER='{"ssh_target":"worker@127.0.0.1","credential":"worker-key","shell":"/bin/bash","forwardAgent":false}',
     CHATGPT_SHELL_COMMAND_PATH="/bin",
     CHATGPT_SHELL_BASH="bash",
     CHATGPT_SHELL_LOCAL_HOST="local",
@@ -197,15 +196,15 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("SSH_AUTH_SOCK", argv[-1])
         self.assertIn("id -u; touch should-not-be-interpreted", argv[-1])
 
-    def test_remote_command_changes_identity_before_agent_shell(self):
-        """Use native remote execution without exposing the primary user's shell."""
+    def test_remote_command_uses_existing_ssh_without_extra_workers(self):
+        """Remote commands use the configured SSH identity, without extra Herdr daemons."""
         self.argv.stop()
         try:
             with patch.dict(
                 shell.REMOTE_TARGETS,
                 {
-                    "mac": shell.RemoteTarget("owner@mac.home", "mac-key", "/bin/zsh", False),
-                    "nixos-arm-parallels": shell.RemoteTarget("owner@parallels.home", "parallels-key", "/bin/bash", True),
+                    "mac": shell.RemoteTarget("owner@mac.home", "mac-key", "/bin/zsh"),
+                    "nixos-arm-parallels": shell.RemoteTarget("owner@parallels.home", "parallels-key", "/bin/bash"),
                 },
             ):
                 mac = shell._build_argv("mac", "id -u")
@@ -213,11 +212,29 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         finally:
             self.argv.start()
         self.assertIn("-oForwardAgent=no", mac)
+        self.assertIn("-oForwardAgent=no", linux)
         self.assertIn("owner@mac.home", mac)
-        self.assertIn("sudo -n -H -u herdr-worker", mac[-1])
-        self.assertIn("-oForwardAgent=yes", linux)
         self.assertIn("owner@parallels.home", linux)
-        self.assertIn("--user=herdr-worker", linux[-1])
+        self.assertIn("exec /bin/zsh -lc", mac[-1])
+        self.assertIn("exec /bin/bash -lc", linux[-1])
+        self.assertNotIn("herdr-worker", " ".join(mac + linux))
+        self.assertNotIn("run0", " ".join(mac + linux))
+        self.assertNotIn("sudo", " ".join(mac + linux))
+
+    def test_remote_ssh_does_not_receive_controller_elevation_credentials(self):
+        """Never put the privileged agent socket in an ordinary SSH environment."""
+        self.env.stop()
+        try:
+            with patch.dict(
+                shell.REMOTE_TARGETS,
+                {"nixos-arm-parallels": shell.RemoteTarget("owner@parallels", "key", "/bin/bash")},
+            ):
+                env = shell._command_env("nixos-arm-parallels")
+                elevated = shell._command_env("nixos-arm-parallels", elevated=True)
+        finally:
+            self.env.start()
+        self.assertNotIn("SSH_AUTH_SOCK", env)
+        self.assertEqual(elevated["SSH_AUTH_SOCK"], shell.REMOTE_AUTH_AGENT)
 
     async def test_native_herdr_command_tracks_exit_and_output(self):
         """Observe one terminal, retaining the real nonzero exit status."""
@@ -302,6 +319,18 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["terminal"], "t17")
         self.assertIn(["interrupt", "--json", "t17"], calls)
 
+    async def test_remote_shell_exec_uses_ssh_not_herdr(self):
+        """Remote operations keep working even if the host has no Herdr installed."""
+        with (
+            patch.object(shell, "HERDR_COMMANDS", True),
+            patch.object(shell, "_run_herdr", new_callable=AsyncMock) as terminal,
+        ):
+            result = await shell.shell_exec("remote", "printf remote", wait_seconds=2)
+        self.assertTrue(result["success"])
+        self.assertEqual(result["output"], "remote")
+        self.assertNotIn("terminal", result)
+        terminal.assert_not_awaited()
+
     async def test_stdin_keeps_exact_pipe_semantics(self):
         """Use the exact-input path when supplied stdin cannot be represented by Herdr run."""
         with (
@@ -324,6 +353,15 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("origin=chatgpt-shell", args)
         self.assertEqual(args[-3:], ["bash", "-lc", "printf test"])
         self.assertEqual(args[args.index("--cwd") + 1], "/tmp")
+
+    async def test_remote_sessions_are_rejected_without_remote_core(self):
+        """Do not manufacture remote terminal addresses for SSH-only hosts."""
+        with patch.object(shell, "_herdr", new_callable=AsyncMock) as invoke:
+            with self.assertRaisesRegex(ValueError, "hosted on local"):
+                await shell.session_start("remote", "true")
+            with self.assertRaisesRegex(ValueError, "hosted on local"):
+                await shell.session_list("remote")
+            invoke.assert_not_awaited()
 
     async def test_herdr_session_start_rejects_relative_cwd(self):
         """Reject non-absolute working directories before spawning a terminal."""
@@ -369,19 +407,20 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
                 await shell.session_read("local", "t1", lines=100000)
             invoke.assert_not_awaited()
 
-    def test_herdr_runs_under_the_same_restricted_identity(self):
-        """Invoke the native terminal runtime only through the worker launcher."""
+    def test_herdr_runs_only_on_server_worker(self):
+        """Herdr CLI is never launched over the pre-existing remote SSH accounts."""
         self.argv.stop()
         try:
             local = shell._herdr_argv("local", ["ls", "--json"])
-            with patch.dict(shell.REMOTE_TARGETS, {"mac": shell.RemoteTarget("owner@mac", "key", "/bin/zsh", False)}):
-                remote = shell._herdr_argv("mac", ["ls", "--json"])
+            with (
+                patch.dict(shell.REMOTE_TARGETS, {"mac": shell.RemoteTarget("owner@mac", "key", "/bin/zsh")}),
+                self.assertRaisesRegex(ValueError, "hosted on local"),
+            ):
+                shell._herdr_argv("mac", ["ls", "--json"])
         finally:
             self.argv.start()
         self.assertIn("unset SSH_AUTH_SOCK GH_TOKEN", local[-1])
         self.assertIn("--user=herdr-worker", local[-1])
-        self.assertIn("-oForwardAgent=no", remote)
-        self.assertIn("sudo -n -H -u herdr-worker", remote[-1])
 
     def test_output_buffer_bounds(self):
         """Cap retained output without dropping the final result."""

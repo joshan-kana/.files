@@ -11,7 +11,6 @@ lib.recursiveUpdate (import ../../profiles/workstation.nix { inherit moduleRegis
   hardware = import ./hardware.nix;
 
   system = extendScope moduleRegistry.system {
-    herdrWorker = import ../../modules/server-apps/agent-tools/herdr-worker.nix;
     parallels = _: {
       systemd.user.services.prlcc.serviceConfig = {
         Restart = "on-failure";

@@ -1,25 +1,13 @@
 {
-  config,
   editScope,
   extendScope,
   lib,
   moduleRegistry,
-  pkgs,
   ...
 }:
 
 lib.recursiveUpdate (import ../../profiles/workstation.nix { inherit moduleRegistry; }) {
   dotfiles.users.primary.homeRoot = "/Users";
-
-  users.knownUsers = [ "herdr-worker" ];
-  users.users.herdr-worker = {
-    uid = 620;
-    gid = 20;
-    home = "/Users/herdr-worker";
-    createHome = true;
-    isHidden = true;
-    shell = "/bin/zsh";
-  };
 
   nix = editScope moduleRegistry.nix {
     builders = { inherited, ... }: {
@@ -51,28 +39,6 @@ lib.recursiveUpdate (import ../../profiles/workstation.nix { inherit moduleRegis
       {
         authentication = _: {
           security.pam.services.sudo_local.touchIdAuth = true;
-          security.sudo.extraConfig = ''
-            ${config.dotfiles.users.primary.name} ALL=(herdr-worker) NOPASSWD: /usr/bin/env
-          '';
-        };
-
-        herdrWorker = _: {
-          environment.systemPackages = [ pkgs.herdr-core ];
-          launchd.daemons.herdr-worker-core.serviceConfig = {
-            ProgramArguments = [
-              "${pkgs.herdr-core}/bin/herdr-core"
-              "serve"
-            ];
-            UserName = "herdr-worker";
-            GroupName = "staff";
-            WorkingDirectory = "/Users/herdr-worker";
-            EnvironmentVariables = {
-              HOME = "/Users/herdr-worker";
-              HC_SESSION = "chatgpt-shell";
-            };
-            RunAtLoad = true;
-            KeepAlive = true;
-          };
         };
 
         preferences = _: {
@@ -133,10 +99,6 @@ lib.recursiveUpdate (import ../../profiles/workstation.nix { inherit moduleRegis
   };
 
   desktopApps = extendScope moduleRegistry.desktopApps {
-    herdrApp = _: {
-      homebrew.casks = [ "herdr-app" ];
-    };
-
     notion = { pkgs, ... }: {
       home = _: {
         home.packages = [ pkgs.notion-app ];
