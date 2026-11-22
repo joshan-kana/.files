@@ -26,14 +26,14 @@ const bindings = JSON.parse(
 );
 
 function chord(binding) {
-  const modifier = binding.mehMod
-    ? ["CTRL", "ALT", "SHIFT"]
-    : binding.mainMod
-      ? ["SUPER"]
-      : [];
-  return [...modifier, ...binding.keys.split(/\s*\+\s*/)]
-    .join("+")
-    .toUpperCase();
+  const modifier = binding.mods.flatMap((name) =>
+    name === "meh"
+      ? ["CTRL", "ALT", "SHIFT"]
+      : name === "main"
+        ? ["SUPER"]
+        : [name.toUpperCase()],
+  );
+  return [...modifier, binding.key].join("+").toUpperCase();
 }
 
 const global = new Map(
@@ -47,8 +47,8 @@ test("hub tab keys derive from the canonical workspace navigation bindings", () 
     (binding) => binding.id === "workspace.previous",
   );
   const next = bindings.find((binding) => binding.id === "workspace.next");
-  assert.equal(previous.keys, "I");
-  assert.equal(next.keys, "O");
+  assert.equal(previous.key, "I");
+  assert.equal(next.key, "O");
   const shell = fs.readFileSync(
     path.join(repo, "modules/desktop/hyprland/shell/default.nix"),
     "utf8",
