@@ -24,12 +24,16 @@ test("frosted glass blurs the active connected frame as one visible layer", () =
     preferences,
     /applyGlassRule\("desktop-shell-shell-glass-frame", "\^desktop-shell-frame\$", frameGlassExposed\)/,
   );
-  // Bar islands and the shared contour live in different Wayland layers.
-  // Both require conditional blur for the complete connected glass surface.
+  // Connected bar islands borrow frame glass; detached islands retain blur.
   assert.match(
     preferences,
-    /applyGlassRule\("desktop-shell-shell-glass", "\^desktop-shell-bar\$", barVisible\)/,
+    /readonly property bool barGlassExposed: barVisible && !frameGlassExposed/,
   );
+  assert.match(
+    preferences,
+    /applyGlassRule\("desktop-shell-shell-glass", "\^desktop-shell-bar\$", barGlassExposed\)/,
+  );
+  assert.match(preferences, /onBarGlassExposedChanged: applyGlassRule/);
 });
 
 test("connected hub borrows a single glass material from the shared contour", () => {
@@ -46,6 +50,10 @@ test("connected hub borrows a single glass material from the shared contour", ()
   assert.match(
     qml("AppearancePreferences.qml"),
     /applyGlassRule\("desktop-shell-shell-glass-expansion", "\^desktop-shell-expansion\$", expansionGlassExposed\)/,
+  );
+  assert.match(
+    qml("shell.qml"),
+    /expansionGlassExposed: \(qmlExpansionState\.hasCurrent \|\| expansionHost\.closing\) && !expansionHost\.frameVisible/,
   );
 });
 
