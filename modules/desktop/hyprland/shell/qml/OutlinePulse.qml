@@ -1,8 +1,8 @@
 import QtQuick
 import QtQuick.Shapes
 
-// Reduced-motion busy feedback is a steady, visible contour.
-// Shape geometry stays in the scene graph without an animation timer.
+// Reduced-motion busy feedback softly pulses the full contour.
+// Only opacity changes; the outline geometry stays in the scene graph.
 Item {
     id: pulse
 
@@ -10,11 +10,28 @@ Item {
     property string contourPath: ""
     required property color highlightColor
     property real lineWidth: 2
-    readonly property real intensity: 0.72
+    property real intensity: 0.22
 
     visible: active
     enabled: false
     Accessible.ignored: true
+
+    SequentialAnimation on intensity {
+        running: pulse.active
+        loops: Animation.Infinite
+        NumberAnimation {
+            from: 0.22
+            to: 1
+            duration: 1800
+            easing.type: Easing.InOutSine
+        }
+        NumberAnimation {
+            from: 1
+            to: 0.22
+            duration: 1800
+            easing.type: Easing.InOutSine
+        }
+    }
 
     Shape {
         anchors.fill: parent
