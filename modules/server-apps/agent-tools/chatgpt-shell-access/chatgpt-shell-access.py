@@ -103,7 +103,7 @@ async def _herdr(host: Host, arguments: list[str], *, stdin: str | None = None) 
     try:
         stdout, stderr = await asyncio.wait_for(
             process.communicate(stdin.encode() if stdin is not None else None),
-            timeout=HERDR_EXEC_TIMEOUT_SECONDS + 20 if stdin is not None else 20,
+            timeout=HERDR_EXEC_TIMEOUT_SECONDS + 20 if arguments[0] == "exec" else 20,
         )
     except (TimeoutError, asyncio.CancelledError) as exc:
         process.kill()
@@ -178,10 +178,7 @@ class Job:
     cancel_requested: bool = False
     awaiting_approval: bool = False
     elevated: bool = False
-    herdr_terminal: str | None = None
-    herdr_screen: str = ""
-    herdr_starting: bool = False
-    herdr_ready: asyncio.Event = field(default_factory=asyncio.Event)
+    core_truncated: bool = False
 
 
 jobs: dict[str, Job] = {}
@@ -211,7 +208,7 @@ def _worker_command(script: str) -> str:
         *(f"--setenv={key}={value}" for key, value in WORKER_ENV.items()),
         "--",
         "bash",
-        "-lc",
+        "-c",
         script,
     ]
     return shlex.join(arguments)
@@ -300,95 +297,23 @@ async def _write_stdin(process: asyncio.subprocess.Process, stdin: str | None) -
             await process.stdin.wait_closed()
 
 
-async def _run_herdr(job: Job, command: str, cwd: str | None) -> None:
-    """Use Herdr's native persistent PTY for observable, interruptible commands."""
-    name = f"chatgpt-{job.request_id[:12]}"
-    arguments = [
-        "run",
-        "--bg",
-        "--json",
-        "--name",
-        name,
-        "--label",
-        "origin=chatgpt-shell",
-        "--no-parent",
-        "--cwd",
-        cwd or WORKER_ENV["HOME"],
-        "bash",
-        "-lc",
-        command,
-    ]
-    job.herdr_starting = True
-    try:
-        created = await _herdr(job.host, arguments)
-        address = created.get("address")
-        if not isinstance(address, str):
-            raise RuntimeError("Herdr did not return a terminal address")
-        job.herdr_terminal = address
-    finally:
-        job.herdr_starting = False
-        job.herdr_ready.set()
-    while True:
-        status = await _herdr(job.host, ["wait", "--json", "--timeout", "1", address])
-        screen = await _herdr(job.host, ["read", "--json", "--lines", "2000", address])
-        current = screen.get("text")
-        if not isinstance(current, str):
-            raise RuntimeError("Herdr returned invalid terminal output")
-        if current.startswith(job.herdr_screen):
-            delta = current[len(job.herdr_screen) :]
-        elif current == job.herdr_screen:
-            delta = ""
-        else:
-            # Readbacks are terminal snapshots, not raw stdout. Reuse overlap
-            # when the scrollback window has moved to avoid duplicate output.
-            overlap = next(
-                (
-                    size
-                    for size in range(min(len(job.herdr_screen), len(current), 4096), 0, -1)
-                    if job.herdr_screen.endswith(current[:size])
-                ),
-                0,
-            )
-            delta = current[overlap:] if overlap else "\n" + current
-        if delta:
-            job.output.append(delta.encode())
-        job.herdr_screen = current
-
-        if status.get("ended") is True:
-            code = status.get("exit_code")
-            job.exit_code = int(code) if code is not None else 128
-            # One-off shell commands are observable while running; explicit
-            # session_start terminals remain persistent until the user removes them.
-            try:
-                await _herdr(job.host, ["rm", "--json", address])
-            except RuntimeError:
-                pass
-            else:
-                job.herdr_terminal = None
-            return
-        if "ended" not in status:
-            raise RuntimeError("Herdr wait returned an invalid response")
-        await asyncio.sleep(0.05)
-
-
-async def _run_herdr_stdin(job: Job, command: str, cwd: str | None, stdin: str) -> None:
-    """Use Herdr's native exact-input operation in the same sandbox as PTYs."""
-    response = await _herdr(
-        job.host,
+async def _run_herdr_exec(job: Job, command: str, cwd: str | None, stdin: str | None) -> None:
+    """Use Core's exact process streams for ordinary commands, not PTY snapshots."""
+    arguments = ["exec", "--json"]
+    if stdin is not None:
+        arguments.append("--stdin")
+    arguments.extend(
         [
-            "exec",
-            "--json",
-            "--stdin",
             "--timeout",
             str(HERDR_EXEC_TIMEOUT_SECONDS),
             "--cwd",
             cwd or WORKER_ENV["HOME"],
             "bash",
             "-c",
-            command,
-        ],
-        stdin=stdin,
+            "exec 2>&1\n" + command,
+        ]
     )
+    response = await _herdr(job.host, arguments, stdin=stdin)
     for stream in ("stdout", "stderr"):
         encoded = response.get(stream)
         if not isinstance(encoded, str):
@@ -399,6 +324,7 @@ async def _run_herdr_stdin(job: Job, command: str, cwd: str | None, stdin: str) 
         raise RuntimeError("Herdr did not return an exit code")
     job.exit_code = code
     if response.get("truncated"):
+        job.core_truncated = True
         job.output.append(b"\n[Herdr truncated the exec output]\n")
 
 
@@ -413,14 +339,10 @@ async def _run(job: Job, command: str, cwd: str | None, stdin: str | None) -> No
             command,
             cwd,
             stdin,
-            session=f"chatgpt-{job.request_id[:12]}" if job.host == LOCAL_HOST and not job.elevated and stdin is None else None,
         )
         job.awaiting_approval = False
         if job.host == LOCAL_HOST and not job.elevated:
-            if stdin is None:
-                await _run_herdr(job, command, cwd)
-            else:
-                await _run_herdr_stdin(job, command, cwd, stdin)
+            await _run_herdr_exec(job, command, cwd, stdin)
             return
         build = _build_elevated_argv if job.elevated else _build_argv
         job.process = await asyncio.create_subprocess_exec(
@@ -468,13 +390,11 @@ def _payload(job: Job, *, include_output: bool = True) -> dict[str, object]:
     }
     if include_output:
         output, truncated, omitted = job.output.drain()
-        payload.update(output=output, output_truncated=truncated)
+        payload.update(output=output, output_truncated=truncated or job.core_truncated)
         if omitted:
             payload["omitted_bytes"] = omitted
     if job.awaiting_approval:
         payload["approval_id"] = job.request_id
-    if job.herdr_terminal:
-        payload["terminal"] = job.herdr_terminal
     if job.target_pid is not None:
         payload["pid"] = job.target_pid
     payload["request_id"] = job.request_id
@@ -569,7 +489,7 @@ async def session_start(
     ]
     if cwd is not None:
         arguments.extend(["--cwd", cwd])
-    arguments.extend(["bash", "-lc", command])
+    arguments.extend(["bash", "-c", command])
     await authorization.authorize(uuid.uuid4().hex, host, "commands", shlex.join(arguments), cwd, session=session_name)
     result = await _herdr(host, arguments)
     address = result.get("address")
@@ -755,34 +675,6 @@ async def shell_cancel(request_id: str) -> dict[str, object]:
         return _payload(job)
 
     job.cancel_requested = True
-    if job.herdr_starting:
-        try:
-            await asyncio.wait_for(job.herdr_ready.wait(), timeout=20)
-        except TimeoutError:
-            if job.task is not None:
-                job.task.cancel()
-                with suppress(asyncio.CancelledError):
-                    await job.task
-            return _payload(job)
-        if job.completed_at is not None:
-            return _payload(job)
-    if job.herdr_terminal is not None:
-        try:
-            await _herdr(job.host, ["interrupt", "--json", job.herdr_terminal])
-            if job.task is not None and not job.task.done():
-                with suppress(TimeoutError):
-                    await asyncio.wait_for(asyncio.shield(job.task), timeout=CANCEL_GRACE_SECONDS)
-            if job.task is not None and not job.task.done():
-                await _herdr(job.host, ["kill", "--json", job.herdr_terminal])
-                await job.task
-        except Exception as exc:
-            if job.task is not None:
-                job.task.cancel()
-                with suppress(asyncio.CancelledError):
-                    await job.task
-            job.error = str(exc)
-            job.completed_at = time.monotonic()
-        return _payload(job)
     if job.process is None and job.task is not None:
         job.task.cancel()
         with suppress(asyncio.CancelledError):
