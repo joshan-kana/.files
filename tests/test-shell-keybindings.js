@@ -90,9 +90,15 @@ test("remapping an assigned key changes dispatch and every related hint together
   assert.equal(f.keyCode(changed, "controls", "Q", Qt), 90);
   assert.equal(f.hint(changed, "SystemContent.themes"), "Z");
   assert.equal(f.hint(changed, "SessionPanel.lock"), "Z");
-  assert.equal(f.hint(changed, "ThemePanel.columns"), "M/L");
+  assert.equal(
+    f.hint(changed, "ThemePanel.columns"),
+    f.hint(registry, "ThemePanel.columns").replace("H/", "M/"),
+  );
   assert.equal(f.keyCode(changed, "calendar", "H", Qt), 72);
-  assert.equal(f.hint(changed, "CalendarContent.days"), "H/L");
+  assert.equal(
+    f.hint(changed, "CalendarContent.days"),
+    f.hint(registry, "CalendarContent.days"),
+  );
   assert.equal(f.matchesHint(changed, "SessionPanel.lock", 90, 0, Qt), true);
   assert.equal(f.matchesHint(changed, "SessionPanel.lock", 81, 0, Qt), false);
 });
@@ -133,6 +139,42 @@ test("modifier changes, alternatives and special keys remain consistent", () => 
   assert.equal(f.hint(changed, "ScreenshotPicker.cancel"), "ESC");
   assert.equal(f.sequence(changed, "CommandPalette.apps"), "Ctrl+2");
   assert.equal(f.hint(registry, "OverviewPanel.workspace"), "1–0");
+});
+
+test("directional hints preserve independently remapped arrow and positional keys", () => {
+  const arrows = {
+    "←": ["Left", "W"],
+    "↓": ["Down", "X"],
+    "↑": ["Up", "Y"],
+    "→": ["Right", "Z"],
+  };
+  const directional = Object.entries(hints).filter(([, { template }]) =>
+    Object.keys(arrows).some((glyph) => template.includes(glyph)),
+  );
+  assert.ok(directional.length > 0);
+  for (const [action, { scope, template }] of directional) {
+    const overrides = {
+      Left: "W",
+      Down: "X",
+      Up: "Y",
+      Right: "Z",
+      W: "A",
+      X: "B",
+      Y: "C",
+      Z: "D",
+    };
+    const shown = f.hint(
+      { ...registry, overrides: { [scope]: overrides } },
+      action,
+    );
+    for (const [glyph, [, marker]] of Object.entries(arrows)) {
+      if (template.includes(glyph))
+        assert.ok(
+          shown.includes(marker),
+          `${action}: ${glyph} was remapped twice`,
+        );
+    }
+  }
 });
 
 test("shell-local and compositor-global shortcuts have distinct owners", () => {
