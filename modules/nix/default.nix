@@ -77,6 +77,7 @@ in
             publicHostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSUM3bFdSS3h5cXFJWXhSckJ6cU83eU9vcVBKTWQ5R2ZQSU9oUnpMMEpGVUcK";
             system = "aarch64-linux";
             maxJobs = 12;
+            speedFactor = 2;
           }
           {
             hostName = "nixos-server.home";
@@ -84,7 +85,10 @@ in
             sshUser = config.dotfiles.users.primary.name;
             sshKey = nixBuilderSecret;
             publicHostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSURZUjZOYjNuRDdqcFN0QlJEb1h2MFpEaUFwR1RxK1VUb3oxYTc4QVFMVFA=";
-            system = "x86_64-linux";
+            systems = [
+              "x86_64-linux"
+              "aarch64-linux"
+            ];
             maxJobs = 12;
           }
         ];
