@@ -63,13 +63,10 @@ test("contextual help can be opened and dismissed on every hub page without trig
 test("help dims the entire hub while keeping shared header controls and its own scrolling", () => {
   const host = qml("ShellExpansionHost.qml");
   const help = qml("WidgetHelp.qml");
-  const overlay = host.slice(
-    host.indexOf("        Item {\n            z: 200"),
-    host.indexOf(
-      "        LoadingOutline {",
-      host.indexOf("        Item {\n            z: 200"),
-    ),
-  );
+  const overlay =
+    host.match(
+      /Item\s*\{\s*z:\s*200[\s\S]*?WidgetHelp\s*\{[\s\S]*?contentArea:\s*contentViewport/,
+    )?.[0] ?? "";
   assert.match(overlay, /anchors\.fill: parent/);
   assert.match(overlay, /contentArea: contentViewport/);
   assert.match(host, /HubTabs \{[\s\S]*?z: 250/);
