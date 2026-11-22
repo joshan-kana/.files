@@ -100,7 +100,8 @@ in
   systemd.tmpfiles.rules = [
     "a+ ${server.storage.appData.root} - - - - u:${gateway}:--x"
     "d ${stateRoot} 0700 ${gateway} ${gateway} - -"
-    "d ${operatorStateRoot} 0750 root ${gateway} - -"
+    "f ${stateRoot}/events.jsonl 0600 ${gateway} ${gateway} - -"
+    "d ${operatorStateRoot} 2750 root ${gateway} - -"
     "d ${approvalRoot} 0750 root ${gateway} - -"
     "d ${approvalRoot}/pending 0700 ${gateway} ${gateway} - -"
     "d ${approvalRoot}/decisions 2750 root ${gateway} - -"
