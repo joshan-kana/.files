@@ -102,8 +102,14 @@ in
   systemd.services.chatgpt-shell-access = {
     description = "ChatGPT shell access through OpenAI Secure MCP Tunnel";
     wantedBy = [ "multi-user.target" ];
-    after = [ "network-online.target" ];
-    wants = [ "network-online.target" ];
+    after = [
+      "network-online.target"
+      "herdr-worker-core.service"
+    ];
+    wants = [
+      "network-online.target"
+      "herdr-worker-core.service"
+    ];
 
     unitConfig.AssertPathExists = [
       tunnelSecret

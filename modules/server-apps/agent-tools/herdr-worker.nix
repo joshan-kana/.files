@@ -7,6 +7,12 @@
     group = "herdr-worker";
     home = "/var/lib/herdr-worker";
     createHome = true;
+    shell = pkgs.bashInteractive;
+    # Grant the machine owner access to the unprivileged Herdr runtime over SSH.
+    # No PTY, port-forwarding, agent-forwarding, or X11 forwarding is permitted.
+    openssh.authorizedKeys.keys = [
+      "restrict ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGMZdbT05P/naiv07J32DxHDOR5A1z8F9jijeBrDkXWV joshankana@gmail.com"
+    ];
   };
 
   security.polkit.extraConfig = ''
