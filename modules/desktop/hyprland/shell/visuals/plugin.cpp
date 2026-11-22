@@ -492,8 +492,41 @@ private:
   double cornerRadius_ = 28, exponent_ = 4.5;
 };
 
+// Keep the hub's QML content tree stationary while the visible viewport
+// changes. Updating the clip geometry does not move or relayout descendants.
+class ContentClipItem : public QQuickItem {
+  Q_OBJECT
+  QML_NAMED_ELEMENT(ContentClipItem)
+  Q_PROPERTY(QRectF clipBounds READ clipBounds WRITE setClipBounds NOTIFY
+                 clipBoundsChanged)
+public:
+  explicit ContentClipItem(QQuickItem *parent = nullptr) : QQuickItem(parent) {
+    setClip(true);
+  }
+
+  QRectF clipBounds() const { return bounds_; }
+  QRectF clipRect() const override { return bounds_; }
+
+  void setClipBounds(const QRectF &bounds) {
+    if (bounds_ == bounds)
+      return;
+    bounds_ = bounds;
+    // Rebuild the native scene-graph clip, not the child item transforms.
+    setClip(false);
+    setClip(true);
+    emit clipBoundsChanged();
+  }
+
+signals:
+  void clipBoundsChanged();
+
+private:
+  QRectF bounds_;
+};
+
 void VisualsPlugin::registerTypes(const char *uri) {
   qmlRegisterType<SpectrumBarsItem>(uri, 1, 0, "SpectrumBarsItem");
   qmlRegisterType<SquircleFillItem>(uri, 1, 0, "SquircleFillItem");
+  qmlRegisterType<ContentClipItem>(uri, 1, 0, "ContentClipItem");
 }
 #include "plugin.moc"

@@ -4,6 +4,7 @@ import QtQuick.Effects
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Wayland
+import DesktopShell.Visuals 1.0
 import "FrameGeometry.js" as FrameGeometry
 
 PanelWindow {
@@ -825,360 +826,380 @@ PanelWindow {
             const fraction = Math.min(width / Math.max(1, host.closing ? host.closeLayoutWidth : host.contentWidth), height / Math.max(1, host.closing ? host.closeLayoutHeight : host.contentHeight));
             return host.chromeOpacity * Math.max(0, Math.min(1, (fraction - 0.68) / 0.30));
         }
+    }
 
-        HubTabs {
-            id: tabs
-            // Keep Back and Help clickable while contextual help overlays
-            // the content; inactive tabs do not intercept modal actions.
-            z: 250
-            opacity: shellSurface.contentReveal
-            anchors {
-                left: parent.left
-                right: parent.right
-                top: parent.top
-                leftMargin: host.theme.spacing4
-                rightMargin: host.theme.spacing4
-                topMargin: host.theme.spacing3
-            }
-            runtime: host.runtime
-            theme: host.theme
-            motion: host.motion
-            currentTab: host.currentTab
-            helpOpen: host.helpVisible
-            backLabel: host.escapeHintLabel
-            onTabRequested: destination => host.navigate(destination)
-            onBackRequested: host.navigateBack()
-            onHelpRequested: host.toggleHelp()
-        }
-
-        // The same raised material as Controls groups keeps footer key hints
-        // readable without leaving them on the darker frame backing. This is
-        // a static fill, not another blurred or animated layer.
-        Rectangle {
-            id: footerSurface
-            z: 250
-            opacity: shellSurface.contentReveal
-            x: hubFooter.x + (hubFooter.width - width) / 2
-            y: hubFooter.y - host.theme.spacing2
-            width: Math.min(hubFooter.width, Math.max(1, Math.max(footerHints.implicitWidth, hubFooter.scrollHintsVisible ? footerScrollHints.implicitWidth : 0) + host.theme.spacing4 * 2))
-            height: hubFooter.height + host.theme.spacing2 * 2
-            radius: host.theme.radiusMedium
-            color: host.theme.expressiveSurface
-            border.width: host.theme.borderThin
-            border.color: host.theme.subtleBorder
-        }
-
-        Column {
-            id: hubFooter
-            z: 250
-            opacity: shellSurface.contentReveal
-            width: Math.max(1, parent.width - host.theme.spacing3 * 2)
-            height: implicitHeight
-            anchors.horizontalCenter: parent.horizontalCenter
-            // Anchor to the *painted* silhouette, never the cached content
-            // layout: Controls can exceed the screen and get clipped. The
-            // navigation pill needs exactly the same visible bottom gap as
-            // the shorter Home, Now Playing and Activity panels.
-            y: Math.max(0, host.visibleFooterBottom - height - host.footerBottomClearance)
-            spacing: host.theme.spacing1
-
-            // Global navigation lives here; local widget hints remain
-            // next to their controls in each view.
-            readonly property real scrollBudget: Math.max(1, host.viewportHeight - tabs.implicitHeight - host.theme.spacing4 * 2 - host.theme.spacing3 * 3 - host.footerBottomClearance - footerHints.implicitHeight)
-            readonly property bool scrollHintsVisible: host.hostPageShortcutsEnabled && host.loadedContent && host.loadedContent.implicitHeight > scrollBudget
-
-            Row {
-                id: footerHints
-                anchors.horizontalCenter: parent.horizontalCenter
-                spacing: host.theme.keyHintGroupGap
-
-                Repeater {
-                    model: (host.tabShortcutsEnabled ? [
-                            {
-                                shortcut: host.runtime.shortcutHint("hubPrevious"),
-                                label: "Previous"
-                            },
-                            {
-                                shortcut: host.runtime.shortcutHint("hubNext"),
-                                label: "Next"
-                            }
-                        ].filter(item => item.shortcut.length > 0) : []).concat([
-                        {
-                            shortcut: host.runtime.shellHint("ShellExpansionHost.back"),
-                            label: host.escapeHintLabel
-                        },
-                        {
-                            shortcut: host.runtime.shellHint("ShellExpansionHost.closeAll"),
-                            label: "Close all"
-                        }
-                    ])
-                    delegate: KeyHint {
-                        required property var modelData
-                        shortcut: modelData.shortcut
-                        label: modelData.label
-                        runtime: host.runtime
-                        theme: host.theme
-                        compact: true
-                    }
-                }
-            }
-
-            Row {
-                id: footerScrollHints
-                visible: hubFooter.scrollHintsVisible
-                anchors.horizontalCenter: parent.horizontalCenter
-                spacing: host.theme.spacing2
-                KeyChord {
-                    visible: host.expansionState.currentName === "system" && !host.detailVisible
-                    anchors.verticalCenter: parent.verticalCenter
-                    shortcut: host.runtime.shellHint("ShellExpansionHost.scroll")
-                    fontFamily: host.runtime.fontMono
-                    textColor: host.theme.textStrong
-                    fontSize: host.theme.fontKeyHint
-                }
-                KeyChord {
-                    anchors.verticalCenter: parent.verticalCenter
-                    shortcut: host.runtime.shellHint("ShellExpansionHost.page")
-                    fontFamily: host.runtime.fontMono
-                    textColor: host.theme.textStrong
-                    fontSize: host.theme.fontKeyHint
-                }
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: "Scroll"
-                    color: host.theme.textMuted
-                    font.family: host.runtime.fontSans
-                    font.pixelSize: host.theme.fontKeyHint
-                }
-            }
-        }
-
-        // Feather the blurred content into the surrounding hub on all
-        // sides. The fixed-width nine-slice mask prevents straight texture
-        // edges without altering the scrollable layout or its hit regions.
-        BorderImage {
-            id: helpBlurMask
-            anchors.fill: contentViewport
-            source: "help-edge-mask.png"
-            border.left: 40
-            border.top: 40
-            border.right: 40
-            border.bottom: 40
-            opacity: 0
-            layer.enabled: scopedHelp.visible && host.theme.shellGlassEnabled
-        }
-
-        Flickable {
-            id: contentViewport
-            opacity: shellSurface.contentReveal * (host.theme.shellGlassEnabled ? 1 - scopedHelp.opacity * 0.56 : 1)
-            enabled: !host.otherHelpOpen
-            anchors {
-                top: tabs.bottom
-                left: parent.left
-                right: parent.right
-                bottom: hubFooter.top
-                topMargin: host.theme.spacing3
-                leftMargin: host.theme.spacing4
-                rightMargin: host.theme.spacing4
-                // Every view clears the shared navigation footer by the same amount.
-                bottomMargin: host.theme.spacing3 + host.theme.spacing4
-            }
-            clip: true
-            // Blur the viewport's own composited output. An offscreen copy
-            // drawn elsewhere changes the relative geometry of scaled and
-            // scrolling children, and can expose the hub's corner contour.
-            layer.enabled: scopedHelp.visible && host.theme.shellGlassEnabled
-            layer.smooth: true
-            layer.effect: MultiEffect {
-                blurEnabled: true
-                blur: scopedHelp.opacity
-                blurMax: 48
-                maskEnabled: true
-                maskSource: helpBlurMask
-                autoPaddingEnabled: false
-            }
-            // Retain the last two views while the hub is open, so returning to
-            // Home or Controls does not reconstruct their expensive models.
-            // Scaling only compensates while the animated viewport narrows.
-            contentWidth: width
-            contentHeight: Math.max(height, host.activeLoader ? host.activeLoader.height * host.activeLoader.scale : 0)
-            boundsBehavior: Flickable.StopAtBounds
-            // Nested detail galleries and the Activity/Calendar pages own
-            // their own scrolling. The host Flickable must not steal their
-            // mouse grabs or cancel hover while the pointer crosses tiles.
-            interactive: contentHeight > height && !host.detailVisible && host.expansionState.currentName !== "activity" && host.expansionState.currentName !== "calendar"
-
-            // Keep inactive prewarmed pages alive, but remove their zero-opacity
-            // items from hit-testing. Qt can still route pointer events into
-            // invisible Loader trees when opacity=0 and enabled=false. During
-            // a crossfade the incoming page stays above the outgoing one.
-            Loader {
-                id: contentLoaderA
-                asynchronous: true
-                readonly property Item contentItem: item as Item
-                width: Math.max(1, Math.min(host.viewportWidth - host.theme.spacing4 * 2, Math.max(600, contentItem ? contentItem.implicitWidth : 600)))
-                height: Math.max(1, contentItem ? contentItem.implicitHeight : 0)
-                transformOrigin: Item.TopLeft
-                scale: Math.min(1, contentViewport.width / Math.max(1, width))
-                x: (contentViewport.width - width * scale) / 2
-                opacity: 0
-                enabled: host.activeSlot === 0
-                visible: host.activeSlot === 0 || opacity > 0.01
-                z: host.activeSlot === 0 ? 1 : 0
-                Behavior on opacity {
-                    NumberAnimation {
-                        duration: host.activeSlot === 0 ? host.motion.contentFade : host.motion.effectsFast
-                        easing.type: host.motion.enterType
-                        easing.bezierCurve: host.activeSlot === 0 ? host.motion.enterCurve : host.motion.exitCurve
-                    }
-                }
-                onLoaded: host.onLoaderReady(contentLoaderA)
-            }
-
-            Loader {
-                id: contentLoaderB
-                asynchronous: true
-                readonly property Item contentItem: item as Item
-                width: Math.max(1, Math.min(host.viewportWidth - host.theme.spacing4 * 2, Math.max(600, contentItem ? contentItem.implicitWidth : 600)))
-                height: Math.max(1, contentItem ? contentItem.implicitHeight : 0)
-                transformOrigin: Item.TopLeft
-                scale: Math.min(1, contentViewport.width / Math.max(1, width))
-                x: (contentViewport.width - width * scale) / 2
-                opacity: 0
-                enabled: host.activeSlot === 1
-                visible: host.activeSlot === 1 || opacity > 0.01
-                z: host.activeSlot === 1 ? 1 : 0
-                Behavior on opacity {
-                    NumberAnimation {
-                        duration: host.activeSlot === 1 ? host.motion.contentFade : host.motion.effectsFast
-                        easing.type: host.motion.enterType
-                        easing.bezierCurve: host.activeSlot === 1 ? host.motion.enterCurve : host.motion.exitCurve
-                    }
-                }
-                onLoaded: host.onLoaderReady(contentLoaderB)
-            }
-
-            Loader {
-                id: contentLoaderC
-                asynchronous: true
-                readonly property Item contentItem: item as Item
-                width: Math.max(1, Math.min(host.viewportWidth - host.theme.spacing4 * 2, Math.max(600, contentItem ? contentItem.implicitWidth : 600)))
-                height: Math.max(1, contentItem ? contentItem.implicitHeight : 0)
-                transformOrigin: Item.TopLeft
-                scale: Math.min(1, contentViewport.width / Math.max(1, width))
-                x: (contentViewport.width - width * scale) / 2
-                opacity: 0
-                enabled: host.activeSlot === 2
-                visible: host.activeSlot === 2 || opacity > 0.01
-                z: host.activeSlot === 2 ? 1 : 0
-                Behavior on opacity {
-                    NumberAnimation {
-                        duration: host.activeSlot === 2 ? host.motion.contentFade : host.motion.effectsFast
-                        easing.type: host.motion.enterType
-                        easing.bezierCurve: host.activeSlot === 2 ? host.motion.enterCurve : host.motion.exitCurve
-                    }
-                }
-                onLoaded: host.onLoaderReady(contentLoaderC)
-            }
-
-            Loader {
-                id: contentLoaderD
-                asynchronous: true
-                readonly property Item contentItem: item as Item
-                width: Math.max(1, Math.min(host.viewportWidth - host.theme.spacing4 * 2, Math.max(600, contentItem ? contentItem.implicitWidth : 600)))
-                height: Math.max(1, contentItem ? contentItem.implicitHeight : 0)
-                transformOrigin: Item.TopLeft
-                scale: Math.min(1, contentViewport.width / Math.max(1, width))
-                x: (contentViewport.width - width * scale) / 2
-                opacity: 0
-                enabled: host.activeSlot === 3
-                visible: host.activeSlot === 3 || opacity > 0.01
-                z: host.activeSlot === 3 ? 1 : 0
-                Behavior on opacity {
-                    NumberAnimation {
-                        duration: host.activeSlot === 3 ? host.motion.contentFade : host.motion.effectsFast
-                        easing.type: host.motion.enterType
-                        easing.bezierCurve: host.activeSlot === 3 ? host.motion.enterCurve : host.motion.exitCurve
-                    }
-                }
-                onLoaded: host.onLoaderReady(contentLoaderD)
-            }
-
-            Loader {
-                id: contentLoaderE
-                asynchronous: true
-                readonly property Item contentItem: item as Item
-                width: Math.max(1, Math.min(host.viewportWidth - host.theme.spacing4 * 2, Math.max(600, contentItem ? contentItem.implicitWidth : 600)))
-                height: Math.max(1, contentItem ? contentItem.implicitHeight : 0)
-                transformOrigin: Item.TopLeft
-                scale: Math.min(1, contentViewport.width / Math.max(1, width))
-                x: (contentViewport.width - width * scale) / 2
-                opacity: 0
-                enabled: host.activeSlot === 4
-                visible: host.activeSlot === 4 || opacity > 0.01
-                z: host.activeSlot === 4 ? 1 : 0
-                Behavior on opacity {
-                    NumberAnimation {
-                        duration: host.activeSlot === 4 ? host.motion.contentFade : host.motion.effectsFast
-                        easing.type: host.motion.enterType
-                        easing.bezierCurve: host.activeSlot === 4 ? host.motion.enterCurve : host.motion.exitCurve
-                    }
-                }
-                onLoaded: host.onLoaderReady(contentLoaderE)
-            }
-        }
-
-        Connections {
-            target: host.systemContent
-            function onHelpScrollRequested(steps: int): void {
-                scopedHelp.scrollHints(steps);
-            }
-        }
-
-        Connections {
-            target: host.mediaContent
-            function onHelpScrollRequested(steps: int): void {
-                scopedHelp.scrollHints(steps);
-            }
-        }
+    ContentClipItem {
+        id: contentClip
+        // Fixed scene-graph parent: changing this clip never moves the large
+        // loaded page subtree when the smaller visible silhouette morphs.
+        width: host.viewportWidth
+        height: host.viewportHeight
+        clipBounds: Qt.rect(shellSurface.x, shellSurface.y, shellSurface.width, shellSurface.height)
 
         Item {
-            z: 200
-            // The scrim follows the complete hub contour in every frame/bar
-            // configuration. Header Back/Help remain above it at z:250.
-            anchors.fill: parent
-            opacity: shellSurface.contentReveal
+            id: contentFrame
+            width: shellSurface.contentLayoutWidth
+            height: shellSurface.contentLayoutHeight
+            x: host.animatedSurfaceCenter - width / 2
+            y: 0
 
-            WidgetHelp {
-                id: scopedHelp
-                keyboardScroll: true
-                anchors.fill: parent
+            HubTabs {
+                id: tabs
+                // Keep Back and Help clickable while contextual help overlays
+                // the content; inactive tabs do not intercept modal actions.
+                z: 250
+                opacity: shellSurface.contentReveal
+                anchors {
+                    left: parent.left
+                    right: parent.right
+                    top: parent.top
+                    leftMargin: host.theme.spacing4
+                    rightMargin: host.theme.spacing4
+                    topMargin: host.theme.spacing3
+                }
                 runtime: host.runtime
                 theme: host.theme
                 motion: host.motion
-                open: host.helpVisible
-                title: host.helpCaption
-                bindings: host.helpKeys
-                backdropRadius: host.theme.radiusPanel
-                contentArea: contentViewport
-                onDismissed: {
-                    if (host.systemContent)
-                        host.systemContent.helpOpen = false;
-                    else if (host.mediaContent)
-                        host.mediaContent.helpOpen = false;
-                    else
-                        host.otherHelpOpen = false;
+                currentTab: host.currentTab
+                helpOpen: host.helpVisible
+                backLabel: host.escapeHintLabel
+                onTabRequested: destination => host.navigate(destination)
+                onBackRequested: host.navigateBack()
+                onHelpRequested: host.toggleHelp()
+            }
+
+            // The same raised material as Controls groups keeps footer key hints
+            // readable without leaving them on the darker frame backing. This is
+            // a static fill, not another blurred or animated layer.
+            Rectangle {
+                id: footerSurface
+                z: 250
+                opacity: shellSurface.contentReveal
+                x: hubFooter.x + (hubFooter.width - width) / 2
+                y: hubFooter.y - host.theme.spacing2
+                width: Math.min(hubFooter.width, Math.max(1, Math.max(footerHints.implicitWidth, hubFooter.scrollHintsVisible ? footerScrollHints.implicitWidth : 0) + host.theme.spacing4 * 2))
+                height: hubFooter.height + host.theme.spacing2 * 2
+                radius: host.theme.radiusMedium
+                color: host.theme.expressiveSurface
+                border.width: host.theme.borderThin
+                border.color: host.theme.subtleBorder
+            }
+
+            Column {
+                id: hubFooter
+                z: 250
+                opacity: shellSurface.contentReveal
+                width: Math.max(1, parent.width - host.theme.spacing3 * 2)
+                height: implicitHeight
+                anchors.horizontalCenter: parent.horizontalCenter
+                // Anchor to the *painted* silhouette, never the cached content
+                // layout: Controls can exceed the screen and get clipped. The
+                // navigation pill needs exactly the same visible bottom gap as
+                // the shorter Home, Now Playing and Activity panels.
+                y: Math.max(0, host.visibleFooterBottom - height - host.footerBottomClearance)
+                spacing: host.theme.spacing1
+
+                // Global navigation lives here; local widget hints remain
+                // next to their controls in each view.
+                readonly property real scrollBudget: Math.max(1, host.viewportHeight - tabs.implicitHeight - host.theme.spacing4 * 2 - host.theme.spacing3 * 3 - host.footerBottomClearance - footerHints.implicitHeight)
+                readonly property bool scrollHintsVisible: host.hostPageShortcutsEnabled && host.loadedContent && host.loadedContent.implicitHeight > scrollBudget
+
+                Row {
+                    id: footerHints
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    spacing: host.theme.keyHintGroupGap
+
+                    Repeater {
+                        model: (host.tabShortcutsEnabled ? [
+                                {
+                                    shortcut: host.runtime.shortcutHint("hubPrevious"),
+                                    label: "Previous"
+                                },
+                                {
+                                    shortcut: host.runtime.shortcutHint("hubNext"),
+                                    label: "Next"
+                                }
+                            ].filter(item => item.shortcut.length > 0) : []).concat([
+                            {
+                                shortcut: host.runtime.shellHint("ShellExpansionHost.back"),
+                                label: host.escapeHintLabel
+                            },
+                            {
+                                shortcut: host.runtime.shellHint("ShellExpansionHost.closeAll"),
+                                label: "Close all"
+                            }
+                        ])
+                        delegate: KeyHint {
+                            required property var modelData
+                            shortcut: modelData.shortcut
+                            label: modelData.label
+                            runtime: host.runtime
+                            theme: host.theme
+                            compact: true
+                        }
+                    }
+                }
+
+                Row {
+                    id: footerScrollHints
+                    visible: hubFooter.scrollHintsVisible
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    spacing: host.theme.spacing2
+                    KeyChord {
+                        visible: host.expansionState.currentName === "system" && !host.detailVisible
+                        anchors.verticalCenter: parent.verticalCenter
+                        shortcut: host.runtime.shellHint("ShellExpansionHost.scroll")
+                        fontFamily: host.runtime.fontMono
+                        textColor: host.theme.textStrong
+                        fontSize: host.theme.fontKeyHint
+                    }
+                    KeyChord {
+                        anchors.verticalCenter: parent.verticalCenter
+                        shortcut: host.runtime.shellHint("ShellExpansionHost.page")
+                        fontFamily: host.runtime.fontMono
+                        textColor: host.theme.textStrong
+                        fontSize: host.theme.fontKeyHint
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "Scroll"
+                        color: host.theme.textMuted
+                        font.family: host.runtime.fontSans
+                        font.pixelSize: host.theme.fontKeyHint
+                    }
+                }
+            }
+
+            // Feather the blurred content into the surrounding hub on all
+            // sides. The fixed-width nine-slice mask prevents straight texture
+            // edges without altering the scrollable layout or its hit regions.
+            BorderImage {
+                id: helpBlurMask
+                anchors.fill: contentViewport
+                source: "help-edge-mask.png"
+                border.left: 40
+                border.top: 40
+                border.right: 40
+                border.bottom: 40
+                opacity: 0
+                layer.enabled: scopedHelp.visible && host.theme.shellGlassEnabled
+            }
+
+            Flickable {
+                id: contentViewport
+                opacity: shellSurface.contentReveal * (host.theme.shellGlassEnabled ? 1 - scopedHelp.opacity * 0.56 : 1)
+                enabled: !host.otherHelpOpen
+                anchors {
+                    top: tabs.bottom
+                    left: parent.left
+                    right: parent.right
+                    bottom: hubFooter.top
+                    topMargin: host.theme.spacing3
+                    leftMargin: host.theme.spacing4
+                    rightMargin: host.theme.spacing4
+                    // Every view clears the shared navigation footer by the same amount.
+                    bottomMargin: host.theme.spacing3 + host.theme.spacing4
+                }
+                clip: true
+                // Blur the viewport's own composited output. An offscreen copy
+                // drawn elsewhere changes the relative geometry of scaled and
+                // scrolling children, and can expose the hub's corner contour.
+                layer.enabled: scopedHelp.visible && host.theme.shellGlassEnabled
+                layer.smooth: true
+                layer.effect: MultiEffect {
+                    blurEnabled: true
+                    blur: scopedHelp.opacity
+                    blurMax: 48
+                    maskEnabled: true
+                    maskSource: helpBlurMask
+                    autoPaddingEnabled: false
+                }
+                // Retain the last two views while the hub is open, so returning to
+                // Home or Controls does not reconstruct their expensive models.
+                // Scaling only compensates while the animated viewport narrows.
+                contentWidth: width
+                contentHeight: Math.max(height, host.activeLoader ? host.activeLoader.height * host.activeLoader.scale : 0)
+                boundsBehavior: Flickable.StopAtBounds
+                // Nested detail galleries and the Activity/Calendar pages own
+                // their own scrolling. The host Flickable must not steal their
+                // mouse grabs or cancel hover while the pointer crosses tiles.
+                interactive: contentHeight > height && !host.detailVisible && host.expansionState.currentName !== "activity" && host.expansionState.currentName !== "calendar"
+
+                // Keep inactive prewarmed pages alive, but remove their zero-opacity
+                // items from hit-testing. Qt can still route pointer events into
+                // invisible Loader trees when opacity=0 and enabled=false. During
+                // a crossfade the incoming page stays above the outgoing one.
+                Loader {
+                    id: contentLoaderA
+                    asynchronous: true
+                    readonly property Item contentItem: item as Item
+                    width: Math.max(1, Math.min(host.viewportWidth - host.theme.spacing4 * 2, Math.max(600, contentItem ? contentItem.implicitWidth : 600)))
+                    height: Math.max(1, contentItem ? contentItem.implicitHeight : 0)
+                    transformOrigin: Item.TopLeft
+                    scale: Math.min(1, contentViewport.width / Math.max(1, width))
+                    x: (contentViewport.width - width * scale) / 2
+                    opacity: 0
+                    enabled: host.activeSlot === 0
+                    visible: host.activeSlot === 0 || opacity > 0.01
+                    z: host.activeSlot === 0 ? 1 : 0
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: host.activeSlot === 0 ? host.motion.contentFade : host.motion.effectsFast
+                            easing.type: host.motion.enterType
+                            easing.bezierCurve: host.activeSlot === 0 ? host.motion.enterCurve : host.motion.exitCurve
+                        }
+                    }
+                    onLoaded: host.onLoaderReady(contentLoaderA)
+                }
+
+                Loader {
+                    id: contentLoaderB
+                    asynchronous: true
+                    readonly property Item contentItem: item as Item
+                    width: Math.max(1, Math.min(host.viewportWidth - host.theme.spacing4 * 2, Math.max(600, contentItem ? contentItem.implicitWidth : 600)))
+                    height: Math.max(1, contentItem ? contentItem.implicitHeight : 0)
+                    transformOrigin: Item.TopLeft
+                    scale: Math.min(1, contentViewport.width / Math.max(1, width))
+                    x: (contentViewport.width - width * scale) / 2
+                    opacity: 0
+                    enabled: host.activeSlot === 1
+                    visible: host.activeSlot === 1 || opacity > 0.01
+                    z: host.activeSlot === 1 ? 1 : 0
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: host.activeSlot === 1 ? host.motion.contentFade : host.motion.effectsFast
+                            easing.type: host.motion.enterType
+                            easing.bezierCurve: host.activeSlot === 1 ? host.motion.enterCurve : host.motion.exitCurve
+                        }
+                    }
+                    onLoaded: host.onLoaderReady(contentLoaderB)
+                }
+
+                Loader {
+                    id: contentLoaderC
+                    asynchronous: true
+                    readonly property Item contentItem: item as Item
+                    width: Math.max(1, Math.min(host.viewportWidth - host.theme.spacing4 * 2, Math.max(600, contentItem ? contentItem.implicitWidth : 600)))
+                    height: Math.max(1, contentItem ? contentItem.implicitHeight : 0)
+                    transformOrigin: Item.TopLeft
+                    scale: Math.min(1, contentViewport.width / Math.max(1, width))
+                    x: (contentViewport.width - width * scale) / 2
+                    opacity: 0
+                    enabled: host.activeSlot === 2
+                    visible: host.activeSlot === 2 || opacity > 0.01
+                    z: host.activeSlot === 2 ? 1 : 0
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: host.activeSlot === 2 ? host.motion.contentFade : host.motion.effectsFast
+                            easing.type: host.motion.enterType
+                            easing.bezierCurve: host.activeSlot === 2 ? host.motion.enterCurve : host.motion.exitCurve
+                        }
+                    }
+                    onLoaded: host.onLoaderReady(contentLoaderC)
+                }
+
+                Loader {
+                    id: contentLoaderD
+                    asynchronous: true
+                    readonly property Item contentItem: item as Item
+                    width: Math.max(1, Math.min(host.viewportWidth - host.theme.spacing4 * 2, Math.max(600, contentItem ? contentItem.implicitWidth : 600)))
+                    height: Math.max(1, contentItem ? contentItem.implicitHeight : 0)
+                    transformOrigin: Item.TopLeft
+                    scale: Math.min(1, contentViewport.width / Math.max(1, width))
+                    x: (contentViewport.width - width * scale) / 2
+                    opacity: 0
+                    enabled: host.activeSlot === 3
+                    visible: host.activeSlot === 3 || opacity > 0.01
+                    z: host.activeSlot === 3 ? 1 : 0
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: host.activeSlot === 3 ? host.motion.contentFade : host.motion.effectsFast
+                            easing.type: host.motion.enterType
+                            easing.bezierCurve: host.activeSlot === 3 ? host.motion.enterCurve : host.motion.exitCurve
+                        }
+                    }
+                    onLoaded: host.onLoaderReady(contentLoaderD)
+                }
+
+                Loader {
+                    id: contentLoaderE
+                    asynchronous: true
+                    readonly property Item contentItem: item as Item
+                    width: Math.max(1, Math.min(host.viewportWidth - host.theme.spacing4 * 2, Math.max(600, contentItem ? contentItem.implicitWidth : 600)))
+                    height: Math.max(1, contentItem ? contentItem.implicitHeight : 0)
+                    transformOrigin: Item.TopLeft
+                    scale: Math.min(1, contentViewport.width / Math.max(1, width))
+                    x: (contentViewport.width - width * scale) / 2
+                    opacity: 0
+                    enabled: host.activeSlot === 4
+                    visible: host.activeSlot === 4 || opacity > 0.01
+                    z: host.activeSlot === 4 ? 1 : 0
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: host.activeSlot === 4 ? host.motion.contentFade : host.motion.effectsFast
+                            easing.type: host.motion.enterType
+                            easing.bezierCurve: host.activeSlot === 4 ? host.motion.enterCurve : host.motion.exitCurve
+                        }
+                    }
+                    onLoaded: host.onLoaderReady(contentLoaderE)
+                }
+            }
+
+            Connections {
+                target: host.systemContent
+                function onHelpScrollRequested(steps: int): void {
+                    scopedHelp.scrollHints(steps);
+                }
+            }
+
+            Connections {
+                target: host.mediaContent
+                function onHelpScrollRequested(steps: int): void {
+                    scopedHelp.scrollHints(steps);
+                }
+            }
+
+            Item {
+                z: 200
+                // The scrim follows the complete hub contour in every frame/bar
+                // configuration. Header Back/Help remain above it at z:250.
+                anchors.fill: parent
+                opacity: shellSurface.contentReveal
+
+                WidgetHelp {
+                    id: scopedHelp
+                    keyboardScroll: true
+                    anchors.fill: parent
+                    runtime: host.runtime
+                    theme: host.theme
+                    motion: host.motion
+                    open: host.helpVisible
+                    title: host.helpCaption
+                    bindings: host.helpKeys
+                    backdropRadius: host.theme.radiusPanel
+                    contentArea: contentViewport
+                    onDismissed: {
+                        if (host.systemContent)
+                            host.systemContent.helpOpen = false;
+                        else if (host.mediaContent)
+                            host.mediaContent.helpOpen = false;
+                        else
+                            host.otherHelpOpen = false;
+                    }
                 }
             }
         }
+    }
 
-        LoadingOutline {
-            anchors.fill: parent
-            surface: shellSurface
-            active: !host.frameVisible && host.loadingOperationVisible
-            motionEnabled: host.motion.enabled
-            highlightColor: host.wallpaperOperationVisible ? host.theme.roleColor("wallpaper") : host.captureEditorRequestVisible ? host.theme.roleColor("screenshot") : host.systemContent && host.systemContent.maintenanceOperationRole.length > 0 ? host.theme.roleColor(host.systemContent.maintenanceOperationRole) : host.theme.accent
-            lineWidth: 3
-        }
+    LoadingOutline {
+        x: shellSurface.x
+        y: shellSurface.y
+        width: shellSurface.width
+        height: shellSurface.height
+        surface: shellSurface
+        active: !host.frameVisible && host.loadingOperationVisible
+        motionEnabled: host.motion.enabled
+        highlightColor: host.wallpaperOperationVisible ? host.theme.roleColor("wallpaper") : host.captureEditorRequestVisible ? host.theme.roleColor("screenshot") : host.systemContent && host.systemContent.maintenanceOperationRole.length > 0 ? host.theme.roleColor(host.systemContent.maintenanceOperationRole) : host.theme.accent
+        lineWidth: 3
     }
 }
