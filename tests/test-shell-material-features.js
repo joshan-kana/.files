@@ -2,9 +2,23 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const { execFileSync } = require("node:child_process");
 
 const root = path.join(__dirname, "../modules/desktop/hyprland/shell");
 const qml = (name) => fs.readFileSync(path.join(root, "qml", name), "utf8");
+const shellHints = JSON.parse(
+  execFileSync(
+    "nix",
+    [
+      "eval",
+      "--impure",
+      "--json",
+      "--expr",
+      "import ./modules/desktop/hyprland/shell/keybindings.nix",
+    ],
+    { cwd: path.join(__dirname, ".."), encoding: "utf8" },
+  ),
+).hints;
 
 test("blur uses one live compositor parameter within the frosted-glass tile", () => {
   const settings = qml("AppearancePreferences.qml");
@@ -48,7 +62,6 @@ test("blur uses one live compositor parameter within the frosted-glass tile", ()
 test("visual parameter controls do not add a separate appearance action row", () => {
   const controls = qml("SystemContent.qml");
   const settings = qml("AppearancePreferences.qml");
-  const shortcuts = fs.readFileSync(path.join(root, "keybindings.nix"), "utf8");
   assert.doesNotMatch(
     controls,
     /Undo appearance|Choose a visual setting|selectedAppearanceKey|resetSelectedAppearance/,
@@ -57,10 +70,8 @@ test("visual parameter controls do not add a separate appearance action row", ()
     settings,
     /lastAppearanceChange|beginAdjustment|undoLastChange/,
   );
-  assert.doesNotMatch(
-    shortcuts,
-    /SystemContent\.undoAppearance|SystemContent\.resetSetting/,
-  );
+  assert.equal(shellHints["SystemContent.undoAppearance"], undefined);
+  assert.equal(shellHints["SystemContent.resetSetting"], undefined);
   assert.doesNotMatch(controls, /opacitySettingsButton|openTransparency/);
 });
 
@@ -68,7 +79,6 @@ test("status is a Controls detail with shared data and nested Escape", () => {
   const controls = qml("SystemContent.qml");
   const host = qml("ShellExpansionHost.qml");
   const shell = qml("shell.qml");
-  const bindings = fs.readFileSync(path.join(root, "keybindings.nix"), "utf8");
   assert.match(
     controls,
     /title: "Status"[\s\S]*?onActivated: root\.openStatus\(\)/,
@@ -84,15 +94,14 @@ test("status is a Controls detail with shared data and nested Escape", () => {
   );
   assert.match(host, /systemContent\.statusOpen/);
   assert.match(shell, /keyboard: qmlKeyboard[\s\S]*?recording: qmlRecording/);
-  assert.match(
-    bindings,
-    /"SystemContent\.statusInspection" = \{\s*scope = "controls";\s*template = "SHIFT\+I";/,
-  );
+  assert.deepEqual(shellHints["SystemContent.statusInspection"], {
+    scope: "controls",
+    template: "SHIFT+I",
+  });
 });
 
 test("System Status consumes its refresh shortcut before Controls actions", () => {
   const controls = qml("SystemContent.qml");
-  const bindings = fs.readFileSync(path.join(root, "keybindings.nix"), "utf8");
   const input = controls.slice(controls.indexOf("id: keyboardFocus"));
   const localStatus = input.indexOf("if (root.statusOpen)");
   const resourcesAction = input.lastIndexOf("root.openResources()");
@@ -127,10 +136,10 @@ test("System Status consumes its refresh shortcut before Controls actions", () =
     controls,
     /readonly property var helpBindings: statusOpen \? \[/,
   );
-  assert.match(
-    bindings,
-    /"StatusContent\.refresh" = \{\s*scope = "status";\s*template = "R";/,
-  );
+  assert.deepEqual(shellHints["StatusContent.refresh"], {
+    scope: "status",
+    template: "R",
+  });
 });
 
 test("displays uses standard notifications and the status island owns only live state", () => {
@@ -168,7 +177,6 @@ test("local OCR exposes selectable text and highlighted original-image coordinat
     path.join(__dirname, "../scripts/desktop-shell/recordings.sh"),
     "utf8",
   );
-  const shortcuts = fs.readFileSync(path.join(root, "keybindings.nix"), "utf8");
   assert.match(library, /function showText\(\): void/);
   assert.match(library, /function parseWords\(tsv: string\): var/);
   assert.match(
@@ -194,16 +202,16 @@ test("local OCR exposes selectable text and highlighted original-image coordinat
     controls,
     /else if \(recordingsPanel\.open && recordingsPanel\.panel && recordingsPanel\.panel\.ocrVisible\) \{\s*recordingsPanel\.invoke\("closeText"\)/,
   );
-  assert.match(
-    shortcuts,
-    /"RecordingLibrary\.extend" = \{\s*scope = "controls";\s*template = "NAV_HORIZONTAL_SHIFT";/,
-  );
+  assert.deepEqual(shellHints["RecordingLibrary.extend"], {
+    scope: "controls",
+    template: "NAV_HORIZONTAL_SHIFT",
+  });
   assert.match(library, /onActivated: library\.showText\(\)/);
   assert.match(controls, /shellMatchesHint\("RecordingLibrary\.ocr"/);
-  assert.match(
-    shortcuts,
-    /"RecordingLibrary\.ocr" = \{\s*scope = "controls";\s*template = "SHIFT\+O";/,
-  );
+  assert.deepEqual(shellHints["RecordingLibrary.ocr"], {
+    scope: "controls",
+    template: "SHIFT+O",
+  });
   assert.match(script, /tesseract "\$path" stdout -l eng tsv/);
   assert.match(script, /jq -Rs --arg text "\$text"/);
   assert.match(script, /trap 'rm -f -- "\$frame"' EXIT/);

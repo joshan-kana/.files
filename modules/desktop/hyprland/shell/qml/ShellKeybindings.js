@@ -46,7 +46,7 @@ function keyCode(registry, scope, slot, qt) {
   return codeFor(assigned(registry, scope, slot), qt);
 }
 
-// Direction slots are declared once in navigation.nix. Text input can opt
+// Direction slots are declared once in Hyprland keybindings.nix. Text input can opt
 // into arrow-only handling so letters remain available for typing.
 function navigates(registry, scope, direction, key, qt, mode = "all") {
   const slots = registry?.navigation?.[direction] ?? [];
@@ -111,10 +111,10 @@ function actionAssignment(registry, action) {
 }
 
 function hint(registry, action) {
-  const entry = registry?.hints?.[action];
-  if (!entry) return "";
   const explicit = actionAssignment(registry, action);
   if (explicit) return explicit;
+  const entry = registry?.hints?.[action];
+  if (!entry) return "";
   const scope = entry.scope;
   if (entry.literal === true) return entry.template;
   const render = (name) => assigned(registry, scope, name);

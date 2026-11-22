@@ -10,41 +10,21 @@ const globalSource = fs.readFileSync(
   path.join(dir, "../keybindings.nix"),
   "utf8",
 );
-const baseText = source.split("base = {")[1].split("  };")[0];
-const base = Object.fromEntries(
-  [...baseText.matchAll(/^\s*(?:"(\d)"|([A-Za-z]\w*))\s*=\s*"([^"]+)";/gm)].map(
-    (m) => [m[1] || m[2], m[3]],
+const { execFileSync } = require("node:child_process");
+const registry = JSON.parse(
+  execFileSync(
+    "nix",
+    [
+      "eval",
+      "--impure",
+      "--json",
+      "--expr",
+      "import ./modules/desktop/hyprland/shell/keybindings.nix",
+    ],
+    { cwd: path.join(__dirname, ".."), encoding: "utf8" },
   ),
 );
-const navigation = Object.fromEntries(
-  [
-    ...globalSource
-      .split("navigation = {")[1]
-      .split("  };")[0]
-      .matchAll(
-        /\b(left|right|up|down)\s*=\s*\[\s*"([^"]+)"\s*"([^"]+)"\s*\];/g,
-      ),
-  ].map((m) => [m[1], [m[2], m[3]]]),
-);
-const hints = Object.fromEntries(
-  [
-    ...source.matchAll(
-      /"([^"\n]+)"\s*=\s*\{\s*scope\s*=\s*"([^"]+)";\s*template\s*=\s*"([^"]*)";(?:\s*literal\s*=\s*true;)?\s*\};/gm,
-    ),
-  ].map((m) => [m[1], { scope: m[2], template: m[3] }]),
-);
-const actionAssignments = Object.fromEntries(
-  [...source.matchAll(/^ {4}"(SystemContent\.[^"]+)" = "([^"]+)";$/gm)].map(
-    (m) => [m[1], m[2]],
-  ),
-);
-const registry = {
-  base,
-  navigation,
-  overrides: {},
-  actions: actionAssignments,
-  hints,
-};
+const { base, navigation, hints, actions: actionAssignments } = registry;
 const Qt = {};
 for (const [
   i,
@@ -85,6 +65,7 @@ test("one declarative registry owns every local shortcut and its visible hint", 
     ))
       assert.ok(
         hints[m[1]] ||
+          actionAssignments[m[1]] ||
           (name === "SessionPanel.qml" && m[1] === "SessionPanel."),
         `${name}: missing action ${m[1]}`,
       );
