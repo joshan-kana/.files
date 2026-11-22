@@ -945,4 +945,8 @@ test("compact detail cards expose their own open shortcut in the top-right tile 
   }
   assert.match(read("TileKeyHint.qml"), /right: parent\.right/);
   assert.match(read("TileKeyHint.qml"), /top: parent\.top/);
+  assert.match(
+    read("ControlsMediaCard.qml"),
+    /width: Math\.max\(1, parent\.width - \(openHint\.visible \? openHint\.implicitWidth/,
+  );
 });

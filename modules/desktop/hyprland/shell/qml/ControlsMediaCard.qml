@@ -51,7 +51,7 @@ ShellSurface {
         spacing: card.theme.spacing2
 
         Row {
-            width: parent.width
+            width: Math.max(1, parent.width - (openHint.visible ? openHint.implicitWidth + card.theme.spacing2 : 0))
             height: card.heroSize
             spacing: card.theme.spacing3
 
@@ -204,6 +204,7 @@ ShellSurface {
     }
 
     TileKeyHint {
+        id: openHint
         visible: shortcut.length > 0
         shortcut: card.runtime.shellHint("ControlsMediaCard.open")
         runtime: card.runtime
