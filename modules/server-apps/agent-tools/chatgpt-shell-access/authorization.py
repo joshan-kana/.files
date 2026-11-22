@@ -7,10 +7,13 @@ import json
 import os
 import tempfile
 import time
+from contextlib import suppress
 from pathlib import Path
 
 APPROVAL_DIR = Path(os.environ["CHATGPT_SHELL_APPROVAL_DIR"])
 STATE_DIR = Path(os.environ["CHATGPT_SHELL_STATE_DIR"])
+OPERATOR_STATE_DIR = Path(os.environ["CHATGPT_SHELL_OPERATOR_STATE_DIR"])
+POLICY_FILE = OPERATOR_STATE_DIR / "policies.json"
 DEFAULTS_FILE = Path(os.environ["CHATGPT_SHELL_POLICIES_FILE"])
 APPROVAL_TIMEOUT = 300
 MAX_REVIEW_STDIN_BYTES = 16 * 1024
@@ -33,18 +36,24 @@ def _read_json(path: Path, default: dict | None = None) -> dict:
         return default
 
 
-def _write_exclusive(path: Path, value: dict) -> None:
+def _write_exclusive(path: Path, value: dict, mode: int = 0o600) -> None:
     """Create a private, immutable decision record once."""
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-    with os.fdopen(fd, "w") as output:
-        json.dump(value, output, sort_keys=True)
-        output.write("\n")
+    fd, temporary = tempfile.mkstemp(dir=path.parent)
+    try:
+        os.fchmod(fd, mode)
+        with os.fdopen(fd, "w") as output:
+            json.dump(value, output, sort_keys=True)
+            output.write("\n")
+        os.link(temporary, path)
+    finally:
+        Path(temporary).unlink(missing_ok=True)
 
 
 def _write_atomic(path: Path, value: dict) -> None:
     """Replace a private policy file without exposing partially written content."""
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     fd, temporary = tempfile.mkstemp(dir=path.parent)
+    os.fchmod(fd, 0o640 if path == POLICY_FILE else 0o600)
     try:
         with os.fdopen(fd, "w") as output:
             json.dump(value, output, sort_keys=True)
@@ -97,6 +106,12 @@ def release_terminal(address: str) -> None:
         _write_atomic(path, records)
 
 
+def _require_operator() -> None:
+    """Only an authenticated run0 operator may change a decision or grant."""
+    if os.geteuid() != 0:
+        raise PermissionError("operator decisions require run0")
+
+
 def _digest(request: dict) -> str:
     """Bind a human decision to the precise, unmodified submitted operation."""
     payload = json.dumps(request, sort_keys=True, separators=(",", ":")).encode()
@@ -112,7 +127,7 @@ def _valid_session(session: str) -> str:
 
 def _override(host: str, kind: str, session: str | None = None) -> str | None:
     """Read an unexpired host or individual-session operator grant."""
-    policies = _read_json(STATE_DIR / "policies.json", {}).get(host, {})
+    policies = _read_json(POLICY_FILE, {}).get(host, {})
     if session is not None:
         policies = policies.get("sessions", {}).get(_valid_session(session), {})
     entry = policies.get(kind, {})
@@ -194,7 +209,8 @@ async def authorize(
         while time.time() < request["expires_at"]:
             try:
                 decision = _read_json(decision_file)
-                decision_file.unlink()
+                # The decision directory is root-owned and deliberately not writable
+                # by the gateway. Request IDs are unique, preventing replay.
             except FileNotFoundError:
                 await asyncio.sleep(0.2)
                 continue
@@ -209,7 +225,8 @@ async def authorize(
         raise PermissionError("approval timed out")
     finally:
         pending.unlink(missing_ok=True)
-        decision_file.unlink(missing_ok=True)
+        with suppress(PermissionError):
+            decision_file.unlink(missing_ok=True)
 
 
 def _valid_id(value: str) -> str:
@@ -237,6 +254,7 @@ def _list() -> None:
 
 def _decide(request_id: str, decision: str) -> None:
     """Record one human decision against the original request digest."""
+    _require_operator()
     request_id = _valid_id(request_id)
     request = _read_json(APPROVAL_DIR / "pending" / f"{request_id}.json")
     if request["expires_at"] <= time.time():
@@ -244,12 +262,14 @@ def _decide(request_id: str, decision: str) -> None:
     _write_exclusive(
         APPROVAL_DIR / "decisions" / f"{request_id}.json",
         {"decision": decision, "digest": request["digest"]},
+        mode=0o640,
     )
     print(f"{decision} {request_id}")
 
 
 def _set_policy(host: str, kind: str, mode: str, ttl: int | None, session: str | None = None) -> None:
     """Set a host or session grant; automatic overrides always expire."""
+    _require_operator()
     defaults = _defaults()
     if host not in defaults or kind not in KINDS or mode not in MODES:
         raise ValueError("unknown host, permission category or mode")
@@ -261,7 +281,7 @@ def _set_policy(host: str, kind: str, mode: str, ttl: int | None, session: str |
         raise ValueError("TTL must be between 1 and 3600 seconds")
     if mode == "automatic" and ttl is None:
         raise ValueError("automatic grants require a TTL")
-    policy_file = STATE_DIR / "policies.json"
+    policy_file = POLICY_FILE
     policies = _read_json(policy_file, {})
     host_policies = policies.setdefault(host, {})
     target = host_policies.setdefault("sessions", {}).setdefault(session, {}) if session else host_policies

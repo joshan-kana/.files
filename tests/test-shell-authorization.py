@@ -16,6 +16,7 @@ from unittest.mock import patch
 
 os.environ.update(
     CHATGPT_SHELL_APPROVAL_DIR="/tmp/authorization-test-approvals",
+    CHATGPT_SHELL_OPERATOR_STATE_DIR="/tmp/shell-operator-test-state",
     CHATGPT_SHELL_STATE_DIR="/tmp/authorization-test-state",
     CHATGPT_SHELL_POLICIES_FILE="/tmp/authorization-test-policies",
 )
@@ -39,13 +40,18 @@ class AuthorizationTests(unittest.IsolatedAsyncioTestCase):
             authorization,
             DEFAULTS_FILE=defaults,
             STATE_DIR=self.root / "state",
+            OPERATOR_STATE_DIR=self.root / "operator-state",
+            POLICY_FILE=self.root / "operator-state" / "policies.json",
             APPROVAL_DIR=self.root / "pending",
             APPROVAL_TIMEOUT=0.5,
         )
         self.paths.start()
+        self.operator = patch.object(authorization.os, "geteuid", return_value=0)
+        self.operator.start()
 
     def tearDown(self):
         """Dispose of approval records and policy state."""
+        self.operator.stop()
         self.paths.stop()
         self.scratch.cleanup()
 
@@ -155,7 +161,7 @@ class AuthorizationTests(unittest.IsolatedAsyncioTestCase):
         defaults = authorization.DEFAULTS_FILE
         defaults.write_text(json.dumps({"server": {"commands": "deny", "elevation": "ask"}}))
         authorization._write_atomic(
-            authorization.STATE_DIR / "policies.json",
+            authorization.POLICY_FILE,
             {"server": {"commands": {"mode": "automatic", "expires_at": time.time() + 60}}},
         )
         self.assertEqual(authorization.effective("server", "commands"), "deny")
@@ -210,6 +216,20 @@ class AuthorizationTests(unittest.IsolatedAsyncioTestCase):
             authorization.register_terminal("t8", "chatgpt-owned", metadata)
         authorization.release_terminal("t8")
         self.assertFalse(authorization.owns_terminal("t8", metadata))
+
+    def test_untrusted_remote_user_cannot_approve_or_edit_policy(self):
+        """The SSH account alone must not be an operator identity."""
+        with patch.object(authorization.os, "geteuid", return_value=1000):
+            with self.assertRaisesRegex(PermissionError, "require run0"):
+                authorization._decide(self.ident(), "approve")
+            with self.assertRaisesRegex(PermissionError, "require run0"):
+                authorization._set_policy("server", "commands", "deny", None)
+
+    def test_policy_file_is_group_readable_but_not_group_writable(self):
+        """The gateway can consume a root-written policy without changing it."""
+        authorization._set_policy("server", "commands", "ask", None)
+        self.assertEqual(authorization.POLICY_FILE.stat().st_mode & 0o777, 0o640)
+        self.assertEqual(authorization.effective("server", "commands"), "ask")
 
     def test_unknown_host_and_bad_ids(self):
         """Unknown hosts and invalid identifiers never map into a filesystem request."""

@@ -38,6 +38,7 @@ os.environ.update(
     CHATGPT_SHELL_LOCAL_HOST="local",
     CHATGPT_SHELL_REMOTE_TARGETS="{}",
     CHATGPT_SHELL_APPROVAL_DIR="/tmp/shell-gateway-test-approvals",
+    CHATGPT_SHELL_OPERATOR_STATE_DIR="/tmp/shell-operator-test-state",
     CHATGPT_SHELL_STATE_DIR="/tmp/shell-gateway-test-state",
     CHATGPT_SHELL_POLICIES_FILE="/tmp/shell-gateway-test-policies",
     CHATGPT_SHELL_WORKER="agent-workspaces",

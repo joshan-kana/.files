@@ -9,6 +9,8 @@ let
   inherit (config.dotfiles) server;
   inherit (config.dotfiles.users) primary;
   stateRoot = "${server.storage.appData.root}/chatgpt-shell-access";
+  operatorStateRoot = "${server.storage.appData.root}/chatgpt-shell-operator";
+  approvalRoot = "/run/chatgpt-shell-approvals";
   workspaces = config.systemd.services.agent-workspaces;
   tunnelSecret = "${server.secretsDir}/chatgpt-shell-tunnel.env";
   macSshKeySecret = "${server.secretsDir}/chatgpt-shell-mac";
@@ -57,8 +59,9 @@ let
     )
   );
   approvalCommand = pkgs.writeShellScriptBin "chatgpt-shell-approval" ''
-    export CHATGPT_SHELL_APPROVAL_DIR=/run/chatgpt-shell-access/approvals
+    export CHATGPT_SHELL_APPROVAL_DIR=${approvalRoot}
     export CHATGPT_SHELL_STATE_DIR=${lib.escapeShellArg stateRoot}
+    export CHATGPT_SHELL_OPERATOR_STATE_DIR=${lib.escapeShellArg operatorStateRoot}
     export CHATGPT_SHELL_POLICIES_FILE=${policyDefaults}
     exec ${pkgs.python3}/bin/python3 ${./.}/authorization.py "$@"
   '';
@@ -82,6 +85,10 @@ in
 
   systemd.tmpfiles.rules = [
     "d ${stateRoot} 0700 ${primary.name} ${config.users.users.${primary.name}.group} - -"
+    "d ${operatorStateRoot} 0750 root ${config.users.users.${primary.name}.group} - -"
+    "d ${approvalRoot} 0750 root ${config.users.users.${primary.name}.group} - -"
+    "d ${approvalRoot}/pending 0700 ${primary.name} ${config.users.users.${primary.name}.group} - -"
+    "d ${approvalRoot}/decisions 2750 root ${config.users.users.${primary.name}.group} - -"
     "f+ /etc/chatgpt-shell-sudo-authorized-key 0444 root root - ssh-ed25519\\x20AAAAC3NzaC1lZDI1NTE5AAAAIEp/T7PcjFts+DbMZnJrMle2UhBtWhJ2ycLYIlFMNkIu\\x20chatgpt-shell-sudo\\n"
   ];
 
@@ -121,8 +128,9 @@ in
       CHATGPT_SHELL_RUN0 = "${pkgs.systemd}/bin/run0";
       CHATGPT_SHELL_BASH = "${pkgs.bash}/bin/bash";
       CHATGPT_SHELL_HC = "${pkgs.herdr-core}/bin/hc";
-      CHATGPT_SHELL_APPROVAL_DIR = "/run/chatgpt-shell-access/approvals";
+      CHATGPT_SHELL_APPROVAL_DIR = approvalRoot;
       CHATGPT_SHELL_STATE_DIR = stateRoot;
+      CHATGPT_SHELL_OPERATOR_STATE_DIR = operatorStateRoot;
       CHATGPT_SHELL_POLICIES_FILE = toString policyDefaults;
       CHATGPT_SHELL_REMOTE_AUTH_AGENT = remoteAuthAgentSocket;
       CHATGPT_SHELL_REMOTE_TARGETS = builtins.toJSON remoteTargetConfig;
