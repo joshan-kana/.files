@@ -48,7 +48,7 @@ TestCase {
             for (let column = 0; column < size; column++) {
                 const tile = added[first + column];
                 verify(tile !== null);
-                fuzzyCompare(tile.width, cell, 0.01);
+                tryCompare(tile, "width", cell);
                 fuzzyCompare(tile.x, column * (cell + tiles.spacing), 0.01);
                 fuzzyCompare(tile.y, expectedY, 0.01);
             }
