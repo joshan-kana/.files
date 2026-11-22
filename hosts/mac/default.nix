@@ -19,7 +19,6 @@ lib.recursiveUpdate (import ../../profiles/workstation.nix { inherit moduleRegis
     createHome = true;
     isHidden = true;
     shell = "/bin/zsh";
-    packages = [ pkgs.herdr-core ];
   };
 
   nix = editScope moduleRegistry.nix {
@@ -58,6 +57,7 @@ lib.recursiveUpdate (import ../../profiles/workstation.nix { inherit moduleRegis
         };
 
         herdrWorker = _: {
+          environment.systemPackages = [ pkgs.herdr-core ];
           launchd.daemons.herdr-worker-core.serviceConfig = {
             ProgramArguments = [
               "${pkgs.herdr-core}/bin/herdr-core"

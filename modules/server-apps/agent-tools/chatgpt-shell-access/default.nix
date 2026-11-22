@@ -90,7 +90,6 @@ let
 in
 {
   environment.systemPackages = [
-    pkgs.herdr-core
     pkgs.procps
     approvalCommand
   ];

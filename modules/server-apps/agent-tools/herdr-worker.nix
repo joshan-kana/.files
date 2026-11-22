@@ -1,6 +1,8 @@
 { pkgs, ... }:
 
 {
+  environment.systemPackages = [ pkgs.herdr-core ];
+
   users.groups.herdr-worker = { };
   users.users.herdr-worker = {
     isSystemUser = true;
