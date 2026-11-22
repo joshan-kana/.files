@@ -175,13 +175,15 @@ in
         renderBinding =
           binding:
           let
+            extraMods = lib.filter (name: name != "main" && name != "meh") binding.mods;
+            chord = lib.concatStringsSep " + " ((map lib.toUpper extraMods) ++ [ binding.key ]);
             keys =
-              if binding.mehMod then
-                meh binding.keys
-              else if binding.mainMod then
-                mod binding.keys
+              if lib.elem "meh" binding.mods then
+                meh chord
+              else if lib.elem "main" binding.mods then
+                mod chord
               else
-                binding.keys;
+                chord;
             dispatcher = actionDispatcher binding.action;
           in
           if binding.flags == { } then bind keys dispatcher else bindWith keys dispatcher binding.flags;

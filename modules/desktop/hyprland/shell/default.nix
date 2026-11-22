@@ -618,21 +618,29 @@ in
         if launcherSlotBindings == [ ] then
           ""
         else
-          "${mainModifierLabel} + ${(builtins.head launcherSlotBindings).keys}–${(lib.last launcherSlotBindings).keys}";
+          "${mainModifierLabel} + ${(builtins.head launcherSlotBindings).key}–${(lib.last launcherSlotBindings).key}";
 
       navigationKey =
         id:
         let
           binding = lib.findFirst (entry: entry.id == id && entry.submap == null) null keybindings;
         in
-        if binding == null then throw "Missing canonical navigation shortcut: ${id}" else binding.keys;
+        if binding == null then throw "Missing canonical navigation shortcut: ${id}" else binding.key;
 
       renderShortcut =
         binding:
         let
-          key = if binding.label != null then binding.label else binding.keys;
+          modLabel =
+            modifier:
+            if modifier == "main" then
+              mainModifierLabel
+            else if modifier == "meh" then
+              mehModifierLabel
+            else
+              lib.toUpper modifier;
+          key = if binding.label != null then binding.label else binding.key;
         in
-        "${lib.optionalString binding.mehMod "${mehModifierLabel} + "}${lib.optionalString binding.mainMod "${mainModifierLabel} + "}${key}";
+        lib.concatStringsSep " + " ((map modLabel binding.mods) ++ [ key ]);
 
       cheatsheetBindings = map (binding: {
         key = renderShortcut binding;
