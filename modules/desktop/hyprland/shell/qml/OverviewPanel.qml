@@ -664,22 +664,22 @@ Item {
                     overview.focusWorkspace(10);
             } else if (event.key === overview.runtime.shellKeyCode("overview", "A") && !overview.moveMode) {
                 overview.browseAllWorkspaces();
-            } else if (event.key === overview.runtime.shellKeyCode("overview", "H") || event.key === overview.runtime.shellKeyCode("overview", "Left")) {
+            } else if (overview.runtime.shellNavigates("overview", "left", event.key)) {
                 if (overview.moveMode)
                     overview.destinationWorkspace = Math.max(1, overview.destinationWorkspace - 1);
                 else
                     overview.chooseIndex(Math.max(0, overview.selectedIndex - 1));
-            } else if (event.key === overview.runtime.shellKeyCode("overview", "L") || event.key === overview.runtime.shellKeyCode("overview", "Right")) {
+            } else if (overview.runtime.shellNavigates("overview", "right", event.key)) {
                 if (overview.moveMode)
                     overview.destinationWorkspace = Math.min(10, overview.destinationWorkspace + 1);
                 else
                     overview.chooseIndex(Math.max(0, Math.min(overview.windows.length - 1, overview.selectedIndex + 1)));
-            } else if (event.key === overview.runtime.shellKeyCode("overview", "J") || event.key === overview.runtime.shellKeyCode("overview", "Down")) {
+            } else if (overview.runtime.shellNavigates("overview", "down", event.key)) {
                 if (overview.moveMode)
                     overview.destinationWorkspace = Math.min(10, overview.destinationWorkspace + 3);
                 else
                     overview.chooseIndex(Math.max(0, Math.min(overview.windows.length - 1, overview.selectedIndex + windowsGrid.columns)));
-            } else if (event.key === overview.runtime.shellKeyCode("overview", "K") || event.key === overview.runtime.shellKeyCode("overview", "Up")) {
+            } else if (overview.runtime.shellNavigates("overview", "up", event.key)) {
                 if (overview.moveMode)
                     overview.destinationWorkspace = Math.max(1, overview.destinationWorkspace - 3);
                 else

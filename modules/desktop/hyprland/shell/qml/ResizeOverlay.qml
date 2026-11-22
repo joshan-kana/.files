@@ -165,13 +165,13 @@ PanelWindow {
             const size = opposite ? -50 : 50;
             if (event.key === overlay.runtime.shellKeyCode("resize", "Escape") || event.key === overlay.runtime.shellKeyCode("resize", "Return") || event.key === overlay.runtime.shellKeyCode("resize", "R")) {
                 overlay.open = false;
-            } else if (event.key === overlay.runtime.shellKeyCode("resize", "H") || event.key === overlay.runtime.shellKeyCode("resize", "Left")) {
+            } else if (overlay.runtime.shellNavigates("resize", "left", event.key)) {
                 overlay.resizeWindow(-size, 0);
-            } else if (event.key === overlay.runtime.shellKeyCode("resize", "J") || event.key === overlay.runtime.shellKeyCode("resize", "Down")) {
+            } else if (overlay.runtime.shellNavigates("resize", "down", event.key)) {
                 overlay.resizeWindow(0, size);
-            } else if (event.key === overlay.runtime.shellKeyCode("resize", "K") || event.key === overlay.runtime.shellKeyCode("resize", "Up")) {
+            } else if (overlay.runtime.shellNavigates("resize", "up", event.key)) {
                 overlay.resizeWindow(0, -size);
-            } else if (event.key === overlay.runtime.shellKeyCode("resize", "L") || event.key === overlay.runtime.shellKeyCode("resize", "Right")) {
+            } else if (overlay.runtime.shellNavigates("resize", "right", event.key)) {
                 overlay.resizeWindow(size, 0);
             } else if (event.key === overlay.runtime.shellKeyCode("resize", "B")) {
                 overlay.balance();

@@ -636,17 +636,17 @@ FocusScope {
                 } else if (event.key === center.runtime.shellKeyCode("activity", "Escape")) {
                     center.navigateBack();
                     event.accepted = true;
-                } else if (event.key === center.runtime.shellKeyCode("activity", "Up") || event.key === center.runtime.shellKeyCode("activity", "K")) {
+                } else if (center.runtime.shellNavigates("activity", "up", event.key)) {
                     center.navigate(-1);
                     event.accepted = true;
-                } else if (event.key === center.runtime.shellKeyCode("activity", "Down") || event.key === center.runtime.shellKeyCode("activity", "J")) {
+                } else if (center.runtime.shellNavigates("activity", "down", event.key)) {
                     center.navigate(1);
                     event.accepted = true;
                 } else if (event.key === center.runtime.shellKeyCode("activity", "H") && (center.runtime.shellModifier("activity", "Shift", event.modifiers))) {
                     center.notificationState.toggleHistory();
                     event.accepted = true;
-                } else if (event.key === center.runtime.shellKeyCode("activity", "Left") || event.key === center.runtime.shellKeyCode("activity", "H") || event.key === center.runtime.shellKeyCode("activity", "Right") || event.key === center.runtime.shellKeyCode("activity", "L")) {
-                    center.selectGroup((event.key === center.runtime.shellKeyCode("activity", "Left") || event.key === center.runtime.shellKeyCode("activity", "H")) ? -1 : 1);
+                } else if (center.runtime.shellNavigates("activity", "left", event.key) || center.runtime.shellNavigates("activity", "right", event.key)) {
+                    center.selectGroup((center.runtime.shellNavigates("activity", "left", event.key)) ? -1 : 1);
                     event.accepted = true;
                 } else if (event.key === center.runtime.shellKeyCode("activity", "P")) {
                     center.notificationState.togglePresentation();

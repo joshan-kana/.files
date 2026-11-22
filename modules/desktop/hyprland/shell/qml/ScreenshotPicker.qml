@@ -668,13 +668,13 @@ Item {
                 picker.startY = 0;
                 picker.endX = picker.width;
                 picker.endY = picker.height;
-            } else if (event.key === picker.runtime.shellKeyCode("capture", "Left") || event.key === picker.runtime.shellKeyCode("capture", "H")) {
+            } else if (picker.runtime.shellNavigates("capture", "left", event.key)) {
                 picker.moveSelection(-step, 0, resize);
-            } else if (event.key === picker.runtime.shellKeyCode("capture", "Right") || event.key === picker.runtime.shellKeyCode("capture", "L")) {
+            } else if (picker.runtime.shellNavigates("capture", "right", event.key)) {
                 picker.moveSelection(step, 0, resize);
-            } else if (event.key === picker.runtime.shellKeyCode("capture", "Up") || event.key === picker.runtime.shellKeyCode("capture", "K")) {
+            } else if (picker.runtime.shellNavigates("capture", "up", event.key)) {
                 picker.moveSelection(0, -step, resize);
-            } else if (event.key === picker.runtime.shellKeyCode("capture", "Down") || event.key === picker.runtime.shellKeyCode("capture", "J")) {
+            } else if (picker.runtime.shellNavigates("capture", "down", event.key)) {
                 picker.moveSelection(0, step, resize);
             } else {
                 return;

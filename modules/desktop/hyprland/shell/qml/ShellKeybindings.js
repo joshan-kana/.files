@@ -46,6 +46,54 @@ function keyCode(registry, scope, slot, qt) {
   return codeFor(assigned(registry, scope, slot), qt);
 }
 
+// Direction slots are declared once in navigation.nix. Text input can opt
+// into arrow-only handling so letters remain available for typing.
+function navigates(registry, scope, direction, key, qt, mode = "all") {
+  const slots = registry?.navigation?.[direction] ?? [];
+  const selected =
+    mode === "arrows"
+      ? slots.slice(1)
+      : mode === "primary"
+        ? slots.slice(0, 1)
+        : slots;
+  return selected.some((slot) => keyCode(registry, scope, slot, qt) === key);
+}
+
+const navigationDirections = {
+  HORIZONTAL: ["left", "right"],
+  VERTICAL: ["down", "up"],
+  ALL: ["left", "down", "up", "right"],
+};
+
+function navigationHint(registry, scope, token) {
+  const shifted = token.endsWith("_SHIFT");
+  const primaryOnly = token.includes("_PRIMARY");
+  const arrowsOnly = token.includes("_ARROWS");
+  const axis = token
+    .replace(/^NAV_/, "")
+    .replace(/_(?:PRIMARY|ARROWS|SHIFT)/g, "");
+  const directions = navigationDirections[axis] ?? [];
+  const groups = arrowsOnly ? [1] : primaryOnly ? [0] : [0, 1];
+  return groups
+    .map((index) => {
+      const names = directions.map(
+        (direction) => registry.navigation[direction][index],
+      );
+      const keys = names.map((name) => {
+        const value = assigned(registry, scope, name);
+        return (
+          { LEFT: "←", RIGHT: "→", UP: "↑", DOWN: "↓" }[value.toUpperCase()] ??
+          value
+        );
+      });
+      return (
+        (shifted ? assigned(registry, scope, "Shift") + "+" : "") +
+        keys.join("/")
+      );
+    })
+    .join(" · ");
+}
+
 function modifier(registry, scope, slot, mask, qt) {
   const spec = assigned(registry, scope, slot).toUpperCase();
   const bits = {
@@ -102,8 +150,21 @@ function hint(registry, action) {
   // Resolve every original token once. Replacing an arrow glyph before
   // positional keys could remap its replacement a second time.
   return entry.template.replace(
-    /BACKSPACE|PGUP|PGDN|SHIFT|CTRL|ALT|ESC|ENTER|SPACE|TAB|DEL|[↑↓←→⇧]|[A-Z0-9]/g,
+    /NAV_KEY_(?:UP|DOWN|LEFT|RIGHT)_(?:PRIMARY(?:_SHIFT)?|ARROW)|NAV_(?:HORIZONTAL|VERTICAL|ALL)(?:_PRIMARY)?(?:_ARROWS)?(?:_SHIFT)?|BACKSPACE|PGUP|PGDN|SHIFT|CTRL|ALT|ESC|ENTER|SPACE|TAB|DEL|[↑↓←→⇧]|[A-Z0-9]/g,
     (token) => {
+      if (token.startsWith("NAV_KEY_")) {
+        const [, , direction, variant] = token.split("_");
+        const index = variant === "PRIMARY" ? 0 : 1;
+        const slot = registry.navigation[direction.toLowerCase()][index];
+        const value = render(slot);
+        const label =
+          { UP: "Up", DOWN: "Down", LEFT: "Left", RIGHT: "Right" }[
+            value.toUpperCase()
+          ] ?? value;
+        return token.endsWith("_SHIFT") ? render("Shift") + "+" + label : label;
+      }
+      if (token.startsWith("NAV_"))
+        return navigationHint(registry, scope, token);
       const direction = {
         "↑": "Up",
         "↓": "Down",

@@ -6,11 +6,25 @@ const vm = require("node:vm");
 const dir = path.join(__dirname, "../modules/desktop/hyprland/shell");
 const qmlDir = path.join(dir, "qml");
 const source = fs.readFileSync(path.join(dir, "keybindings.nix"), "utf8");
+const globalSource = fs.readFileSync(
+  path.join(dir, "../keybindings.nix"),
+  "utf8",
+);
 const baseText = source.split("base = {")[1].split("  };")[0];
 const base = Object.fromEntries(
   [...baseText.matchAll(/^\s*(?:"(\d)"|([A-Za-z]\w*))\s*=\s*"([^"]+)";/gm)].map(
     (m) => [m[1] || m[2], m[3]],
   ),
+);
+const navigation = Object.fromEntries(
+  [
+    ...globalSource
+      .split("navigation = {")[1]
+      .split("  };")[0]
+      .matchAll(
+        /\b(left|right|up|down)\s*=\s*\[\s*"([^"]+)"\s*"([^"]+)"\s*\];/g,
+      ),
+  ].map((m) => [m[1], [m[2], m[3]]]),
 );
 const hints = Object.fromEntries(
   [
@@ -24,7 +38,13 @@ const actionAssignments = Object.fromEntries(
     (m) => [m[1], m[2]],
   ),
 );
-const registry = { base, overrides: {}, actions: actionAssignments, hints };
+const registry = {
+  base,
+  navigation,
+  overrides: {},
+  actions: actionAssignments,
+  hints,
+};
 const Qt = {};
 for (const [
   i,
@@ -41,7 +61,7 @@ Object.assign(Qt, {
 });
 const f = vm.runInNewContext(
   fs.readFileSync(path.join(qmlDir, "ShellKeybindings.js"), "utf8") +
-    "\n({assigned,keyCode,modifier,hint,sequence,matchesHint,numberIndex,numberHint})",
+    "\n({assigned,keyCode,navigates,navigationHint,modifier,hint,sequence,matchesHint,numberIndex,numberHint})",
 );
 const files = fs.readdirSync(qmlDir).filter((name) => name.endsWith(".qml"));
 
@@ -141,39 +161,58 @@ test("modifier changes, alternatives and special keys remain consistent", () => 
   assert.equal(f.hint(registry, "OverviewPanel.workspace"), "1–0");
 });
 
-test("directional hints preserve independently remapped arrow and positional keys", () => {
-  const arrows = {
-    "←": ["Left", "W"],
-    "↓": ["Down", "X"],
-    "↑": ["Up", "Y"],
-    "→": ["Right", "Z"],
+test("direction bindings drive both navigation and action-owned hints", () => {
+  const directions = Object.keys(navigation);
+  assert.equal(directions.length, 4);
+  const changed = {
+    ...registry,
+    navigation: Object.fromEntries(
+      directions.map((direction, index) => [
+        direction,
+        ["VWXY"[index], "1234"[index]],
+      ]),
+    ),
   };
-  const directional = Object.entries(hints).filter(([, { template }]) =>
-    Object.keys(arrows).some((glyph) => template.includes(glyph)),
-  );
-  assert.ok(directional.length > 0);
-  for (const [action, { scope, template }] of directional) {
-    const overrides = {
-      Left: "W",
-      Down: "X",
-      Up: "Y",
-      Right: "Z",
-      W: "A",
-      X: "B",
-      Y: "C",
-      Z: "D",
-    };
-    const shown = f.hint(
-      { ...registry, overrides: { [scope]: overrides } },
-      action,
+
+  for (const direction of directions) {
+    const [primary, alternative] = changed.navigation[direction];
+    const primaryKey = f.keyCode(changed, "controls", primary, Qt);
+    const alternateKey = f.keyCode(changed, "controls", alternative, Qt);
+    assert.equal(
+      f.navigates(changed, "controls", direction, primaryKey, Qt),
+      true,
     );
-    for (const [glyph, [, marker]] of Object.entries(arrows)) {
-      if (template.includes(glyph))
-        assert.ok(
-          shown.includes(marker),
-          `${action}: ${glyph} was remapped twice`,
-        );
-    }
+    assert.equal(
+      f.navigates(changed, "controls", direction, alternateKey, Qt),
+      true,
+    );
+    assert.equal(
+      f.navigates(changed, "controls", direction, primaryKey, Qt, "arrows"),
+      false,
+    );
+    assert.equal(
+      f.navigates(changed, "controls", direction, alternateKey, Qt, "primary"),
+      false,
+    );
+  }
+
+  const directionalHints = Object.entries(hints).filter(([, entry]) =>
+    /NAV_(?:HORIZONTAL|VERTICAL|ALL)/.test(entry.template),
+  );
+  assert.ok(directionalHints.length > 0);
+  for (const [action, { scope, template }] of directionalHints) {
+    const original = f.hint(registry, action);
+    const changedHint = f.hint(changed, action);
+    assert.notEqual(changedHint, original, action);
+    for (const [, token] of [
+      ...template.matchAll(
+        /(NAV_(?:HORIZONTAL|VERTICAL|ALL)(?:_PRIMARY)?(?:_ARROWS)?(?:_SHIFT)?)/g,
+      ),
+    ])
+      assert.ok(
+        changedHint.includes(f.navigationHint(changed, scope, token)),
+        action,
+      );
   }
 });
 
@@ -185,13 +224,21 @@ test("shell-local and compositor-global shortcuts have distinct owners", () => {
   );
   const global = fs.readFileSync(path.join(dir, "../keybindings.nix"), "utf8");
   assert.match(nix, /shellBindings = import \.\/keybindings\.nix/);
-  assert.match(nix, /keybindings = import \.\.\/keybindings\.nix/);
+  assert.match(
+    nix,
+    /keybindings = \(import \.\.\/keybindings\.nix\)\.bindings/,
+  );
   assert.match(
     runtime,
     /ShellKeybindings\.keyCode\(shellBindings, scope, slot, Qt\)/,
   );
   assert.match(runtime, /ShellKeybindings\.hint\(shellBindings, action\)/);
   assert.match(global, /id = "status\.inspect"/);
+  assert.match(global, /navigation = \{/);
+  assert.match(source, /import \.\.\/keybindings\.nix/);
+  assert.match(global, /navigationKey = direction:/);
+  for (const direction of Object.keys(navigation))
+    assert.ok(global.includes('navigationKey "' + direction + '"'));
 });
 
 test("numbered actions use the assigned key for each index, not a contiguous keycode range", () => {
