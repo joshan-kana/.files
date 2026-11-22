@@ -8,10 +8,9 @@
     home = "/var/lib/herdr-worker";
     createHome = true;
     shell = pkgs.bashInteractive;
-    # Grant the machine owner access to the unprivileged Herdr runtime over SSH.
-    # No PTY, port-forwarding, agent-forwarding, or X11 forwarding is permitted.
+    # The owner's SSH key reaches only the native Herdr protocol, never a login shell.
     openssh.authorizedKeys.keys = [
-      "restrict ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGMZdbT05P/naiv07J32DxHDOR5A1z8F9jijeBrDkXWV joshankana@gmail.com"
+      ''restrict,command="${pkgs.coreutils}/bin/env HOME=/var/lib/herdr-worker XDG_RUNTIME_DIR=/run/herdr-worker XDG_CONFIG_HOME=/var/lib/herdr-worker/.config XDG_STATE_HOME=/var/lib/herdr-worker/.local/state HC_SESSION=chatgpt-shell ${pkgs.herdr-core}/bin/hc connect --session chatgpt-shell" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGMZdbT05P/naiv07J32DxHDOR5A1z8F9jijeBrDkXWV joshankana@gmail.com''
     ];
   };
 
