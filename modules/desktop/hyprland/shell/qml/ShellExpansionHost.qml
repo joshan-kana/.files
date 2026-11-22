@@ -833,7 +833,7 @@ PanelWindow {
         // Fixed scene-graph parent: changing this clip never moves the large
         // loaded page subtree when the smaller visible silhouette morphs.
         width: host.viewportWidth
-        height: host.viewportHeight
+        transformOrigin: Item.TopLeft
         clipBounds: Qt.rect(shellSurface.x, shellSurface.y, shellSurface.width, shellSurface.height)
 
         Item {
