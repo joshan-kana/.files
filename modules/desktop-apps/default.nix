@@ -31,6 +31,15 @@ in
     };
   };
 
+  herdr = _: {
+    home = _: {
+      home.packages = [
+        pkgs.herdr-core
+        pkgs.herdr-app
+      ];
+    };
+  };
+
   neodisk = _: {
     home = _: {
       home.packages = [ pkgs.neodisk ];

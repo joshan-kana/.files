@@ -55,6 +55,7 @@ _: {
     ./steam
     ./vlc
     ./dropbox
+    ./herdr-app
     ./hermes-agent
     ./matrix-bridges
     ./neodisk
