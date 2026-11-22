@@ -511,14 +511,22 @@ public:
     if (bounds_ == bounds)
       return;
     bounds_ = bounds;
-    // Rebuild the native scene-graph clip, not the child item transforms.
-    setClip(false);
-    setClip(true);
+    // Batch the two independently animated edges into one clip update.
+    polish();
     emit clipBoundsChanged();
   }
 
 signals:
   void clipBoundsChanged();
+
+protected:
+  void updatePolish() override {
+    // Qt refreshes an existing clip node on an item-size change. A width-only
+    // or position-only morph must also mark it dirty without toggling clip.
+    if (height() == bounds_.height())
+      setHeight(bounds_.height() + 1);
+    setHeight(bounds_.height());
+  }
 
 private:
   QRectF bounds_;
