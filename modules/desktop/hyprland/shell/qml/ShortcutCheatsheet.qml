@@ -438,6 +438,10 @@ Item {
                     theme: window.theme
                     hints: search.activeFocus ? [
                         {
+                            shortcut: window.runtime.shellHint("ShortcutCheatsheet.scrollSearch"),
+                            label: "Scroll"
+                        },
+                        {
                             shortcut: window.runtime.shellHint("ShortcutCheatsheet.navigate"),
                             label: "Navigate"
                         },
@@ -488,12 +492,13 @@ Item {
             title: "Shortcut sheet controls"
             bindings: [
                 {
-                    key: window.runtime.shellHint("ShortcutCheatsheet.legend.scroll_down_up"),
+                    key: search.activeFocus ? window.runtime.shellHint("ShortcutCheatsheet.scrollSearch") : window.runtime.shellHint("ShortcutCheatsheet.legend.scroll_down_up"),
                     action: "Scroll down / up"
                 },
                 {
                     key: window.runtime.shellHint("ShortcutCheatsheet.legend.half_page_up_down"),
-                    action: "Half page up / down"
+                    action: "Half page up / down",
+                    visible: !search.activeFocus
                 },
                 {
                     key: window.runtime.shellHint("ShortcutCheatsheet.legend.scroll_by_page"),
@@ -501,7 +506,8 @@ Item {
                 },
                 {
                     key: window.runtime.shellHint("ShortcutCheatsheet.legend.focus_search"),
-                    action: "Focus search"
+                    action: "Focus search",
+                    visible: !search.activeFocus
                 },
                 {
                     key: window.runtime.shellHint("ShortcutCheatsheet.legend.switch_search_navigation"),
@@ -515,7 +521,7 @@ Item {
                     key: window.runtime.shellHint("ShortcutCheatsheet.legend.toggle_these_controls"),
                     action: "Toggle these controls"
                 }
-            ]
+            ].filter(entry => entry.visible !== false)
             onDismissed: window.helpOpen = false
         }
     }

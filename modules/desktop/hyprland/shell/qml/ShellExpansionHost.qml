@@ -885,7 +885,7 @@ PanelWindow {
             // Global navigation lives here; local widget hints remain
             // next to their controls in each view.
             readonly property real scrollBudget: Math.max(1, host.viewportHeight - tabs.implicitHeight - host.theme.spacing4 * 2 - host.theme.spacing3 * 3 - host.footerBottomClearance - footerHints.implicitHeight)
-            readonly property bool scrollHintsVisible: host.loadedContent && host.loadedContent.implicitHeight > scrollBudget
+            readonly property bool scrollHintsVisible: host.hostPageShortcutsEnabled && host.loadedContent && host.loadedContent.implicitHeight > scrollBudget
 
             Row {
                 id: footerHints

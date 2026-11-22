@@ -160,10 +160,6 @@
       scope = "clipboard";
       template = "ENTER";
     };
-    "ClipboardPanel.copySearch" = {
-      scope = "clipboard";
-      template = "ENTER";
-    };
     "ClipboardPanel.halfPage" = {
       scope = "clipboard";
       template = "U/D · PGUP/PGDN";
@@ -422,7 +418,7 @@
     };
     "RecordingLibrary.choose" = {
       scope = "controls";
-      template = "J/K";
+      template = "J/K · ↓/↑";
     };
     "RecordingLibrary.copy" = {
       scope = "controls";
@@ -450,11 +446,11 @@
     };
     "RecordingLibrary.word" = {
       scope = "controls";
-      template = "H/L";
+      template = "H/L · ←/→";
     };
     "RecordingLibrary.extend" = {
       scope = "controls";
-      template = "SHIFT+H/L";
+      template = "SHIFT+H/L · SHIFT+←/→";
     };
     "RecordingLibrary.refresh" = {
       scope = "controls";
@@ -908,6 +904,10 @@
       scope = "hub";
       template = "Esc";
     };
+    "ShellExpansionHost.helpPage" = {
+      scope = "hub";
+      template = "U/D · PGUP/PGDN";
+    };
     "ShellExpansionHost.helpScroll" = {
       scope = "hub";
       template = "J/K · ↓/↑";
@@ -1255,11 +1255,11 @@
     };
     "SystemContent.legend.select_clip_half_page" = {
       scope = "controls";
-      template = "J/K · U/⇧D · PGUP/PGDN";
+      template = "J/K · ↓/↑ · U/⇧D · PGUP/PGDN";
     };
     "SystemContent.legend.select_device" = {
       scope = "controls";
-      template = "J/K · U/D · PGUP/PGDN";
+      template = "J/K · ↓/↑ · U/D · PGUP/PGDN";
     };
     "SystemContent.legend.select_device_21" = {
       scope = "controls";
@@ -1267,15 +1267,15 @@
     };
     "SystemContent.legend.select_item" = {
       scope = "controls";
-      template = "J/K · U/D · PGUP/PGDN";
+      template = "J/K · ↓/↑ · U/D · PGUP/PGDN";
     };
     "SystemContent.legend.select_network" = {
       scope = "controls";
-      template = "J/K · U/D · PGUP/PGDN";
+      template = "J/K · ↓/↑ · U/D · PGUP/PGDN";
     };
     "SystemContent.legend.select_output_input_or_stream_half_page" = {
       scope = "controls";
-      template = "J/K · TAB/SHIFT+TAB · U/D · PGUP/PGDN";
+      template = "J/K · ↓/↑ · TAB/SHIFT+TAB · U/D · PGUP/PGDN";
     };
     "SystemContent.legend.shuffle_repeat_choose_player" = {
       scope = "controls";
@@ -1295,7 +1295,7 @@
     };
     "AdjustableSetting.level" = {
       scope = "controls";
-      template = "H/L";
+      template = "H/L · ←/→";
     };
     "AudioDeviceControl.chooser" = {
       scope = "controls";
@@ -1371,7 +1371,7 @@
     };
     "OpacitySetting.level" = {
       scope = "controls";
-      template = "H/L";
+      template = "H/L · ←/→";
     };
     "ScreenshotPicker.toggleRecord" = {
       scope = "capture";
@@ -1379,7 +1379,7 @@
     };
     "SystemContent.legend.slider_selection" = {
       scope = "controls";
-      template = "J/K · TAB/SHIFT+TAB";
+      template = "J/K · ↓/↑ · TAB/SHIFT+TAB";
     };
     "SystemContent.legend.audio_selection" = {
       scope = "controls";

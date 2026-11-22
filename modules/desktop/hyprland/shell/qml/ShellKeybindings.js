@@ -99,17 +99,10 @@ function hint(registry, action) {
       ? "1–0"
       : workspaceKeys.join("/");
   }
-  const arrows = ["Left", "Up", "Down", "Right"].map(render);
-  const renderGroup = (group) => {
-    const keys = group.split("").map(render);
-    return keys.every((key) => key.length === 1)
-      ? keys.join("")
-      : keys.join("/");
-  };
   // Resolve every original token once. Replacing an arrow glyph before
   // positional keys could remap its replacement a second time.
   return entry.template.replace(
-    /BACKSPACE|ARROWS|HJKL|PGUP|PGDN|SHIFT|CTRL|ALT|ESC|ENTER|SPACE|TAB|DEL|[↑↓←→⇧]|[A-Z0-9]/g,
+    /BACKSPACE|PGUP|PGDN|SHIFT|CTRL|ALT|ESC|ENTER|SPACE|TAB|DEL|[↑↓←→⇧]|[A-Z0-9]/g,
     (token) => {
       const direction = {
         "↑": "Up",
@@ -129,11 +122,6 @@ function hint(registry, action) {
         }[direction];
         return rendered === original ? token : rendered;
       }
-      if (token === "ARROWS")
-        return arrows.join("/") === "LEFT/UP/DOWN/RIGHT"
-          ? "ARROWS"
-          : arrows.join("/");
-      if (token === "HJKL") return renderGroup(token);
       const alias = {
         PGUP: "PageUp",
         PGDN: "PageDown",
