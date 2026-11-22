@@ -105,6 +105,7 @@ in
     "d ${approvalRoot} 0750 root ${gateway} - -"
     "d ${approvalRoot}/pending 0700 ${gateway} ${gateway} - -"
     "d ${approvalRoot}/decisions 2750 root ${gateway} - -"
+    "e ${approvalRoot}/decisions - - - 1d -"
   ];
   systemd.services.chatgpt-shell-access = {
     description = "ChatGPT shell access through OpenAI Secure MCP Tunnel";

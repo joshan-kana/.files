@@ -83,8 +83,11 @@ class AuthorizationTests(unittest.IsolatedAsyncioTestCase):
         await self.await_pending(ident)
         authorization._decide(ident, "approve")
         await operation
-        self.assertFalse((authorization.APPROVAL_DIR / "decisions" / f"{ident}.json").exists())
+        # The gateway may read an operator decision, but must not unlink it.
+        self.assertTrue((authorization.APPROVAL_DIR / "decisions" / f"{ident}.json").exists())
         self.assertFalse((authorization.APPROVAL_DIR / "pending" / f"{ident}.json").exists())
+        with self.assertRaises(FileNotFoundError):
+            authorization._decide(ident, "approve")
 
     async def test_approval_is_bound_to_stdin_and_displays_exact_text(self):
         """Bind submitted standard input and escape untrusted terminal control sequences."""

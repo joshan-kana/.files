@@ -7,7 +7,6 @@ import json
 import os
 import tempfile
 import time
-from contextlib import suppress
 from pathlib import Path
 
 APPROVAL_DIR = Path(os.environ["CHATGPT_SHELL_APPROVAL_DIR"])
@@ -225,8 +224,7 @@ async def authorize(
         raise PermissionError("approval timed out")
     finally:
         pending.unlink(missing_ok=True)
-        with suppress(PermissionError):
-            decision_file.unlink(missing_ok=True)
+        # Root-owned decisions stay immutable to the gateway until runtime cleanup.
 
 
 def _valid_id(value: str) -> str:
