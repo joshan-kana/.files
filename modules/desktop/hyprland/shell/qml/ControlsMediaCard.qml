@@ -152,7 +152,7 @@ ShellSurface {
             ShellAction {
                 id: shuffleButton
                 width: 44
-                height: 42
+                height: 46
                 anchors.verticalCenter: parent.verticalCenter
                 runtime: card.runtime
                 theme: card.theme
@@ -185,7 +185,7 @@ ShellSurface {
             ShellAction {
                 id: repeatButton
                 width: 44
-                height: 42
+                height: 46
                 anchors.verticalCenter: parent.verticalCenter
                 runtime: card.runtime
                 theme: card.theme

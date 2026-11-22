@@ -44,3 +44,25 @@ test("Now Playing keeps shuffle and repeat visible but disabled without a player
     );
   }
 });
+
+test("compact shuffle and repeat buttons match the shared transport height", () => {
+  const card = qml("ControlsMediaCard.qml");
+  const transport = qml("MediaTransport.qml");
+  const match = transport.match(
+    /delegate: ShellAction \{[\s\S]*?height:\s*(\d+)/,
+  );
+  assert.ok(match, "media transport buttons should declare a height");
+  const transportHeight = Number(match[1]);
+  for (const id of ["shuffleButton", "repeatButton"]) {
+    const start = card.indexOf(`id: ${id}`);
+    assert.notEqual(start, -1, `missing ${id}`);
+    const action = card.slice(start);
+    const height = action.match(/\bheight:\s*(\d+)/);
+    assert.ok(height, `missing height for ${id}`);
+    assert.equal(
+      Number(height[1]),
+      transportHeight,
+      `${id} must align with media transport`,
+    );
+  }
+});
