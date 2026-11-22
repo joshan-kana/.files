@@ -9,7 +9,7 @@ import time
 import types
 import unittest
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 
 class MCPServer:
@@ -317,6 +317,20 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
             result = await asyncio.wait_for(shell.shell_cancel(job["request_id"]), timeout=3)
         self.assertEqual(result["status"], "cancelled")
         self.assertTrue(cancelled.is_set())
+
+    async def test_core_exec_cancellation_interrupts_client(self):
+        """A kill would orphan a Core exec; send SIGINT before falling back."""
+        process = AsyncMock()
+        process.send_signal = Mock()
+        process.kill = Mock()
+        process.communicate.side_effect = asyncio.CancelledError()
+        with (
+            patch.object(shell.asyncio, "create_subprocess_exec", return_value=process),
+            self.assertRaises(asyncio.CancelledError),
+        ):
+            await shell._herdr("local", ["exec", "--json"])
+        process.send_signal.assert_called_once_with(signal.SIGINT)
+        process.kill.assert_not_called()
 
     async def test_remote_shell_exec_uses_ssh_not_herdr(self):
         """Remote operations keep working even if the host has no Herdr installed."""

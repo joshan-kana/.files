@@ -104,11 +104,20 @@ async def _herdr(host: Host, arguments: list[str], *, stdin: str | None = None) 
             process.communicate(stdin.encode() if stdin is not None else None),
             timeout=HERDR_EXEC_TIMEOUT_SECONDS + 20 if arguments[0] == "exec" else 20,
         )
-    except (TimeoutError, asyncio.CancelledError) as exc:
+    except asyncio.CancelledError:
+        # Core-owned execs can outlive a client killed with SIGKILL.
+        # An interrupt lets the native client cancel its remote operation.
+        with suppress(ProcessLookupError):
+            process.send_signal(signal.SIGINT)
+        try:
+            await asyncio.wait_for(process.wait(), timeout=CANCEL_GRACE_SECONDS)
+        except TimeoutError:
+            process.kill()
+            await process.wait()
+        raise
+    except TimeoutError:
         process.kill()
         await process.wait()
-        if isinstance(exc, asyncio.CancelledError):
-            raise
         raise RuntimeError("Herdr did not respond before its execution deadline") from None
     if process.returncode != 0:
         raise RuntimeError(f"Herdr failed: {stderr.decode(errors='replace')[:4096]}")
