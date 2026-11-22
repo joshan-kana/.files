@@ -79,20 +79,20 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
     async def test_cwd_and_stdin(self):
         """Pass the requested working directory and standard input."""
         with patch.dict(os.environ, {"HOME": "/tmp"}):
-            result = await shell.shell_exec("local", "printf '%s\\n' \"$PWD\"; cat", cwd="/tmp", stdin="hello\n")
+            result = await shell.shell_exec("remote", "printf '%s\\n' \"$PWD\"; cat", cwd="/tmp", stdin="hello\n")
         self.assertTrue(result["success"])
         self.assertEqual(result["output"], "/tmp\nhello\n")
 
     async def test_nonzero_exit_is_not_success(self):
         """Report failed command exit statuses accurately."""
-        result = await shell.shell_exec("local", "exit 17")
+        result = await shell.shell_exec("remote", "exit 17")
         self.assertEqual(result["status"], "completed")
         self.assertFalse(result["success"])
         self.assertEqual(result["exit_code"], 17)
 
     async def test_missing_cwd_stops_execution(self):
         """Reject execution when the working directory is unavailable."""
-        result = await shell.shell_exec("local", "echo should-not-run", cwd="/not-a-real-working-directory")
+        result = await shell.shell_exec("remote", "echo should-not-run", cwd="/not-a-real-working-directory")
         self.assertEqual(result["exit_code"], 125)
         self.assertFalse(result["success"])
         self.assertNotIn("should-not-run", result["output"])
@@ -116,7 +116,7 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_job_listing_does_not_consume_output(self):
         """List jobs without draining their buffered output."""
-        started = await shell.shell_exec("local", "printf payload", wait_seconds=0)
+        started = await shell.shell_exec("remote", "printf payload", wait_seconds=0)
         await shell.jobs[started["request_id"]].task
         listing = await shell.shell_jobs()
         self.assertEqual(listing[0]["request_id"], started["request_id"])
@@ -126,7 +126,7 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_job_recovery_and_expiration(self):
         """Recover running jobs and expire completed job records."""
-        started = await shell.shell_exec("local", "sleep 0.15; printf 'done'", wait_seconds=0)
+        started = await shell.shell_exec("remote", "sleep 0.15; printf 'done'", wait_seconds=0)
         self.assertEqual(started["status"], "running")
         self.assertIn(started["request_id"], [j["request_id"] for j in await shell.shell_jobs()])
         result = await shell.shell_result(started["request_id"], wait_seconds=1)
@@ -139,7 +139,7 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
     async def test_detached_child_does_not_hold_completed_job(self):
         """Finish a job even when detached children retain output pipes."""
         started = time.monotonic()
-        result = await shell.shell_exec("local", "sleep 5 & echo child=$!", wait_seconds=3)
+        result = await shell.shell_exec("remote", "sleep 5 & echo child=$!", wait_seconds=3)
         try:
             self.assertTrue(result["success"])
             self.assertLess(time.monotonic() - started, 3)
@@ -151,7 +151,7 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_cancel_after_shell_exits_does_not_change_success(self):
         """Keep completed results intact after a late cancellation request."""
-        started = await shell.shell_exec("local", "sleep 5 & echo child=$!", wait_seconds=0)
+        started = await shell.shell_exec("remote", "sleep 5 & echo child=$!", wait_seconds=0)
         job = shell.jobs[started["request_id"]]
 
         async def wait_for_exit():
@@ -169,7 +169,7 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_cancel_running_tree(self):
         """Cancel the running process tree rather than its leader alone."""
-        started = await shell.shell_exec("local", "sleep 60; printf unsafe-continuation", wait_seconds=0)
+        started = await shell.shell_exec("remote", "sleep 60; printf unsafe-continuation", wait_seconds=0)
         job = shell.jobs[started["request_id"]]
 
         async def wait_for_pid():
@@ -241,6 +241,14 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("SSH_AUTH_SOCK", env)
         self.assertEqual(elevated["SSH_AUTH_SOCK"], shell.REMOTE_AUTH_AGENT)
 
+    async def test_local_core_failure_never_falls_back_to_unobserved_shell(self):
+        """Fail closed when the Core runtime is unavailable."""
+        with patch.object(shell, "_herdr", new_callable=AsyncMock, side_effect=RuntimeError("Core unavailable")):
+            result = await shell.shell_exec("local", "printf 'should-not-run'", wait_seconds=2)
+        self.assertEqual(result["status"], "failed")
+        self.assertFalse(result["success"])
+        self.assertNotIn("should-not-run", result["output"])
+
     async def test_native_herdr_command_tracks_exit_and_output(self):
         """Observe one terminal, retaining the real nonzero exit status."""
         response = iter(
@@ -250,6 +258,7 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
                 {"text": "first"},
                 {"ended": True, "exit_code": 9},
                 {"text": "firstsecond"},
+                {"removed": "t17"},
             ]
         )
 
@@ -259,15 +268,16 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         job = shell.Job(request_id="a" * 32, host="local")
         with patch.object(shell, "_herdr", side_effect=native) as invoke:
             await shell._run_herdr(job, "printf first; printf second; exit 9", "/tmp")
-        self.assertEqual(job.herdr_terminal, "t17")
         self.assertEqual(job.exit_code, 9)
+        self.assertIsNone(job.herdr_terminal)
+        self.assertEqual(invoke.call_args.args[1], ["rm", "--json", "t17"])
         self.assertEqual(job.output.drain()[0], "firstsecond")
         launched = invoke.call_args_list[0].args[1]
         self.assertEqual(launched[:3], ["run", "--bg", "--json"])
         self.assertIn("origin=chatgpt-shell", launched)
 
     async def test_shell_exec_uses_herdr_for_no_stdin(self):
-        """Route normal commands into persistent native terminals by default."""
+        """Route ordinary commands through native terminals without creating parallel runtimes."""
 
         async def mock_terminal(job, command, cwd):
             self.assertEqual(command, "printf session")
@@ -276,7 +286,6 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
             job.exit_code = 0
 
         with (
-            patch.object(shell, "HERDR_COMMANDS", True),
             patch.object(shell, "_run_herdr", side_effect=mock_terminal) as terminal,
         ):
             result = await shell.shell_exec("local", "printf session", cwd="/tmp")
@@ -305,7 +314,6 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
             raise AssertionError(args)
 
         with (
-            patch.object(shell, "HERDR_COMMANDS", True),
             patch.object(shell, "_herdr", side_effect=fake_herdr),
         ):
             started = await shell.shell_exec("local", "sleep 60", wait_seconds=0)
@@ -327,7 +335,6 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
     async def test_remote_shell_exec_uses_ssh_not_herdr(self):
         """Remote operations keep working even if the host has no Herdr installed."""
         with (
-            patch.object(shell, "HERDR_COMMANDS", True),
             patch.object(shell, "_run_herdr", new_callable=AsyncMock) as terminal,
         ):
             result = await shell.shell_exec("remote", "printf remote", wait_seconds=2)
@@ -343,21 +350,21 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         async def native(_host, arguments, *, stdin):
             self.assertEqual(stdin, "hello\n")
             self.assertEqual(arguments[:3], ["exec", "--json", "--stdin"])
+            self.assertEqual(arguments[-3:], ["bash", "-c", "cat; exit 23"])
             return {"code": 23, "stdout": base64.b64encode(b"hello\n").decode(), "stderr": "", "truncated": False}
 
-        with patch.object(shell, "HERDR_COMMANDS", True), patch.object(shell, "_herdr", side_effect=native):
+        with patch.object(shell, "_herdr", side_effect=native):
             result = await shell.shell_exec("local", "cat; exit 23", stdin="hello\n")
         self.assertEqual(result["exit_code"], 23)
         self.assertEqual(result["output"], "hello\n")
         self.assertFalse(result["success"])
 
     async def test_stdin_keeps_exact_pipe_semantics(self):
-        """Use the exact-input path when supplied stdin cannot be represented by Herdr run."""
+        """Keep exact input available over the existing remote SSH command path."""
         with (
-            patch.object(shell, "HERDR_COMMANDS", False),
             patch.object(shell, "_run_herdr", new_callable=AsyncMock) as terminal,
         ):
-            result = await shell.shell_exec("local", "cat", stdin="line\n")
+            result = await shell.shell_exec("remote", "cat", stdin="line\n")
         terminal.assert_not_awaited()
         self.assertEqual(result["output"], "line\n")
         self.assertTrue(result["success"])

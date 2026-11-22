@@ -73,7 +73,6 @@ WORKER_ENV = json.loads(os.environ["CHATGPT_SHELL_WORKER_ENV"])
 HERDR_SESSION = WORKER_ENV["HC_SESSION"]
 WORKER_USER = os.environ["CHATGPT_SHELL_WORKER"]
 RUN0 = os.environ.get("CHATGPT_SHELL_RUN0", "run0")
-HERDR_COMMANDS = os.environ.get("CHATGPT_SHELL_HERDR_COMMANDS", "") == "1"
 
 
 def _require_local_herdr(host: Host) -> None:
@@ -358,6 +357,14 @@ async def _run_herdr(job: Job, command: str, cwd: str | None) -> None:
         if status.get("ended") is True:
             code = status.get("exit_code")
             job.exit_code = int(code) if code is not None else 128
+            # One-off shell commands are observable while running; explicit
+            # session_start terminals remain persistent until the user removes them.
+            try:
+                await _herdr(job.host, ["rm", "--json", address])
+            except RuntimeError:
+                pass
+            else:
+                job.herdr_terminal = None
             return
         if "ended" not in status:
             raise RuntimeError("Herdr wait returned an invalid response")
@@ -377,7 +384,7 @@ async def _run_herdr_stdin(job: Job, command: str, cwd: str | None, stdin: str) 
             "--cwd",
             cwd or WORKER_ENV["HOME"],
             "bash",
-            "-lc",
+            "-c",
             command,
         ],
         stdin=stdin,
@@ -406,12 +413,10 @@ async def _run(job: Job, command: str, cwd: str | None, stdin: str | None) -> No
             command,
             cwd,
             stdin,
-            session=f"chatgpt-{job.request_id[:12]}"
-            if HERDR_COMMANDS and job.host == LOCAL_HOST and not job.elevated and stdin is None
-            else None,
+            session=f"chatgpt-{job.request_id[:12]}" if job.host == LOCAL_HOST and not job.elevated and stdin is None else None,
         )
         job.awaiting_approval = False
-        if HERDR_COMMANDS and job.host == LOCAL_HOST and not job.elevated:
+        if job.host == LOCAL_HOST and not job.elevated:
             if stdin is None:
                 await _run_herdr(job, command, cwd)
             else:

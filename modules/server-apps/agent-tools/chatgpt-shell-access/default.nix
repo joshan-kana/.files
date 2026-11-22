@@ -121,7 +121,6 @@ in
       CHATGPT_SHELL_RUN0 = "${pkgs.systemd}/bin/run0";
       CHATGPT_SHELL_BASH = "${pkgs.bash}/bin/bash";
       CHATGPT_SHELL_HC = "${pkgs.herdr-core}/bin/hc";
-      CHATGPT_SHELL_HERDR_COMMANDS = "1";
       CHATGPT_SHELL_APPROVAL_DIR = "/run/chatgpt-shell-access/approvals";
       CHATGPT_SHELL_STATE_DIR = stateRoot;
       CHATGPT_SHELL_POLICIES_FILE = toString policyDefaults;
