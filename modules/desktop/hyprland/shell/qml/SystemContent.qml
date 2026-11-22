@@ -390,7 +390,7 @@ FocusScope {
                             action: "Open corresponding system control"
                         },
                         {
-                            key: root.runtime.shellHint("SystemContent.legend.now_playing_application_mixer"),
+                            key: [root.runtime.shellHint("ControlsMediaCard.open"), root.runtime.shellHint("AudioMixerContent.open")].filter(Boolean).join(" / "),
                             action: "Now Playing / application mixer"
                         },
                         {
@@ -2147,7 +2147,7 @@ FocusScope {
                     root.frameToggleRequested();
                 } else if (shifted && event.key === root.runtime.shellKeyCode("controls", "E")) {
                     root.motion.toggle();
-                } else if (shifted && event.key === root.runtime.shellKeyCode("controls", "M")) {
+                } else if (root.runtime.shellMatchesHint("AudioMixerContent.open", event.key, event.modifiers)) {
                     root.openMixer();
                 } else if (shifted && event.key === root.runtime.shellKeyCode("controls", "P")) {
                     root.media.cyclePlayer();
@@ -2189,7 +2189,7 @@ FocusScope {
                     root.openRecordings();
                 } else if (event.key === root.runtime.shellKeyCode("controls", "V") && root.powerProfile.available) {
                     root.powerProfile.cycle();
-                } else if (event.key === root.runtime.shellKeyCode("controls", "N")) {
+                } else if (root.runtime.shellMatchesHint("ControlsMediaCard.open", event.key, event.modifiers)) {
                     root.mediaRequested();
                 } else if (event.key === root.runtime.shellKeyCode("controls", "M")) {
                     root.muteSelectedAudio();

@@ -276,3 +276,16 @@ test("semantic action bindings change their handler and hint without changing a 
       ),
     );
 });
+
+test("compact detail open actions follow remapped keys in labels and dispatch", () => {
+  for (const action of ["AudioMixerContent.open", "ControlsMediaCard.open"]) {
+    assert.ok(f.hint(registry, action), `${action} must be assigned`);
+    const rebound = {
+      ...registry,
+      actions: { ...actionAssignments, [action]: "ALT+Y" },
+    };
+    assert.equal(f.hint(rebound, action), "ALT+Y");
+    assert.equal(f.matchesHint(rebound, action, 89, Qt.AltModifier, Qt), true);
+    assert.equal(f.matchesHint(rebound, action, 89, 0, Qt), false);
+  }
+});

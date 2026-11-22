@@ -202,4 +202,12 @@ ShellSurface {
             }
         }
     }
+
+    TileKeyHint {
+        visible: shortcut.length > 0
+        shortcut: card.runtime.shellHint("ControlsMediaCard.open")
+        runtime: card.runtime
+        theme: card.theme
+        motion: card.motion
+    }
 }

@@ -397,4 +397,12 @@ FocusScope {
             ]
         }
     }
+
+    TileKeyHint {
+        visible: mixer.compact && shortcut.length > 0
+        shortcut: mixer.runtime.shellHint("AudioMixerContent.open")
+        runtime: mixer.runtime
+        theme: mixer.theme
+        motion: mixer.motion
+    }
 }

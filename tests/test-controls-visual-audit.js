@@ -655,7 +655,7 @@ test("Compact Audio and Media backgrounds open full views while child actions re
   assert.doesNotMatch(media, /id: fullPlayer|title: "Now Playing"/);
   assert.match(
     controls,
-    /shifted && event\.key === root\.runtime\.shellKeyCode\("controls", "M"\)\)\s*\{\s*root\.openMixer\(\)/,
+    /shellMatchesHint\("AudioMixerContent\.open", event\.key, event\.modifiers\)\)\s*\{\s*root\.openMixer\(\)/,
   );
   assert.doesNotMatch(
     controls.slice(
@@ -908,4 +908,41 @@ test("calendar dates and overview windows expose actionable accessibility semant
   assert.match(window, /Accessible\.role: Accessible\.Button/);
   assert.match(window, /Accessible\.name: "Switch to "/);
   assert.match(window, /Accessible\.onPressAction:[\s\S]*?tile\.activated\(\)/);
+});
+
+test("compact detail cards expose their own open shortcut in the top-right tile hint", () => {
+  const controls = read("SystemContent.qml");
+  for (const [component, action, owner, request] of [
+    [
+      "AudioMixerContent.qml",
+      "AudioMixerContent.open",
+      "mixer",
+      "expandRequested",
+    ],
+    [
+      "ControlsMediaCard.qml",
+      "ControlsMediaCard.open",
+      "card",
+      "fullRequested",
+    ],
+  ]) {
+    const card = read(component);
+    assert.match(card, /TileKeyHint \{/);
+    assert.ok(
+      card.includes(`shortcut: ${owner}.runtime.shellHint("${action}")`),
+      `${component} must display its own open action`,
+    );
+    assert.ok(
+      card.includes(`onActivated: ${owner}.${request}()`),
+      `${component} must expose pointer activation`,
+    );
+    assert.ok(
+      controls.includes(
+        `shellMatchesHint("${action}", event.key, event.modifiers)`,
+      ),
+      `${component} must dispatch its displayed action`,
+    );
+  }
+  assert.match(read("TileKeyHint.qml"), /right: parent\.right/);
+  assert.match(read("TileKeyHint.qml"), /top: parent\.top/);
 });

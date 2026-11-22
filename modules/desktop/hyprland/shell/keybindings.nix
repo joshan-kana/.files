@@ -142,6 +142,7 @@
           "AudioDeviceControl.chooser" = "P";
           "AudioDeviceControl.mute" = "M";
           "AudioDeviceControl.muteMicrophone" = "X";
+          "AudioMixerContent.open" = "SHIFT+M";
           "BluetoothPanel.activate" = "ENTER";
           "BluetoothPanel.forget" = "F";
           "BluetoothPanel.pair" = "P";
@@ -149,6 +150,7 @@
           "BluetoothPanel.scan" = "SHIFT+D";
           "BluetoothPanel.select" = "NAV_VERTICAL";
           "BluetoothPanel.trust" = "T";
+          "ControlsMediaCard.open" = "N";
           "ControlsMediaCard.repeat" = "B";
           "ControlsMediaCard.shuffle" = "Z";
           "NetworkPanel.advanced" = "A";
@@ -233,7 +235,6 @@
           "SystemContent.legend.mute_stream_mute_mic_choose_device" = "M / X / P";
           "SystemContent.legend.navigate_actions" = "NAV_ALL";
           "SystemContent.legend.night_light_warmer_cooler" = "T / - (⇧T) / +";
-          "SystemContent.legend.now_playing_application_mixer" = "N / SHIFT+M";
           "SystemContent.legend.open_corresponding_system_control" = "Q/W/E/F/G/R/C/D/I";
           "SystemContent.legend.open_selected_capture" = "ENTER / O";
           "SystemContent.legend.page_selection" = "U/D · PGUP/PGDN";

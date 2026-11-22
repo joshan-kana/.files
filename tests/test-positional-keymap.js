@@ -242,13 +242,13 @@ test("Compact Media advertises the direct Now Playing key and shares its destina
   const card = qml("ControlsMediaCard.qml");
   assert.match(
     controls,
-    /event\.key === root\.runtime\.shellKeyCode\("controls", "N"\)\)\s*\{\s*root\.mediaRequested\(\)/,
+    /shellMatchesHint\("ControlsMediaCard\.open", event\.key, event\.modifiers\)\)\s*\{\s*root\.mediaRequested\(\)/,
   );
   assert.match(card, /onActivated: card.fullRequested\(\)/);
   assert.match(controls, /onFullRequested: root.mediaRequested\(\)/);
   assert.match(
     controls,
-    /event\.key === root\.runtime\.shellKeyCode\("controls", "N"\)\)\s*\{\s*root\.mediaRequested\(\)/,
+    /shellMatchesHint\("ControlsMediaCard\.open", event\.key, event\.modifiers\)\)\s*\{\s*root\.mediaRequested\(\)/,
   );
 });
 
@@ -258,7 +258,7 @@ test("mixer and device hints match the shared Controls keyboard dispatcher", () 
   const controls = qml("SystemContent.qml");
   assert.match(
     controls,
-    /shifted && event\.key === root\.runtime\.shellKeyCode\("controls", "M"\)\)\s*\{\s*root\.openMixer\(\)/,
+    /shellMatchesHint\("AudioMixerContent\.open", event\.key, event\.modifiers\)\)\s*\{\s*root\.openMixer\(\)/,
   );
   assert.match(mixer, /onActivated: mixer.expandRequested\(\)/);
   assert.doesNotMatch(mixer, /id: expandAction/);
@@ -268,7 +268,7 @@ test("mixer and device hints match the shared Controls keyboard dispatcher", () 
   );
   assert.match(
     controls,
-    /shifted && event\.key === root\.runtime\.shellKeyCode\("controls", "M"\)\)\s*\{\s*root\.openMixer\(\)/,
+    /shellMatchesHint\("AudioMixerContent\.open", event\.key, event\.modifiers\)\)\s*\{\s*root\.openMixer\(\)/,
   );
   assert.match(
     controls,
