@@ -8,18 +8,18 @@
 let
   inherit (config.dotfiles) server;
   inherit (config.dotfiles.users) primary;
-  stateRoot = "${server.storage.appData.root}/chatgpt-shell-access";
-  operatorStateRoot = "${server.storage.appData.root}/chatgpt-shell-operator";
+  gateway = "chatgpt-shell-access";
+  stateRoot = "${server.storage.appData.root}/chatgpt-shell-gateway";
+  operatorStateRoot = "${server.storage.appData.root}/chatgpt-shell-operator-secure";
   approvalRoot = "/run/chatgpt-shell-approvals";
   workspaces = config.systemd.services.agent-workspaces;
   tunnelSecret = "${server.secretsDir}/chatgpt-shell-tunnel.env";
   macSshKeySecret = "${server.secretsDir}/chatgpt-shell-mac";
   parallelsSshKeySecret = "${server.secretsDir}/chatgpt-shell-nixos-arm-parallels";
   parallelsSudoSshKeySecret = "${server.secretsDir}/nixos-arm-parallels-sudo";
-  sudoSshKeySecret = "${server.secretsDir}/chatgpt-shell-sudo";
   githubSecret = "${server.secretsDir}/github-self-hosted-agents.env";
   knownHostsFile = "${config.users.users.${primary.name}.home}/.ssh/known_hosts";
-  remoteAuthAgentSocket = "/run/chatgpt-shell-access/remote-sudo-agent.sock";
+  remoteAuthAgentSocket = "/run/${gateway}/remote-sudo-agent.sock";
 
   macHost = "mac.home";
   parallelsHost = "nixos-arm-parallels.home";
@@ -69,6 +69,20 @@ let
 
 in
 {
+  users.groups.${gateway} = { };
+  users.users.${gateway} = {
+    isSystemUser = true;
+    group = gateway;
+    home = stateRoot;
+  };
+
+  security.polkit.extraConfig = ''
+    polkit.addRule(function(action, subject) {
+      if (action.id === "org.freedesktop.systemd1.manage-units" && subject.user === "${gateway}")
+        return polkit.Result.YES;
+    });
+  '';
+
   environment.systemPackages = [
     approvalCommand
   ];
@@ -80,18 +94,17 @@ in
     compress = true;
     missingok = true;
     notifempty = true;
-    su = "${primary.name} ${config.users.users.${primary.name}.group}";
+    su = "${gateway} ${gateway}";
   };
 
   systemd.tmpfiles.rules = [
-    "d ${stateRoot} 0700 ${primary.name} ${config.users.users.${primary.name}.group} - -"
-    "d ${operatorStateRoot} 0750 root ${config.users.users.${primary.name}.group} - -"
-    "d ${approvalRoot} 0750 root ${config.users.users.${primary.name}.group} - -"
-    "d ${approvalRoot}/pending 0700 ${primary.name} ${config.users.users.${primary.name}.group} - -"
-    "d ${approvalRoot}/decisions 2750 root ${config.users.users.${primary.name}.group} - -"
-    "f+ /etc/chatgpt-shell-sudo-authorized-key 0444 root root - ssh-ed25519\\x20AAAAC3NzaC1lZDI1NTE5AAAAIEp/T7PcjFts+DbMZnJrMle2UhBtWhJ2ycLYIlFMNkIu\\x20chatgpt-shell-sudo\\n"
+    "a+ ${server.storage.appData.root} - - - - u:${gateway}:--x"
+    "d ${stateRoot} 0700 ${gateway} ${gateway} - -"
+    "d ${operatorStateRoot} 0750 root ${gateway} - -"
+    "d ${approvalRoot} 0750 root ${gateway} - -"
+    "d ${approvalRoot}/pending 0700 ${gateway} ${gateway} - -"
+    "d ${approvalRoot}/decisions 2750 root ${gateway} - -"
   ];
-
   systemd.services.chatgpt-shell-access = {
     description = "ChatGPT shell access through OpenAI Secure MCP Tunnel";
     wantedBy = [ "multi-user.target" ];
@@ -107,7 +120,6 @@ in
     unitConfig.RequiresMountsFor = [ stateRoot ];
     unitConfig.AssertPathExists = [
       tunnelSecret
-      sudoSshKeySecret
       parallelsSudoSshKeySecret
       githubSecret
       knownHostsFile
@@ -118,7 +130,6 @@ in
 
     environment = {
       HEALTH_LISTEN_ADDR = "127.0.0.1:18792";
-      SSH_AUTH_SOCK = "/run/chatgpt-shell-access/sudo-agent.sock";
       MCP_COMMAND = "${pkgs.coreutils}/bin/env -u CONTROL_PLANE_API_KEY -u CONTROL_PLANE_TUNNEL_ID ${pkgs.chatgpt-shell-mcp-python}/bin/python3 ${./.}/chatgpt-shell-access.py";
       CHATGPT_SHELL_COMMAND_PATH = lib.makeBinPath shellPackages;
       CHATGPT_SHELL_LOCAL_HOST = config.networking.hostName;
@@ -138,8 +149,8 @@ in
 
     serviceConfig = {
       Type = "simple";
-      User = primary.name;
-      RuntimeDirectory = "chatgpt-shell-access";
+      User = gateway;
+      RuntimeDirectory = gateway;
       RuntimeDirectoryMode = "0700";
       EnvironmentFile = [
         tunnelSecret
@@ -148,24 +159,18 @@ in
       LoadCredential =
         lib.mapAttrsToList (name: target: "chatgpt-shell-${name}:${target.credential}") remoteTargets
         ++ [
-          "chatgpt-shell-sudo:${sudoSshKeySecret}"
           "nixos-arm-parallels-sudo:${parallelsSudoSshKeySecret}"
           "chatgpt-shell-known-hosts:${knownHostsFile}"
         ];
       ExecStart = pkgs.writeShellScript "chatgpt-shell-access-start" ''
         set -euo pipefail
-        rm -f "$SSH_AUTH_SOCK" "$CHATGPT_SHELL_REMOTE_AUTH_AGENT"
-        ${pkgs.openssh}/bin/ssh-agent -D -a "$SSH_AUTH_SOCK" >/dev/null &
+        rm -f "$CHATGPT_SHELL_REMOTE_AUTH_AGENT"
         ${pkgs.openssh}/bin/ssh-agent -D -a "$CHATGPT_SHELL_REMOTE_AUTH_AGENT" >/dev/null &
         for _ in $(seq 1 100); do
-          [ -S "$SSH_AUTH_SOCK" ] && [ -S "$CHATGPT_SHELL_REMOTE_AUTH_AGENT" ] && break
+          [ -S "$CHATGPT_SHELL_REMOTE_AUTH_AGENT" ] && break
           sleep 0.05
         done
-        [ -S "$SSH_AUTH_SOCK" ]
         [ -S "$CHATGPT_SHELL_REMOTE_AUTH_AGENT" ]
-        cat "$CREDENTIALS_DIRECTORY/chatgpt-shell-sudo" | \
-          ${pkgs.bash}/bin/bash -c \
-            'SSH_AUTH_SOCK="$1" exec ${pkgs.openssh}/bin/ssh-add -' _ "$SSH_AUTH_SOCK"
         cat "$CREDENTIALS_DIRECTORY/nixos-arm-parallels-sudo" | \
           ${pkgs.bash}/bin/bash -c \
             'SSH_AUTH_SOCK="$1" exec ${pkgs.openssh}/bin/ssh-add -' _ "$CHATGPT_SHELL_REMOTE_AUTH_AGENT"
@@ -174,6 +179,13 @@ in
       Restart = "always";
       RestartSec = "2s";
       UMask = "0077";
+      NoNewPrivileges = true;
+      ProtectSystem = "strict";
+      ProtectHome = true;
+      ReadWritePaths = [
+        stateRoot
+        "${approvalRoot}/pending"
+      ];
     };
   };
 }

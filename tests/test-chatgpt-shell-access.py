@@ -31,7 +31,6 @@ sys.modules["mcp.server"] = mcp.server
 
 os.environ.update(
     CREDENTIALS_DIRECTORY="/tmp",
-    SSH_AUTH_SOCK="/tmp/agent.sock",
     CHATGPT_SHELL_REMOTE_AUTH_AGENT="/tmp/remote-agent.sock",
     CHATGPT_SHELL_COMMAND_PATH="/bin",
     CHATGPT_SHELL_BASH="bash",
@@ -200,7 +199,7 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("--user=agent-workspaces", argv[-1])
         self.assertIn("--setenv=PATH=/bin", argv[-1])
         self.assertIn("--non-interactive", argv[-1])
-        self.assertIn("SSH_AUTH_SOCK", argv[-1])
+        self.assertNotIn("SSH_AUTH_SOCK", argv[-1])
         self.assertIn("id -u; touch should-not-be-interpreted", argv[-1])
 
     def test_remote_command_uses_existing_ssh_without_extra_workers(self):

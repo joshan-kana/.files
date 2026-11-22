@@ -37,7 +37,6 @@ class RemoteTarget:
 
 
 CREDENTIALS = os.environ["CREDENTIALS_DIRECTORY"]
-SUDO_AGENT = os.environ["SSH_AUTH_SOCK"]
 REMOTE_AUTH_AGENT = os.environ["CHATGPT_SHELL_REMOTE_AUTH_AGENT"]
 LOCAL = [os.environ["CHATGPT_SHELL_BASH"], "-lc"]
 COMMAND_PATH = os.environ["CHATGPT_SHELL_COMMAND_PATH"]
@@ -122,9 +121,7 @@ async def _herdr(host: Host, arguments: list[str], *, stdin: str | None = None) 
 def _command_env(host: Host, *, elevated: bool = False) -> dict[str, str]:
     """Keep credential forwarding separate from ordinary remote SSH commands."""
     environment = {key: value for key, value in COMMAND_ENV.items() if key not in ("SSH_AUTH_SOCK", "GH_TOKEN")}
-    if host == LOCAL_HOST:
-        environment["SSH_AUTH_SOCK"] = SUDO_AGENT
-    elif elevated and host == "nixos-arm-parallels":
+    if elevated and host == "nixos-arm-parallels":
         environment["SSH_AUTH_SOCK"] = REMOTE_AUTH_AGENT
     return environment
 
@@ -220,9 +217,7 @@ def _build_argv(host: Host, script: str) -> list[str]:
     if host == LOCAL_HOST:
         return [
             *LOCAL,
-            f"export PATH={shlex.quote(COMMAND_PATH)}:$PATH\n"
-            f"export SSH_AUTH_SOCK={shlex.quote(SUDO_AGENT)}\n"
-            f"exec {_worker_command(script)}",
+            f"export PATH={shlex.quote(COMMAND_PATH)}:$PATH\nexec {_worker_command(script)}",
         ]
     target = REMOTE_TARGETS[host]
     return [
@@ -240,7 +235,7 @@ def _build_elevated_argv(host: Host, script: str) -> list[str]:
     if host == LOCAL_HOST:
         return [
             *LOCAL,
-            f"export PATH={shlex.quote(COMMAND_PATH)}:$PATH\nexport SSH_AUTH_SOCK={shlex.quote(SUDO_AGENT)}\n{script}",
+            f"export PATH={shlex.quote(COMMAND_PATH)}:$PATH\n{script}",
         ]
     if host != "nixos-arm-parallels":
         raise PermissionError(f"elevation broker unavailable on {host}")
