@@ -23,15 +23,24 @@ test("compact media actions disappear with no player without hiding paused media
   assert.doesNotMatch(card, /visible: card.media.playing/);
 });
 
-test("Now Playing hides shuffle and repeat without a media player", () => {
+test("Now Playing keeps shuffle and repeat visible but disabled without a player", () => {
   const full = qml("MediaContent.qml");
-  assert.match(
-    full,
-    /title: content.media.shuffled \? "SHUFFLE ON" : "SHUFFLE OFF"\s*visible: content.media.available/,
-  );
-  assert.match(
-    full,
-    /title: "REPEAT " \+ content.media.repeatLabel\s*visible: content.media.available/,
-  );
-  assert.doesNotMatch(full, /visible: content.media.playing/);
+  for (const [title, availability] of [
+    [
+      'title: content.media.shuffled ? "SHUFFLE ON" : "SHUFFLE OFF"',
+      "shuffleAvailable",
+    ],
+    ['title: "REPEAT " + content.media.repeatLabel', "repeatAvailable"],
+  ]) {
+    const start = full.indexOf(title);
+    assert.notEqual(start, -1, `missing action ${title}`);
+    const end = full.indexOf("onActivated:", start);
+    assert.notEqual(end, -1, `missing activation for ${title}`);
+    const action = full.slice(start, end);
+    assert.doesNotMatch(action, /visible:\s*content.media.available/);
+    assert.match(
+      action,
+      new RegExp(`enabled: content\\.media\\.${availability}`),
+    );
+  }
 });
