@@ -1,7 +1,9 @@
 """Regression tests for scoped operator authorization and replay protection."""
 
 import asyncio
+import contextlib
 import importlib.util
+import io
 import json
 import sys
 import tempfile
@@ -70,6 +72,32 @@ class AuthorizationTests(unittest.IsolatedAsyncioTestCase):
         await operation
         self.assertFalse((authorization.APPROVAL_DIR / "decisions" / f"{ident}.json").exists())
         self.assertFalse((authorization.APPROVAL_DIR / "pending" / f"{ident}.json").exists())
+
+    async def test_approval_is_bound_to_stdin_and_displays_exact_text(self):
+        """Bind submitted standard input and escape untrusted terminal control sequences."""
+        ident = self.ident()
+        payload = "first\n\x1b[2Jsecond"
+        operation = asyncio.create_task(authorization.authorize(ident, "server", "elevation", "cat", "/tmp\nforged", payload))
+        pending = await self.await_pending(ident)
+        request = json.loads(pending.read_text())
+        self.assertEqual(request["stdin"], payload)
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            authorization._list()
+        self.assertNotIn("\x1b", output.getvalue())
+        self.assertIn(r"\u001b", output.getvalue())
+        self.assertIn(r"\nforged", output.getvalue())
+        self.assertIn(r"first\n", output.getvalue())
+        authorization._decide(ident, "approve")
+        await operation
+
+    async def test_unreviewably_large_stdin_is_rejected(self):
+        """Never approve a truncated view of a submitted input stream."""
+        with self.assertRaisesRegex(PermissionError, "stdin exceeds"):
+            await authorization.authorize(
+                self.ident(), "server", "elevation", "cat", None, "x" * (authorization.MAX_REVIEW_STDIN_BYTES + 1)
+            )
+        self.assertFalse((authorization.APPROVAL_DIR / "pending").exists())
 
     async def test_human_denial_and_timeout(self):
         """Denials and unanswered requests fail closed."""

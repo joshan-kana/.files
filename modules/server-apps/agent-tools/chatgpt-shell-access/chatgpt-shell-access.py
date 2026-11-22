@@ -326,6 +326,7 @@ async def _run(job: Job, command: str, cwd: str | None, stdin: str | None) -> No
             "elevation" if job.elevated else "commands",
             command,
             cwd,
+            stdin,
         )
         job.awaiting_approval = False
         build = _build_elevated_argv if job.elevated else _build_argv

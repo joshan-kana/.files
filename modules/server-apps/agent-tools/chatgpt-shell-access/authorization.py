@@ -13,6 +13,7 @@ APPROVAL_DIR = Path(os.environ.get("CHATGPT_SHELL_APPROVAL_DIR", "/run/chatgpt-s
 STATE_DIR = Path(os.environ.get("CHATGPT_SHELL_STATE_DIR", "/var/lib/chatgpt-shell-access"))
 DEFAULTS_FILE = Path(os.environ.get("CHATGPT_SHELL_POLICIES_FILE", "/etc/chatgpt-shell-policies.json"))
 APPROVAL_TIMEOUT = 300
+MAX_REVIEW_STDIN_BYTES = 16 * 1024
 MODES = {"automatic", "ask", "deny"}
 KINDS = {"commands", "elevation"}
 
@@ -93,7 +94,14 @@ def audit(event: str, details: dict) -> None:
         output.write(json.dumps({"at": time.time(), "event": event, **details}, sort_keys=True) + "\n")
 
 
-async def authorize(request_id: str, host: str, kind: str, command: str, cwd: str | None) -> None:
+async def authorize(
+    request_id: str,
+    host: str,
+    kind: str,
+    command: str,
+    cwd: str | None,
+    stdin: str | None = None,
+) -> None:
     """Wait for a one-time human decision where the effective policy requires it."""
     mode = effective(host, kind)
     if mode == "deny":
@@ -103,6 +111,9 @@ async def authorize(request_id: str, host: str, kind: str, command: str, cwd: st
         audit("allowed-by-policy", {"request": request_id, "host": host, "kind": kind})
         return
 
+    if stdin is not None and len(stdin.encode()) > MAX_REVIEW_STDIN_BYTES:
+        raise PermissionError("stdin exceeds the maximum size for an operator-reviewed command")
+
     _prepare()
     request = {
         "id": request_id,
@@ -110,6 +121,7 @@ async def authorize(request_id: str, host: str, kind: str, command: str, cwd: st
         "kind": kind,
         "command": command,
         "cwd": cwd,
+        "stdin": stdin,
         "expires_at": time.time() + APPROVAL_TIMEOUT,
     }
     digest = _digest(request)
@@ -155,8 +167,10 @@ def _list() -> None:
         if request["expires_at"] <= time.time():
             continue
         print(f"{request['id']}  {request['host']}  {request['kind']}")
-        print(f"  cwd: {request['cwd'] or '(home)'}")
-        print(f"  command: {request['command']}")
+        print(f"  cwd: {json.dumps(request['cwd'], ensure_ascii=True)}")
+        print(f"  command: {json.dumps(request['command'], ensure_ascii=True)}")
+        if request.get("stdin") is not None:
+            print(f"  stdin: {json.dumps(request['stdin'], ensure_ascii=True)}")
 
 
 def _decide(request_id: str, decision: str) -> None:
