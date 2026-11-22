@@ -15,7 +15,8 @@ fi
 [ -f "$video" ] || exit 1
 case "${video,,}" in *.mp4 | *.webm | *.mkv | *.mov) ;; *) exit 0 ;; esac
 [ ! -f "$XDG_RUNTIME_DIR/desktop-shell-wallpaper-motion-disabled" ] || exit 0
-options='no-audio loop-file=inf hwdec=auto'
+# A background player keeps diagnostics, not the per-frame terminal status.
+options='no-audio loop-file=inf hwdec=auto quiet=yes input-terminal=no'
 [ "$resize" != crop ] || options="$options panscan=1"
 if [ "$output" != all ]; then
   exec mpvpaper -p -a full -l background -o "$options" "$output" "$video"

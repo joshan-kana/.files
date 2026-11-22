@@ -69,6 +69,28 @@ class DesktopScriptTests(unittest.TestCase):
         source.chmod(0o700)
         return source
 
+    def test_video_wallpaper_keeps_diagnostics_without_terminal_progress(self):
+        """Both video launch paths retain diagnostics without terminal status output."""
+        output = "Sample-Output"
+        video = self.home / "wallpaper.mp4"
+        video.write_bytes(b"fixture")
+        wallpapers = self.state / "desktop-shell" / "wallpapers"
+        wallpapers.mkdir(parents=True)
+        self.executable("mpvpaper", 'printf "%s\\n" "$@" > "$XDG_RUNTIME_DIR/mpvpaper-args"')
+        self.executable("awww", f"echo ': {output}: 100x100'")
+
+        for target, resize in ((output, "crop"), ("all", "fit")):
+            (wallpapers / f"{target}.wall").write_text(f"{resize}\n{video}\n")
+            result = self.run_script(SCRIPTS / "wallpaper-video-from-state.sh", target)
+            arguments = (self.runtime / "mpvpaper-args").read_text().splitlines()
+            self.assertIn("-o", arguments, result.stderr)
+            options = arguments[arguments.index("-o") + 1].split()
+            self.assertTrue({"quiet=yes", "input-terminal=no", "no-audio", "loop-file=inf", "hwdec=auto"}.issubset(options))
+            self.assertEqual("panscan=1" in options, resize == "crop")
+            self.assertEqual(arguments[-2:], [output, str(video)])
+            if target != "all":
+                (wallpapers / f"{target}.wall").unlink()
+
     def test_recording_start_acknowledges_service_owned_state(self):
         """Successful service admission is not merely a queued systemd job."""
         self.executable(
