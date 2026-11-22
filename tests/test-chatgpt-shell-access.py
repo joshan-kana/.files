@@ -58,7 +58,7 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         """Prepare an isolated shell server for each test."""
         shell.jobs.clear()
-        self.argv = patch.object(shell, "_build_argv", side_effect=lambda _host, script: ["bash", "-c", script])
+        self.argv = patch.object(shell, "_build_argv", side_effect=lambda _host, script, **_kwargs: ["bash", "-c", script])
         self.argv.start()
         self.env = patch.object(
             shell, "_command_env", side_effect=lambda _host, **_kwargs: {**shell.COMMAND_ENV, "HOME": os.environ["HOME"]}
@@ -202,6 +202,10 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("SSH_AUTH_SOCK", argv[-1])
         self.assertIn("id -u; touch should-not-be-interpreted", argv[-1])
 
+    def test_core_exec_uses_named_run0_unit_for_interruption(self):
+        """A Core exec has one named worker unit that can receive SIGINT."""
+        self.assertIn("--unit=chatgpt-hc-test", shell._worker_command("true", "chatgpt-hc-test"))
+
     def test_remote_command_uses_existing_ssh_without_extra_workers(self):
         """Remote commands use the configured SSH identity, without extra Herdr daemons."""
         self.argv.stop()
@@ -326,11 +330,32 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         process.communicate.side_effect = asyncio.CancelledError()
         with (
             patch.object(shell.asyncio, "create_subprocess_exec", return_value=process),
+            patch.object(shell, "_interrupt_worker_unit", new_callable=AsyncMock) as interrupt,
             self.assertRaises(asyncio.CancelledError),
         ):
             await shell._herdr("local", ["exec", "--json"])
-        process.send_signal.assert_called_once_with(signal.SIGINT)
+        interrupt.assert_awaited_once()
+        self.assertTrue(interrupt.call_args.args[0].startswith("chatgpt-hc-"))
+        process.send_signal.assert_not_called()
         process.kill.assert_not_called()
+
+    async def test_failed_core_interruption_is_not_reported_as_cancelled(self):
+        """A failed kill must not be mistaken for an acknowledged cancellation."""
+        started = asyncio.Event()
+
+        async def native(_host, _args, *, stdin):
+            started.set()
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                raise RuntimeError("Core command cancellation was not confirmed") from None
+
+        with patch.object(shell, "_herdr", side_effect=native):
+            job = await shell.shell_exec("local", "sleep 60", wait_seconds=0)
+            await asyncio.wait_for(started.wait(), timeout=2)
+            result = await shell.shell_cancel(job["request_id"])
+        self.assertEqual(result["status"], "failed")
+        self.assertIn("not confirmed", result["error"])
 
     async def test_remote_shell_exec_uses_ssh_not_herdr(self):
         """Remote operations keep working even if the host has no Herdr installed."""

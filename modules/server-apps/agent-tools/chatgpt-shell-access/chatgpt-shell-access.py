@@ -72,6 +72,7 @@ WORKER_ENV = json.loads(os.environ["CHATGPT_SHELL_WORKER_ENV"])
 HERDR_SESSION = WORKER_ENV["HC_SESSION"]
 WORKER_USER = os.environ["CHATGPT_SHELL_WORKER"]
 RUN0 = os.environ.get("CHATGPT_SHELL_RUN0", "run0")
+SYSTEMCTL = os.path.join(os.path.dirname(RUN0), "systemctl")
 
 
 def _require_local_herdr(host: Host) -> None:
@@ -80,17 +81,43 @@ def _require_local_herdr(host: Host) -> None:
         raise ValueError(f"Herdr sessions are hosted on {LOCAL_HOST}; remote commands use SSH")
 
 
-def _herdr_argv(host: Host, arguments: list[str]) -> list[str]:
+def _herdr_argv(host: Host, arguments: list[str], *, unit_name: str | None = None) -> list[str]:
     """Herdr Core lives only on the server, under its restricted worker identity."""
     _require_local_herdr(host)
     command = f"unset SSH_AUTH_SOCK GH_TOKEN; export HC_SESSION={shlex.quote(HERDR_SESSION)}; exec {shlex.join([HERDR_LOCAL, *arguments])}"
-    return _build_argv(LOCAL_HOST, command)
+    return _build_argv(LOCAL_HOST, command, unit_name=unit_name)
+
+
+async def _interrupt_worker_unit(unit_name: str) -> None:
+    """Send SIGINT to the actual Core CLI process, not its run0 client."""
+    process = await asyncio.create_subprocess_exec(
+        RUN0,
+        "--non-interactive",
+        "--pipe",
+        SYSTEMCTL,
+        "kill",
+        "--signal=SIGINT",
+        "--kill-whom=main",
+        f"{unit_name}.service",
+        stdin=asyncio.subprocess.DEVNULL,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    try:
+        _, stderr = await asyncio.wait_for(process.communicate(), timeout=5)
+    except TimeoutError:
+        process.kill()
+        await process.wait()
+        raise RuntimeError("Core worker interruption timed out") from None
+    if process.returncode != 0:
+        raise RuntimeError(f"Core worker interruption failed: {stderr.decode(errors='replace')[:1024]}")
 
 
 async def _herdr(host: Host, arguments: list[str], *, stdin: str | None = None) -> dict[str, object]:
     """Invoke the native Herdr CLI with a bounded response and no privileged agent forwarding."""
+    unit_name = f"chatgpt-hc-{uuid.uuid4().hex}" if arguments[0] == "exec" else None
     process = await asyncio.create_subprocess_exec(
-        *_herdr_argv(host, arguments),
+        *_herdr_argv(host, arguments, unit_name=unit_name),
         stdin=asyncio.subprocess.PIPE if stdin is not None else asyncio.subprocess.DEVNULL,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
@@ -105,15 +132,19 @@ async def _herdr(host: Host, arguments: list[str], *, stdin: str | None = None) 
             timeout=HERDR_EXEC_TIMEOUT_SECONDS + 20 if arguments[0] == "exec" else 20,
         )
     except asyncio.CancelledError:
-        # Core-owned execs can outlive a client killed with SIGKILL.
-        # An interrupt lets the native client cancel its remote operation.
-        with suppress(ProcessLookupError):
-            process.send_signal(signal.SIGINT)
+        # run0 runs the Core CLI in a separate service. Signalling only the
+        # gateway's run0 client leaves the Core-owned command running.
         try:
+            if unit_name is not None:
+                await _interrupt_worker_unit(unit_name)
+            else:
+                with suppress(ProcessLookupError):
+                    process.send_signal(signal.SIGINT)
             await asyncio.wait_for(process.wait(), timeout=CANCEL_GRACE_SECONDS)
-        except TimeoutError:
+        except (RuntimeError, TimeoutError) as exc:
             process.kill()
             await process.wait()
+            raise RuntimeError("Core command cancellation was not confirmed") from exc
         raise
     except TimeoutError:
         process.kill()
@@ -203,12 +234,13 @@ def _validate_cwd(cwd: str | None) -> str | None:
     return cwd
 
 
-def _worker_command(script: str) -> str:
+def _worker_command(script: str, unit_name: str | None = None) -> str:
     """Enter the server's restricted identity before interpreting an agent script."""
     arguments = [
         RUN0,
         "--non-interactive",
         "--pipe",
+        *([f"--unit={unit_name}"] if unit_name else []),
         f"--user={WORKER_USER}",
         f"--chdir={WORKER_ENV['HOME']}",
         *(f"--setenv={key}={value}" for key, value in WORKER_ENV.items()),
@@ -221,12 +253,12 @@ def _worker_command(script: str) -> str:
     return shlex.join(arguments)
 
 
-def _build_argv(host: Host, script: str) -> list[str]:
+def _build_argv(host: Host, script: str, *, unit_name: str | None = None) -> list[str]:
     """Run server commands in Herdr's worker; other hosts use existing SSH targets."""
     if host == LOCAL_HOST:
         return [
             *LOCAL,
-            f"export PATH={shlex.quote(COMMAND_PATH)}:$PATH\nexec {_worker_command(script)}",
+            f"export PATH={shlex.quote(COMMAND_PATH)}:$PATH\nexec {_worker_command(script, unit_name)}",
         ]
     target = REMOTE_TARGETS[host]
     return [
@@ -381,10 +413,10 @@ def _payload(job: Job, *, include_output: bool = True) -> dict[str, object]:
     end = job.completed_at or time.monotonic()
     if job.completed_at is None:
         status = "awaiting_approval" if job.awaiting_approval else "running"
-    elif job.cancel_requested:
-        status = "cancelled"
     elif job.error:
         status = "failed"
+    elif job.cancel_requested:
+        status = "cancelled"
     else:
         status = "completed"
     payload: dict[str, object] = {
