@@ -86,7 +86,7 @@ in
       Group = worker;
       WorkingDirectory = stateRoot;
       ExecStart = "${pkgs.herdr-core}/bin/herdr-core serve";
-      Restart = "on-failure";
+      Restart = "always";
       RestartSec = "2s";
       RuntimeDirectory = worker;
       RuntimeDirectoryMode = "0700";
