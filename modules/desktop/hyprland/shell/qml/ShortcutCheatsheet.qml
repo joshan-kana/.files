@@ -108,10 +108,10 @@ Item {
         } else if (!search.activeFocus && event.key === window.runtime.shellKeyCode("help", "Question")) {
             helpOpen = true;
             event.accepted = true;
-        } else if (event.key === window.runtime.shellKeyCode("help", "Up") || (!search.activeFocus && event.key === window.runtime.shellKeyCode("help", "K"))) {
+        } else if (window.runtime.shellNavigates("help", "up", event.key, search.activeFocus ? "arrows" : "all")) {
             flick.contentY = Math.max(0, flick.contentY - 72);
             event.accepted = true;
-        } else if (event.key === window.runtime.shellKeyCode("help", "Down") || (!search.activeFocus && event.key === window.runtime.shellKeyCode("help", "J"))) {
+        } else if (window.runtime.shellNavigates("help", "down", event.key, search.activeFocus ? "arrows" : "all")) {
             flick.contentY = Math.min(Math.max(0, flick.contentHeight - flick.height), flick.contentY + 72);
             event.accepted = true;
         } else if (event.key === window.runtime.shellKeyCode("help", "PageUp") || (!search.activeFocus && event.key === window.runtime.shellKeyCode("help", "U"))) {

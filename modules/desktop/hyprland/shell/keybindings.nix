@@ -69,6 +69,8 @@
     Z = "Z";
   };
 
+  inherit ((import ../keybindings.nix)) navigation;
+
   # Optional scope-specific slot overrides. Keep unrelated panels independent.
   overrides = { };
 
@@ -86,11 +88,11 @@
   hints = {
     "AudioMixerContent.level" = {
       scope = "mixer";
-      template = "H/L · ←/→";
+      template = "NAV_HORIZONTAL";
     };
     "AudioMixerContent.select" = {
       scope = "mixer";
-      template = "J/K · ↓/↑";
+      template = "NAV_VERTICAL";
     };
     "BluetoothPanel.activate" = {
       scope = "controls";
@@ -114,7 +116,7 @@
     };
     "BluetoothPanel.select" = {
       scope = "controls";
-      template = "J/K · ↓/↑";
+      template = "NAV_VERTICAL";
     };
     "BluetoothPanel.trust" = {
       scope = "controls";
@@ -130,7 +132,7 @@
     };
     "CalendarContent.days" = {
       scope = "calendar";
-      template = "H/L · ←/→";
+      template = "NAV_HORIZONTAL";
     };
     "CalendarContent.events" = {
       scope = "calendar";
@@ -138,11 +140,11 @@
     };
     "CalendarContent.months" = {
       scope = "calendar";
-      template = "J/K · ↓/↑ · PGUP/PGDN";
+      template = "NAV_VERTICAL · PGUP/PGDN";
     };
     "CalendarContent.selectCalendar" = {
       scope = "calendar";
-      template = "J/K · ↓/↑";
+      template = "NAV_VERTICAL";
     };
     "CalendarContent.today" = {
       scope = "calendar";
@@ -166,11 +168,11 @@
     };
     "ClipboardPanel.navigateList" = {
       scope = "clipboard";
-      template = "J/K · ↓/↑";
+      template = "NAV_VERTICAL";
     };
     "ClipboardPanel.navigateSearch" = {
       scope = "clipboard";
-      template = "↓/↑";
+      template = "NAV_VERTICAL_ARROWS";
     };
     "CommandPalette.actionMenu" = {
       scope = "palette";
@@ -218,15 +220,15 @@
     };
     "CommandPalette.select" = {
       scope = "palette";
-      template = "J/K · ↓/↑";
+      template = "NAV_VERTICAL";
     };
     "CommandPalette.navigateSearch" = {
       scope = "palette";
-      template = "↓/↑";
+      template = "NAV_VERTICAL_ARROWS";
     };
     "CommandPalette.selectResults" = {
       scope = "palette";
-      template = "J/K · ↓/↑";
+      template = "NAV_VERTICAL";
     };
     "CommandPalette.unified" = {
       scope = "palette";
@@ -294,7 +296,7 @@
     };
     "NetworkPanel.listScroll" = {
       scope = "controls";
-      template = "J/K · ↓/↑";
+      template = "NAV_VERTICAL";
     };
     "NetworkPanel.passwordCancel" = {
       scope = "controls";
@@ -314,7 +316,7 @@
     };
     "NetworkPanel.select" = {
       scope = "controls";
-      template = "J/K · ↓/↑";
+      template = "NAV_VERTICAL";
     };
     "NetworkPanel.toggleWifi" = {
       scope = "controls";
@@ -330,7 +332,7 @@
     };
     "NotificationContent.groups" = {
       scope = "activity";
-      template = "H/L · ←/→";
+      template = "NAV_HORIZONTAL";
     };
     "NotificationContent.history" = {
       scope = "activity";
@@ -346,7 +348,7 @@
     };
     "NotificationContent.navigate" = {
       scope = "activity";
-      template = "J/K · ↓/↑";
+      template = "NAV_VERTICAL";
     };
     "NotificationContent.presentation" = {
       scope = "activity";
@@ -382,7 +384,7 @@
     };
     "OverviewPanel.navigate" = {
       scope = "overview";
-      template = "H/J/K/L · ←/↓/↑/→";
+      template = "NAV_ALL";
     };
     "OverviewPanel.open" = {
       scope = "overview";
@@ -390,7 +392,7 @@
     };
     "OverviewPanel.target" = {
       scope = "overview";
-      template = "H/L · ←/→";
+      template = "NAV_HORIZONTAL";
     };
     "OverviewPanel.toggleFloating" = {
       scope = "overview";
@@ -418,7 +420,7 @@
     };
     "RecordingLibrary.choose" = {
       scope = "controls";
-      template = "J/K · ↓/↑";
+      template = "NAV_VERTICAL";
     };
     "RecordingLibrary.copy" = {
       scope = "controls";
@@ -446,11 +448,11 @@
     };
     "RecordingLibrary.word" = {
       scope = "controls";
-      template = "H/L · ←/→";
+      template = "NAV_HORIZONTAL";
     };
     "RecordingLibrary.extend" = {
       scope = "controls";
-      template = "SHIFT+H/L · SHIFT+←/→";
+      template = "NAV_HORIZONTAL_SHIFT";
     };
     "RecordingLibrary.refresh" = {
       scope = "controls";
@@ -506,11 +508,11 @@
     };
     "ScreenshotPicker.move" = {
       scope = "capture";
-      template = "H/J/K/L · ←/↓/↑/→";
+      template = "NAV_ALL";
     };
     "ScreenshotPicker.resize" = {
       scope = "capture";
-      template = "SHIFT+H/J/K/L · SHIFT+←/↓/↑/→";
+      template = "NAV_ALL_SHIFT";
     };
     "SessionPanel.confirm" = {
       scope = "controls";
@@ -526,7 +528,7 @@
     };
     "SessionPanel.move" = {
       scope = "controls";
-      template = "H/J/K/L · ←/↓/↑/→";
+      template = "NAV_ALL";
     };
     "SessionPanel.reboot" = {
       scope = "controls";
@@ -582,11 +584,11 @@
     };
     "ShortcutCheatsheet.scrollSearch" = {
       scope = "help";
-      template = "↓/↑";
+      template = "NAV_VERTICAL_ARROWS";
     };
     "ShortcutCheatsheet.scroll" = {
       scope = "help";
-      template = "J/K · ↓/↑";
+      template = "NAV_VERTICAL";
     };
     "ShortcutCheatsheet.search" = {
       scope = "help";
@@ -606,15 +608,15 @@
     };
     "SystemContent.audioAdjust" = {
       scope = "controls";
-      template = "H/L · ←/→";
+      template = "NAV_HORIZONTAL";
     };
     "SystemContent.audioLevel" = {
       scope = "controls";
-      template = "H/L · ←/→";
+      template = "NAV_HORIZONTAL";
     };
     "SystemContent.audioSelect" = {
       scope = "controls";
-      template = "J/K · ↓/↑";
+      template = "NAV_VERTICAL";
     };
     "SystemContent.bar" = {
       scope = "controls";
@@ -678,7 +680,7 @@
     };
     "SystemContent.rowSelect" = {
       scope = "controls";
-      template = "J/K · ↓/↑";
+      template = "NAV_VERTICAL";
     };
     "SystemContent.session" = {
       scope = "controls";
@@ -730,7 +732,7 @@
     };
     "ThemePanel.columns" = {
       scope = "controls";
-      template = "H/L · ←/→";
+      template = "NAV_HORIZONTAL";
     };
     "ThemePanel.page" = {
       scope = "controls";
@@ -738,7 +740,7 @@
     };
     "ThemePanel.rows" = {
       scope = "controls";
-      template = "J/K · ↓/↑";
+      template = "NAV_VERTICAL";
     };
     "ThemePanel.search" = {
       scope = "controls";
@@ -746,7 +748,7 @@
     };
     "WallpaperPanel.columns" = {
       scope = "controls";
-      template = "H/L · ←/→";
+      template = "NAV_HORIZONTAL";
     };
     "WallpaperPanel.default" = {
       scope = "controls";
@@ -766,7 +768,7 @@
     };
     "WallpaperPanel.rows" = {
       scope = "controls";
-      template = "J/K · ↓/↑";
+      template = "NAV_VERTICAL";
     };
     "WallpaperPanel.search" = {
       scope = "controls";
@@ -782,7 +784,7 @@
     };
     "WeatherContent.days" = {
       scope = "weather";
-      template = "H/J/K/L · ←/↓/↑/→";
+      template = "NAV_ALL";
     };
     "WeatherContent.refresh" = {
       scope = "weather";
@@ -826,7 +828,7 @@
     };
     "MediaContent.legend.seek" = {
       scope = "media";
-      template = "H/L · ←/→";
+      template = "NAV_HORIZONTAL";
     };
     "MediaContent.legend.seek_1" = {
       scope = "media";
@@ -842,19 +844,19 @@
     };
     "MediaTransport.back" = {
       scope = "media";
-      template = "H";
+      template = "NAV_KEY_LEFT_PRIMARY";
     };
     "MediaTransport.backCompact" = {
       scope = "media";
-      template = "SHIFT+H";
+      template = "NAV_KEY_LEFT_PRIMARY_SHIFT";
     };
     "MediaTransport.forward" = {
       scope = "media";
-      template = "L";
+      template = "NAV_KEY_RIGHT_PRIMARY";
     };
     "MediaTransport.forwardCompact" = {
       scope = "media";
-      template = "SHIFT+L";
+      template = "NAV_KEY_RIGHT_PRIMARY_SHIFT";
     };
     "MediaTransport.next" = {
       scope = "media";
@@ -870,19 +872,19 @@
     };
     "ResizeOverlay.legend.move" = {
       scope = "resize";
-      template = "L";
+      template = "NAV_KEY_RIGHT_PRIMARY";
     };
     "ResizeOverlay.legend.move_1" = {
       scope = "resize";
-      template = "H";
+      template = "NAV_KEY_LEFT_PRIMARY";
     };
     "ResizeOverlay.legend.move_2" = {
       scope = "resize";
-      template = "J";
+      template = "NAV_KEY_DOWN_PRIMARY";
     };
     "ResizeOverlay.legend.move_3" = {
       scope = "resize";
-      template = "K";
+      template = "NAV_KEY_UP_PRIMARY";
     };
     "ShellExpansionHost.controlsPageDown" = {
       scope = "hub";
@@ -894,11 +896,11 @@
     };
     "ShellExpansionHost.helpArrowDown" = {
       scope = "hub";
-      template = "Down";
+      template = "NAV_KEY_DOWN_ARROW";
     };
     "ShellExpansionHost.helpArrowUp" = {
       scope = "hub";
-      template = "Up";
+      template = "NAV_KEY_UP_ARROW";
     };
     "ShellExpansionHost.helpClose" = {
       scope = "hub";
@@ -910,11 +912,11 @@
     };
     "ShellExpansionHost.helpScroll" = {
       scope = "hub";
-      template = "J/K · ↓/↑";
+      template = "NAV_VERTICAL";
     };
     "ShellExpansionHost.helpDown" = {
       scope = "hub";
-      template = "J";
+      template = "NAV_KEY_DOWN_PRIMARY";
     };
     "ShellExpansionHost.helpOpen" = {
       scope = "hub";
@@ -938,11 +940,11 @@
     };
     "ShellExpansionHost.helpUp" = {
       scope = "hub";
-      template = "K";
+      template = "NAV_KEY_UP_PRIMARY";
     };
     "ShellExpansionHost.legend.browse_forecast_days" = {
       scope = "hub";
-      template = "H/J/K/L · ←/↓/↑/→";
+      template = "NAV_ALL";
     };
     "ShellExpansionHost.legend.choose_visible_calendars" = {
       scope = "hub";
@@ -974,7 +976,7 @@
     };
     "ShellExpansionHost.legend.navigate_notifications" = {
       scope = "hub";
-      template = "J/K · ↓/↑";
+      template = "NAV_VERTICAL";
     };
     "ShellExpansionHost.legend.open_forecast" = {
       scope = "hub";
@@ -982,11 +984,11 @@
     };
     "ShellExpansionHost.legend.previous_next_day" = {
       scope = "hub";
-      template = "H/L · ←/→";
+      template = "NAV_HORIZONTAL";
     };
     "ShellExpansionHost.legend.previous_next_month" = {
       scope = "hub";
-      template = "J/K · ↓/↑ · PGUP/PGDN";
+      template = "NAV_VERTICAL · PGUP/PGDN";
     };
     "ShellExpansionHost.legend.refresh_agenda" = {
       scope = "hub";
@@ -1002,7 +1004,7 @@
     };
     "ShellExpansionHost.legend.select_a_notification_group" = {
       scope = "hub";
-      template = "H/L · ←/→";
+      template = "NAV_HORIZONTAL";
     };
     "ShellExpansionHost.legend.toggle_read_mark_all_read" = {
       scope = "hub";
@@ -1042,7 +1044,7 @@
     };
     "ShortcutCheatsheet.legend.scroll_down_up" = {
       scope = "help";
-      template = "J/K · ↓/↑";
+      template = "NAV_VERTICAL";
     };
     "ShortcutCheatsheet.legend.switch_search_navigation" = {
       scope = "help";
@@ -1066,7 +1068,7 @@
     };
     "SystemContent.legend.adjust_selected_level" = {
       scope = "controls";
-      template = "H/L · ←/→";
+      template = "NAV_HORIZONTAL";
     };
     "SystemContent.legend.advanced_network_editor" = {
       scope = "controls";
@@ -1106,11 +1108,11 @@
     };
     "SystemContent.legend.choose_theme_in_the_grid" = {
       scope = "controls";
-      template = "H/J/K/L · ←/↓/↑/→";
+      template = "NAV_ALL";
     };
     "SystemContent.legend.choose_thumbnail" = {
       scope = "controls";
-      template = "H/J/K/L · ←/↓/↑/→";
+      template = "NAV_ALL";
     };
     "SystemContent.legend.close" = {
       scope = "controls";
@@ -1166,7 +1168,7 @@
     };
     "SystemContent.legend.h_l" = {
       scope = "controls";
-      template = "H/L · ←/→";
+      template = "NAV_HORIZONTAL";
     };
     "SystemContent.legend.hardware_display_brightness_and_volume_style_osd" = {
       scope = "controls";
@@ -1191,7 +1193,7 @@
     };
     "SystemContent.legend.navigate_actions" = {
       scope = "controls";
-      template = "H/J/K/L · ←/↓/↑/→";
+      template = "NAV_ALL";
     };
     "SystemContent.legend.night_light_warmer_cooler" = {
       scope = "controls";
@@ -1247,7 +1249,7 @@
     };
     "SystemContent.legend.seek_backward_forward" = {
       scope = "controls";
-      template = "SHIFT+H/L";
+      template = "NAV_HORIZONTAL_PRIMARY_SHIFT";
     };
     "SystemContent.legend.select_activate_tray_app" = {
       scope = "controls";
@@ -1255,11 +1257,11 @@
     };
     "SystemContent.legend.select_clip_half_page" = {
       scope = "controls";
-      template = "J/K · ↓/↑ · U/⇧D · PGUP/PGDN";
+      template = "NAV_VERTICAL · U/⇧D · PGUP/PGDN";
     };
     "SystemContent.legend.select_device" = {
       scope = "controls";
-      template = "J/K · ↓/↑ · U/D · PGUP/PGDN";
+      template = "NAV_VERTICAL · U/D · PGUP/PGDN";
     };
     "SystemContent.legend.select_device_21" = {
       scope = "controls";
@@ -1267,15 +1269,15 @@
     };
     "SystemContent.legend.select_item" = {
       scope = "controls";
-      template = "J/K · ↓/↑ · U/D · PGUP/PGDN";
+      template = "NAV_VERTICAL · U/D · PGUP/PGDN";
     };
     "SystemContent.legend.select_network" = {
       scope = "controls";
-      template = "J/K · ↓/↑ · U/D · PGUP/PGDN";
+      template = "NAV_VERTICAL · U/D · PGUP/PGDN";
     };
     "SystemContent.legend.select_output_input_or_stream_half_page" = {
       scope = "controls";
-      template = "J/K · ↓/↑ · TAB/SHIFT+TAB · U/D · PGUP/PGDN";
+      template = "NAV_VERTICAL · TAB/SHIFT+TAB · U/D · PGUP/PGDN";
     };
     "SystemContent.legend.shuffle_repeat_choose_player" = {
       scope = "controls";
@@ -1295,7 +1297,7 @@
     };
     "AdjustableSetting.level" = {
       scope = "controls";
-      template = "H/L · ←/→";
+      template = "NAV_HORIZONTAL";
     };
     "AudioDeviceControl.chooser" = {
       scope = "controls";
@@ -1331,7 +1333,7 @@
     };
     "CommandPalette.legendSelect" = {
       scope = "palette";
-      template = "J/K · ↓/↑";
+      template = "NAV_VERTICAL";
     };
     "CommandPalette.legendShiftEnter" = {
       scope = "palette";
@@ -1371,7 +1373,7 @@
     };
     "OpacitySetting.level" = {
       scope = "controls";
-      template = "H/L · ←/→";
+      template = "NAV_HORIZONTAL";
     };
     "ScreenshotPicker.toggleRecord" = {
       scope = "capture";
@@ -1379,11 +1381,11 @@
     };
     "SystemContent.legend.slider_selection" = {
       scope = "controls";
-      template = "J/K · ↓/↑ · TAB/SHIFT+TAB";
+      template = "NAV_VERTICAL · TAB/SHIFT+TAB";
     };
     "SystemContent.legend.audio_selection" = {
       scope = "controls";
-      template = "J/K · ↓/↑";
+      template = "NAV_VERTICAL";
     };
   };
 }

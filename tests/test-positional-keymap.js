@@ -19,7 +19,7 @@ const bindings = JSON.parse(
       "--impure",
       "--json",
       "--expr",
-      'import ./modules/desktop/hyprland/keybindings.nix { terminal = "terminal"; browser = "browser"; }',
+      '(import ./modules/desktop/hyprland/keybindings.nix).bindings { terminal = "terminal"; browser = "browser"; }',
     ],
     { cwd: repo, encoding: "utf8" },
   ),
@@ -143,7 +143,9 @@ test("the right-hand MEH app grid is complete and unambiguous", () => {
     assert.equal(global.get(`CTRL+ALT+SHIFT+${key}`), description);
 });
 
-test("HJKL and arrow-key navigation both remain available in widgets", () => {
+test("all directional widgets delegate keys to the shared navigation mapping", () => {
+  const runtime = qml("RuntimeConfig.qml");
+  assert.match(runtime, /ShellKeybindings\.navigates\(shellBindings,/);
   for (const name of [
     "SystemContent.qml",
     "ScreenshotPicker.qml",
@@ -156,11 +158,12 @@ test("HJKL and arrow-key navigation both remain available in widgets", () => {
     "AudioMixerContent.qml",
   ]) {
     const source = qml(name);
-    for (const key of ["H", "J", "K", "L", "Left", "Right", "Up", "Down"])
-      assert.match(
-        source,
-        new RegExp(`shellKeyCode\\("[^"]+", "${key}"\\)`),
-        `${name}: ${key}`,
+    for (const direction of ["left", "right", "up", "down"])
+      assert.ok(
+        new RegExp('shellNavigates\\("[^"]+", "' + direction + '",').test(
+          source,
+        ),
+        name + ": missing " + direction + " navigation",
       );
   }
 });

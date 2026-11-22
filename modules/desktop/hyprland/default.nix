@@ -157,7 +157,7 @@ in
           ];
         };
         exec = command: ''hl.dsp.exec_cmd("${command}")'';
-        keybindings = import ./keybindings.nix {
+        keybindings = (import ./keybindings.nix).bindings {
           inherit terminal;
           browser = config.dotfiles.defaults.browser;
         };

@@ -592,10 +592,10 @@ FocusScope {
                     if (helpKey || event.key === content.runtime.shellKeyCode("media", "Escape") || event.key === content.runtime.shellKeyCode("media", "Backspace")) {
                         content.helpOpen = false;
                         event.accepted = true;
-                    } else if (event.key === content.runtime.shellKeyCode("media", "J") || event.key === content.runtime.shellKeyCode("media", "Down")) {
+                    } else if (content.runtime.shellNavigates("media", "down", event.key)) {
                         content.helpScrollRequested(1);
                         event.accepted = true;
-                    } else if (event.key === content.runtime.shellKeyCode("media", "K") || event.key === content.runtime.shellKeyCode("media", "Up")) {
+                    } else if (content.runtime.shellNavigates("media", "up", event.key)) {
                         content.helpScrollRequested(-1);
                         event.accepted = true;
                     } else if (event.key === content.runtime.shellKeyCode("media", "D") || event.key === content.runtime.shellKeyCode("media", "PageDown")) {
@@ -638,10 +638,10 @@ FocusScope {
                 } else if (event.key === content.runtime.shellKeyCode("media", "Plus") || event.key === content.runtime.shellKeyCode("media", "Equal")) {
                     content.media.adjustSeekStep(1);
                     event.accepted = true;
-                } else if ((event.key === content.runtime.shellKeyCode("media", "Left") || event.key === content.runtime.shellKeyCode("media", "H"))) {
+                } else if ((content.runtime.shellNavigates("media", "left", event.key))) {
                     content.media.seekStep(-1);
                     event.accepted = true;
-                } else if ((event.key === content.runtime.shellKeyCode("media", "Right") || event.key === content.runtime.shellKeyCode("media", "L"))) {
+                } else if ((content.runtime.shellNavigates("media", "right", event.key))) {
                     content.media.seekStep(1);
                     event.accepted = true;
                 } else if (event.key === content.runtime.shellKeyCode("media", "Comma")) {

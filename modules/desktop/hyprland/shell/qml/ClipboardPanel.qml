@@ -369,10 +369,10 @@ Item {
                             } else if (event.key === panel.runtime.shellKeyCode("clipboard", "Escape")) {
                                 panel.hide();
                                 event.accepted = true;
-                            } else if (event.key === panel.runtime.shellKeyCode("clipboard", "Down")) {
+                            } else if (panel.runtime.shellNavigates("clipboard", "down", event.key, "arrows")) {
                                 panel.selectedIndex = Math.min(panel.filteredEntries.length - 1, panel.selectedIndex + 1);
                                 event.accepted = true;
-                            } else if (event.key === panel.runtime.shellKeyCode("clipboard", "Up")) {
+                            } else if (panel.runtime.shellNavigates("clipboard", "up", event.key, "arrows")) {
                                 panel.selectedIndex = Math.max(0, panel.selectedIndex - 1);
                                 event.accepted = true;
                             } else if (event.key === panel.runtime.shellKeyCode("clipboard", "Return") || event.key === panel.runtime.shellKeyCode("clipboard", "Enter")) {
@@ -409,9 +409,9 @@ Item {
                         search.forceActiveFocus();
                     } else if (event.key === panel.runtime.shellKeyCode("clipboard", "Escape")) {
                         panel.hide();
-                    } else if (event.key === panel.runtime.shellKeyCode("clipboard", "Down") || event.key === panel.runtime.shellKeyCode("clipboard", "J")) {
+                    } else if (panel.runtime.shellNavigates("clipboard", "down", event.key)) {
                         panel.selectedIndex = Math.min(panel.filteredEntries.length - 1, panel.selectedIndex + 1);
-                    } else if (event.key === panel.runtime.shellKeyCode("clipboard", "Up") || event.key === panel.runtime.shellKeyCode("clipboard", "K")) {
+                    } else if (panel.runtime.shellNavigates("clipboard", "up", event.key)) {
                         panel.selectedIndex = Math.max(0, panel.selectedIndex - 1);
                     } else if (event.key === panel.runtime.shellKeyCode("clipboard", "U") || event.key === panel.runtime.shellKeyCode("clipboard", "PageUp") || event.key === panel.runtime.shellKeyCode("clipboard", "D") || event.key === panel.runtime.shellKeyCode("clipboard", "PageDown")) {
                         const rowHeight = list.currentItem ? list.currentItem.height + list.spacing : 62;

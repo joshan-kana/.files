@@ -150,9 +150,7 @@ test("mixer selection follows visual left-to-right order before descending throu
     ["output", "input", "music", "browser", "recorder"],
   );
   assert.ok(
-    mixer.includes(
-      'key === mixer.runtime.shellKeyCode("mixer", "Down") || key === mixer.runtime.shellKeyCode("mixer", "J")',
-    ),
+    mixer.includes('mixer.runtime.shellNavigates("mixer", "down", key)'),
   );
   assert.ok(mixer.includes("function moveAudioSelection(delta: int)"));
 });

@@ -196,7 +196,7 @@ test("local OCR exposes selectable text and highlighted original-image coordinat
   );
   assert.match(
     shortcuts,
-    /"RecordingLibrary\.extend" = \{\s*scope = "controls";\s*template = "SHIFT\+H\/L[^"]*";/,
+    /"RecordingLibrary\.extend" = \{\s*scope = "controls";\s*template = "NAV_HORIZONTAL_SHIFT";/,
   );
   assert.match(library, /onActivated: library\.showText\(\)/);
   assert.match(controls, /shellMatchesHint\("RecordingLibrary\.ocr"/);

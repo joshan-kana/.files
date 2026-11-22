@@ -1453,10 +1453,10 @@ Item {
                         } else if (event.key === palette.runtime.shellKeyCode("palette", "Escape")) {
                             palette.dismissOrReset();
                             event.accepted = true;
-                        } else if (event.key === palette.runtime.shellKeyCode("palette", "Down")) {
+                        } else if (palette.runtime.shellNavigates("palette", "down", event.key, "arrows")) {
                             results.currentIndex = Math.min(displayedModel.values.length - 1, results.currentIndex + 1);
                             event.accepted = true;
-                        } else if (event.key === palette.runtime.shellKeyCode("palette", "Up")) {
+                        } else if (palette.runtime.shellNavigates("palette", "up", event.key, "arrows")) {
                             results.currentIndex = Math.max(0, results.currentIndex - 1);
                             event.accepted = true;
                         } else if (event.key === palette.runtime.shellKeyCode("palette", "Return") || event.key === palette.runtime.shellKeyCode("palette", "Enter")) {
@@ -1504,9 +1504,9 @@ Item {
                         search.forceActiveFocus();
                     } else if (event.key === palette.runtime.shellKeyCode("palette", "Escape")) {
                         palette.dismissOrReset();
-                    } else if (event.key === palette.runtime.shellKeyCode("palette", "Down") || event.key === palette.runtime.shellKeyCode("palette", "J")) {
+                    } else if (palette.runtime.shellNavigates("palette", "down", event.key)) {
                         results.currentIndex = Math.min(displayedModel.values.length - 1, results.currentIndex + 1);
-                    } else if (event.key === palette.runtime.shellKeyCode("palette", "Up") || event.key === palette.runtime.shellKeyCode("palette", "K")) {
+                    } else if (palette.runtime.shellNavigates("palette", "up", event.key)) {
                         results.currentIndex = Math.max(0, results.currentIndex - 1);
                     } else if (event.key === palette.runtime.shellKeyCode("palette", "U") || event.key === palette.runtime.shellKeyCode("palette", "PageUp") || event.key === palette.runtime.shellKeyCode("palette", "D") || event.key === palette.runtime.shellKeyCode("palette", "PageDown")) {
                         const rows = Math.max(1, Math.floor(results.height / (57 + results.spacing) / 2));

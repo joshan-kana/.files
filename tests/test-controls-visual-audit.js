@@ -817,11 +817,11 @@ test("slider mode retains Tab, J/K selection and H/L edits without duplicate leg
   );
   assert.match(
     controls,
-    /event\.key === root\.runtime\.shellKeyCode\("controls", "K"\) \|\| event\.key === root\.runtime\.shellKeyCode\("controls", "Up"\)/,
+    /root\.runtime\.shellNavigates\("controls", "up", event\.key\)/,
   );
   assert.match(
     controls,
-    /event\.key === root\.runtime\.shellKeyCode\("controls", "J"\) \|\| event\.key === root\.runtime\.shellKeyCode\("controls", "Down"\)/,
+    /root\.runtime\.shellNavigates\("controls", "down", event\.key\)/,
   );
   assert.match(controls, /root.adjustSlider\(-1\)/);
   assert.match(controls, /root.adjustSlider\(1\)/);

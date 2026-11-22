@@ -602,7 +602,7 @@ in
 
       spectrumAnalyzer = pkgs.desktop-shell-spectrum;
 
-      keybindings = import ../keybindings.nix {
+      keybindings = (import ../keybindings.nix).bindings {
         terminal = osConfig.dotfiles.defaults.terminal;
         browser = osConfig.dotfiles.defaults.browser;
       };

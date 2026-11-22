@@ -151,9 +151,9 @@ FocusScope {
             if (calendar.calendarPickerOpen) {
                 if (event.key === calendar.runtime.shellKeyCode("calendar", "Escape") || event.key === calendar.runtime.shellKeyCode("calendar", "C")) {
                     calendar.navigateBack();
-                } else if (event.key === calendar.runtime.shellKeyCode("calendar", "J") || event.key === calendar.runtime.shellKeyCode("calendar", "Down")) {
+                } else if (calendar.runtime.shellNavigates("calendar", "down", event.key)) {
                     calendar.calendarPickerIndex = Math.min(qmlAgenda.calendars.length - 1, calendar.calendarPickerIndex + 1);
-                } else if (event.key === calendar.runtime.shellKeyCode("calendar", "K") || event.key === calendar.runtime.shellKeyCode("calendar", "Up")) {
+                } else if (calendar.runtime.shellNavigates("calendar", "up", event.key)) {
                     calendar.calendarPickerIndex = Math.max(0, calendar.calendarPickerIndex - 1);
                 } else if (event.key === calendar.runtime.shellKeyCode("calendar", "Return") || event.key === calendar.runtime.shellKeyCode("calendar", "Enter") || event.key === calendar.runtime.shellKeyCode("calendar", "Space")) {
                     calendar.toggleCalendarAt(calendar.calendarPickerIndex);
@@ -170,16 +170,16 @@ FocusScope {
             } else if (event.key === calendar.runtime.shellKeyCode("calendar", "Escape")) {
                 calendar.navigateBack();
                 event.accepted = true;
-            } else if (event.key === calendar.runtime.shellKeyCode("calendar", "K") || event.key === calendar.runtime.shellKeyCode("calendar", "Up") || event.key === calendar.runtime.shellKeyCode("calendar", "PageUp")) {
+            } else if (calendar.runtime.shellNavigates("calendar", "up", event.key) || event.key === calendar.runtime.shellKeyCode("calendar", "PageUp")) {
                 calendar.browseMonths(-1);
                 event.accepted = true;
-            } else if (event.key === calendar.runtime.shellKeyCode("calendar", "J") || event.key === calendar.runtime.shellKeyCode("calendar", "Down") || event.key === calendar.runtime.shellKeyCode("calendar", "PageDown")) {
+            } else if (calendar.runtime.shellNavigates("calendar", "down", event.key) || event.key === calendar.runtime.shellKeyCode("calendar", "PageDown")) {
                 calendar.browseMonths(1);
                 event.accepted = true;
-            } else if (event.key === calendar.runtime.shellKeyCode("calendar", "H") || event.key === calendar.runtime.shellKeyCode("calendar", "Left")) {
+            } else if (calendar.runtime.shellNavigates("calendar", "left", event.key)) {
                 calendar.browseDays(-1);
                 event.accepted = true;
-            } else if (event.key === calendar.runtime.shellKeyCode("calendar", "L") || event.key === calendar.runtime.shellKeyCode("calendar", "Right")) {
+            } else if (calendar.runtime.shellNavigates("calendar", "right", event.key)) {
                 calendar.browseDays(1);
                 event.accepted = true;
             } else if (event.key === calendar.runtime.shellKeyCode("calendar", "U") || event.key === calendar.runtime.shellKeyCode("calendar", "D")) {

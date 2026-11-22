@@ -120,7 +120,7 @@ test("history shortcut is handled before ordinary H navigation", () => {
     'event.key === center.runtime.shellKeyCode("activity", "H") && (center.runtime.shellModifier("activity", "Shift", event.modifiers))',
   );
   const nav = content.indexOf(
-    'event.key === center.runtime.shellKeyCode("activity", "Left") || event.key === center.runtime.shellKeyCode("activity", "H")',
+    'center.runtime.shellNavigates("activity", "left", event.key)',
   );
   assert.ok(history > 0 && nav > history);
 });

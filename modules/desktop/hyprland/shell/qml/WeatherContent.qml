@@ -45,10 +45,10 @@ FocusScope {
             } else if (event.key === panel.runtime.shellKeyCode("weather", "C") || event.key === panel.runtime.shellKeyCode("weather", "Backspace")) {
                 panel.calendarRequested();
                 event.accepted = true;
-            } else if (event.key === panel.runtime.shellKeyCode("weather", "J") || event.key === panel.runtime.shellKeyCode("weather", "L") || event.key === panel.runtime.shellKeyCode("weather", "Down") || event.key === panel.runtime.shellKeyCode("weather", "Right")) {
+            } else if (panel.runtime.shellNavigates("weather", "down", event.key) || panel.runtime.shellNavigates("weather", "right", event.key)) {
                 panel.selectedDay = Math.min(6, panel.selectedDay + 1);
                 event.accepted = true;
-            } else if (event.key === panel.runtime.shellKeyCode("weather", "K") || event.key === panel.runtime.shellKeyCode("weather", "H") || event.key === panel.runtime.shellKeyCode("weather", "Up") || event.key === panel.runtime.shellKeyCode("weather", "Left")) {
+            } else if (panel.runtime.shellNavigates("weather", "up", event.key) || panel.runtime.shellNavigates("weather", "left", event.key)) {
                 panel.selectedDay = Math.max(0, panel.selectedDay - 1);
                 event.accepted = true;
             }

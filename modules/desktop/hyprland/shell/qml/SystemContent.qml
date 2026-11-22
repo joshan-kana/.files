@@ -1769,10 +1769,10 @@ FocusScope {
                             sessionPanel.invoke("cancelConfirmation");
                         root.helpOpen = false;
                         event.accepted = true;
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "J") || event.key === root.runtime.shellKeyCode("controls", "Down")) {
+                    } else if (root.runtime.shellNavigates("controls", "down", event.key)) {
                         root.helpScrollRequested(1);
                         event.accepted = true;
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "K") || event.key === root.runtime.shellKeyCode("controls", "Up")) {
+                    } else if (root.runtime.shellNavigates("controls", "up", event.key)) {
                         root.helpScrollRequested(-1);
                         event.accepted = true;
                     } else if (event.key === root.runtime.shellKeyCode("controls", "D") || event.key === root.runtime.shellKeyCode("controls", "PageDown")) {
@@ -1822,16 +1822,16 @@ FocusScope {
                     } else if (event.key === root.runtime.shellKeyCode("controls", "Slash")) {
                         wallpaperPanel.invoke("enterSearch");
                         event.accepted = true;
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "Left") || event.key === root.runtime.shellKeyCode("controls", "H")) {
+                    } else if (root.runtime.shellNavigates("controls", "left", event.key)) {
                         wallpaperPanel.invoke("moveSelection", -1);
                         event.accepted = true;
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "Right") || event.key === root.runtime.shellKeyCode("controls", "L")) {
+                    } else if (root.runtime.shellNavigates("controls", "right", event.key)) {
                         wallpaperPanel.invoke("moveSelection", 1);
                         event.accepted = true;
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "Up") || event.key === root.runtime.shellKeyCode("controls", "K")) {
+                    } else if (root.runtime.shellNavigates("controls", "up", event.key)) {
                         wallpaperPanel.invoke("moveGrid", 0, -1);
                         event.accepted = true;
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "Down") || event.key === root.runtime.shellKeyCode("controls", "J")) {
+                    } else if (root.runtime.shellNavigates("controls", "down", event.key)) {
                         wallpaperPanel.invoke("moveGrid", 0, 1);
                         event.accepted = true;
                     } else if (event.key === root.runtime.shellKeyCode("controls", "U") || event.key === root.runtime.shellKeyCode("controls", "PageUp") || event.key === root.runtime.shellKeyCode("controls", "D") || event.key === root.runtime.shellKeyCode("controls", "PageDown")) {
@@ -1864,9 +1864,9 @@ FocusScope {
                             recordingsPanel.invoke("selectAllWords");
                         } else if (control && event.key === root.runtime.shellKeyCode("controls", "C") || !control && !shifted && event.key === root.runtime.shellKeyCode("controls", "C")) {
                             recordingsPanel.invoke("copyHighlightedText");
-                        } else if (!control && (event.key === root.runtime.shellKeyCode("controls", "H") || event.key === root.runtime.shellKeyCode("controls", "Left"))) {
+                        } else if (!control && (root.runtime.shellNavigates("controls", "left", event.key))) {
                             recordingsPanel.invoke("moveWordSelection", -1, shifted);
-                        } else if (!control && (event.key === root.runtime.shellKeyCode("controls", "L") || event.key === root.runtime.shellKeyCode("controls", "Right"))) {
+                        } else if (!control && (root.runtime.shellNavigates("controls", "right", event.key))) {
                             recordingsPanel.invoke("moveWordSelection", 1, shifted);
                         } else {
                             return;
@@ -1879,9 +1879,9 @@ FocusScope {
                             recordingsPanel.invoke("cancelDelete");
                         else
                             root.backFromDetail();
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "J") || event.key === root.runtime.shellKeyCode("controls", "Down")) {
+                    } else if (root.runtime.shellNavigates("controls", "down", event.key)) {
                         recordingsPanel.invoke("moveSelection", 1);
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "K") || event.key === root.runtime.shellKeyCode("controls", "Up")) {
+                    } else if (root.runtime.shellNavigates("controls", "up", event.key)) {
                         recordingsPanel.invoke("moveSelection", -1);
                     } else if (event.key === root.runtime.shellKeyCode("controls", "U") || event.key === root.runtime.shellKeyCode("controls", "PageUp")) {
                         recordingsPanel.invoke("moveSelection", -4);
@@ -1924,10 +1924,10 @@ FocusScope {
                     if (event.key === root.runtime.shellKeyCode("controls", "Backspace")) {
                         root.backFromDetail();
                         event.accepted = true;
-                    } else if ((event.key === root.runtime.shellKeyCode("controls", "Up") || event.key === root.runtime.shellKeyCode("controls", "K"))) {
+                    } else if ((root.runtime.shellNavigates("controls", "up", event.key))) {
                         bluetoothPanel.invoke("moveSelection", -1);
                         event.accepted = true;
-                    } else if ((event.key === root.runtime.shellKeyCode("controls", "Down") || event.key === root.runtime.shellKeyCode("controls", "J"))) {
+                    } else if ((root.runtime.shellNavigates("controls", "down", event.key))) {
                         bluetoothPanel.invoke("moveSelection", 1);
                         event.accepted = true;
                     } else if (event.key === root.runtime.shellKeyCode("controls", "U") || event.key === root.runtime.shellKeyCode("controls", "PageUp") || event.key === root.runtime.shellKeyCode("controls", "PageDown") || (event.key === root.runtime.shellKeyCode("controls", "D") && !(root.runtime.shellModifier("controls", "Shift", event.modifiers)))) {
@@ -1965,16 +1965,16 @@ FocusScope {
                         else
                             root.backFromDetail();
                         event.accepted = true;
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "Up") || event.key === root.runtime.shellKeyCode("controls", "K")) {
+                    } else if (root.runtime.shellNavigates("controls", "up", event.key)) {
                         sessionPanel.invoke("moveGrid", 0, -1);
                         event.accepted = true;
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "Down") || event.key === root.runtime.shellKeyCode("controls", "J")) {
+                    } else if (root.runtime.shellNavigates("controls", "down", event.key)) {
                         sessionPanel.invoke("moveGrid", 0, 1);
                         event.accepted = true;
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "Left") || event.key === root.runtime.shellKeyCode("controls", "H")) {
+                    } else if (root.runtime.shellNavigates("controls", "left", event.key)) {
                         sessionPanel.invoke("moveGrid", -1, 0);
                         event.accepted = true;
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "Right") || event.key === root.runtime.shellKeyCode("controls", "L")) {
+                    } else if (root.runtime.shellNavigates("controls", "right", event.key)) {
                         sessionPanel.invoke("moveGrid", 1, 0);
                         event.accepted = true;
                     } else if (event.key === root.runtime.shellKeyCode("controls", "Return") || event.key === root.runtime.shellKeyCode("controls", "Enter")) {
@@ -1992,16 +1992,16 @@ FocusScope {
                     } else if (event.key === root.runtime.shellKeyCode("controls", "Backspace")) {
                         root.backFromDetail();
                         event.accepted = true;
-                    } else if ((event.key === root.runtime.shellKeyCode("controls", "Up") || event.key === root.runtime.shellKeyCode("controls", "K"))) {
+                    } else if ((root.runtime.shellNavigates("controls", "up", event.key))) {
                         themePanel.invoke("moveGrid", 0, -1);
                         event.accepted = true;
-                    } else if ((event.key === root.runtime.shellKeyCode("controls", "Down") || event.key === root.runtime.shellKeyCode("controls", "J"))) {
+                    } else if ((root.runtime.shellNavigates("controls", "down", event.key))) {
                         themePanel.invoke("moveGrid", 0, 1);
                         event.accepted = true;
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "H") || event.key === root.runtime.shellKeyCode("controls", "Left")) {
+                    } else if (root.runtime.shellNavigates("controls", "left", event.key)) {
                         themePanel.invoke("moveGrid", -1, 0);
                         event.accepted = true;
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "L") || event.key === root.runtime.shellKeyCode("controls", "Right")) {
+                    } else if (root.runtime.shellNavigates("controls", "right", event.key)) {
                         themePanel.invoke("moveGrid", 1, 0);
                         event.accepted = true;
                     } else if (event.key === root.runtime.shellKeyCode("controls", "U") || event.key === root.runtime.shellKeyCode("controls", "PageUp") || event.key === root.runtime.shellKeyCode("controls", "PageDown") || (event.key === root.runtime.shellKeyCode("controls", "D") && !(root.runtime.shellModifier("controls", "Shift", event.modifiers)))) {
@@ -2028,10 +2028,10 @@ FocusScope {
                         else
                             root.backFromDetail();
                         event.accepted = true;
-                    } else if ((event.key === root.runtime.shellKeyCode("controls", "Up") || event.key === root.runtime.shellKeyCode("controls", "K"))) {
+                    } else if ((root.runtime.shellNavigates("controls", "up", event.key))) {
                         networkPanel.invoke("moveSelection", -1);
                         event.accepted = true;
-                    } else if ((event.key === root.runtime.shellKeyCode("controls", "Down") || event.key === root.runtime.shellKeyCode("controls", "J"))) {
+                    } else if ((root.runtime.shellNavigates("controls", "down", event.key))) {
                         networkPanel.invoke("moveSelection", 1);
                         event.accepted = true;
                     } else if (event.key === root.runtime.shellKeyCode("controls", "U") || event.key === root.runtime.shellKeyCode("controls", "PageUp") || event.key === root.runtime.shellKeyCode("controls", "PageDown") || (event.key === root.runtime.shellKeyCode("controls", "D") && !(root.runtime.shellModifier("controls", "Shift", event.modifiers)))) {
@@ -2064,7 +2064,7 @@ FocusScope {
                 }
 
                 if (trayMenu.open) {
-                    if (event.key === root.runtime.shellKeyCode("controls", "Backspace") || (event.key === root.runtime.shellKeyCode("controls", "Left") || event.key === root.runtime.shellKeyCode("controls", "H"))) {
+                    if (event.key === root.runtime.shellKeyCode("controls", "Backspace") || (root.runtime.shellNavigates("controls", "left", event.key))) {
                         if ((event.key === root.runtime.shellKeyCode("controls", "Backspace")) && trayMenu.panel && trayMenu.panel.stack.length <= 1) {
                             // A tray menu opened inside Controls has no hub
                             // navigation history. Dismiss it locally instead
@@ -2077,16 +2077,16 @@ FocusScope {
                             trayMenu.invoke("goBack");
                         }
                         event.accepted = true;
-                    } else if ((event.key === root.runtime.shellKeyCode("controls", "Up") || event.key === root.runtime.shellKeyCode("controls", "K"))) {
+                    } else if ((root.runtime.shellNavigates("controls", "up", event.key))) {
                         trayMenu.invoke("moveSelection", -1);
                         event.accepted = true;
-                    } else if ((event.key === root.runtime.shellKeyCode("controls", "Down") || event.key === root.runtime.shellKeyCode("controls", "J"))) {
+                    } else if ((root.runtime.shellNavigates("controls", "down", event.key))) {
                         trayMenu.invoke("moveSelection", 1);
                         event.accepted = true;
                     } else if (event.key === root.runtime.shellKeyCode("controls", "U") || event.key === root.runtime.shellKeyCode("controls", "PageUp") || event.key === root.runtime.shellKeyCode("controls", "PageDown") || (event.key === root.runtime.shellKeyCode("controls", "D") && !(root.runtime.shellModifier("controls", "Shift", event.modifiers)))) {
                         trayMenu.invoke("moveHalfPage", (event.key === root.runtime.shellKeyCode("controls", "U") || event.key === root.runtime.shellKeyCode("controls", "PageUp")) ? -1 : 1);
                         event.accepted = true;
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "Return") || event.key === root.runtime.shellKeyCode("controls", "Enter") || (event.key === root.runtime.shellKeyCode("controls", "Right") || event.key === root.runtime.shellKeyCode("controls", "L"))) {
+                    } else if (event.key === root.runtime.shellKeyCode("controls", "Return") || event.key === root.runtime.shellKeyCode("controls", "Enter") || (root.runtime.shellNavigates("controls", "right", event.key))) {
                         trayMenu.invoke("activateSelected");
                         event.accepted = true;
                     }
@@ -2110,13 +2110,13 @@ FocusScope {
                 if (root.selectedSlider.length > 0) {
                     if (event.key === root.runtime.shellKeyCode("controls", "Backspace")) {
                         root.selectedSlider = "";
-                    } else if (!shifted && (event.key === root.runtime.shellKeyCode("controls", "K") || event.key === root.runtime.shellKeyCode("controls", "Up"))) {
+                    } else if (!shifted && (root.runtime.shellNavigates("controls", "up", event.key))) {
                         root.cycleSlider(-1);
-                    } else if (!shifted && (event.key === root.runtime.shellKeyCode("controls", "J") || event.key === root.runtime.shellKeyCode("controls", "Down"))) {
+                    } else if (!shifted && (root.runtime.shellNavigates("controls", "down", event.key))) {
                         root.cycleSlider(1);
-                    } else if (!shifted && (event.key === root.runtime.shellKeyCode("controls", "H") || event.key === root.runtime.shellKeyCode("controls", "Left"))) {
+                    } else if (!shifted && (root.runtime.shellNavigates("controls", "left", event.key))) {
                         root.adjustSlider(-1);
-                    } else if (!shifted && (event.key === root.runtime.shellKeyCode("controls", "L") || event.key === root.runtime.shellKeyCode("controls", "Right"))) {
+                    } else if (!shifted && (root.runtime.shellNavigates("controls", "right", event.key))) {
                         root.adjustSlider(1);
                     } else if (event.key === root.runtime.shellKeyCode("controls", "Return") || event.key === root.runtime.shellKeyCode("controls", "Enter")) {
                         root.activateSlider();
@@ -2125,7 +2125,7 @@ FocusScope {
                         // semantics; only editing keys belong to the slider.
                         root.selectedSlider = "";
                     }
-                    if (event.key === root.runtime.shellKeyCode("controls", "Backspace") || (!shifted && (event.key === root.runtime.shellKeyCode("controls", "H") || event.key === root.runtime.shellKeyCode("controls", "Left") || event.key === root.runtime.shellKeyCode("controls", "L") || event.key === root.runtime.shellKeyCode("controls", "Right") || event.key === root.runtime.shellKeyCode("controls", "K") || event.key === root.runtime.shellKeyCode("controls", "Up") || event.key === root.runtime.shellKeyCode("controls", "J") || event.key === root.runtime.shellKeyCode("controls", "Down"))) || event.key === root.runtime.shellKeyCode("controls", "Return") || event.key === root.runtime.shellKeyCode("controls", "Enter")) {
+                    if (event.key === root.runtime.shellKeyCode("controls", "Backspace") || (!shifted && (root.runtime.shellNavigates("controls", "left", event.key) || root.runtime.shellNavigates("controls", "right", event.key) || root.runtime.shellNavigates("controls", "up", event.key) || root.runtime.shellNavigates("controls", "down", event.key))) || event.key === root.runtime.shellKeyCode("controls", "Return") || event.key === root.runtime.shellKeyCode("controls", "Enter")) {
                         event.accepted = true;
                         return;
                     }
@@ -2153,17 +2153,17 @@ FocusScope {
                     root.media.cyclePlayer();
                 } else if (shifted && event.key === root.runtime.shellKeyCode("controls", "T")) {
                     root.nightLight.warmer();
-                } else if (shifted && event.key === root.runtime.shellKeyCode("controls", "H")) {
+                } else if (shifted && root.runtime.shellNavigates("controls", "left", event.key, "primary")) {
                     root.media.seekStep(-1);
-                } else if (shifted && event.key === root.runtime.shellKeyCode("controls", "L")) {
+                } else if (shifted && root.runtime.shellNavigates("controls", "right", event.key, "primary")) {
                     root.media.seekStep(1);
-                } else if ((event.key === root.runtime.shellKeyCode("controls", "H") || event.key === root.runtime.shellKeyCode("controls", "Left"))) {
+                } else if ((root.runtime.shellNavigates("controls", "left", event.key))) {
                     root.adjustSelectedAudio(-0.05);
-                } else if ((event.key === root.runtime.shellKeyCode("controls", "L") || event.key === root.runtime.shellKeyCode("controls", "Right"))) {
+                } else if ((root.runtime.shellNavigates("controls", "right", event.key))) {
                     root.adjustSelectedAudio(0.05);
-                } else if ((event.key === root.runtime.shellKeyCode("controls", "K") || event.key === root.runtime.shellKeyCode("controls", "Up"))) {
+                } else if ((root.runtime.shellNavigates("controls", "up", event.key))) {
                     root.moveAudioSelection(-1);
-                } else if ((event.key === root.runtime.shellKeyCode("controls", "J") || event.key === root.runtime.shellKeyCode("controls", "Down"))) {
+                } else if ((root.runtime.shellNavigates("controls", "down", event.key))) {
                     root.moveAudioSelection(1);
                 } else if (event.key === root.runtime.shellKeyCode("controls", "Q")) {
                     root.openTheme();

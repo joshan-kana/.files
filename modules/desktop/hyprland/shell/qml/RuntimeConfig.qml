@@ -101,6 +101,10 @@ QtObject {
         return ShellKeybindings.keyCode(shellBindings, scope, slot, Qt);
     }
 
+    function shellNavigates(scope: string, direction: string, key: int, mode = "all"): bool {
+        return ShellKeybindings.navigates(shellBindings, scope, direction, key, Qt, mode);
+    }
+
     function shellModifier(scope: string, slot: string, modifiers: int): bool {
         return ShellKeybindings.modifier(shellBindings, scope, slot, modifiers, Qt);
     }

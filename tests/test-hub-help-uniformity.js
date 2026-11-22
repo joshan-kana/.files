@@ -123,11 +123,11 @@ test("keyboard scrolling is available on every contextual Help view", () => {
   for (const page of [system, media]) {
     assert.match(
       page,
-      /shellKeyCode\("(?:controls|media)", "J"\) \|\| event\.key === \w+\.runtime\.shellKeyCode\("(?:controls|media)", "Down"\)/,
+      /shellNavigates\("(?:controls|media)", "down", event\.key\)/,
     );
     assert.match(
       page,
-      /shellKeyCode\("(?:controls|media)", "K"\) \|\| event\.key === \w+\.runtime\.shellKeyCode\("(?:controls|media)", "Up"\)/,
+      /shellNavigates\("(?:controls|media)", "up", event\.key\)/,
     );
     assert.match(
       page,
