@@ -70,6 +70,16 @@ in
     approvalCommand
   ];
 
+  services.logrotate.settings.chatgpt-shell-access = {
+    files = [ "${stateRoot}/events.jsonl" ];
+    frequency = "weekly";
+    rotate = 8;
+    compress = true;
+    missingok = true;
+    notifempty = true;
+    su = "${primary.name} ${config.users.users.${primary.name}.group}";
+  };
+
   systemd.tmpfiles.rules = [
     "d ${stateRoot} 0700 ${primary.name} ${config.users.users.${primary.name}.group} - -"
     "f+ /etc/chatgpt-shell-sudo-authorized-key 0444 root root - ssh-ed25519\\x20AAAAC3NzaC1lZDI1NTE5AAAAIEp/T7PcjFts+DbMZnJrMle2UhBtWhJ2ycLYIlFMNkIu\\x20chatgpt-shell-sudo\\n"
@@ -111,6 +121,7 @@ in
       CHATGPT_SHELL_RUN0 = "${pkgs.systemd}/bin/run0";
       CHATGPT_SHELL_BASH = "${pkgs.bash}/bin/bash";
       CHATGPT_SHELL_HC = "${pkgs.herdr-core}/bin/hc";
+      CHATGPT_SHELL_HERDR_COMMANDS = "1";
       CHATGPT_SHELL_APPROVAL_DIR = "/run/chatgpt-shell-access/approvals";
       CHATGPT_SHELL_STATE_DIR = stateRoot;
       CHATGPT_SHELL_POLICIES_FILE = toString policyDefaults;

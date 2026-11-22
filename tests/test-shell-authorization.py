@@ -150,6 +150,46 @@ class AuthorizationTests(unittest.IsolatedAsyncioTestCase):
         with patch.object(authorization.time, "time", return_value=time.time() + 2):
             self.assertEqual(authorization.effective("server", "elevation"), "ask")
 
+    def test_declarative_deny_is_a_permission_ceiling(self):
+        """Saved runtime grants may not override an administrator's explicit deny."""
+        defaults = authorization.DEFAULTS_FILE
+        defaults.write_text(json.dumps({"server": {"commands": "deny", "elevation": "ask"}}))
+        authorization._write_atomic(
+            authorization.STATE_DIR / "policies.json",
+            {"server": {"commands": {"mode": "automatic", "expires_at": time.time() + 60}}},
+        )
+        self.assertEqual(authorization.effective("server", "commands"), "deny")
+        with self.assertRaises(PermissionError):
+            authorization._set_policy("server", "commands", "automatic", 60)
+
+    def test_session_specific_grant_is_bounded(self):
+        """A strict session does not restrict other sessions or grant indefinite access."""
+        authorization._set_policy("server", "commands", "ask", None, session="chatgpt-a")
+        self.assertEqual(authorization.effective("server", "commands", "chatgpt-a"), "ask")
+        self.assertEqual(authorization.effective("server", "commands", "chatgpt-b"), "automatic")
+        with self.assertRaisesRegex(ValueError, "require a TTL"):
+            authorization._set_policy("server", "commands", "automatic", None, session="chatgpt-a")
+        authorization._set_policy("server", "commands", "automatic", 1, session="chatgpt-a")
+        self.assertEqual(authorization.effective("server", "commands", "chatgpt-a"), "automatic")
+        with patch.object(authorization.time, "time", return_value=time.time() + 2):
+            self.assertEqual(authorization.effective("server", "commands", "chatgpt-a"), "automatic")
+        with self.assertRaises(ValueError):
+            authorization._set_policy("server", "commands", "ask", None, session="../../other")
+
+    async def test_approval_is_bound_to_session_identity(self):
+        """One approval cannot be replayed against another terminal's control action."""
+        authorization._set_policy("server", "commands", "ask", None, session="chatgpt-a")
+        ident = self.ident()
+        operation = asyncio.create_task(authorization.authorize(ident, "server", "commands", "hc interrupt t1", None, session="chatgpt-a"))
+        pending = await self.await_pending(ident)
+        request = json.loads(pending.read_text())
+        self.assertEqual(request["session"], "chatgpt-a")
+        changed = {key: value for key, value in request.items() if key != "digest"}
+        changed["session"] = "chatgpt-b"
+        self.assertNotEqual(authorization._digest(changed), request["digest"])
+        authorization._decide(ident, "approve")
+        await operation
+
     def test_unknown_host_and_bad_ids(self):
         """Unknown hosts and invalid identifiers never map into a filesystem request."""
         with self.assertRaises(ValueError):

@@ -246,9 +246,9 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         response = iter(
             [
                 {"address": "t17", "state": "live"},
-                {"state": "live"},
+                {"ended": False, "reason": "timeout"},
                 {"text": "first"},
-                {"state": "finished", "exit_code": 9},
+                {"ended": True, "exit_code": 9},
                 {"text": "firstsecond"},
             ]
         )
@@ -298,8 +298,8 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
             if args[0] == "interrupt":
                 interrupted.set()
                 return {"state": "finished"}
-            if args[0] == "get":
-                return {"state": "finished", "exit_code": 130} if interrupted.is_set() else {"state": "live"}
+            if args[0] == "wait":
+                return {"ended": True, "exit_code": 130} if interrupted.is_set() else {"ended": False, "reason": "timeout"}
             if args[0] == "read":
                 return {"text": ""}
             raise AssertionError(args)
@@ -336,10 +336,25 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("terminal", result)
         terminal.assert_not_awaited()
 
+    async def test_herdr_native_stdin_preserves_output_and_exit_status(self):
+        """Use Core-owned execution for exact input rather than an unsandboxed worker."""
+        import base64
+
+        async def native(_host, arguments, *, stdin):
+            self.assertEqual(stdin, "hello\n")
+            self.assertEqual(arguments[:3], ["exec", "--json", "--stdin"])
+            return {"code": 23, "stdout": base64.b64encode(b"hello\n").decode(), "stderr": "", "truncated": False}
+
+        with patch.object(shell, "HERDR_COMMANDS", True), patch.object(shell, "_herdr", side_effect=native):
+            result = await shell.shell_exec("local", "cat; exit 23", stdin="hello\n")
+        self.assertEqual(result["exit_code"], 23)
+        self.assertEqual(result["output"], "hello\n")
+        self.assertFalse(result["success"])
+
     async def test_stdin_keeps_exact_pipe_semantics(self):
         """Use the exact-input path when supplied stdin cannot be represented by Herdr run."""
         with (
-            patch.object(shell, "HERDR_COMMANDS", True),
+            patch.object(shell, "HERDR_COMMANDS", False),
             patch.object(shell, "_run_herdr", new_callable=AsyncMock) as terminal,
         ):
             result = await shell.shell_exec("local", "cat", stdin="line\n")
@@ -375,35 +390,53 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
                 await shell.session_start("local", "true", cwd="../parent")
             invoke.assert_not_awaited()
 
-    async def test_herdr_ownership_is_the_worker_identity_not_mutable_labels(self):
-        """Use the restricted Unix account as the authorization boundary."""
-        with patch.object(shell, "_herdr", new_callable=AsyncMock, return_value={"address": "t1"}) as invoke:
+    async def test_herdr_mutations_only_target_managed_sessions(self):
+        """Observe worker terminals but mutate only agent-labelled sessions."""
+
+        async def native(_host, arguments):
+            if arguments[0] == "get":
+                return {"name": "chatgpt-test", "labels": {"origin": "chatgpt-shell"}}
+            return {"address": "t1"}
+
+        with patch.object(shell, "_herdr", side_effect=native) as invoke:
             await shell.session_read("local", "t1")
             invoke.assert_awaited_once_with("local", ["read", "--json", "--lines", "100", "t1"])
             invoke.reset_mock()
             await shell.session_interrupt("local", "t1")
-            invoke.assert_awaited_once_with("local", ["interrupt", "--json", "t1"])
+            self.assertEqual(invoke.await_args_list[-1].args[1], ["interrupt", "--json", "t1"])
             invoke.reset_mock()
             await shell.session_kill("local", "t1")
-            invoke.assert_awaited_once_with("local", ["kill", "--json", "t1"])
+            self.assertEqual(invoke.await_args_list[-1].args[1], ["kill", "--json", "t1"])
+        self.assertEqual(shell.authorization.authorize.await_count, 2)
+        self.assertEqual(shell.authorization.authorize.call_args.kwargs["session"], "chatgpt-test")
 
-    async def test_herdr_mutations_respect_strict_mode(self):
-        """Read-only and strict policy modes cannot be bypassed via Herdr controls."""
-        self.effective.stop()
-        try:
-            with (
-                patch.object(shell.authorization, "effective", return_value="ask"),
-                patch.object(shell, "_herdr", new_callable=AsyncMock) as invoke,
-            ):
-                with self.assertRaises(PermissionError):
-                    await shell.session_interrupt("local", "t1")
-                with self.assertRaises(PermissionError):
-                    await shell.session_kill("local", "t1")
-                with self.assertRaises(PermissionError):
-                    await shell.session_start("local", "true")
-                invoke.assert_not_awaited()
-        finally:
-            self.effective.start()
+    async def test_herdr_mutations_reject_other_terminals(self):
+        """Ordinary operator terminals cannot be killed by the agent tool."""
+        with (
+            patch.object(shell, "_herdr", new_callable=AsyncMock, return_value={"name": "operator", "labels": {}}) as invoke,
+            self.assertRaisesRegex(PermissionError, "not an agent-managed"),
+        ):
+            await shell.session_kill("local", "t2")
+        invoke.assert_awaited_once_with("local", ["get", "--json", "t2"])
+        shell.authorization.authorize.assert_not_awaited()
+
+    async def test_herdr_mutations_respect_denied_approvals(self):
+        """A strict host policy requires actual approval for all terminal mutations."""
+
+        async def native(_host, arguments):
+            return {"name": "chatgpt-test", "labels": {"origin": "chatgpt-shell"}}
+
+        with (
+            patch.object(shell.authorization, "authorize", new_callable=AsyncMock, side_effect=PermissionError("not approved")),
+            patch.object(shell, "_herdr", side_effect=native) as invoke,
+        ):
+            with self.assertRaises(PermissionError):
+                await shell.session_interrupt("local", "t1")
+            with self.assertRaises(PermissionError):
+                await shell.session_kill("local", "t1")
+            with self.assertRaises(PermissionError):
+                await shell.session_start("local", "true")
+            self.assertEqual(len(invoke.await_args_list), 2)
 
     async def test_herdr_read_bounds_scrollback(self):
         """Bound requested scrollback so a tool cannot request an unlimited response."""

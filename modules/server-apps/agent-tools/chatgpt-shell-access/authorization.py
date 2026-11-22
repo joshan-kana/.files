@@ -61,20 +61,36 @@ def _digest(request: dict) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
-def _override(host: str, kind: str) -> str | None:
-    """Read a non-expired operator policy override."""
-    entry = _read_json(STATE_DIR / "policies.json", {}).get(host, {}).get(kind, {})
+def _valid_session(session: str) -> str:
+    """Keep session policy keys bounded and unambiguous."""
+    if not session or len(session) > 64 or not all(c.isascii() and (c.isalnum() or c in "-_") for c in session):
+        raise ValueError("invalid session")
+    return session
+
+
+def _override(host: str, kind: str, session: str | None = None) -> str | None:
+    """Read an unexpired host or individual-session operator grant."""
+    policies = _read_json(STATE_DIR / "policies.json", {}).get(host, {})
+    if session is not None:
+        policies = policies.get("sessions", {}).get(_valid_session(session), {})
+    entry = policies.get(kind, {})
     if entry and entry.get("expires_at") is not None and entry["expires_at"] <= time.time():
         return None
     return entry.get("mode")
 
 
-def effective(host: str, kind: str) -> str:
-    """Resolve operator overrides above the declarative host defaults."""
+def effective(host: str, kind: str, session: str | None = None) -> str:
+    """Apply explicit host denies before scoped operator grants."""
     defaults = _defaults()
     if host not in defaults or kind not in KINDS:
         raise ValueError("unknown host or permission category")
+    if defaults[host][kind] == "deny":
+        return "deny"
     mode = _override(host, kind) or defaults[host][kind]
+    if mode == "deny":
+        return "deny"
+    if session is not None:
+        mode = _override(host, kind, session) or mode
     if mode not in MODES:
         raise ValueError("invalid permission mode")
     return mode
@@ -101,9 +117,10 @@ async def authorize(
     command: str,
     cwd: str | None,
     stdin: str | None = None,
+    session: str | None = None,
 ) -> None:
     """Wait for a one-time human decision where the effective policy requires it."""
-    mode = effective(host, kind)
+    mode = effective(host, kind, session)
     if mode == "deny":
         audit("denied-by-policy", {"request": request_id, "host": host, "kind": kind})
         raise PermissionError(f"{kind} denied on {host}")
@@ -122,6 +139,7 @@ async def authorize(
         "command": command,
         "cwd": cwd,
         "stdin": stdin,
+        "session": session,
         "expires_at": time.time() + APPROVAL_TIMEOUT,
     }
     digest = _digest(request)
@@ -140,7 +158,7 @@ async def authorize(
                 continue
             if decision.get("digest") != digest or decision.get("decision") not in ("approve", "deny"):
                 raise PermissionError("approval record does not match the requested operation")
-            if effective(host, kind) == "deny":
+            if effective(host, kind, session) == "deny":
                 raise PermissionError("policy changed to deny while awaiting approval")
             if decision["decision"] == "approve":
                 audit("approval-granted", {"request": request_id, "host": host, "kind": kind})
@@ -168,6 +186,8 @@ def _list() -> None:
             continue
         print(f"{request['id']}  {request['host']}  {request['kind']}")
         print(f"  cwd: {json.dumps(request['cwd'], ensure_ascii=True)}")
+        if request.get("session") is not None:
+            print(f"  session: {json.dumps(request['session'], ensure_ascii=True)}")
         print(f"  command: {json.dumps(request['command'], ensure_ascii=True)}")
         if request.get("stdin") is not None:
             print(f"  stdin: {json.dumps(request['stdin'], ensure_ascii=True)}")
@@ -186,23 +206,30 @@ def _decide(request_id: str, decision: str) -> None:
     print(f"{decision} {request_id}")
 
 
-def _set_policy(host: str, kind: str, mode: str, ttl: int | None) -> None:
-    """Set an explicit operator policy with mandatory expiry for automatic elevation."""
-    if host not in _defaults() or kind not in KINDS or mode not in MODES:
+def _set_policy(host: str, kind: str, mode: str, ttl: int | None, session: str | None = None) -> None:
+    """Set a host or session grant; automatic overrides always expire."""
+    defaults = _defaults()
+    if host not in defaults or kind not in KINDS or mode not in MODES:
         raise ValueError("unknown host, permission category or mode")
+    if defaults[host][kind] == "deny" and mode != "deny":
+        raise PermissionError("declarative policy denies this permission")
+    if session is not None:
+        _valid_session(session)
     if ttl is not None and not 1 <= ttl <= 3600:
         raise ValueError("TTL must be between 1 and 3600 seconds")
-    if kind == "elevation" and mode == "automatic" and ttl is None:
-        raise ValueError("automatic elevation requires a TTL")
+    if mode == "automatic" and ttl is None:
+        raise ValueError("automatic grants require a TTL")
     policy_file = STATE_DIR / "policies.json"
     policies = _read_json(policy_file, {})
-    policies.setdefault(host, {})[kind] = {
+    host_policies = policies.setdefault(host, {})
+    target = host_policies.setdefault("sessions", {}).setdefault(session, {}) if session else host_policies
+    target[kind] = {
         "mode": mode,
         "expires_at": time.time() + ttl if ttl is not None else None,
     }
     _write_atomic(policy_file, policies)
-    audit("policy-changed", {"host": host, "kind": kind, "mode": mode, "ttl": ttl})
-    print(f"{host} {kind}: {effective(host, kind)}")
+    audit("policy-changed", {"host": host, "kind": kind, "mode": mode, "ttl": ttl, "session": session})
+    print(f"{host} {kind}: {effective(host, kind, session)}")
 
 
 def main() -> None:
@@ -215,11 +242,13 @@ def main() -> None:
     get_policy = subcommands.add_parser("policy")
     get_policy.add_argument("host")
     get_policy.add_argument("kind", choices=sorted(KINDS))
+    get_policy.add_argument("--session")
     set_policy = subcommands.add_parser("set-policy")
     set_policy.add_argument("host")
     set_policy.add_argument("kind", choices=sorted(KINDS))
     set_policy.add_argument("mode", choices=sorted(MODES))
     set_policy.add_argument("--ttl", type=int)
+    set_policy.add_argument("--session")
     arguments = parser.parse_args()
 
     try:
@@ -228,9 +257,9 @@ def main() -> None:
         elif arguments.action in ("approve", "deny"):
             _decide(arguments.request_id, arguments.action)
         elif arguments.action == "policy":
-            print(effective(arguments.host, arguments.kind))
+            print(effective(arguments.host, arguments.kind, arguments.session))
         elif arguments.action == "set-policy":
-            _set_policy(arguments.host, arguments.kind, arguments.mode, arguments.ttl)
+            _set_policy(arguments.host, arguments.kind, arguments.mode, arguments.ttl, arguments.session)
     except (OSError, ValueError, PermissionError) as exc:
         parser.error(str(exc))
 

@@ -1,6 +1,7 @@
 """Provide bounded shell execution on explicitly configured hosts."""
 
 import asyncio
+import base64
 import json
 import os
 import shlex
@@ -23,6 +24,7 @@ JOB_RETENTION_SECONDS = 30 * 60
 WAIT_SECONDS = 10.0
 MAX_WAIT_SECONDS = 30.0
 CANCEL_GRACE_SECONDS = 2.0
+HERDR_EXEC_TIMEOUT_SECONDS = 600
 
 
 @dataclass(frozen=True)
@@ -87,11 +89,11 @@ def _herdr_argv(host: Host, arguments: list[str]) -> list[str]:
     return _build_argv(LOCAL_HOST, command)
 
 
-async def _herdr(host: Host, arguments: list[str]) -> dict[str, object]:
+async def _herdr(host: Host, arguments: list[str], *, stdin: str | None = None) -> dict[str, object]:
     """Invoke the native Herdr CLI with a bounded response and no privileged agent forwarding."""
     process = await asyncio.create_subprocess_exec(
         *_herdr_argv(host, arguments),
-        stdin=asyncio.subprocess.DEVNULL,
+        stdin=asyncio.subprocess.PIPE if stdin is not None else asyncio.subprocess.DEVNULL,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
         env={
@@ -100,11 +102,16 @@ async def _herdr(host: Host, arguments: list[str]) -> dict[str, object]:
         },
     )
     try:
-        stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=20)
-    except TimeoutError:
+        stdout, stderr = await asyncio.wait_for(
+            process.communicate(stdin.encode() if stdin is not None else None),
+            timeout=HERDR_EXEC_TIMEOUT_SECONDS + 20 if stdin is not None else 20,
+        )
+    except (TimeoutError, asyncio.CancelledError) as exc:
         process.kill()
         await process.wait()
-        raise RuntimeError("Herdr did not respond within 20 seconds") from None
+        if isinstance(exc, asyncio.CancelledError):
+            raise
+        raise RuntimeError("Herdr did not respond before its execution deadline") from None
     if process.returncode != 0:
         raise RuntimeError(f"Herdr failed: {stderr.decode(errors='replace')[:4096]}")
     try:
@@ -323,7 +330,7 @@ async def _run_herdr(job: Job, command: str, cwd: str | None) -> None:
         job.herdr_starting = False
         job.herdr_ready.set()
     while True:
-        snapshot = await _herdr(job.host, ["get", "--json", address])
+        status = await _herdr(job.host, ["wait", "--json", "--timeout", "1", address])
         screen = await _herdr(job.host, ["read", "--json", "--lines", "2000", address])
         current = screen.get("text")
         if not isinstance(current, str):
@@ -348,13 +355,44 @@ async def _run_herdr(job: Job, command: str, cwd: str | None) -> None:
             job.output.append(delta.encode())
         job.herdr_screen = current
 
-        if snapshot.get("state") == "finished":
-            code = snapshot.get("exit_code")
+        if status.get("ended") is True:
+            code = status.get("exit_code")
             job.exit_code = int(code) if code is not None else 128
             return
-        if snapshot.get("state") != "live":
-            raise RuntimeError(f"Herdr terminal lost: {snapshot.get('state')}")
-        await asyncio.sleep(0.5)
+        if "ended" not in status:
+            raise RuntimeError("Herdr wait returned an invalid response")
+        await asyncio.sleep(0.05)
+
+
+async def _run_herdr_stdin(job: Job, command: str, cwd: str | None, stdin: str) -> None:
+    """Use Herdr's native exact-input operation in the same sandbox as PTYs."""
+    response = await _herdr(
+        job.host,
+        [
+            "exec",
+            "--json",
+            "--stdin",
+            "--timeout",
+            str(HERDR_EXEC_TIMEOUT_SECONDS),
+            "--cwd",
+            cwd or WORKER_ENV["HOME"],
+            "bash",
+            "-lc",
+            command,
+        ],
+        stdin=stdin,
+    )
+    for stream in ("stdout", "stderr"):
+        encoded = response.get(stream)
+        if not isinstance(encoded, str):
+            raise RuntimeError("Herdr returned an invalid exec response")
+        job.output.append(base64.b64decode(encoded, validate=True))
+    code = response.get("code")
+    if not isinstance(code, int):
+        raise RuntimeError("Herdr did not return an exit code")
+    job.exit_code = code
+    if response.get("truncated"):
+        job.output.append(b"\n[Herdr truncated the exec output]\n")
 
 
 async def _run(job: Job, command: str, cwd: str | None, stdin: str | None) -> None:
@@ -368,10 +406,16 @@ async def _run(job: Job, command: str, cwd: str | None, stdin: str | None) -> No
             command,
             cwd,
             stdin,
+            session=f"chatgpt-{job.request_id[:12]}"
+            if HERDR_COMMANDS and job.host == LOCAL_HOST and not job.elevated and stdin is None
+            else None,
         )
         job.awaiting_approval = False
-        if HERDR_COMMANDS and job.host == LOCAL_HOST and not job.elevated and stdin is None:
-            await _run_herdr(job, command, cwd)
+        if HERDR_COMMANDS and job.host == LOCAL_HOST and not job.elevated:
+            if stdin is None:
+                await _run_herdr(job, command, cwd)
+            else:
+                await _run_herdr_stdin(job, command, cwd, stdin)
             return
         build = _build_elevated_argv if job.elevated else _build_argv
         job.process = await asyncio.create_subprocess_exec(
@@ -507,8 +551,6 @@ async def session_start(
     """
     cwd = _validate_cwd(cwd)
     _require_local_herdr(host)
-    if authorization.effective(host, "commands") != "automatic":
-        raise PermissionError("interactive session creation requires automatic command permission")
     session_name = f"chatgpt-{uuid.uuid4().hex[:12]}"
     arguments = [
         "run",
@@ -523,6 +565,7 @@ async def session_start(
     if cwd is not None:
         arguments.extend(["--cwd", cwd])
     arguments.extend(["bash", "-lc", command])
+    await authorization.authorize(uuid.uuid4().hex, host, "commands", shlex.join(arguments), cwd, session=session_name)
     result = await _herdr(host, arguments)
     return {"host": host, "session": HERDR_SESSION, **result}
 
@@ -543,22 +586,34 @@ async def session_read(host: Host, terminal: str, lines: int = 100) -> dict[str,
     return await _herdr(host, ["read", "--json", "--lines", str(lines), terminal])
 
 
+async def _managed_session_action(host: Host, terminal: str, action: str) -> dict[str, object]:
+    """Allow only recorded agent terminals through the approval broker."""
+    _require_local_herdr(host)
+    metadata = await _herdr(host, ["get", "--json", terminal])
+    name = metadata.get("name")
+    labels = metadata.get("labels")
+    if (
+        not isinstance(name, str)
+        or not name.startswith("chatgpt-")
+        or not isinstance(labels, dict)
+        or labels.get("origin") != "chatgpt-shell"
+    ):
+        raise PermissionError("terminal is not an agent-managed workspace")
+    arguments = [action, "--json", terminal]
+    await authorization.authorize(uuid.uuid4().hex, host, "commands", shlex.join(arguments), None, session=name)
+    return await _herdr(host, arguments)
+
+
 @mcp.tool()
 async def session_interrupt(host: Host, terminal: str) -> dict[str, object]:
-    """Interrupt a ChatGPT-managed terminal only when command control is enabled."""
-    _require_local_herdr(host)
-    if authorization.effective(host, "commands") != "automatic":
-        raise PermissionError("agent terminal mutation is disabled by the command policy")
-    return await _herdr(host, ["interrupt", "--json", terminal])
+    """Interrupt an agent-managed terminal subject to its scoped command policy."""
+    return await _managed_session_action(host, terminal, "interrupt")
 
 
 @mcp.tool()
 async def session_kill(host: Host, terminal: str) -> dict[str, object]:
-    """Terminate a managed terminal only when the command policy permits it."""
-    _require_local_herdr(host)
-    if authorization.effective(host, "commands") != "automatic":
-        raise PermissionError("agent terminal mutation is disabled by the command policy")
-    return await _herdr(host, ["kill", "--json", terminal])
+    """Terminate an agent-managed terminal subject to its scoped command policy."""
+    return await _managed_session_action(host, terminal, "kill")
 
 
 @mcp.tool()
