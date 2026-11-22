@@ -54,7 +54,8 @@ ShellRoot {
         id: qmlAppearance
         runtime: qmlRuntime
         frameGlassExposed: desktopFrame.glassExposed
-        expansionGlassExposed: qmlExpansionState.hasCurrent || expansionHost.closing
+        // The shared frame already blurs connected hub surfaces.
+        expansionGlassExposed: (qmlExpansionState.hasCurrent || expansionHost.closing) && !expansionHost.frameVisible
         modalGlassExposed: modalHost.contentVisible
         // Popup ownership includes closing cards until their exit completes.
         // NotificationPopup has no separate closing property.

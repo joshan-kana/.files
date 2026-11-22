@@ -75,19 +75,18 @@ QtObject {
     // Preloaded panels retain their Wayland layers while closed, but an
     // invisible surface must not force compositor blur of the live wallpaper.
     property bool frameGlassExposed: false
+    // Connected bar islands use the frame's existing glass backdrop.
+    readonly property bool barGlassExposed: barVisible && !frameGlassExposed
     property bool expansionGlassExposed: false
     property bool modalGlassExposed: false
     property bool notificationGlassExposed: false
     property bool osdGlassExposed: false
     property bool resizeGlassExposed: false
 
-    // The frame and connected islands occupy separate Wayland layers.
-    // Both need masked blur; neither is a substitute for the other.
-    onBarVisibleChanged: applyGlassRule("desktop-shell-shell-glass", "^desktop-shell-bar$", barVisible)
-    onFrameGlassExposedChanged: {
-        applyGlassRule("desktop-shell-shell-glass-frame", "^desktop-shell-frame$", frameGlassExposed);
-        applyGlassRule("desktop-shell-shell-glass", "^desktop-shell-bar$", barVisible);
-    }
+    // Connected islands borrow the frame backdrop. Detached bar islands
+    // have their own blur, independently of window transparency.
+    onBarGlassExposedChanged: applyGlassRule("desktop-shell-shell-glass", "^desktop-shell-bar$", barGlassExposed)
+    onFrameGlassExposedChanged: applyGlassRule("desktop-shell-shell-glass-frame", "^desktop-shell-frame$", frameGlassExposed)
     onExpansionGlassExposedChanged: applyGlassRule("desktop-shell-shell-glass-expansion", "^desktop-shell-expansion$", expansionGlassExposed)
     onModalGlassExposedChanged: applyGlassRule("desktop-shell-shell-glass-modal", "^desktop-shell-modal$", modalGlassExposed)
     onNotificationGlassExposedChanged: applyGlassRule("desktop-shell-shell-glass-notification", "^desktop-shell-notification-popup$", notificationGlassExposed)
@@ -265,7 +264,7 @@ QtObject {
     function applyShellGlass(): void {
         // Only visible layers need backdrop blur. Preloaded modal and hub
         // surfaces keep their fast first-open path without idle blur passes.
-        applyGlassRule("desktop-shell-shell-glass", "^desktop-shell-bar$", barVisible);
+        applyGlassRule("desktop-shell-shell-glass", "^desktop-shell-bar$", barGlassExposed);
         applyGlassRule("desktop-shell-shell-glass-frame", "^desktop-shell-frame$", frameGlassExposed);
         applyGlassRule("desktop-shell-shell-glass-expansion", "^desktop-shell-expansion$", expansionGlassExposed);
         applyGlassRule("desktop-shell-shell-glass-modal", "^desktop-shell-modal$", modalGlassExposed);
