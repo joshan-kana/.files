@@ -198,6 +198,7 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
             self.argv.start()
         self.assertEqual(argv[:2], ["bash", "-lc"])
         self.assertIn("--user=agent-workspaces", argv[-1])
+        self.assertIn("--setenv=PATH=/bin", argv[-1])
         self.assertIn("--non-interactive", argv[-1])
         self.assertIn("SSH_AUTH_SOCK", argv[-1])
         self.assertIn("id -u; touch should-not-be-interpreted", argv[-1])

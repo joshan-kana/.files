@@ -206,6 +206,7 @@ def _worker_command(script: str) -> str:
         f"--user={WORKER_USER}",
         f"--chdir={WORKER_ENV['HOME']}",
         *(f"--setenv={key}={value}" for key, value in WORKER_ENV.items()),
+        f"--setenv=PATH={COMMAND_PATH}",
         "--",
         "bash",
         "-c",
