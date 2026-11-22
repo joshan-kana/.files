@@ -24,7 +24,7 @@ let
 
   defaultPolicy = {
     commands = "automatic";
-    elevation = "ask";
+    elevation = "automatic";
   };
   remoteTargets = {
     mac = {
