@@ -248,7 +248,7 @@ WlSessionLock {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: Qt.formatDateTime(lock.clock.date, "dddd, d MMMM").toUpperCase()
                     color: lock.theme.textMuted
-                    font.family: lock.runtime.fontMono
+                    font.family: lock.runtime.fontSans
                     font.pixelSize: lock.theme.fontSize(11)
                     font.weight: Font.DemiBold
                     font.letterSpacing: 2
@@ -342,7 +342,7 @@ WlSessionLock {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: Quickshell.env("USER") || "user"
                                 color: lock.theme.textStrong
-                                font.family: lock.runtime.fontMono
+                                font.family: lock.runtime.fontSans
                                 font.pixelSize: lock.theme.fontSize(18)
                                 font.weight: Font.DemiBold
                             }
@@ -377,7 +377,7 @@ WlSessionLock {
                                 color: lock.theme.textStrong
                                 selectionColor: lock.theme.accent
                                 selectedTextColor: lock.theme.background
-                                font.family: lock.runtime.fontMono
+                                font.family: lock.runtime.fontSans
                                 font.pixelSize: lock.theme.fontSize(17)
                                 clip: true
 
@@ -439,7 +439,7 @@ WlSessionLock {
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
                             color: lock.statusError ? lock.theme.critical : lock.theme.textMuted
-                            font.family: lock.runtime.fontMono
+                            font.family: lock.runtime.fontSans
                             font.pixelSize: lock.theme.fontSize(9)
                             font.weight: Font.DemiBold
                             font.letterSpacing: 1.2

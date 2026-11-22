@@ -89,7 +89,7 @@ Item {
                 width: parent.width
                 text: tile.title
                 color: tile.foreground
-                font.family: tile.runtime.fontMono
+                font.family: tile.runtime.fontSans
                 font.pixelSize: tile.theme.fontSize(15)
                 font.weight: Font.DemiBold
             }
@@ -99,7 +99,7 @@ Item {
                 text: tile.detail
                 color: tile.foreground
                 opacity: tile.connected ? 0.76 : 0.75
-                font.family: tile.runtime.fontMono
+                font.family: tile.runtime.fontSans
                 font.pixelSize: tile.theme.fontSize(11)
             }
 
@@ -109,7 +109,7 @@ Item {
                 visible: tile.status.length > 0
                 color: tile.signalColor
                 opacity: tile.failed || tile.pending || tile.scanning ? 1 : 0.88
-                font.family: tile.runtime.fontMono
+                font.family: tile.runtime.fontSans
                 font.pixelSize: tile.theme.fontSize(9)
                 font.weight: Font.DemiBold
             }

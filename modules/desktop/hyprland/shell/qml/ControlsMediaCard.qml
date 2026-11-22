@@ -91,7 +91,7 @@ ShellSurface {
                     width: parent.width
                     text: card.media.available ? card.media.identity : "MEDIA"
                     color: card.theme.readableRoleColor("media")
-                    font.family: card.runtime.fontMono
+                    font.family: card.runtime.fontSans
                     font.pixelSize: card.theme.fontSize(10)
                     font.weight: Font.DemiBold
                     elide: Text.ElideRight
@@ -100,7 +100,7 @@ ShellSurface {
                     width: parent.width
                     text: card.media.available ? card.media.title : "No active player"
                     color: card.theme.textStrong
-                    font.family: card.runtime.fontMono
+                    font.family: card.runtime.fontSans
                     font.pixelSize: card.theme.fontSize(15)
                     font.weight: Font.DemiBold
                 }
@@ -108,7 +108,7 @@ ShellSurface {
                     width: parent.width
                     text: card.media.available ? card.media.artist : "No playback"
                     color: card.theme.textMuted
-                    font.family: card.runtime.fontMono
+                    font.family: card.runtime.fontSans
                     font.pixelSize: card.theme.fontSize(11)
                 }
             }

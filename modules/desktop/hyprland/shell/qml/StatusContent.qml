@@ -42,7 +42,7 @@ Item {
                     elide: Text.ElideRight
                     text: "System status"
                     color: content.theme.textStrong
-                    font.family: content.runtime.fontMono
+                    font.family: content.runtime.fontSans
                     font.pixelSize: content.theme.fontSize(18)
                     font.weight: Font.Bold
                 }
@@ -51,7 +51,7 @@ Item {
                     elide: Text.ElideRight
                     text: content.keyboard.pending ? "Reading keyboard state…" : content.keyboard.stale ? "Keyboard state unavailable or stale" : content.keyboard.deviceName + " · Current device and interaction state"
                     color: content.theme.textMuted
-                    font.family: content.runtime.fontMono
+                    font.family: content.runtime.fontSans
                     font.pixelSize: content.theme.fontSize(10)
                 }
             }
@@ -156,7 +156,7 @@ Item {
                                 width: parent.width
                                 text: statusTile.modelData.label
                                 color: content.theme.textMuted
-                                font.family: content.runtime.fontMono
+                                font.family: content.runtime.fontSans
                                 font.pixelSize: content.theme.fontSize(10)
                                 elide: Text.ElideRight
                             }
@@ -164,7 +164,7 @@ Item {
                                 width: parent.width
                                 text: statusTile.modelData.value
                                 color: content.theme.textStrong
-                                font.family: content.runtime.fontMono
+                                font.family: content.runtime.fontSans
                                 font.pixelSize: content.theme.fontSize(12)
                                 font.weight: Font.DemiBold
                                 elide: Text.ElideRight

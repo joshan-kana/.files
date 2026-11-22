@@ -49,7 +49,7 @@ ShellSurface {
             visible: !tile.toplevel || !tile.toplevel.wayland
             text: "PREVIEW UNAVAILABLE"
             color: tile.theme.textMuted
-            font.family: tile.runtime.fontMono
+            font.family: tile.runtime.fontSans
             font.pixelSize: tile.theme.fontSize(10)
         }
 
@@ -71,7 +71,7 @@ ShellSurface {
                 anchors.centerIn: parent
                 text: "WS " + (tile.toplevel && tile.toplevel.workspace ? tile.toplevel.workspace.id : "")
                 color: tile.theme.textStrong
-                font.family: tile.runtime.fontMono
+                font.family: tile.runtime.fontSans
                 font.pixelSize: tile.theme.fontSize(10)
                 font.weight: Font.DemiBold
             }
@@ -110,7 +110,7 @@ ShellSurface {
                     anchors.verticalCenter: parent.verticalCenter
                     text: tile.toplevel ? (tile.toplevel.title || tile.toplevel.lastIpcObject.class || "Window") : "Window"
                     textFormat: Text.PlainText
-                    font.family: tile.runtime.fontMono
+                    font.family: tile.runtime.fontSans
                     font.pixelSize: tile.theme.fontSize(12)
                     color: tile.theme.textStrong
                 }

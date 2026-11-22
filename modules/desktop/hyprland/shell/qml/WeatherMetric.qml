@@ -31,7 +31,7 @@ ShellSurface {
             Text {
                 text: metric.title.toUpperCase()
                 color: metric.theme.textMuted
-                font.family: metric.theme.runtime.fontMono
+                font.family: metric.theme.runtime.fontSans
                 font.pixelSize: metric.theme.fontSize(10)
                 font.weight: Font.DemiBold
             }

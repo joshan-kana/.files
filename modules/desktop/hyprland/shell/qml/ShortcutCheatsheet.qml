@@ -261,7 +261,7 @@ Item {
                     visible: search.text.length === 0
                     text: "Search shortcuts…"
                     color: window.theme.textMuted
-                    font.family: window.runtime.fontMono
+                    font.family: window.runtime.fontSans
                     font.pixelSize: window.theme.fontSize(13)
                 }
 
@@ -278,7 +278,7 @@ Item {
                     color: window.theme.textStrong
                     selectionColor: window.theme.accent
                     selectedTextColor: window.theme.background
-                    font.family: window.runtime.fontMono
+                    font.family: window.runtime.fontSans
                     font.pixelSize: window.theme.fontSize(13)
                     onTextChanged: {
                         window.query = text;
@@ -327,7 +327,7 @@ Item {
                             Text {
                                 text: shortcutSection.modelData.title
                                 color: window.theme.readableRoleColor(window.sectionRole(shortcutSection.modelData.title))
-                                font.family: window.runtime.fontMono
+                                font.family: window.runtime.fontSans
                                 font.pixelSize: window.theme.fontSize(15)
                                 font.weight: Font.DemiBold
                                 font.letterSpacing: 1.6
@@ -369,7 +369,7 @@ Item {
                                         anchors.verticalCenter: parent.verticalCenter
                                         text: shortcutBinding.modelData.description
                                         color: window.theme.textStrong
-                                        font.family: window.runtime.fontMono
+                                        font.family: window.runtime.fontSans
                                         font.pixelSize: window.theme.fontSize(17)
                                         wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                                         maximumLineCount: 3
@@ -387,7 +387,7 @@ Item {
                 visible: window.query.trim().length > 0 && window.filteredBindingCount === 0
                 text: "No matching shortcuts"
                 color: window.theme.textMuted
-                font.family: window.runtime.fontMono
+                font.family: window.runtime.fontSans
                 font.pixelSize: window.theme.fontSize(14)
             }
 

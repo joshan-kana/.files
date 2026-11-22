@@ -947,7 +947,7 @@ PanelWindow {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "Scroll"
                     color: host.theme.textMuted
-                    font.family: host.runtime.fontMono
+                    font.family: host.runtime.fontSans
                     font.pixelSize: host.theme.fontKeyHint
                 }
             }

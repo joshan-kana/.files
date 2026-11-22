@@ -97,7 +97,7 @@ Item {
                     width: parent.width
                     text: help.title
                     color: help.theme.textStrong
-                    font.family: help.runtime.fontMono
+                    font.family: help.runtime.fontSans
                     font.pixelSize: help.theme.fontSize(19)
                     font.weight: Font.DemiBold
                 }
@@ -138,7 +138,7 @@ Item {
                             anchors.verticalCenter: shortcutCell.verticalCenter
                             text: helpBinding.modelData.action
                             color: help.theme.text
-                            font.family: help.runtime.fontMono
+                            font.family: help.runtime.fontSans
                             font.pixelSize: help.theme.fontSize(12)
                             wrapMode: Text.WordWrap
                         }
@@ -150,7 +150,7 @@ Item {
                     text: help.keyboardScroll ? help.runtime.shellHint("ShellExpansionHost.helpScroll") + " scroll · " + help.runtime.shellHint("ShellExpansionHost.helpPage") + " page · " + help.runtime.shellHint("HubTabs.help") + "/" + help.runtime.shellHint("ShellExpansionHost.back") + " return" : help.runtime.shellHint("HubTabs.help") + " or " + help.runtime.shellHint("ShellExpansionHost.back") + " to return"
                     horizontalAlignment: Text.AlignRight
                     color: help.theme.textMuted
-                    font.family: help.runtime.fontMono
+                    font.family: help.runtime.fontSans
                     font.pixelSize: help.theme.fontSize(10)
                 }
             }

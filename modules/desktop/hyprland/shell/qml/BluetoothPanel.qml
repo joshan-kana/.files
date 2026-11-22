@@ -322,7 +322,7 @@ Item {
                             width: parent.width
                             text: panel.displayName(deviceRow.modelData)
                             color: panel.theme.textStrong
-                            font.family: panel.runtime.fontMono
+                            font.family: panel.runtime.fontSans
                             font.pixelSize: panel.theme.fontSize(13)
                             font.weight: deviceRow.modelData.connected ? Font.DemiBold : Font.Normal
                         }
@@ -342,7 +342,7 @@ Item {
                             Text {
                                 text: BluetoothDeviceState.toString(deviceRow.modelData.state).toUpperCase()
                                 color: deviceRow.modelData.connected ? panel.theme.positive : panel.theme.textMuted
-                                font.family: panel.runtime.fontMono
+                                font.family: panel.runtime.fontSans
                                 font.pixelSize: panel.theme.fontSize(8)
                                 font.weight: Font.DemiBold
                             }
@@ -350,7 +350,7 @@ Item {
                             Text {
                                 text: deviceRow.modelData.pairing ? "PAIRING" : (deviceRow.modelData.paired ? "PAIRED" : "UNPAIRED")
                                 color: panel.theme.readableRoleColor(deviceRow.modelData.paired || deviceRow.modelData.pairing ? "connectivity" : "warning")
-                                font.family: panel.runtime.fontMono
+                                font.family: panel.runtime.fontSans
                                 font.pixelSize: panel.theme.fontSize(8)
                                 font.weight: Font.DemiBold
                             }
@@ -359,7 +359,7 @@ Item {
                                 visible: deviceRow.modelData.trusted
                                 text: "TRUSTED"
                                 color: panel.theme.roleColor("connectivity")
-                                font.family: panel.runtime.fontMono
+                                font.family: panel.runtime.fontSans
                                 font.pixelSize: panel.theme.fontSize(8)
                                 font.weight: Font.DemiBold
                             }
@@ -419,7 +419,7 @@ Item {
             text: "Bluetooth radio is off"
             horizontalAlignment: Text.AlignHCenter
             color: panel.theme.readableRoleColor("warning")
-            font.family: panel.runtime.fontMono
+            font.family: panel.runtime.fontSans
             font.pixelSize: panel.theme.fontSize(10)
             font.letterSpacing: 0.8
         }
@@ -431,7 +431,7 @@ Item {
             text: panel.system.bluetoothDiscovering ? "Scanning for devices…" : "No devices found"
             horizontalAlignment: Text.AlignHCenter
             color: panel.theme.textMuted
-            font.family: panel.runtime.fontMono
+            font.family: panel.runtime.fontSans
             font.pixelSize: panel.theme.fontSize(10)
             font.letterSpacing: 0.8
         }

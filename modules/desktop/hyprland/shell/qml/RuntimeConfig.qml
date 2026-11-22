@@ -43,6 +43,8 @@ QtObject {
     readonly property string displaySettings: root.configData.tools.displaySettings
     readonly property string notifySend: root.configData.tools.notifySend
 
+    readonly property string fontSans: root.themeAdapter.fonts.sans
+    readonly property string fontSerif: root.themeAdapter.fonts.serif
     readonly property string fontMono: root.themeAdapter.fonts.mono
 
     readonly property color background: root.themeAdapter.theme.background
@@ -185,6 +187,8 @@ QtObject {
             }
 
             property JsonObject fonts: JsonObject {
+                property string sans: "sans-serif"
+                property string serif: "serif"
                 property string mono: "monospace"
             }
 

@@ -112,7 +112,7 @@ ShellSurface {
                     width: Math.max(1, parent.width - parent.children[0].implicitWidth - muteHint.implicitWidth - levelLabel.implicitWidth - parent.spacing * 3)
                     text: deviceControl.microphone ? "Input" : "Output"
                     color: deviceControl.theme.textStrong
-                    font.family: deviceControl.runtime.fontMono
+                    font.family: deviceControl.runtime.fontSans
                     font.pixelSize: deviceControl.theme.fontSize(deviceControl.compact ? 13 : 11)
                     font.weight: Font.DemiBold
                     elide: Text.ElideRight
@@ -197,7 +197,7 @@ ShellSurface {
                     width: Math.max(1, parent.width - pickerHint.implicitWidth - parent.spacing)
                     text: deviceControl.device ? (deviceControl.device.description || deviceControl.device.name) : "Hardware unavailable"
                     color: deviceControl.theme.textMuted
-                    font.family: deviceControl.runtime.fontMono
+                    font.family: deviceControl.runtime.fontSans
                     font.pixelSize: deviceControl.theme.fontSize(deviceControl.compact ? 11 : 9)
                 }
                 KeyHint {

@@ -94,7 +94,7 @@ Item {
                         anchors.centerIn: parent
                         text: tab.modelData.label
                         color: tab.chosen ? root.theme.textStrong : root.theme.textMuted
-                        font.family: root.runtime.fontMono
+                        font.family: root.runtime.fontSans
                         font.pixelSize: root.theme.fontSize(12)
                         font.weight: tab.chosen ? Font.DemiBold : Font.Medium
                         Behavior on color {
@@ -139,7 +139,7 @@ Item {
         Text {
             anchors.centerIn: parent
             text: "←"
-            font.family: root.runtime.fontMono
+            font.family: root.runtime.fontSans
             font.pixelSize: root.theme.fontSize(22)
             font.weight: Font.DemiBold
             color: root.theme.textStrong

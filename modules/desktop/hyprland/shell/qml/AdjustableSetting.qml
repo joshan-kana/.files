@@ -108,7 +108,7 @@ ShellSurface {
                 horizontalAlignment: Text.AlignHCenter
                 elide: Text.ElideRight
                 color: setting.theme.textStrong
-                font.family: setting.runtime.fontMono
+                font.family: setting.runtime.fontSans
                 font.pixelSize: setting.theme.fontSize(9)
                 font.weight: setting.active ? Font.DemiBold : Font.Medium
             }
@@ -116,7 +116,7 @@ ShellSurface {
                 id: temperatureValue
                 text: setting.valueText
                 color: setting.active ? setting.roleAccent : setting.theme.textMuted
-                font.family: setting.runtime.fontMono
+                font.family: setting.runtime.fontSans
                 font.pixelSize: setting.theme.fontSize(9)
                 font.weight: Font.DemiBold
             }

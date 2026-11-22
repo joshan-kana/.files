@@ -554,7 +554,7 @@ Item {
                             text: recordRow.entry ? recordRow.entry.name.replace(/^(Recording|Screenshot)-/, "") : ""
                             textFormat: Text.PlainText
                             color: library.theme.textStrong
-                            font.family: library.runtime.fontMono
+                            font.family: library.runtime.fontSans
                             font.pixelSize: library.theme.fontSize(11)
                             font.weight: Font.DemiBold
                         }
@@ -572,7 +572,7 @@ Item {
                 visible: !library.listProcess.running && library.entries.length === 0
                 text: "NO SAVED CAPTURES"
                 color: library.theme.textMuted
-                font.family: library.runtime.fontMono
+                font.family: library.runtime.fontSans
                 font.pixelSize: library.theme.fontSize(11)
             }
         }
@@ -652,7 +652,7 @@ Item {
                         visible: library.previewPath.length === 0
                         text: library.selectedEntry ? "󰕧" : "󰋼"
                         color: library.theme.roleColor("capture")
-                        font.family: library.runtime.fontMono
+                        font.family: library.runtime.fontSans
                         font.pixelSize: library.theme.fontSize(38)
                     }
                 }
@@ -660,7 +660,7 @@ Item {
                     width: parent.width
                     text: library.selectedEntry ? (library.selectedEntry.isImage ? "IMAGE" : library.timeLabel(library.selectedEntry.duration)) + " · " + library.formatBytes(library.selectedEntry.size) : "SELECT A CAPTURE"
                     color: library.theme.textStrong
-                    font.family: library.runtime.fontMono
+                    font.family: library.runtime.fontSans
                     font.pixelSize: library.theme.fontSize(11)
                     font.weight: Font.DemiBold
                 }
@@ -704,7 +704,7 @@ Item {
                             color: library.theme.textStrong
                             selectionColor: library.theme.accent
                             selectedTextColor: library.theme.background
-                            font.family: library.runtime.fontMono
+                            font.family: library.runtime.fontSans
                             font.pixelSize: library.theme.fontSize(12)
                             background: null
                             Keys.onEscapePressed: event => {

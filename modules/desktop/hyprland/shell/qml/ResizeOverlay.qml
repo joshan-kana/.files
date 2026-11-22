@@ -216,14 +216,14 @@ PanelWindow {
                         Text {
                             text: "Resize window"
                             color: overlay.theme.textStrong
-                            font.family: overlay.runtime.fontMono
+                            font.family: overlay.runtime.fontSans
                             font.pixelSize: overlay.theme.fontSize(18)
                             font.weight: Font.Bold
                         }
                         Text {
                             text: overlay.lastAction
                             color: overlay.theme.textMuted
-                            font.family: overlay.runtime.fontMono
+                            font.family: overlay.runtime.fontSans
                             font.pixelSize: overlay.theme.fontSize(11)
                         }
                     }
@@ -281,13 +281,13 @@ PanelWindow {
                     Text {
                         text: `Caps ${overlay.keyboard.description(overlay.keyboard.capsState)} · Num ${overlay.keyboard.description(overlay.keyboard.numState)}`
                         color: overlay.theme.textStrong
-                        font.family: overlay.runtime.fontMono
+                        font.family: overlay.runtime.fontSans
                         font.pixelSize: overlay.theme.fontSize(10)
                     }
                     Text {
                         text: overlay.system.microphoneAvailable ? (overlay.system.microphoneMuted ? "Mic muted" : "Mic unmuted") : "Mic unavailable"
                         color: overlay.theme.textMuted
-                        font.family: overlay.runtime.fontMono
+                        font.family: overlay.runtime.fontSans
                         font.pixelSize: overlay.theme.fontSize(10)
                     }
                 }

@@ -24,7 +24,7 @@ ShellSurface {
             width: parent.width
             text: card.statusText
             color: card.statusColor
-            font.family: card.runtime.fontMono
+            font.family: card.runtime.fontSans
             font.pixelSize: card.theme.fontSize(11)
             font.weight: Font.DemiBold
         }
@@ -34,7 +34,7 @@ ShellSurface {
             text: card.heading
             elide: Text.ElideRight
             color: card.theme.textStrong
-            font.family: card.runtime.fontMono
+            font.family: card.runtime.fontSans
             font.pixelSize: card.theme.fontSize(20)
             font.weight: Font.DemiBold
         }
@@ -44,7 +44,7 @@ ShellSurface {
             text: card.description
             wrapMode: Text.WordWrap
             color: card.theme.textMuted
-            font.family: card.runtime.fontMono
+            font.family: card.runtime.fontSans
             font.pixelSize: card.theme.fontSize(10)
         }
     }

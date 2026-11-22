@@ -83,7 +83,7 @@ Item {
                 text: chip.title
                 color: chip.theme.textStrong
                 alignCenter: true
-                font.family: chip.runtime.fontMono
+                font.family: chip.runtime.fontSans
                 font.pixelSize: chip.theme.fontSize(10)
                 font.weight: chip.active ? Font.DemiBold : Font.Medium
             }

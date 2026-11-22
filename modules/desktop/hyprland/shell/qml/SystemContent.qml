@@ -820,7 +820,7 @@ FocusScope {
                     anchors.verticalCenter: parent.verticalCenter
                     text: Qt.formatDateTime(controlsDateTime.date, "ddd d MMM yyyy")
                     color: root.theme.textMuted
-                    font.family: root.runtime.fontMono
+                    font.family: root.runtime.fontSans
                     font.pixelSize: root.theme.fontSize(12)
                 }
                 Text {
@@ -1166,7 +1166,7 @@ FocusScope {
                                 wrapMode: Text.WordWrap
                                 text: root.resetConfirmPending ? "Restore Nix defaults for appearance, motion, notifications, captures and wallpapers? Personal files and the active system generation stay intact." : root.resetStatus
                                 color: root.resetConfirmPending ? root.theme.textStrong : root.theme.textMuted
-                                font.family: root.runtime.fontMono
+                                font.family: root.runtime.fontSans
                                 font.pixelSize: root.theme.fontSize(11)
                             }
                             KeyHintStrip {
@@ -1202,7 +1202,7 @@ FocusScope {
                             anchors.verticalCenter: parent.verticalCenter
                             text: "VISUAL MODES"
                             color: root.theme.readableRoleColor("display")
-                            font.family: root.runtime.fontMono
+                            font.family: root.runtime.fontSans
                             font.pixelSize: root.theme.fontPanelEyebrow
                             font.weight: Font.DemiBold
                             font.letterSpacing: 1.0
@@ -1450,7 +1450,7 @@ FocusScope {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "TRAY  " + root.system.trayCount
                     color: root.theme.textMuted
-                    font.family: root.runtime.fontMono
+                    font.family: root.runtime.fontSans
                     font.pixelSize: root.theme.fontPanelEyebrow
                     font.weight: Font.DemiBold
                 }
@@ -1523,7 +1523,7 @@ FocusScope {
                                         text: trayItem.modelData.title || trayItem.modelData.id
                                         elide: Text.ElideRight
                                         color: root.theme.text
-                                        font.family: root.runtime.fontMono
+                                        font.family: root.runtime.fontSans
                                         font.pixelSize: root.theme.fontSize(10)
                                     }
                                 }

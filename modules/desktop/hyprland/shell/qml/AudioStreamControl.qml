@@ -58,7 +58,7 @@ Item {
                         width: parent.width
                         text: channel.displayName
                         color: channel.muted ? channel.theme.warning : channel.theme.textStrong
-                        font.family: channel.runtime.fontMono
+                        font.family: channel.runtime.fontSans
                         font.pixelSize: channel.theme.fontSize(channel.compact ? 10 : 12)
                         font.weight: channel.selected ? Font.DemiBold : Font.Medium
                     }

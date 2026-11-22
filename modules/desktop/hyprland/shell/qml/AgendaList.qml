@@ -52,7 +52,7 @@ Column {
                 anchors.verticalCenter: parent.verticalCenter
                 text: "AGENDA · NEXT 7 DAYS"
                 color: panel.theme.readableRoleColor("calendar")
-                font.family: panel.runtime.fontMono
+                font.family: panel.runtime.fontSans
                 font.pixelSize: panel.theme.fontPanelEyebrow
                 font.weight: Font.DemiBold
             }
@@ -65,7 +65,7 @@ Column {
                 anchors.verticalCenter: parent.verticalCenter
                 text: panel.agenda.loading ? "SYNCING" : panel.agenda.configured ? panel.agenda.events.length + " EVENTS" : "SET UP"
                 color: panel.theme.textMuted
-                font.family: panel.runtime.fontMono
+                font.family: panel.runtime.fontSans
                 font.pixelSize: panel.theme.fontSize(10)
             }
             ShellAction {
@@ -113,7 +113,7 @@ Column {
                             width: parent.width
                             text: eventRow.modelData.title
                             color: panel.theme.textStrong
-                            font.family: panel.runtime.fontMono
+                            font.family: panel.runtime.fontSans
                             font.pixelSize: panel.theme.fontSize(12)
                             font.weight: Font.DemiBold
                             elide: Text.ElideRight
@@ -126,7 +126,7 @@ Column {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: (eventRow.modelData.dateKind ? eventRow.modelData.dateKind + " " : "") + (eventRow.modelData.date === panel.startDate ? "TODAY" : eventRow.modelData.date.slice(5)) + (eventRow.modelData.time ? " · " + eventRow.modelData.time : "")
                                 color: panel.theme.readableRoleColor("calendar")
-                                font.family: panel.runtime.fontMono
+                                font.family: panel.runtime.fontSans
                                 font.pixelSize: panel.theme.fontSize(10)
                             }
                             Item {
@@ -138,7 +138,7 @@ Column {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: eventRow.modelData.calendar || "Local"
                                 color: panel.theme.textMuted
-                                font.family: panel.runtime.fontMono
+                                font.family: panel.runtime.fontSans
                                 font.pixelSize: panel.theme.fontSize(10)
                                 maximumLineCount: 1
                                 elide: Text.ElideRight
@@ -172,7 +172,7 @@ Column {
                 horizontalAlignment: Text.AlignHCenter
                 text: panel.agenda.errorMessage || (panel.agenda.loading ? "Reading calendar…" : panel.agenda.configured ? "No upcoming events" : "Set up local calendar")
                 color: panel.theme.textStrong
-                font.family: panel.runtime.fontMono
+                font.family: panel.runtime.fontSans
                 font.pixelSize: panel.theme.fontSize(panel.featured ? 15 : 11)
                 wrapMode: Text.WordWrap
             }
@@ -204,7 +204,7 @@ Column {
         visible: panel.agenda.events.length > panel.pageSize
         text: (panel.visibleStart + 1) + "–" + panel.visibleEnd + " / " + panel.agenda.events.length + ""
         color: panel.theme.textMuted
-        font.family: panel.runtime.fontMono
+        font.family: panel.runtime.fontSans
         font.pixelSize: panel.theme.fontSize(10)
     }
 }

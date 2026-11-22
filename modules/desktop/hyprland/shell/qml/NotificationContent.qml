@@ -255,14 +255,14 @@ FocusScope {
                     Text {
                         text: "Notifications"
                         color: center.theme.textStrong
-                        font.family: center.runtime.fontMono
+                        font.family: center.runtime.fontSans
                         font.pixelSize: center.theme.fontSize(21)
                         font.weight: Font.DemiBold
                     }
                     Text {
                         text: center.notificationState.count + " total · " + center.notificationState.unreadCount + " unread"
                         color: center.theme.textMuted
-                        font.family: center.runtime.fontMono
+                        font.family: center.runtime.fontSans
                         font.pixelSize: center.theme.fontSize(10)
                     }
                 }
@@ -404,7 +404,7 @@ FocusScope {
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: center.notificationState.silent ? "Notifications are paused" : "All caught up"
-                    font.family: center.runtime.fontMono
+                    font.family: center.runtime.fontSans
                     font.pixelSize: center.theme.fontSize(17)
                     font.weight: Font.DemiBold
                     color: center.theme.textStrong
@@ -412,7 +412,7 @@ FocusScope {
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: "New notifications will appear here"
-                    font.family: center.runtime.fontMono
+                    font.family: center.runtime.fontSans
                     font.pixelSize: center.theme.fontSize(10)
                     color: center.theme.textMuted
                 }
@@ -526,14 +526,14 @@ FocusScope {
                             Text {
                                 text: groupItem.modelData.name.toUpperCase()
                                 color: center.theme.readableRoleColor("notifications")
-                                font.family: center.runtime.fontMono
+                                font.family: center.runtime.fontSans
                                 font.pixelSize: center.theme.fontSize(10)
                                 font.weight: Font.DemiBold
                             }
                             Text {
                                 text: groupItem.modelData.notifications.length + " notifications · " + groupItem.modelData.notifications.filter(item => !center.notificationState.isRead(item)).length + " unread " + (groupItem.expanded ? "󰅃" : "󰅀")
                                 color: center.theme.textMuted
-                                font.family: center.runtime.fontMono
+                                font.family: center.runtime.fontSans
                                 font.pixelSize: center.theme.fontSize(9)
                             }
                         }

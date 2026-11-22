@@ -71,7 +71,7 @@ FocusScope {
                 Text {
                     text: "WEATHER / " + (panel.weather.city || "YOUR LOCATION").toUpperCase()
                     color: panel.theme.readableRoleColor("weather")
-                    font.family: panel.runtime.fontMono
+                    font.family: panel.runtime.fontSans
                     font.pixelSize: panel.theme.fontPanelEyebrow
                     font.weight: Font.DemiBold
                 }
@@ -79,7 +79,7 @@ FocusScope {
                 Text {
                     text: Qt.formatDateTime(clock.date, "dddd, d MMMM")
                     color: panel.theme.textStrong
-                    font.family: panel.runtime.fontMono
+                    font.family: panel.runtime.fontSans
                     font.pixelSize: panel.theme.fontPanelTitle
                     font.weight: Font.DemiBold
                 }
@@ -151,7 +151,7 @@ FocusScope {
                     Text {
                         text: panel.weather.available ? panel.weather.description : panel.weather.status
                         color: panel.theme.text
-                        font.family: panel.runtime.fontMono
+                        font.family: panel.runtime.fontSans
                         font.pixelSize: panel.theme.fontSize(14)
                     }
                 }
@@ -216,7 +216,7 @@ FocusScope {
         Text {
             text: "7-DAY FORECAST"
             color: panel.theme.textStrong
-            font.family: panel.runtime.fontMono
+            font.family: panel.runtime.fontSans
             font.pixelSize: panel.theme.fontSize(12)
             font.weight: Font.DemiBold
         }
@@ -245,7 +245,7 @@ FocusScope {
         Text {
             text: panel.weather.status || ("Updated " + panel.weather.updatedAt)
             color: panel.theme.textMuted
-            font.family: panel.runtime.fontMono
+            font.family: panel.runtime.fontSans
             font.pixelSize: panel.theme.fontSize(11)
         }
 

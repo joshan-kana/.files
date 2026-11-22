@@ -113,7 +113,7 @@ ShellSurface {
                 horizontalAlignment: Text.AlignHCenter
                 elide: Text.ElideRight
                 color: setting.theme.textStrong
-                font.family: setting.runtime.fontMono
+                font.family: setting.runtime.fontSans
                 font.pixelSize: setting.theme.fontSize(9)
                 font.weight: setting.active ? Font.DemiBold : Font.Medium
             }
@@ -127,7 +127,7 @@ ShellSurface {
                     anchors.centerIn: parent
                     text: Math.round(setting.opacityValue * 100) + "%"
                     color: setting.active && !setting.blurEditing ? setting.roleAccent : setting.theme.textMuted
-                    font.family: setting.runtime.fontMono
+                    font.family: setting.runtime.fontSans
                     font.pixelSize: setting.theme.fontSize(9)
                     font.weight: Font.DemiBold
                 }
@@ -152,7 +152,7 @@ ShellSurface {
                     anchors.centerIn: parent
                     text: "Blur " + setting.blurValue
                     color: setting.blurEditing ? setting.roleAccent : setting.theme.textMuted
-                    font.family: setting.runtime.fontMono
+                    font.family: setting.runtime.fontSans
                     font.pixelSize: setting.theme.fontSize(9)
                     font.weight: Font.DemiBold
                 }

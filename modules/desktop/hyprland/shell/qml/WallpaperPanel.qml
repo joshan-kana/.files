@@ -292,7 +292,7 @@ Item {
                 onTextChanged: panel.searchText = text
                 color: panel.theme.textStrong
                 selectionColor: panel.theme.accent
-                font.family: panel.runtime.fontMono
+                font.family: panel.runtime.fontSans
                 font.pixelSize: panel.theme.fontSize(12)
                 focus: false
                 Keys.onPressed: event => {
@@ -339,7 +339,7 @@ Item {
                 visible: searchField.text.length === 0 && !searchField.activeFocus
                 text: "Search wallpapers"
                 color: panel.theme.textMuted
-                font.family: panel.runtime.fontMono
+                font.family: panel.runtime.fontSans
                 font.pixelSize: panel.theme.fontSize(11)
             }
         }
@@ -495,7 +495,7 @@ Item {
                             visible: entry.posterPath.length === 0
                             text: entry.animatedFile ? "󰐊" : "󰋩"
                             color: panel.theme.textMuted
-                            font.family: panel.runtime.fontMono
+                            font.family: panel.runtime.fontSans
                             font.pixelSize: panel.theme.fontSize(19)
                         }
 
@@ -508,7 +508,7 @@ Item {
                             visible: entry.animatedFile && entry.posterPath.length > 0
                             text: "󰐊"
                             color: "#ffffff"
-                            font.family: panel.runtime.fontMono
+                            font.family: panel.runtime.fontSans
                             font.pixelSize: panel.theme.fontSize(15)
                         }
 
@@ -543,7 +543,7 @@ Item {
                                     anchors.verticalCenter: parent.verticalCenter
                                     text: entry.applied ? "ACTIVE" : ""
                                     color: panel.theme.positive
-                                    font.family: panel.runtime.fontMono
+                                    font.family: panel.runtime.fontSans
                                     font.pixelSize: panel.theme.fontSize(9)
                                 }
                             }
@@ -611,7 +611,7 @@ Item {
                         anchors.centerIn: parent
                         text: "STYLIX"
                         color: "#ffffff"
-                        font.family: panel.runtime.fontMono
+                        font.family: panel.runtime.fontSans
                         font.pixelSize: panel.theme.fontSize(10)
                     }
                 }
@@ -622,7 +622,7 @@ Item {
                 visible: panel.filteredEntries.length === 0 && (panel.loading || panel.searchText.length > 0 || panel.runtime.wallpaper.length === 0)
                 text: panel.loading ? "Loading wallpapers…" : panel.searchText.length > 0 ? "No matching wallpapers" : "Add images, GIFs or videos to ~/wallpapers"
                 color: panel.theme.textMuted
-                font.family: panel.runtime.fontMono
+                font.family: panel.runtime.fontSans
                 font.pixelSize: panel.theme.fontSize(11)
             }
         }
