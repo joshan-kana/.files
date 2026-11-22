@@ -791,7 +791,7 @@
                 export HOME="$TMPDIR"
                 export NIX_CONFIG='experimental-features = nix-command flakes'
                 cd ${self.outPath}
-                node --test tests/test-*.js
+                node --test --test-concurrency=1 tests/test-*.js
                 ${lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
                   QT_QPA_PLATFORM=offscreen qmltestrunner -input tests/qml -import ${pkgs.kdePackages.qtdeclarative}/lib/qt-6/qml -platform offscreen
                 ''}
