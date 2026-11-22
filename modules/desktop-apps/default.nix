@@ -35,7 +35,7 @@ in
     home = _: {
       home.packages = [
         pkgs.herdr-core
-        pkgs.herdr-app
+        pkgs.herdr-desktop
       ];
     };
   };
