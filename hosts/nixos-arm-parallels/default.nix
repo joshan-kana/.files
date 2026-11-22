@@ -28,6 +28,7 @@ let
     exec ${pkgs.systemd}/bin/systemd-run --user --quiet --wait --pipe --collect \
       --property=NoNewPrivileges=yes \
       --property=PrivateTmp=yes \
+      --property=PrivatePIDs=yes \
       --property=ProtectSystem=full \
       --property='InaccessiblePaths=${home}/.ssh ${home}/.secrets /run/user' \
       ${pkgs.bash}/bin/bash -c "$SSH_ORIGINAL_COMMAND"
