@@ -368,6 +368,47 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("terminal", result)
         terminal.assert_not_awaited()
 
+    async def test_elevation_keeps_exact_arguments_and_independent_policy(self):
+        """Privileged argv must be passed unchanged to the separately reviewed run0 path."""
+        captured = []
+
+        async def fake_run(job, command, cwd, stdin):
+            captured.append((job.elevated, job.host, command, cwd, stdin))
+            job.exit_code = 0
+            job.completed_at = time.monotonic()
+
+        argv = ["/bin/printf", "%s", "quoted ' argument"]
+        with patch.object(shell, "_run", side_effect=fake_run):
+            result = await shell.shell_elevated_exec("nixos-arm-parallels", argv, cwd="/tmp")
+        self.assertTrue(result["success"])
+        self.assertEqual(len(captured), 1)
+        elevated, host, command, cwd, stdin = captured[0]
+        self.assertTrue(elevated)
+        self.assertEqual(host, "nixos-arm-parallels")
+        self.assertEqual(cwd, "/tmp")
+        self.assertIsNone(stdin)
+        self.assertEqual(
+            shell.shlex.split(command),
+            [
+                "run0",
+                "--non-interactive",
+                "--pipe",
+                f"--unit=chatgpt-shell-{result['request_id']}",
+                "--chdir=/tmp",
+                "--",
+                *argv,
+            ],
+        )
+
+    async def test_elevation_rejects_unsupported_hosts_and_unsafe_argv(self):
+        """Only configured Linux elevation routes accept nonempty argv elements."""
+        for host in ("mac", "unconfigured"):
+            with self.assertRaises(PermissionError):
+                await shell.shell_elevated_exec(host, ["/bin/true"])
+        for argv in ([], [""], ["/bin/true", "bad\x00arg"]):
+            with self.assertRaises(ValueError):
+                await shell.shell_elevated_exec("nixos-arm-parallels", argv)
+
     async def test_herdr_native_stdin_preserves_output_and_exit_status(self):
         """Use Core-owned execution for exact input rather than an unsandboxed worker."""
         import base64

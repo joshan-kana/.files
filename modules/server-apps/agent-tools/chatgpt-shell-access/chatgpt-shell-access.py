@@ -606,7 +606,8 @@ async def shell_exec(
     bounds the wait for both startup and completion; 0 returns immediately.
     A running result has a request_id for shell_result or shell_cancel.
     Check success or exit_code, not status='completed', for command success.
-    Stdout and stderr are combined; output is bounded and drained per result.
+    Stdout and stderr are combined and bounded. Server Core exec replies
+    contain exact output after completion; use sessions for live PTY output.
     """
     cwd = _validate_cwd(cwd)
     wait_seconds = _validate_wait_seconds(wait_seconds)
