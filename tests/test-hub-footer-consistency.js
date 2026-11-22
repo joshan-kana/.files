@@ -420,3 +420,12 @@ test("Home action hints are centered across the entire page independently of Tod
     /id: resetButton[\s\S]*?anchors\.right: parent\.right/,
   );
 });
+
+test("hub scroll hints appear only when the hub owns page navigation", () => {
+  const host = source("ShellExpansionHost.qml");
+  const visibility = host.match(
+    /readonly property bool scrollHintsVisible: ([^\n]+)/,
+  )?.[1];
+  assert.ok(visibility, "scroll hint visibility must have an explicit owner");
+  assert.match(visibility, /\bhost\.hostPageShortcutsEnabled\b/);
+});

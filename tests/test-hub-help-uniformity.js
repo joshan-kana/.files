@@ -147,8 +147,25 @@ test("keyboard scrolling is available on every contextual Help view", () => {
     help,
     /onOpenChanged: \{\s*if \(open\)\s*hintsViewport\.contentY = 0;/,
   );
-  assert.match(
-    help,
-    /keyboardScroll \? help\.runtime\.shellHint\("ShellExpansionHost\.helpDown"\)/,
-  );
+  for (const action of ["helpScroll", "helpPage"]) {
+    assert.ok(
+      help.includes('runtime.shellHint("ShellExpansionHost.' + action + '")'),
+      action + " must come from the shared shortcut registry",
+    );
+  }
+});
+
+test("text-search hints describe the keys owned by the active focus scope", () => {
+  for (const name of [
+    "ClipboardPanel.qml",
+    "CommandPalette.qml",
+    "ShortcutCheatsheet.qml",
+  ]) {
+    const content = qml(name);
+    assert.match(
+      content,
+      /search\.activeFocus\s*\?\s*\w+\.runtime\.shellHint\("[^"]+"\)/,
+      name + " should derive its focused navigation hint from the registry",
+    );
+  }
 });

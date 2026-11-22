@@ -615,22 +615,6 @@ Item {
                         font.pixelSize: panel.theme.fontSize(10)
                         elide: Text.ElideRight
                     }
-
-                    KeyHintStrip {
-                        width: parent.width
-                        runtime: panel.runtime
-                        theme: panel.theme
-                        hints: [
-                            {
-                                shortcut: panel.runtime.shellHint("ClipboardPanel.copySearch"),
-                                label: "Copy"
-                            },
-                            {
-                                shortcut: panel.runtime.shellHint("ClipboardPanel.navigateSearch"),
-                                label: "Navigate"
-                            }
-                        ]
-                    }
                 }
             }
 
@@ -662,8 +646,12 @@ Item {
                 theme: panel.theme
                 hints: [
                     {
-                        shortcut: search.activeFocus ? panel.runtime.shellHint("ClipboardPanel.focusSearch") : panel.runtime.shellHint("ClipboardPanel.navigateSearch"),
-                        label: search.activeFocus ? "Navigate" : "Move"
+                        shortcut: search.activeFocus ? panel.runtime.shellHint("ClipboardPanel.navigateSearch") : panel.runtime.shellHint("ClipboardPanel.navigateList"),
+                        label: "Select"
+                    },
+                    {
+                        shortcut: panel.runtime.shellHint("ClipboardPanel.focusSearch"),
+                        label: search.activeFocus ? "Results" : "Search"
                     },
                     {
                         shortcut: panel.runtime.shellHint("ClipboardPanel.halfPage"),

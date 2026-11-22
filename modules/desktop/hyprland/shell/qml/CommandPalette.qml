@@ -1713,8 +1713,12 @@ Item {
                         }
                     ] : search.activeFocus ? [
                         {
+                            shortcut: palette.runtime.shellHint("CommandPalette.navigateSearch"),
+                            label: "Select"
+                        },
+                        {
                             shortcut: palette.runtime.shellHint("CommandPalette.navigate"),
-                            label: "Navigate"
+                            label: "Results"
                         },
                         {
                             shortcut: palette.runtime.shellHint("CommandPalette.actionMenu"),
@@ -1763,12 +1767,13 @@ Item {
                     action: "Switch search and results"
                 },
                 {
-                    key: palette.runtime.shellHint("CommandPalette.legendSelect"),
+                    key: search.activeFocus ? palette.runtime.shellHint("CommandPalette.navigateSearch") : palette.runtime.shellHint("CommandPalette.legendSelect"),
                     action: "Move through results"
                 },
                 {
                     key: palette.runtime.shellHint("CommandPalette.legendPage"),
-                    action: "Half-page through results"
+                    action: "Half-page through results",
+                    visible: !search.activeFocus
                 },
                 {
                     key: palette.runtime.shellHint("CommandPalette.legendEnter"),
@@ -1786,7 +1791,7 @@ Item {
                     key: palette.runtime.shellHint("CommandPalette.back"),
                     action: "Close help or palette"
                 }
-            ]
+            ].filter(entry => entry.visible !== false)
             onDismissed: palette.dismissOrReset()
         }
     }
