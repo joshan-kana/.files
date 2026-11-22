@@ -635,7 +635,7 @@ Item {
                                 width: parent.width - statusBadge.width - parent.spacing
                                 text: networkRow.modelData.name
                                 color: panel.theme.textStrong
-                                font.family: panel.runtime.fontMono
+                                font.family: panel.runtime.fontSans
                                 font.pixelSize: panel.theme.fontSize(13)
                                 font.weight: networkRow.modelData.connected ? Font.DemiBold : Font.Normal
                             }
@@ -644,7 +644,7 @@ Item {
                                 id: statusBadge
                                 text: networkRow.modelData.connected ? "CONNECTED" : (networkRow.modelData.known ? "KNOWN" : "")
                                 color: networkRow.modelData.connected ? panel.theme.positive : panel.theme.textMuted
-                                font.family: panel.runtime.fontMono
+                                font.family: panel.runtime.fontSans
                                 font.pixelSize: panel.theme.fontSize(8)
                                 font.weight: Font.DemiBold
                             }
@@ -684,7 +684,7 @@ Item {
                             visible: networkRow.modelData.stateChanging
                             text: visible ? ConnectionState.toString(networkRow.modelData.state).toUpperCase() : ""
                             color: panel.theme.warning
-                            font.family: panel.runtime.fontMono
+                            font.family: panel.runtime.fontSans
                             font.pixelSize: panel.theme.fontSize(8)
                             font.weight: Font.DemiBold
                         }
@@ -762,7 +762,7 @@ Item {
                         width: 76
                         text: profileRow.modelData.label
                         color: profileRow.modelData.connected ? panel.theme.positive : panel.theme.readableRoleColor("connectivity")
-                        font.family: panel.runtime.fontMono
+                        font.family: panel.runtime.fontSans
                         font.pixelSize: panel.theme.fontSize(9)
                         font.weight: Font.DemiBold
                     }
@@ -775,7 +775,7 @@ Item {
                             text: profileRow.modelData.name
                             elide: Text.ElideRight
                             color: panel.theme.textStrong
-                            font.family: panel.runtime.fontMono
+                            font.family: panel.runtime.fontSans
                             font.pixelSize: panel.theme.fontSize(12)
                             font.weight: Font.DemiBold
                         }
@@ -813,7 +813,7 @@ Item {
                             visible: panel.actionUuid === profileRow.modelData.uuid || !profileRow.modelData.supported
                             text: panel.actionUuid === profileRow.modelData.uuid ? "WORKING" : "DETAILS ONLY"
                             color: panel.actionUuid === profileRow.modelData.uuid ? panel.theme.warning : panel.theme.textMuted
-                            font.family: panel.runtime.fontMono
+                            font.family: panel.runtime.fontSans
                             font.pixelSize: panel.theme.fontSize(9)
                         }
                     }
@@ -849,7 +849,7 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         text: detailRow.modelData.label
                         color: panel.theme.accent
-                        font.family: panel.runtime.fontMono
+                        font.family: panel.runtime.fontSans
                         font.pixelSize: panel.theme.fontSize(10)
                         font.weight: Font.DemiBold
                     }
@@ -877,7 +877,7 @@ Item {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: panel.detailPending ? "READING NETWORKMANAGER…" : panel.detailError ? "CONNECTION DETAILS UNAVAILABLE" : "NO ACTIVE INTERFACE"
                 color: panel.detailError ? panel.theme.readableRoleColor("critical") : panel.theme.textMuted
-                font.family: panel.runtime.fontMono
+                font.family: panel.runtime.fontSans
                 font.pixelSize: panel.theme.fontSize(10)
             }
             Text {
@@ -902,7 +902,7 @@ Item {
                 text: panel.pendingNetwork ? panel.pendingNetwork.name : ""
                 horizontalAlignment: Text.AlignHCenter
                 color: panel.theme.textStrong
-                font.family: panel.runtime.fontMono
+                font.family: panel.runtime.fontSans
                 font.pixelSize: panel.theme.fontSize(18)
                 font.weight: Font.DemiBold
                 elide: Text.ElideRight
@@ -913,7 +913,7 @@ Item {
                 text: panel.pendingNetwork ? WifiSecurityType.toString(panel.pendingNetwork.security).toUpperCase() : ""
                 horizontalAlignment: Text.AlignHCenter
                 color: panel.theme.textMuted
-                font.family: panel.runtime.fontMono
+                font.family: panel.runtime.fontSans
                 font.pixelSize: panel.theme.fontSize(9)
                 font.letterSpacing: 1
             }
@@ -944,7 +944,7 @@ Item {
                     color: panel.theme.textStrong
                     selectionColor: panel.theme.accent
                     selectedTextColor: panel.theme.background
-                    font.family: panel.runtime.fontMono
+                    font.family: panel.runtime.fontSans
                     font.pixelSize: panel.theme.fontSize(15)
                     clip: true
 
@@ -1012,7 +1012,7 @@ Item {
             text: panel.system.wifiHardwareEnabled ? "Wi-Fi radio disabled" : "Wi-Fi disabled by hardware"
             horizontalAlignment: Text.AlignHCenter
             color: panel.system.wifiHardwareEnabled ? panel.theme.warning : panel.theme.critical
-            font.family: panel.runtime.fontMono
+            font.family: panel.runtime.fontSans
             font.pixelSize: panel.theme.fontSize(10)
             font.letterSpacing: 0.8
         }

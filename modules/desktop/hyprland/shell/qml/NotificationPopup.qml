@@ -334,7 +334,7 @@ PanelWindow {
                             anchors.verticalCenter: parent.verticalCenter
                             text: toast.notification ? (toast.notification.appName || "SYSTEM").toUpperCase() : "SYSTEM"
                             color: toast.urgencyColor
-                            font.family: qmlPopup.runtime.fontMono
+                            font.family: qmlPopup.runtime.fontSans
                             font.pixelSize: qmlPopup.theme.fontSize(10)
                             font.weight: Font.DemiBold
                             font.letterSpacing: 1.4
@@ -352,7 +352,7 @@ PanelWindow {
                             anchors.verticalCenter: parent.verticalCenter
                             text: !toast.notification ? "" : toast.notification.urgency === NotificationUrgency.Critical ? "CRITICAL" : toast.explicitActions.length > 0 ? toast.explicitActions.length + " ACTION" + (toast.explicitActions.length === 1 ? "" : "S") : toast.notification.hasInlineReply ? "REPLY" : ""
                             color: qmlPopup.theme.textMuted
-                            font.family: qmlPopup.runtime.fontMono
+                            font.family: qmlPopup.runtime.fontSans
                             font.pixelSize: qmlPopup.theme.fontSize(9)
                             font.letterSpacing: 0.8
                         }
@@ -363,7 +363,7 @@ PanelWindow {
                         text: toast.notification ? toast.notification.summary : ""
                         textFormat: Text.PlainText
                         color: qmlPopup.theme.textStrong
-                        font.family: qmlPopup.runtime.fontMono
+                        font.family: qmlPopup.runtime.fontSans
                         font.pixelSize: qmlPopup.theme.fontSize(15)
                         font.weight: Font.DemiBold
                     }
@@ -377,7 +377,7 @@ PanelWindow {
                         visible: text.length > 0
                         color: qmlPopup.theme.text
                         opacity: 0.84
-                        font.family: qmlPopup.runtime.fontMono
+                        font.family: qmlPopup.runtime.fontSans
                         font.pixelSize: qmlPopup.theme.fontSize(12)
                         wrapMode: Text.Wrap
                         elide: Text.ElideRight
@@ -451,7 +451,7 @@ PanelWindow {
                     text: qmlPopup.notificationState.hasDefaultAction(toast.notification) ? "CLICK · OPEN  /  RMB · DISMISS" : "CLICK · HISTORY  /  RMB · DISMISS"
                     color: qmlPopup.theme.textMuted
                     opacity: 0.62
-                    font.family: qmlPopup.runtime.fontMono
+                    font.family: qmlPopup.runtime.fontSans
                     font.pixelSize: qmlPopup.theme.fontSize(8)
                 }
             }

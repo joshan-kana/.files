@@ -157,7 +157,7 @@ Item {
                 visible: island.media.artUrl.length === 0
                 text: "♫"
                 color: island.theme.roleColor("media")
-                font.family: island.runtime.fontMono
+                font.family: island.runtime.fontSans
                 font.pixelSize: island.theme.fontSize(19)
             }
         }
@@ -176,7 +176,7 @@ Item {
                 width: parent.width
                 text: island.media.title
                 color: island.theme.textStrong
-                font.family: island.runtime.fontMono
+                font.family: island.runtime.fontSans
                 font.pixelSize: island.theme.fontSize(11)
                 font.weight: Font.DemiBold
             }
@@ -185,7 +185,7 @@ Item {
                 width: parent.width
                 text: island.media.artist
                 color: island.theme.textMuted
-                font.family: island.runtime.fontMono
+                font.family: island.runtime.fontSans
                 font.pixelSize: island.theme.fontSize(9)
             }
         }

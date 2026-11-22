@@ -83,7 +83,7 @@ Item {
                 elide: Text.ElideRight
                 textFormat: Text.PlainText
                 color: status.phase === "idle" ? status.theme.textMuted : status.semanticColor
-                font.family: status.runtime.fontMono
+                font.family: status.runtime.fontSans
                 font.pixelSize: status.theme.fontSize(11)
                 font.weight: Font.DemiBold
             }
@@ -95,7 +95,7 @@ Item {
                 elide: Text.ElideLeft
                 textFormat: Text.PlainText
                 color: status.theme.textMuted
-                font.family: status.runtime.fontMono
+                font.family: status.runtime.fontSans
                 font.pixelSize: status.theme.fontSize(9)
             }
         }

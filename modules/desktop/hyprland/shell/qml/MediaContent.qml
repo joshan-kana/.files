@@ -176,7 +176,7 @@ FocusScope {
                     visible: content.media.artUrl.length === 0
                     text: "♫"
                     color: content.theme.roleColor("media")
-                    font.family: content.runtime.fontMono
+                    font.family: content.runtime.fontSans
                     font.pixelSize: content.theme.fontSize(48)
                 }
             }
@@ -189,7 +189,7 @@ FocusScope {
                 Text {
                     text: content.media.available ? "Now playing" : "Media"
                     color: content.theme.readableRoleColor("media")
-                    font.family: content.runtime.fontMono
+                    font.family: content.runtime.fontSans
                     font.pixelSize: content.theme.fontSize(12)
                     font.weight: Font.Medium
                 }
@@ -198,7 +198,7 @@ FocusScope {
                     width: parent.width
                     text: content.media.title
                     color: content.theme.textStrong
-                    font.family: content.runtime.fontMono
+                    font.family: content.runtime.fontSans
                     font.pixelSize: content.theme.fontSize(content.compactHeight ? 22 : 28)
                     font.weight: Font.DemiBold
                 }
@@ -207,7 +207,7 @@ FocusScope {
                     width: parent.width
                     text: content.media.artist || content.media.identity || "No MPRIS player connected"
                     color: content.theme.textMuted
-                    font.family: content.runtime.fontMono
+                    font.family: content.runtime.fontSans
                     font.pixelSize: content.theme.fontSize(13)
                 }
 
@@ -217,7 +217,7 @@ FocusScope {
                     text: content.media.album
                     color: content.theme.textMuted
                     opacity: 0.72
-                    font.family: content.runtime.fontMono
+                    font.family: content.runtime.fontSans
                     font.pixelSize: content.theme.fontSize(10)
                 }
             }
@@ -365,7 +365,7 @@ FocusScope {
                             text: modelData.label
                             color: content.theme.textMuted
                             opacity: 0.62
-                            font.family: content.runtime.fontMono
+                            font.family: content.runtime.fontSans
                             font.pixelSize: content.theme.fontSize(8)
                         }
                     }
@@ -560,7 +560,7 @@ FocusScope {
                 anchors.verticalCenter: parent.verticalCenter
                 text: "Seek " + content.media.seekSeconds + "s"
                 color: content.theme.textStrong
-                font.family: content.runtime.fontMono
+                font.family: content.runtime.fontSans
                 font.pixelSize: content.theme.fontSize(12)
                 font.weight: Font.DemiBold
             }

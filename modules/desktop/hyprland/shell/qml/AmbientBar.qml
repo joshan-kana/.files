@@ -538,7 +538,7 @@ Variants {
                         anchors.verticalCenter: parent.verticalCenter
                         text: Qt.formatDateTime(clock.date, "ddd d MMM")
                         color: bars.theme.textMuted
-                        font.family: bars.runtime.fontMono
+                        font.family: bars.runtime.fontSans
                         font.pixelSize: bars.theme.fontSize(13)
                         font.weight: Font.Medium
                     }
@@ -547,7 +547,7 @@ Variants {
                         anchors.verticalCenter: parent.verticalCenter
                         text: "✳"
                         color: bars.theme.warning
-                        font.family: bars.runtime.fontMono
+                        font.family: bars.runtime.fontSans
                         font.pixelSize: bars.theme.fontSize(14)
                     }
 
@@ -704,7 +704,7 @@ Variants {
                         anchors.verticalCenter: parent.verticalCenter
                         text: "●"
                         color: bar.recordingState.phase === "completed" ? bars.theme.positive : bar.recordingState.phase === "failed" ? bars.theme.critical : bars.theme.warning
-                        font.family: bars.runtime.fontMono
+                        font.family: bars.runtime.fontSans
                         font.pixelSize: bars.theme.fontSize(15)
                     }
                     Text {

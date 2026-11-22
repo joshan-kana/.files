@@ -224,7 +224,7 @@ FocusScope {
                 Text {
                     text: Qt.formatDate(clock.date, "dddd · d MMMM yyyy").toUpperCase()
                     color: calendar.theme.readableRoleColor("calendar")
-                    font.family: calendar.runtime.fontMono
+                    font.family: calendar.runtime.fontSans
                     font.pixelSize: calendar.theme.fontPanelEyebrow
                     font.weight: Font.DemiBold
                     font.letterSpacing: 0.7
@@ -232,7 +232,7 @@ FocusScope {
                 Text {
                     text: clock.date.getHours() < 12 ? "Good morning." : clock.date.getHours() < 17 ? "Good afternoon." : "Good evening."
                     color: calendar.theme.textStrong
-                    font.family: calendar.runtime.fontMono
+                    font.family: calendar.runtime.fontSans
                     font.pixelSize: calendar.theme.fontPanelTitle
                     font.weight: Font.DemiBold
                 }
@@ -283,7 +283,7 @@ FocusScope {
                                 text: Qt.formatDate(calendar.viewingDate, "MMMM yyyy")
                                 wrapMode: Text.WordWrap
                                 color: calendar.theme.textStrong
-                                font.family: calendar.runtime.fontMono
+                                font.family: calendar.runtime.fontSans
                                 font.pixelSize: calendar.theme.fontSize(22)
                                 font.weight: Font.DemiBold
                             }
@@ -470,7 +470,7 @@ FocusScope {
                 spacing: calendar.theme.spacing2
                 Text {
                     text: "CALENDARS"
-                    font.family: calendar.runtime.fontMono
+                    font.family: calendar.runtime.fontSans
                     font.pixelSize: calendar.theme.fontPanelEyebrow
                     font.weight: Font.DemiBold
                     color: calendar.theme.readableRoleColor("calendar")
@@ -482,7 +482,7 @@ FocusScope {
                 Text {
                     id: enabledLabel
                     text: qmlAgenda.calendars.filter(source => source.enabled).length + " / " + qmlAgenda.calendars.length + " ON"
-                    font.family: calendar.runtime.fontMono
+                    font.family: calendar.runtime.fontSans
                     font.pixelSize: calendar.theme.fontSize(10)
                     color: calendar.theme.textMuted
                 }
@@ -523,7 +523,7 @@ FocusScope {
                             elide: Text.ElideRight
                             text: sourceRow.modelData.name
                             color: sourceRow.modelData.enabled ? calendar.theme.textStrong : calendar.theme.textMuted
-                            font.family: calendar.runtime.fontMono
+                            font.family: calendar.runtime.fontSans
                             font.pixelSize: calendar.theme.fontSize(12)
                         }
                     }

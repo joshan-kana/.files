@@ -347,7 +347,7 @@ Item {
             onTextChanged: panel.searchText = text
             color: panel.theme.textStrong
             selectionColor: panel.theme.accent
-            font.family: panel.runtime.fontMono
+            font.family: panel.runtime.fontSans
             font.pixelSize: panel.theme.fontSize(12)
             focus: false
             Keys.onPressed: event => {
@@ -371,7 +371,7 @@ Item {
             visible: searchField.text.length === 0 && !searchField.activeFocus
             text: "Search themes"
             color: panel.theme.textMuted
-            font.family: panel.runtime.fontMono
+            font.family: panel.runtime.fontSans
             font.pixelSize: panel.theme.fontSize(11)
         }
     }
@@ -425,7 +425,7 @@ Item {
             visible: panel.filteredThemes.length === 0
             text: panel.themes.length === 0 ? "Loading themes…" : "No matching themes"
             color: panel.theme.textMuted
-            font.family: panel.runtime.fontMono
+            font.family: panel.runtime.fontSans
             font.pixelSize: panel.theme.fontSize(11)
         }
 
@@ -545,7 +545,7 @@ Item {
                                 y: 22
                                 text: "Ag"
                                 color: themeCard.preview ? themeCard.preview.text : panel.theme.textStrong
-                                font.family: panel.runtime.fontMono
+                                font.family: panel.runtime.fontSans
                                 font.pixelSize: panel.theme.fontSize(22)
                                 font.weight: Font.DemiBold
                             }
@@ -655,7 +655,7 @@ Item {
                                     anchors.horizontalCenter: parent.horizontalCenter
                                     text: "DYNAMIC PALETTE"
                                     color: "#ffffff"
-                                    font.family: panel.runtime.fontMono
+                                    font.family: panel.runtime.fontSans
                                     font.pixelSize: panel.theme.fontSize(11)
                                     font.weight: Font.DemiBold
                                     font.letterSpacing: 0.7
@@ -665,7 +665,7 @@ Item {
                                     text: "DERIVED FROM WALLPAPER"
                                     color: "#ffffff"
                                     opacity: 0.8
-                                    font.family: panel.runtime.fontMono
+                                    font.family: panel.runtime.fontSans
                                     font.pixelSize: panel.theme.fontSize(9)
                                 }
                             }
@@ -679,7 +679,7 @@ Item {
                             width: parent.width - status.width - parent.spacing
                             text: themeCard.modelData.label || themeCard.modelData.name
                             color: panel.theme.textStrong
-                            font.family: panel.runtime.fontMono
+                            font.family: panel.runtime.fontSans
                             font.pixelSize: panel.theme.fontSize(12)
                             font.weight: Font.DemiBold
                             elide: Text.ElideRight
@@ -688,7 +688,7 @@ Item {
                             id: status
                             text: themeCard.modelData.name === panel.currentTheme ? "ACTIVE" : ""
                             color: panel.theme.positive
-                            font.family: panel.runtime.fontMono
+                            font.family: panel.runtime.fontSans
                             font.pixelSize: panel.theme.fontSize(9)
                         }
                     }

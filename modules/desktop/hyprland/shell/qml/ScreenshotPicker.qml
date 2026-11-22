@@ -531,7 +531,7 @@ Item {
                         width: parent.width
                         text: picker.selectionMode === "record" ? "VIDEO · " + picker.audioLabel : (picker.frozenForCapture ? "FROZEN IMAGE" : "LIVE IMAGE")
                         color: picker.theme.readableRoleColor("capture")
-                        font.family: picker.runtime.fontMono
+                        font.family: picker.runtime.fontSans
                         font.pixelSize: picker.theme.fontSize(12)
                         font.weight: Font.DemiBold
                         elide: Text.ElideRight
@@ -540,7 +540,7 @@ Item {
                         width: parent.width
                         text: picker.statusText.length > 0 ? picker.statusText : "DRAG TO SELECT · RELEASE TO ADJUST"
                         color: picker.theme.textMuted
-                        font.family: picker.runtime.fontMono
+                        font.family: picker.runtime.fontSans
                         font.pixelSize: picker.theme.fontSize(9)
                         elide: Text.ElideRight
                     }

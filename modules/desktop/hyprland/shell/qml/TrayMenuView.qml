@@ -211,7 +211,7 @@ Item {
                         visible: entryDelegate.modelData.buttonType !== QsMenuButtonType.None
                         text: entryDelegate.modelData.checkState === Qt.Checked ? (entryDelegate.modelData.buttonType === QsMenuButtonType.RadioButton ? "●" : "✓") : "○"
                         color: view.theme.accent
-                        font.family: view.runtime.fontMono
+                        font.family: view.runtime.fontSans
                         font.pixelSize: view.theme.fontSize(11)
                     }
 
@@ -220,7 +220,7 @@ Item {
                         width: parent.width - (entryDelegate.modelData.icon.length > 0 ? 20 + parent.spacing : 0) - (entryDelegate.modelData.buttonType !== QsMenuButtonType.None ? 18 + parent.spacing : 0) - (entryDelegate.modelData.hasChildren ? 18 : 0)
                         text: entryDelegate.modelData.text
                         color: view.theme.text
-                        font.family: view.runtime.fontMono
+                        font.family: view.runtime.fontSans
                         font.pixelSize: view.theme.fontSize(12)
                     }
 
@@ -229,7 +229,7 @@ Item {
                         visible: entryDelegate.modelData.hasChildren
                         text: "›"
                         color: view.theme.textMuted
-                        font.family: view.runtime.fontMono
+                        font.family: view.runtime.fontSans
                         font.pixelSize: view.theme.fontSize(16)
                     }
                 }
@@ -261,7 +261,7 @@ Item {
         Text {
             text: view.itemCount + " ENTRIES"
             color: view.theme.textMuted
-            font.family: view.runtime.fontMono
+            font.family: view.runtime.fontSans
             font.pixelSize: view.theme.fontSize(9)
             font.letterSpacing: 1
         }
@@ -269,7 +269,7 @@ Item {
         Text {
             text: view.stack.length > 1 ? "BACKSPACE  UP" : "BACKSPACE  TRAY"
             color: view.theme.accent
-            font.family: view.runtime.fontMono
+            font.family: view.runtime.fontSans
             font.pixelSize: view.theme.fontSize(9)
             font.letterSpacing: 1
         }

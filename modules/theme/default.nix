@@ -559,7 +559,11 @@ in
                         scrimOpacity = 0.50;
                         squircleExponent = 4.5;
                       };
-                      fonts.mono = config.stylix.fonts.monospace.name;
+                      fonts = {
+                        sans = config.stylix.fonts.sansSerif.name;
+                        serif = config.stylix.fonts.serif.name;
+                        mono = config.stylix.fonts.monospace.name;
+                      };
                       wallpaper = toString osConfig.stylix.image;
                       tools.themeSet = lib.getExe themeSet;
                     };

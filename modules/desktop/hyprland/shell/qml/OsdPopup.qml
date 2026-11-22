@@ -148,7 +148,7 @@ PanelWindow {
                 Text {
                     text: qmlPopup.osd.label
                     color: qmlPopup.accentColor
-                    font.family: qmlPopup.runtime.fontMono
+                    font.family: qmlPopup.runtime.fontSans
                     font.pixelSize: qmlPopup.theme.fontSize(11)
                     font.weight: Font.DemiBold
                     font.letterSpacing: 1.4
@@ -163,7 +163,7 @@ PanelWindow {
                     id: valueText
                     text: qmlPopup.osd.kind === "mode" ? "ACTIVE" : qmlPopup.keyboardMode ? FeedbackSemantics.stateLabel(qmlPopup.osd.keyboardState) : qmlPopup.osd.muted ? "MUTED" : qmlPopup.osd.value + "%"
                     color: qmlPopup.theme.textStrong
-                    font.family: qmlPopup.runtime.fontMono
+                    font.family: qmlPopup.runtime.fontSans
                     font.pixelSize: qmlPopup.theme.fontSize(12)
                     font.weight: Font.DemiBold
                 }

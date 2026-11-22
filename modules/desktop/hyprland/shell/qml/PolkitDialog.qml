@@ -129,7 +129,7 @@ Scope {
                         Text {
                             text: "AUTHENTICATION"
                             color: auth.theme.warning
-                            font.family: auth.runtime.fontMono
+                            font.family: auth.runtime.fontSans
                             font.pixelSize: auth.theme.fontSize(10)
                             font.weight: Font.DemiBold
                             font.letterSpacing: 1.2
@@ -137,7 +137,7 @@ Scope {
                         Text {
                             text: "Authorization required"
                             color: auth.theme.textStrong
-                            font.family: auth.runtime.fontMono
+                            font.family: auth.runtime.fontSans
                             font.pixelSize: auth.theme.fontSize(18)
                             font.weight: Font.DemiBold
                         }
@@ -152,7 +152,7 @@ Scope {
                     maximumLineCount: 4
                     elide: Text.ElideRight
                     color: auth.theme.text
-                    font.family: auth.runtime.fontMono
+                    font.family: auth.runtime.fontSans
                     font.pixelSize: auth.theme.fontSize(12)
                 }
                 MarqueeText {
@@ -171,7 +171,7 @@ Scope {
                         width: Math.max(1, parent.width - (identityButton.visible ? identityButton.width + parent.spacing : 0))
                         text: "󰀄  " + (auth.flow && auth.flow.selectedIdentity ? auth.flow.selectedIdentity.displayName : "Local authentication")
                         color: auth.theme.textStrong
-                        font.family: auth.runtime.fontMono
+                        font.family: auth.runtime.fontSans
                         font.pixelSize: auth.theme.fontSize(11)
                     }
                     ShellAction {
@@ -194,7 +194,7 @@ Scope {
                     text: auth.flow && auth.flow.inputPrompt.length ? auth.flow.inputPrompt : "Password"
                     textFormat: Text.PlainText
                     color: auth.theme.textMuted
-                    font.family: auth.runtime.fontMono
+                    font.family: auth.runtime.fontSans
                     font.pixelSize: auth.theme.fontSize(10)
                 }
 
@@ -219,7 +219,7 @@ Scope {
                         enabled: !!auth.flow && auth.flow.isResponseRequired && !auth.submitting
                         color: auth.theme.textStrong
                         selectionColor: auth.theme.accent
-                        font.family: auth.runtime.fontMono
+                        font.family: auth.runtime.fontSans
                         font.pixelSize: auth.theme.fontSize(13)
                         echoMode: auth.flow && auth.flow.responseVisible ? TextInput.Normal : TextInput.Password
                         inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
@@ -255,7 +255,7 @@ Scope {
                     wrapMode: Text.Wrap
                     maximumLineCount: 3
                     color: auth.flow && (auth.flow.supplementaryIsError || auth.flow.failed) ? auth.theme.critical : auth.theme.textMuted
-                    font.family: auth.runtime.fontMono
+                    font.family: auth.runtime.fontSans
                     font.pixelSize: auth.theme.fontSize(10)
                 }
 

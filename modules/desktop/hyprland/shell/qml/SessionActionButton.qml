@@ -110,7 +110,7 @@ Item {
         }
         text: button.armed ? "CONFIRM " + button.label.toUpperCase() : button.label
         color: button.armed ? button.theme.warning : button.selected ? button.accentColor : button.theme.textStrong
-        font.family: button.runtime.fontMono
+        font.family: button.runtime.fontSans
         font.pixelSize: button.theme.fontSize(11)
         font.weight: button.selected ? Font.DemiBold : Font.Medium
     }

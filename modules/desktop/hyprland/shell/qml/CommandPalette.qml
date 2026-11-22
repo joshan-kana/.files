@@ -1288,7 +1288,7 @@ Item {
                 Text {
                     text: palette.actionMode ? "COMMAND PALETTE · ACTIONS" : palette.parameterTarget ? "COMMAND PALETTE · ARGUMENT" : "COMMAND PALETTE · SEARCH / CALCULATE"
                     color: palette.scopeAccent
-                    font.family: runtime.fontMono
+                    font.family: runtime.fontSans
                     font.pixelSize: theme.fontPanelEyebrow
                     font.weight: Font.DemiBold
                     font.letterSpacing: 0.7
@@ -1303,7 +1303,7 @@ Item {
                         text: palette.actionMode ? "Actions for " + palette.actionTarget.name : palette.parameterTarget ? (palette.parameterTarget.parameterMode === "move" ? "Move to workspace" : palette.parameterTarget.name) : "What do you want to do?"
                         elide: Text.ElideRight
                         color: theme.textStrong
-                        font.family: runtime.fontMono
+                        font.family: runtime.fontSans
                         font.pixelSize: theme.fontSize(24)
                         font.weight: Font.DemiBold
                     }
@@ -1421,7 +1421,7 @@ Item {
                     color: theme.textStrong
                     selectionColor: palette.theme.accent
                     selectedTextColor: theme.background
-                    font.family: runtime.fontMono
+                    font.family: runtime.fontSans
                     font.pixelSize: theme.fontSize(18)
                     clip: true
 
@@ -1599,7 +1599,7 @@ Item {
                                 text: modelData.name
                                 textFormat: Text.PlainText
                                 color: theme.textStrong
-                                font.family: runtime.fontMono
+                                font.family: runtime.fontSans
                                 font.pixelSize: theme.fontSize(14)
                                 font.weight: result.ListView.isCurrentItem ? Font.DemiBold : Font.Normal
                             }
@@ -1610,7 +1610,7 @@ Item {
                                 text: modelData.genericName
                                 textFormat: Text.PlainText
                                 color: theme.textMuted
-                                font.family: runtime.fontMono
+                                font.family: runtime.fontSans
                                 font.pixelSize: theme.fontSize(11)
                             }
                         }
@@ -1670,7 +1670,7 @@ Item {
                     visible: displayedModel.values.length === 0
                     text: palette.parameterTarget ? "ENTER A VALUE" : "NO MATCHES"
                     color: theme.textMuted
-                    font.family: runtime.fontMono
+                    font.family: runtime.fontSans
                     font.pixelSize: theme.fontSize(12)
                     font.letterSpacing: 1.5
                 }
@@ -1689,7 +1689,7 @@ Item {
                     id: resultCount
                     text: palette.copyFeedback || displayedModel.values.length + (palette.actionMode ? " ACTIONS" : " RESULTS")
                     color: theme.textMuted
-                    font.family: runtime.fontMono
+                    font.family: runtime.fontSans
                     font.pixelSize: theme.fontSize(10)
                     font.letterSpacing: 1.2
                 }

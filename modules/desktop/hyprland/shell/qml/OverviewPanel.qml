@@ -392,14 +392,14 @@ Item {
                     Text {
                         text: "SPATIAL OVERVIEW"
                         color: overview.theme.accent
-                        font.family: overview.runtime.fontMono
+                        font.family: overview.runtime.fontSans
                         font.pixelSize: overview.theme.fontPanelEyebrow
                         font.weight: Font.DemiBold
                     }
                     Text {
                         text: overview.moveMode ? "Move window" : "Your workspaces"
                         color: overview.theme.textStrong
-                        font.family: overview.runtime.fontMono
+                        font.family: overview.runtime.fontSans
                         font.pixelSize: overview.theme.fontPanelTitle
                         font.weight: Font.DemiBold
                     }
@@ -412,7 +412,7 @@ Item {
                 Text {
                     text: overview.statusText.length > 0 ? overview.statusText : overview.scopeLabel.toUpperCase() + " · " + overview.windows.length + (overview.windows.length === 1 ? " WINDOW" : " WINDOWS")
                     color: overview.theme.textMuted
-                    font.family: overview.runtime.fontMono
+                    font.family: overview.runtime.fontSans
                     font.pixelSize: overview.theme.fontSize(11)
                 }
             }
@@ -466,7 +466,7 @@ Item {
                     Layout.fillWidth: true
                     text: overview.movePending ? "WAITING FOR COMPOSITOR" : overview.moveMode ? "MOVE TARGET · " + (overview.moveTarget ? overview.moveTarget.title : "WINDOW") : overview.showAllWorkspaces ? "ALL DESKTOP WINDOWS" : "WORKSPACE " + overview.browsedWorkspace
                     color: overview.theme.accent
-                    font.family: overview.runtime.fontMono
+                    font.family: overview.runtime.fontSans
                     font.pixelSize: overview.theme.fontSubpanelEyebrow
                     font.letterSpacing: 0.6
                 }
@@ -578,7 +578,7 @@ Item {
                     visible: overview.windows.length === 0
                     text: overview.showAllWorkspaces ? "No open application windows" : "Workspace " + overview.browsedWorkspace + " is empty · " + overview.runtime.shellHint("OverviewPanel.open") + " to switch"
                     color: overview.theme.textMuted
-                    font.family: overview.runtime.fontMono
+                    font.family: overview.runtime.fontSans
                     font.pixelSize: overview.theme.fontSize(13)
                 }
             }
@@ -593,7 +593,7 @@ Item {
                     textFormat: Text.PlainText
                     elide: Text.ElideRight
                     color: overview.theme.textMuted
-                    font.family: overview.runtime.fontMono
+                    font.family: overview.runtime.fontSans
                     font.pixelSize: overview.theme.fontSize(11)
                 }
                 ShellAction {

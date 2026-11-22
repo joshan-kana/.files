@@ -48,7 +48,7 @@ ShellSurface {
                 text: (summary.weather.city || "YOUR LOCATION").toUpperCase() + " · WEATHER"
                 color: summary.theme.readableRoleColor("weather")
                 opacity: 0.89
-                font.family: summary.theme.runtime.fontMono
+                font.family: summary.theme.runtime.fontSans
                 font.pixelSize: summary.theme.fontPanelEyebrow
                 font.weight: Font.DemiBold
                 elide: Text.ElideRight
@@ -77,7 +77,7 @@ ShellSurface {
             width: parent.width
             text: summary.weather.available ? summary.weather.description : summary.weather.status
             color: summary.theme.textStrong
-            font.family: summary.theme.runtime.fontMono
+            font.family: summary.theme.runtime.fontSans
             font.pixelSize: summary.theme.fontSize(11)
             elide: Text.ElideRight
         }

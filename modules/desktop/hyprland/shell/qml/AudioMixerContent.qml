@@ -274,7 +274,7 @@ FocusScope {
                 width: Math.max(1, parent.width - channelCount.implicitWidth - parent.spacing)
                 text: mixer.compact ? "APPLICATION AUDIO" : "APPLICATION CHANNELS"
                 color: mixer.theme.readableRoleColor("audio")
-                font.family: mixer.runtime.fontMono
+                font.family: mixer.runtime.fontSans
                 font.pixelSize: mixer.theme.fontSize(10)
                 font.weight: Font.DemiBold
                 font.letterSpacing: 0.9
@@ -284,7 +284,7 @@ FocusScope {
                 anchors.verticalCenter: parent.verticalCenter
                 text: mixer.system.audioApplicationStreams.length + " PLAY · " + mixer.system.audioCaptureStreams.length + " REC"
                 color: mixer.theme.textMuted
-                font.family: mixer.runtime.fontMono
+                font.family: mixer.runtime.fontSans
                 font.pixelSize: mixer.theme.fontSize(9)
             }
         }
@@ -322,7 +322,7 @@ FocusScope {
                     height: visible ? 18 : 0
                     text: streamRow.capture ? "CAPTURE" : "PLAYBACK"
                     color: mixer.theme.readableRoleColor("audio")
-                    font.family: mixer.runtime.fontMono
+                    font.family: mixer.runtime.fontSans
                     font.pixelSize: mixer.theme.fontSize(9)
                 }
 
@@ -374,7 +374,7 @@ FocusScope {
                 anchors.centerIn: parent
                 text: mixer.compact ? "No application audio" : "No application channels · Start playback or capture"
                 color: mixer.theme.textMuted
-                font.family: mixer.runtime.fontMono
+                font.family: mixer.runtime.fontSans
                 font.pixelSize: mixer.theme.fontSize(11)
             }
         }

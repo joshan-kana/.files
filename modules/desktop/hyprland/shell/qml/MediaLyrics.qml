@@ -107,7 +107,7 @@ Item {
                         maximumLineCount: 2
                         elide: Text.ElideRight
                         color: lineRow.current ? root.theme.textStrong : root.theme.textMuted
-                        font.family: root.runtime.fontMono
+                        font.family: root.runtime.fontSans
                         font.pixelSize: root.theme.fontSize(17)
                         font.weight: lineRow.current ? Font.DemiBold : Font.Normal
                     }
@@ -123,7 +123,7 @@ Item {
                 horizontalAlignment: Text.AlignHCenter
                 wrapMode: Text.WordWrap
                 color: root.theme.textMuted
-                font.family: root.runtime.fontMono
+                font.family: root.runtime.fontSans
                 font.pixelSize: root.theme.fontSize(12)
             }
         }

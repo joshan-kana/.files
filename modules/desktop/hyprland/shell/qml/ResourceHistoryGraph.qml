@@ -30,7 +30,7 @@ Item {
             width: parent.width - current.width
             text: graph.label
             color: graph.theme.textMuted
-            font.family: graph.runtime.fontMono
+            font.family: graph.runtime.fontSans
             font.pixelSize: graph.theme.fontSize(10)
             font.weight: Font.DemiBold
         }

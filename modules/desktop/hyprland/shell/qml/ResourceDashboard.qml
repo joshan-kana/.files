@@ -82,7 +82,7 @@ Item {
                             Text {
                                 text: tile.cpu ? "CPU" : "MEMORY"
                                 color: panel.theme.textStrong
-                                font.family: panel.runtime.fontMono
+                                font.family: panel.runtime.fontSans
                                 font.pixelSize: panel.theme.fontSize(12)
                                 font.weight: Font.DemiBold
                             }
@@ -100,7 +100,7 @@ Item {
                             anchors.horizontalCenter: parent.horizontalCenter
                             text: tile.detailText
                             color: panel.theme.textMuted
-                            font.family: panel.runtime.fontMono
+                            font.family: panel.runtime.fontSans
                             font.pixelSize: panel.theme.fontSize(9)
                         }
                     }
@@ -147,7 +147,7 @@ Item {
                         Text {
                             text: metricColumn.modelData.title
                             color: panel.theme.textMuted
-                            font.family: panel.runtime.fontMono
+                            font.family: panel.runtime.fontSans
                             font.pixelSize: panel.theme.fontSize(10)
                         }
                         Text {
@@ -163,7 +163,7 @@ Item {
                             width: parent.width
                             text: metricColumn.modelData.subtitle
                             color: panel.theme.textMuted
-                            font.family: panel.runtime.fontMono
+                            font.family: panel.runtime.fontSans
                             font.pixelSize: panel.theme.fontSize(9)
                             elide: Text.ElideRight
                         }
@@ -210,7 +210,7 @@ Item {
                         Text {
                             text: sensorColumn.modelData.title
                             color: panel.theme.textMuted
-                            font.family: panel.runtime.fontMono
+                            font.family: panel.runtime.fontSans
                             font.pixelSize: panel.theme.fontSize(10)
                         }
                         Text {
@@ -226,7 +226,7 @@ Item {
                             width: parent.width
                             text: sensorColumn.modelData.detail
                             color: panel.theme.textMuted
-                            font.family: panel.runtime.fontMono
+                            font.family: panel.runtime.fontSans
                             font.pixelSize: panel.theme.fontSize(9)
                             elide: Text.ElideRight
                         }
@@ -257,7 +257,7 @@ Item {
                         width: Math.max(1, parent.width - viewToggle.width - parent.spacing)
                         text: panel.showCores ? "LOGICAL CORES · " + panel.resourceState.coreUsage.length + " ACTIVE COUNTERS" : "RESOURCE HISTORY · LAST " + panel.resourceState.historyLength * 2 + "s"
                         color: panel.theme.textStrong
-                        font.family: panel.runtime.fontMono
+                        font.family: panel.runtime.fontSans
                         font.pixelSize: panel.theme.fontSize(10)
                         font.weight: Font.DemiBold
                         elide: Text.ElideRight

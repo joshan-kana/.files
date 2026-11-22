@@ -50,7 +50,7 @@ Item {
         visible: hint.showLabel
         text: hint.label
         color: hint.theme.textMuted
-        font.family: hint.runtime.fontMono
+        font.family: hint.runtime.fontSans
         font.pixelSize: hint.theme.fontKeyHint
         font.weight: Font.Medium
     }

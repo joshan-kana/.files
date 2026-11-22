@@ -74,7 +74,7 @@ Item {
             anchors.horizontalCenter: parent.horizontalCenter
             text: gauge.label
             color: gauge.theme.textMuted
-            font.family: gauge.theme.runtime.fontMono
+            font.family: gauge.theme.runtime.fontSans
             font.pixelSize: gauge.theme.fontSize(10)
         }
     }

@@ -171,7 +171,7 @@ SquircleSurface {
                 elide: Text.ElideRight
                 width: Math.min(implicitWidth, Math.max(70, card.width * 0.38))
                 color: card.notification && card.notification.urgency === NotificationUrgency.Critical ? card.theme.readableRoleColor("critical") : card.read ? card.theme.textMuted : card.theme.readableRoleColor("notifications")
-                font.family: card.runtime.fontMono
+                font.family: card.runtime.fontSans
                 font.pixelSize: card.theme.fontSize(9)
                 font.weight: Font.DemiBold
                 font.letterSpacing: 1.2
@@ -203,7 +203,7 @@ SquircleSurface {
                     anchors.verticalCenter: parent.verticalCenter
                     text: (card.groupCount > 1 ? card.groupCount + " ITEMS · " : "") + (card.expanded ? "󰅃" : "󰅀") + (card.safeActions.length > 0 ? "  " + card.safeActions.length + " ACTIONS" : card.notification && card.notification.hasInlineReply ? "  REPLY" : card.notificationState.hasDefaultAction(card.notification) ? "  OPEN" : "  EXPAND")
                     color: card.theme.textMuted
-                    font.family: card.runtime.fontMono
+                    font.family: card.runtime.fontSans
                     font.pixelSize: card.theme.fontSize(8)
                 }
 
@@ -262,7 +262,7 @@ SquircleSurface {
             text: card.notification ? card.notification.summary : ""
             textFormat: Text.PlainText
             color: card.theme.textStrong
-            font.family: card.runtime.fontMono
+            font.family: card.runtime.fontSans
             font.pixelSize: card.theme.fontSize(14)
             font.weight: Font.DemiBold
             wrapMode: Text.Wrap
@@ -277,7 +277,7 @@ SquircleSurface {
             onLinkActivated: link => card.notificationState.openBodyLink(link)
             color: card.theme.text
             opacity: 0.78
-            font.family: card.runtime.fontMono
+            font.family: card.runtime.fontSans
             font.pixelSize: card.theme.fontSize(11)
             wrapMode: Text.Wrap
             elide: Text.ElideRight
@@ -384,7 +384,7 @@ SquircleSurface {
                     color: card.theme.textStrong
                     selectionColor: card.theme.accent
                     selectedTextColor: card.theme.background
-                    font.family: card.runtime.fontMono
+                    font.family: card.runtime.fontSans
                     font.pixelSize: card.theme.fontSize(11)
                     clip: true
                     text: card.replyDraft

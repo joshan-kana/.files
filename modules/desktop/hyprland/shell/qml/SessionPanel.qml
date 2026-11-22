@@ -364,7 +364,7 @@ Item {
             text: panel.statusText
             color: panel.theme.readableRoleColor(panel.statusError ? "critical" : "warning")
             horizontalAlignment: Text.AlignHCenter
-            font.family: panel.runtime.fontMono
+            font.family: panel.runtime.fontSans
             font.pixelSize: panel.theme.fontSize(11)
             font.weight: Font.DemiBold
         }

@@ -349,7 +349,7 @@ Item {
                         color: panel.theme.textStrong
                         selectionColor: panel.theme.accent
                         selectedTextColor: panel.theme.background
-                        font.family: panel.runtime.fontMono
+                        font.family: panel.runtime.fontSans
                         font.pixelSize: panel.theme.fontSize(14)
                         clip: true
 
@@ -463,7 +463,7 @@ Item {
                             anchors.verticalCenter: parent.verticalCenter
                             text: item.modelData.kind
                             color: panel.theme.readableRoleColor(item.modelData.kind !== "TEXT" ? "capture" : "clipboard")
-                            font.family: panel.runtime.fontMono
+                            font.family: panel.runtime.fontSans
                             font.pixelSize: panel.theme.fontSize(9)
                             font.weight: Font.DemiBold
                             font.letterSpacing: 0.8
@@ -511,7 +511,7 @@ Item {
                         Text {
                             text: "◈"
                             color: panel.theme.roleColor("clipboard")
-                            font.family: panel.runtime.fontMono
+                            font.family: panel.runtime.fontSans
                             font.pixelSize: panel.theme.fontSize(19)
                         }
                         Column {
@@ -590,7 +590,7 @@ Item {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: "▧"
                                 color: panel.theme.roleColor("clipboard")
-                                font.family: panel.runtime.fontMono
+                                font.family: panel.runtime.fontSans
                                 font.pixelSize: panel.theme.fontSize(44)
                             }
                             ShellText {
@@ -623,7 +623,7 @@ Item {
                 visible: !panel.queryProcess.running && panel.filteredEntries.length === 0
                 text: search.text.length > 0 ? "NO MATCHES" : "CLIPBOARD HISTORY IS EMPTY"
                 color: panel.theme.textMuted
-                font.family: panel.runtime.fontMono
+                font.family: panel.runtime.fontSans
                 font.pixelSize: panel.theme.fontSize(11)
                 font.letterSpacing: 1.1
             }
@@ -633,7 +633,7 @@ Item {
                 visible: panel.queryProcess.running
                 text: "Loading history…"
                 color: panel.theme.readableRoleColor("clipboard")
-                font.family: panel.runtime.fontMono
+                font.family: panel.runtime.fontSans
                 font.pixelSize: panel.theme.fontSize(11)
                 font.letterSpacing: 1.1
             }
