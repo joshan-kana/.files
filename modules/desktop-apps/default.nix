@@ -41,6 +41,14 @@ in
     };
   };
 
+  nowcaption =
+    _:
+    lib.optionalAttrs isLinux {
+      home = _: {
+        home.packages = [ pkgs.nowcaption ];
+      };
+    };
+
   neodisk = _: {
     home = _: {
       home.packages = [ pkgs.neodisk ];

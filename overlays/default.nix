@@ -60,6 +60,7 @@ _: {
     ./hermes-agent
     ./matrix-bridges
     ./neodisk
+    ./nowcaption
     ./ncmpcpp
     ./xytz
     ./openclaw
