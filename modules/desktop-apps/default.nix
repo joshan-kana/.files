@@ -25,12 +25,6 @@ in
       home.sessionVariables.BROWSER = config.dotfiles.defaults.browser;
     };
 
-  animaEngine =
-    _:
-    lib.optionalAttrs isLinux {
-      home = _: { home.packages = [ pkgs.anima-engine ]; };
-    };
-
   nowcaption =
     _:
     lib.optionalAttrs isLinux {
