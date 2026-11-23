@@ -28,6 +28,10 @@ test("animated VHS scales tracking distortion and grain with intensity", () => {
   assert.match(source, /VHS_NOISE/);
   assert.match(source, /VHS_SCANLINES/);
   assert.match(source, /VHS_SPEED/);
+  assert.match(source, /const float VHS_DROPOUTS = 0\.00;/);
+  assert.match(source, /colour \*= 1\.0 - dropout \* strength \* VHS_DROPOUTS/);
+  assert.match(source, /trackingFlash = .*max\(0\.0, tearDirection\) \* VHS_TRACKING/);
+  assert.doesNotMatch(source, /dropout \* strength \* VHS_NOISE/);
   assert.doesNotMatch(source, /pointer_position/);
   assert.match(read(command), /damage_tracking = 0, vfr = false/);
 });
@@ -102,10 +106,10 @@ test("VHS validates intensity and caches only requested shader variants", () => 
     assert.equal(run("off").status, 0);
     const generated = path.join(tmp, "desktop-shell", path.basename(shader));
     assert.deepEqual(fs.readdirSync(generated).sort(), [
-      "045-100-100-100-100-100.frag", "100-100-100-100-100-100.frag"
+      "045-100-100-100-100-100-000.frag", "100-100-100-100-100-100-000.frag"
     ]);
-    assert.match(read(path.join(generated, "045-100-100-100-100-100.frag")), /VHS_INTENSITY = 0\.45;/);
-    assert.match(read(path.join(generated, "100-100-100-100-100-100.frag")), /VHS_INTENSITY = 1\.00;/);
+    assert.match(read(path.join(generated, "045-100-100-100-100-100-000.frag")), /VHS_INTENSITY = 0\.45;/);
+    assert.match(read(path.join(generated, "100-100-100-100-100-100-000.frag")), /VHS_INTENSITY = 1\.00;/);
     assert.match(read(path.join(tmp, "calls")), /damage_tracking = 0, vfr = false/);
   });
 });
@@ -122,8 +126,8 @@ test("VHS restores original damage tracking, VFR and prior screen shader", () =>
     const calls = read(path.join(tmp, "calls")).trim().split("\n");
     assert.equal(calls.length, 3);
     assert.match(calls[0], /damage_tracking = 0, vfr = false/);
-    assert.match(calls[0], /screen_shader = ".*070-100-100-100-100-100\.frag"/);
-    assert.match(calls[1], /screen_shader = ".*090-100-100-100-100-100\.frag"/);
+    assert.match(calls[0], /screen_shader = ".*070-100-100-100-100-100-000\.frag"/);
+    assert.match(calls[1], /screen_shader = ".*090-100-100-100-100-100-000\.frag"/);
     assert.match(calls[2], /damage_tracking = 1, vfr = false/);
     assert.match(calls[2], /screen_shader = "\/custom\/original\.frag"/);
   }, { damage: "1", vfr: "false", shader: "/custom/original.frag" });
@@ -147,17 +151,19 @@ test("independent VHS parameters compile their own variants and validate bounds"
     for (const invalid of [
       ["80", "-1"], ["80", "101"], ["80", "80", "bad"],
       ["80", "80", "80", "80", "80", "24"],
-      ["80", "80", "80", "80", "80", "251"]
+      ["80", "80", "80", "80", "80", "251"],
+      ["80", "80", "80", "80", "80", "100", "-1"],
+      ["80", "80", "80", "80", "80", "100", "101"]
     ]) {
       assert.equal(run("on", ...invalid).status, 2);
     }
     assert.equal(run("on", "80", "0", "50", "75", "25", "150").status, 0);
     const generated = path.join(tmp, "desktop-shell", path.basename(shader),
-      "080-000-050-075-025-150.frag");
+      "080-000-050-075-025-150-000.frag");
     const source = read(generated);
     for (const [key, value] of Object.entries({
       INTENSITY: "0.80", TRACKING: "0.00", CHROMA: "0.50",
-      NOISE: "0.75", SCANLINES: "0.25", SPEED: "1.50"
+      NOISE: "0.75", SCANLINES: "0.25", SPEED: "1.50", DROPOUTS: "0.00"
     })) {
       assert.ok(source.includes("const float VHS_" + key + " = " + value + ";"), key);
     }
@@ -174,7 +180,7 @@ test("VHS tuning exposes correct keyboard focus, pointer and navigation paths", 
   const defaults = read(path.join(shell, "default.nix"));
   const runtime = read(path.join(shell, "qml/RuntimeConfig.qml"));
 
-  for (const key of ["vhsTracking", "vhsChroma", "vhsNoise", "vhsScanlines", "vhsSpeed"]) {
+  for (const key of ["vhsTracking", "vhsChroma", "vhsNoise", "vhsScanlines", "vhsSpeed", "vhsDropouts"]) {
     assert.match(defaults, new RegExp(key + " = lib\\.mkOption"));
     assert.match(runtime, new RegExp("property real " + key));
     assert.match(preferences, new RegExp("property real " + key));
@@ -204,4 +210,23 @@ test("VHS tuning exposes correct keyboard focus, pointer and navigation paths", 
   assert.match(preferences, /function setVhsParameter\(key: string, value: real\)/);
   assert.match(preferences, /storeOverride\("vhsEnabled", true\)/);
   assert.match(preferences, /vhsApply\.restart\(\)/);
+  assert.match(defaults, /vhsDropouts = lib\.mkOption \{\s*type = lib\.types\.numbers\.between 0\.0 1\.0;\s*default = 0\.0;/);
+  assert.match(panel, /title: "Dropouts", description: "Irregular dark horizontal tape streaks"/);
+});
+
+test("high tape noise cannot produce black dropout bands when scanlines and dropouts are zero", () => {
+  withCompositor(({ tmp, run }) => {
+    assert.equal(run("on", "100", "0", "0", "100", "0", "100", "0").status, 0);
+    const quietLines = read(path.join(tmp, "desktop-shell", path.basename(shader), "100-000-000-100-000-100-000.frag"));
+    assert.match(quietLines, /const float VHS_NOISE = 1\.00;/);
+    assert.match(quietLines, /const float VHS_SCANLINES = 0\.00;/);
+    assert.match(quietLines, /const float VHS_DROPOUTS = 0\.00;/);
+    assert.match(quietLines, /colour \*= 1\.0 - dropout \* strength \* VHS_DROPOUTS/);
+    assert.match(quietLines, /trackingFlash = .*max\(0\.0, tearDirection\) \* VHS_TRACKING/);
+    assert.equal(run("on", "100", "0", "0", "0", "0", "100", "100").status, 0);
+    const enabledLines = read(path.join(tmp, "desktop-shell", path.basename(shader), "100-000-000-000-000-100-100.frag"));
+    assert.match(enabledLines, /const float VHS_NOISE = 0\.00;/);
+    assert.match(enabledLines, /const float VHS_DROPOUTS = 1\.00;/);
+    assert.equal(run("off").status, 0);
+  });
 });

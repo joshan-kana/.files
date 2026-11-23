@@ -59,7 +59,8 @@ chroma="${4:-100}"
 noise="${5:-100}"
 scanlines="${6:-100}"
 speed="${7:-100}"
-for value in "$level" "$tracking" "$chroma" "$noise" "$scanlines"; do
+dropouts="${8:-0}"
+for value in "$level" "$tracking" "$chroma" "$noise" "$scanlines" "$dropouts"; do
   if ! [[ "$value" =~ ^([0-9]|[1-9][0-9]|100)$ ]]; then
     printf 'VHS strengths must be whole percentages from 0 to 100\n' >&2
     exit 2
@@ -80,12 +81,12 @@ shaderSource="${VHS_SHADER_SOURCE:?VHS shader source not configured}"
 mkdir -p "$runtimeDir"
 shaderDir="$runtimeDir/$(basename "$shaderSource")"
 mkdir -p "$shaderDir"
-printf -v shaderName '%03d-%03d-%03d-%03d-%03d-%03d.frag' "$level" "$tracking" "$chroma" "$noise" "$scanlines" "$speed"
+printf -v shaderName '%03d-%03d-%03d-%03d-%03d-%03d-%03d.frag' "$level" "$tracking" "$chroma" "$noise" "$scanlines" "$speed" "$dropouts"
 shader="$shaderDir/$shaderName"
 if [[ ! -f "$shader" ]]; then
   filters=()
-  names=(INTENSITY TRACKING CHROMA NOISE SCANLINES SPEED)
-  values=("$level" "$tracking" "$chroma" "$noise" "$scanlines" "$speed")
+  names=(INTENSITY TRACKING CHROMA NOISE SCANLINES SPEED DROPOUTS)
+  values=("$level" "$tracking" "$chroma" "$noise" "$scanlines" "$speed" "$dropouts")
   for index in "${!names[@]}"; do
     amount="${values[index]}"
     printf -v strength '%d.%02d' "$((amount / 100))" "$((amount % 100))"

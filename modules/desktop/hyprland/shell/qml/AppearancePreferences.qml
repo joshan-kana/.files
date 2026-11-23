@@ -31,6 +31,7 @@ QtObject {
         property real vhsNoise: appearance.runtime.appearanceDefaults.vhsNoise
         property real vhsScanlines: appearance.runtime.appearanceDefaults.vhsScanlines
         property real vhsSpeed: appearance.runtime.appearanceDefaults.vhsSpeed
+        property real vhsDropouts: appearance.runtime.appearanceDefaults.vhsDropouts
         property string mediaVisualizerMode: appearance.runtime.appearanceDefaults.mediaVisualizerMode
         property bool mediaLyricsVisible: appearance.runtime.appearanceDefaults.mediaLyricsVisible
         property int mediaSeekSeconds: appearance.runtime.appearanceDefaults.mediaSeekSeconds
@@ -56,6 +57,7 @@ QtObject {
     readonly property real vhsNoise: Math.max(0, Math.min(1, effective("vhsNoise")))
     readonly property real vhsScanlines: Math.max(0, Math.min(1, effective("vhsScanlines")))
     readonly property real vhsSpeed: Math.max(0.25, Math.min(2.5, effective("vhsSpeed")))
+    readonly property real vhsDropouts: Math.max(0, Math.min(1, effective("vhsDropouts")))
     function hasOverride(key: string): bool {
         return overrideKeys.includes(key);
     }
@@ -231,7 +233,8 @@ QtObject {
             String(Math.round(vhsChroma * 100)),
             String(Math.round(vhsNoise * 100)),
             String(Math.round(vhsScanlines * 100)),
-            String(Math.round(vhsSpeed * 100))
+            String(Math.round(vhsSpeed * 100)),
+            String(Math.round(vhsDropouts * 100))
         ]);
     }
 
@@ -244,7 +247,7 @@ QtObject {
     }
 
     function setVhsParameter(key: string, value: real): void {
-        if (!["vhsTracking", "vhsChroma", "vhsNoise", "vhsScanlines", "vhsSpeed"].includes(key))
+        if (!["vhsTracking", "vhsChroma", "vhsNoise", "vhsScanlines", "vhsSpeed", "vhsDropouts"].includes(key))
             return;
         const lower = key === "vhsSpeed" ? 0.25 : 0;
         const upper = key === "vhsSpeed" ? 2.5 : 1;

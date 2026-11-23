@@ -14,6 +14,7 @@ const float VHS_INTENSITY = 0.45;
 const float VHS_TRACKING = 1.00;
 const float VHS_CHROMA = 1.00;
 const float VHS_NOISE = 1.00;
+const float VHS_DROPOUTS = 0.00;
 const float VHS_SCANLINES = 1.00;
 const float VHS_SPEED = 1.00;
 
@@ -51,13 +52,16 @@ void main() {
     // Moving grain, uneven tape dropout, alternating scanlines and the thick
     // bright/dark tracking bar become much harsher near maximum intensity.
     float grain = (tapeHash(floor(pixel / vec2(2.0, 3.0)) + vec2(frame * 0.77, frame * 1.13)) - 0.5);
-    float dropout = step(0.995 - 0.14 * severe, tapeHash(vec2(floor(pixel.y / 4.0), frame)));
+    float dropout = step(0.995 - 0.14 * severe * VHS_DROPOUTS,
+                         tapeHash(vec2(floor(pixel.y / 4.0), frame)));
     float scanline = mod(floor(pixel.y), 2.0);
     float flicker = 1.0 - 0.10 * severe * VHS_NOISE * (0.5 + 0.5 * sin(tapeTime * 17.0));
-    float trackingFlash = tearBand * (0.18 + 0.32 * severe) * tearDirection * VHS_TRACKING;
+    // Tracking may displace rows in either direction, but it must not create
+    // additional black bars when both Scanlines and Dropouts are disabled.
+    float trackingFlash = tearBand * (0.18 + 0.32 * severe) * max(0.0, tearDirection) * VHS_TRACKING;
 
     colour *= flicker * (1.0 - strength * VHS_SCANLINES * (0.06 + 0.45 * severe) * scanline);
-    colour *= 1.0 - dropout * strength * VHS_NOISE * (0.08 + 0.70 * severe);
+    colour *= 1.0 - dropout * strength * VHS_DROPOUTS * (0.08 + 0.70 * severe);
     colour += vec3((grain * (0.08 + 0.62 * severe) * VHS_NOISE + trackingFlash) * strength);
 
     fragColor = vec4(clamp(colour, 0.0, 1.0), center.a);
