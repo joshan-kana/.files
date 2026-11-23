@@ -1009,10 +1009,11 @@ FocusScope {
                             glyph: root.system.wifiConnected ? "󰤨" : root.system.networkConnected ? "󰈀" : "󰤭"
                             shortcut: root.runtime.shellHint("SystemContent.network")
                             detailShortcut: root.runtime.shellHint("SystemContent.networkDetails")
-                            connected: root.system.wifiEnabled
+                            connected: root.system.networkConnected
+                            primaryAvailable: root.system.wifiAvailable
                             pending: networkPanel.open && (networkPanel.profileActionRunning || networkPanel.pendingNetwork !== null)
                             failed: networkPanel.open && networkPanel.statusError
-                            unavailable: !root.system.wifiAvailable
+                            unavailable: root.system.networkDevices.length === 0
                             onActivated: {
                                 if (root.system.wifiAvailable)
                                     root.system.setWifiEnabled(!root.system.wifiEnabled);

@@ -204,6 +204,7 @@ ShellSurface {
     }
 
     TileKeyHint {
+        primary: true
         id: openHint
         visible: shortcut.length > 0
         shortcut: card.runtime.shellHint("ControlsMediaCard.open")

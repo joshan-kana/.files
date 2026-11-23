@@ -89,3 +89,31 @@ test("Session QWE/ASD still uses the positional physical keymap", () => {
   assert.match(button, /TileKeyHint \{[\s\S]*?primary: true/);
   assert.match(session, /entries\.findIndex\(entry => runtime\.shellMatchesHint\(entry\.binding, key, modifiers\)\)/);
 });
+
+
+
+test("compact media card primary actions also use the left corner", () => {
+  for (const name of ["AudioMixerContent", "ControlsMediaCard"]) {
+    const source = qml(name);
+    assert.ok(source.includes("TileKeyHint {"));
+    assert.ok(source.includes("primary: true"));
+  }
+});
+
+test("Ethernet-only connectivity keeps status accurate and disables unsupported radio actions", () => {
+  const controls = qml("SystemContent");
+  const tile = qml("ConnectivityTile");
+  for (const sourceLine of [
+    "connected: root.system.networkConnected",
+    "primaryAvailable: root.system.wifiAvailable",
+    "unavailable: root.system.networkDevices.length === 0",
+  ])
+    assert.ok(controls.includes(sourceLine), sourceLine);
+  for (const sourceLine of [
+    "property bool primaryAvailable: !unavailable",
+    "disabled: !tile.primaryAvailable",
+    "available: tile.primaryAvailable",
+    "onActivated: tile.detailsRequested()",
+  ])
+    assert.ok(tile.includes(sourceLine), sourceLine);
+});

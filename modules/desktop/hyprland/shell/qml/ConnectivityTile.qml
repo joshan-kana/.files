@@ -22,6 +22,9 @@ Item {
     property bool scanning: false
     property bool failed: false
     property bool unavailable: false
+    // A radio toggle may be unavailable while another connection is active.
+    // The detail action remains usable even when primary activation cannot run.
+    property bool primaryAvailable: !unavailable
     readonly property color signalColor: failed ? theme.critical : pending || scanning ? theme.warning : connected ? theme.roleColor("connectivity") : theme.textMuted
     readonly property color foreground: theme.textStrong
 
@@ -128,6 +131,7 @@ Item {
             runtime: tile.runtime
             theme: tile.theme
             emphasized: tile.connected
+            available: tile.primaryAvailable
         }
     }
 
@@ -136,8 +140,10 @@ Item {
         theme: tile.theme
         motion: tile.motion
         selected: tile.connected
+        disabled: !tile.primaryAvailable
         stateColor: tile.signalColor
         cornerRadius: tile.theme.radiusLarge
+        Accessible.name: tile.primaryAvailable ? "Toggle " + tile.title : tile.title + " primary action unavailable"
         onActivated: tile.activated()
     }
 
