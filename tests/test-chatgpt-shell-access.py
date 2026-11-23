@@ -178,6 +178,20 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
             if "child=" in result["output"]:
                 os.kill(int(result["output"].split("child=")[1].splitlines()[0]), signal.SIGTERM)
 
+    async def test_cancel_before_command_task_starts(self):
+        """Immediate cancellation is terminal even if the job never starts."""
+        started = await shell.shell_exec("remote", "printf should-not-run", wait_seconds=0)
+        job = shell.jobs[started["request_id"]]
+        self.assertIsNone(job.process)
+        self.assertFalse(job.task.done())
+        stopped = await shell.shell_cancel(started["request_id"])
+        self.assertEqual(stopped["status"], "cancelled")
+        self.assertFalse(stopped["success"])
+        self.assertNotIn("should-not-run", stopped["output"])
+        self.assertIsNotNone(job.completed_at)
+        self.assertTrue(job.task.done())
+        self.assertEqual((await shell.shell_result(started["request_id"]))["status"], "cancelled")
+
     async def test_cancel_running_tree(self):
         """Cancel the running process tree rather than its leader alone."""
         started = await shell.shell_exec("remote", "sleep 60; printf unsafe-continuation", wait_seconds=0)

@@ -773,6 +773,10 @@ async def shell_cancel(request_id: str) -> dict[str, object]:
         job.task.cancel()
         with suppress(asyncio.CancelledError):
             await job.task
+        # A job cancelled before its coroutine first runs has no _run finalizer.
+        if job.completed_at is None:
+            job.awaiting_approval = False
+            job.completed_at = time.monotonic()
         return _payload(job)
     try:
         await _signal_target(job, "TERM")
