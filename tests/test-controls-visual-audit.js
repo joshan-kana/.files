@@ -97,8 +97,9 @@ test("Visual Modes and Quick Actions have distinct full-width balanced sections"
     actionCount,
     (actions.match(/height: root.dashboardTileHeight/g) || []).length,
   );
-  assert.ok((visual.match(/OpacitySetting \{/g) || []).length >= 2);
-  assert.equal((visual.match(/AdjustableSetting \{/g) || []).length, 1);
+  assert.doesNotMatch(visual, /OpacitySetting \{|AdjustableSetting \{|ShellSlider \{/);
+  assert.ok((visual.match(/QuickSettingChip \{/g) || []).length >= 8);
+  assert.match(read("SettingsDetail.qml"), /key: "blurSize"/);
   assert.match(controls, /id: visualModesGroup/);
   assert.match(controls, /id: quickActionsSection/);
   assert.match(controls, /text: "VISUAL MODES"/);
@@ -124,34 +125,21 @@ test("Visual Modes and Quick Actions have distinct full-width balanced sections"
   assert.doesNotMatch(controls, /id: controlTiles|id: quickActionsHeading/);
 });
 
-test("night light uses inline, interactive slider with value and shared KeyHint", () => {
+test("Night Light keeps instant toggling in its compact tile and parameter editing in detail", () => {
   const controls = read("SystemContent.qml");
-  const tile = read("AdjustableSetting.qml");
+  const tile = read("QuickSettingChip.qml");
+  const detail = read("SettingsDetail.qml");
   const state = read("NightLightState.qml");
-  assert.match(controls, /label: "Night Light"/);
-  assert.match(
-    controls,
-    /toggleShortcut: root\.runtime\.shellHint\("SystemContent\.nightLight"\)/,
-  );
-  assert.match(
-    controls,
-    /valueText: root\.nightLight\.supported \? root\.nightLight\.temperature/,
-  );
-  assert.match(
-    controls,
-    /onValueRequested: value => root\.nightLight\.setTemperature\(value\)/,
-  );
-  assert.match(tile, /ShellSlider \{/);
-  assert.match(
-    tile,
-    /onValueRequested: next => setting\.valueRequested\(next\)/,
-  );
-  assert.match(tile, /KeyHint \{/);
-  assert.match(
-    tile,
-    /primary: true[\s\S]*?shortcut: setting\.toggleShortcut/,
-  );
-  assert.equal((tile.match(/KeyHint \{/g) || []).length, 1);
+  assert.match(controls, /title: root\.nightLight\.supported \? "Night " \+ root\.nightLight\.temperature/);
+  assert.match(controls, /shortcut: root\.runtime\.shellHint\("SystemContent\.nightLight"\)/);
+  assert.match(controls, /detailShortcut: root\.runtime\.shellHint\("SystemContent\.nightLightDetails"\)/);
+  assert.match(controls, /onDetailsRequested: root\.openSetting\("nightLight"\)/);
+  assert.match(tile, /TileQuickAction \{[\s\S]*?onActivated: chip\.activated\(\)/);
+  assert.doesNotMatch(controls, /AdjustableSetting \{/);
+  assert.match(detail, /key: "temperature"/);
+  assert.match(detail, /ShellSlider \{/);
+  assert.match(detail, /nightLight\.setTemperature\(value\)/);
+  assert.match(detail, /onValueRequested: next => panel\.setValue/);
   assert.match(state, /function setTemperature\(target: real\)/);
 });
 
@@ -179,7 +167,7 @@ test("brightness slider is in Controls, not a draggable brightness OSD", () => {
 test("slider keyboard workflow respects direct actions, detail Escape and global footer", () => {
   const controls = read("SystemContent.qml");
   const slider = read("ShellSlider.qml");
-  const opacity = read("OpacitySetting.qml");
+  const detail = read("SettingsDetail.qml");
   assert.match(controls, /property string selectedSlider: ""/);
   assert.match(controls, /function cycleSlider\(direction: int\)/);
   assert.match(controls, /function adjustSlider\(direction: int\)/);
@@ -201,10 +189,9 @@ test("slider keyboard workflow respects direct actions, detail Escape and global
     /hints: root\.selectedSlider\.length === 0 \? \[\s*\{\s*shortcut: root\.runtime\.shellHint\("SystemContent.audioSelect"\)/,
   );
   assert.match(read("ShellSection.qml"), /trailing: true/);
-  assert.match(
-    opacity,
-    /primary: true[\s\S]*?shortcut: setting\.shortcut/,
-  );
+  assert.match(detail, /function handleKey\(key: int, modifiers: int\): bool/);
+  assert.match(detail, /shellNavigates\("controls", "right", key\)/);
+  assert.match(detail, /shellNavigates\("controls", "down", key\)/);
   assert.match(slider, /signal valueRequested\(real value\)/);
   assert.match(slider, /signal interactionStarted\(real value\)/);
 });
@@ -224,7 +211,7 @@ test("global Escape footer reflects slider-selection focus without adding widget
   assert.match(controls, /root\.selectedSlider = ""/);
   assert.match(
     controls,
-    /onSliderActivated: root\.selectSlider\("nightLight"\)/,
+    /onDetailsRequested: root\.openSetting\("nightLight"\)/,
   );
   assert.match(
     host,
