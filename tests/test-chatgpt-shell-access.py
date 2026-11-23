@@ -83,6 +83,17 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(result["success"])
         self.assertEqual(result["output"], "/tmp\nhello\n")
 
+    async def test_isolated_parallels_command_has_exact_output_without_pid_marker(self):
+        """Named remote units already identify a command, so do not print an internal PID."""
+        with patch.dict(
+            shell.REMOTE_TARGETS,
+            {"nixos-arm-parallels": shell.RemoteTarget("owner@parallels", "key", "/bin/bash")},
+        ):
+            result = await shell.shell_exec("nixos-arm-parallels", "cat", stdin="exact\nsecond line\n")
+        self.assertTrue(result["success"])
+        self.assertEqual(result["output"], "exact\nsecond line\n")
+        self.assertNotIn("pid", result)
+
     async def test_nonzero_exit_is_not_success(self):
         """Report failed command exit statuses accurately."""
         result = await shell.shell_exec("remote", "exit 17")

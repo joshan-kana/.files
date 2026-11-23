@@ -293,19 +293,26 @@ def _build_elevated_argv(host: Host, script: str) -> list[str]:
     ]
 
 
-def _command_script(command: str, cwd: str | None, marker: str) -> str:
-    return "\n".join(
+def _command_script(command: str, cwd: str | None, marker: str | None) -> str:
+    lines = []
+    if marker is not None:
+        lines.append(f"printf '%s%s\\n' {shlex.quote(marker)} \"$$\"")
+    lines.extend(
         [
-            f"printf '%s%s\\n' {shlex.quote(marker)} \"$$\"",
             f"cd -- {shlex.quote(cwd)} || exit 125" if cwd else 'cd -- "$HOME" || exit 125',
             command,
         ]
     )
+    return "\n".join(lines)
 
 
-async def _read_output(job: Job, marker: str) -> None:
+async def _read_output(job: Job, marker: str | None) -> None:
     assert job.process is not None
     assert job.process.stdout is not None
+    if marker is None:
+        while chunk := await job.process.stdout.read(64 * 1024):
+            job.output.append(chunk)
+        return
     marker_bytes = marker.encode()
 
     while line := await job.process.stdout.readline():
@@ -388,8 +395,10 @@ async def _run(job: Job, command: str, cwd: str | None, stdin: str | None) -> No
         if job.host == LOCAL_HOST and not job.elevated:
             await _run_herdr_exec(job, command, cwd, stdin)
             return
-        script = _command_script(command, cwd, marker)
-        if job.host == "nixos-arm-parallels" and not job.elevated:
+        named_remote_unit = job.host == "nixos-arm-parallels" and not job.elevated
+        output_marker = None if named_remote_unit else marker
+        script = _command_script(command, cwd, output_marker)
+        if named_remote_unit:
             argv = _build_argv(job.host, script, unit_name=job.request_id)
         else:
             build = _build_elevated_argv if job.elevated else _build_argv
@@ -402,7 +411,7 @@ async def _run(job: Job, command: str, cwd: str | None, stdin: str | None) -> No
             env=_command_env(job.host, elevated=job.elevated),
             start_new_session=True,
         )
-        reader = asyncio.create_task(_read_output(job, marker))
+        reader = asyncio.create_task(_read_output(job, output_marker))
         writer = asyncio.create_task(_write_stdin(job.process, stdin))
         job.exit_code = await job.process.wait()
         await writer
