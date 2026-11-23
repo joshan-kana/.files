@@ -147,3 +147,32 @@ test("Activity Escape collapses nested notification groups before closing", () =
   assert.match(back, /else \{\s*closeRequested\(\);/);
   assert.match(activity, /Keys\.onPressed:[\s\S]*?center\.navigateBack\(\)/);
 });
+
+test("focused setting details share the hub Back/Escape history", () => {
+  const system = qml("SystemContent.qml");
+  const host = qml("ShellExpansionHost.qml");
+  const history = qml("ShellExpansionState.qml");
+
+  assert.match(system, /readonly property bool settingsOpen: settingsPanel\.open/);
+  assert.match(system, /readonly property bool vhsOpen: vhsPanel\.open/);
+  assert.match(host, /readonly property bool detailVisible:[^\n]*systemContent\.settingsOpen \|\| systemContent\.vhsOpen/);
+  assert.match(system, /function openSetting\(name: string\): void \{/);
+  assert.match(system, /settingsPanel\.openView\(\);\s*markDetail\(name\);/);
+  assert.match(system, /function navigateBack\(\): void \{[\s\S]*?else if \(detailsVisible\) \{\s*backFromDetail\(\)/);
+  assert.match(history, /function enterDetail\(view: string\): void \{[\s\S]*?backDestination = fromControls \? "controls" : ""/);
+  assert.match(history, /function back\(\): void \{[\s\S]*?currentView = destination === "controls" \? "controls" : ""/);
+});
+
+test("one-shot detail actions execute on initial key-down without auto-repeat", () => {
+  const system = qml("SystemContent.qml");
+  const detail = qml("SettingsDetail.qml");
+  const stateLayer = qml("StateLayer.qml");
+
+  assert.match(system, /Keys\.onPressed: event => \{/);
+  assert.match(system, /if \(event\.isAutoRepeat\) \{[\s\S]*?"SystemContent\.nightLightDetails"/);
+  assert.match(system, /settingsPanel\.invoke\("handleKey", event\.key, event\.modifiers, event\.isAutoRepeat\)/);
+  assert.match(detail, /function handleKey\(key: int, modifiers: int, autoRepeat: bool\): bool \{/);
+  assert.match(detail, /if \(autoRepeat\) \{[\s\S]*?SettingsDetail\.toggle/);
+  assert.match(detail, /runtime\.shellNumberIndex\("controls", key, 5\)/);
+  assert.match(stateLayer, /Keys\.onPressed: event => \{[\s\S]*?if \(!event\.isAutoRepeat\)\s*activated\(event\)/);
+});
