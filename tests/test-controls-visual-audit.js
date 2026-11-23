@@ -490,7 +490,7 @@ test("Compact Media shares a live spectrum, controls and full Now Playing naviga
   const transport = read("MediaTransport.qml");
   assert.match(controls, /onFullRequested: root.mediaRequested\(\)/);
   assert.match(controls, /spectrum: root.spectrum/);
-  assert.match(card, /implicitHeight: Math.max\(media.available \? 178 : 152, content.implicitHeight \+ contentTopInset/);
+  assert.match(card, /implicitHeight: Math.max\(media.available \? 178 : 152, controlsHeight \+ contentTopInset/);
   assert.match(
     card,
     /text: card.media.available \? card.media.title : "No active player"/,
@@ -622,7 +622,7 @@ test("main panel and compact Media use measured geometry with bounded empty stat
       "implicitWidth: sessionPanel.open ? sessionPanel.implicitWidth : detailsVisible ? theme.controlsDetailWidth : dashboardWidthBudget",
     ],
     [controls, "active: root.engaged && !root.detailsVisible"],
-    [media, "implicitHeight: Math.max(media.available ? 178 : 152, content.implicitHeight + contentTopInset"],
+    [media, "implicitHeight: Math.max(media.available ? 178 : 152, controlsHeight + contentTopInset"],
     [host, "height: Math.min(host.viewportHeight, host.targetHeight)"],
     [host, "(fraction - 0.68) / 0.30"],
   ])
@@ -773,7 +773,7 @@ test("all visual and action tile heights remain fixed when categories rebalance"
 test("compact Media anchors artwork and player information above footer controls", () => {
   const card = read("ControlsMediaCard.qml");
   assert.match(card, /height: card.heroSize/);
-  assert.match(card, /implicitHeight: Math.max\(media.available \? 178 : 152, content.implicitHeight \+ contentTopInset/);
+  assert.match(card, /implicitHeight: Math.max\(media.available \? 178 : 152, controlsHeight \+ contentTopInset/);
   assert.match(card, /onActivated: card.fullRequested\(\)/);
   assert.doesNotMatch(card, /id: fullPlayer/);
 });

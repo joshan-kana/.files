@@ -19,8 +19,11 @@ ShellSurface {
 
     readonly property real heroSize: 64
     readonly property real visualizerWidth: width >= 520 ? Math.min(180, width * 0.27) : 0
-    readonly property real contentTopInset: openHint.visible ? Math.max(theme.spacing3, theme.spacing2 * 2 + openHint.implicitHeight) : theme.spacing3
-    implicitHeight: Math.max(media.available ? 178 : 152, content.implicitHeight + contentTopInset + theme.spacing3)
+    // Use theme geometry, not the child Column's implicitHeight: the hub
+    // measures our own implicitHeight to choose the expansion size.
+    readonly property real contentTopInset: Math.max(theme.spacing3, theme.spacing2 * 2 + theme.keycapHeight)
+    readonly property real controlsHeight: heroSize + (media.available ? theme.spacing2 * 2 + 24 + 46 : 0)
+    implicitHeight: Math.max(media.available ? 178 : 152, controlsHeight + contentTopInset + theme.spacing3)
     surfaceLayer: ShellSurface.Group
     cornerRadius: theme.radiusLarge
     fillColor: media.available ? theme.blend(theme.groupBase, theme.roleColor("media"), theme.dark ? 0.075 : 0.045) : theme.groupBase

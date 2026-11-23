@@ -43,7 +43,7 @@ FocusScope {
     signal expandRequested
 
     implicitWidth: compact ? 490 : 950
-    readonly property real compactTopInset: openHint.visible ? Math.max(theme.spacing4, theme.spacing2 * 2 + openHint.implicitHeight) : theme.spacing4
+    readonly property real compactTopInset: Math.max(theme.spacing4, theme.spacing2 * 2 + theme.keycapHeight)
     implicitHeight: body.implicitHeight + (compact ? compactTopInset + theme.spacing3 : theme.spacing2 * 2)
     visible: active
     focus: active && !compact
@@ -400,7 +400,6 @@ FocusScope {
     }
 
     TileKeyHint {
-        id: openHint
         primary: true
         visible: mixer.compact && shortcut.length > 0
         shortcut: mixer.runtime.shellHint("AudioMixerContent.open")
