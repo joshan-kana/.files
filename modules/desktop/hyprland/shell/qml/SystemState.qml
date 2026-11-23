@@ -9,9 +9,37 @@ QtObject {
     id: system
 
     // Only valid for the current shell session; do not persist an accidental stay-awake.
+    // An inhibitor belongs to the active session. Timed requests expire
+    // automatically and never become persistent Nix/user preferences.
     property bool idleInhibited: false
+    property int idleInhibitMinutes: 0
+    property Timer idleInhibitExpiry: Timer {
+        id: expiry
+        repeat: false
+        onTriggered: {
+            system.idleInhibited = false;
+            system.idleInhibitMinutes = 0;
+        }
+    }
+    function setIdleInhibitMinutes(minutes: int): void {
+        if (minutes < 0 || minutes > 120)
+            return;
+        idleInhibitExpiry.stop();
+        idleInhibitMinutes = minutes;
+        idleInhibited = true;
+        if (minutes > 0) {
+            idleInhibitExpiry.interval = minutes * 60000;
+            idleInhibitExpiry.start();
+        }
+    }
     function toggleIdleInhibited(): void {
-        idleInhibited = !idleInhibited;
+        if (idleInhibited) {
+            idleInhibitExpiry.stop();
+            idleInhibitMinutes = 0;
+            idleInhibited = false;
+        } else {
+            setIdleInhibitMinutes(0);
+        }
     }
 
     readonly property var audioSink: Pipewire.defaultAudioSink
