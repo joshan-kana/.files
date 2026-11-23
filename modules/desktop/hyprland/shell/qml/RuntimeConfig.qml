@@ -30,6 +30,7 @@ QtObject {
     readonly property string networkConnectionEditor: root.configData.tools.networkConnectionEditor
     readonly property string nmcli: root.configData.tools.nmcli
     readonly property string hyprctl: root.configData.tools.hyprctl
+    readonly property string easyeffects: root.configData.tools.easyeffects
     readonly property string vhsControl: root.configData.tools.vhsControl
     readonly property string sessionCommand: Quickshell.env("DESKTOP_SHELL_SESSION_COMMAND") || root.configData.tools.sessionCommand
     readonly property string themeSet: Quickshell.env("DESKTOP_SHELL_THEME_SET") || root.themeAdapter.tools.themeSet
@@ -300,6 +301,7 @@ QtObject {
                 property string networkConnectionEditor: ""
                 property string nmcli: ""
                 property string hyprctl: ""
+                property string easyeffects: ""
                 property string vhsControl: ""
                 property string sessionCommand: ""
                 property string urlOpen: ""
