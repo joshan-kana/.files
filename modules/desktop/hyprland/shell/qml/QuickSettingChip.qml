@@ -21,7 +21,7 @@ Item {
 
     implicitHeight: 78
     Accessible.role: Accessible.Button
-    Accessible.name: title
+    Accessible.name: detailShortcut.length > 0 ? "Open " + title + " details" : title
 
     // Scale inward at rest and fill the allocated bounds on hover.
     // The hub viewport clips content outside its edge during panel morphs.
@@ -94,7 +94,7 @@ Item {
         // Primary action: always in the top-left, even when focused or active.
         TileKeyHint {
             primary: true
-            visible: chip.shortcut.length > 0
+            visible: chip.shortcut.length > 0 && chip.detailShortcut.length === 0
             shortcut: chip.shortcut
             compact: true
             runtime: chip.runtime
@@ -114,6 +114,17 @@ Item {
         hoverOpacity: 0.05
         pressOpacity: 0.11
         cornerRadius: chipSurface.cornerRadius
+        onActivated: chip.detailShortcut.length > 0 ? chip.detailsRequested() : chip.activated()
+    }
+
+    TileQuickAction {
+        runtime: chip.runtime
+        theme: chip.theme
+        motion: chip.motion
+        shortcut: chip.detailShortcut.length > 0 ? chip.shortcut : ""
+        actionName: "Activate " + chip.title
+        selected: chip.active
+        emphasisColor: chip.activeColor
         onActivated: chip.activated()
     }
 

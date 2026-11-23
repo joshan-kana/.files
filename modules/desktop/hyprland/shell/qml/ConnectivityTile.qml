@@ -125,8 +125,8 @@ Item {
         TileKeyHint {
             id: shortcutHint
             primary: true
+            visible: false
             motion: tile.motion
-            visible: tile.shortcut.length > 0
             shortcut: tile.shortcut
             compact: true
             runtime: tile.runtime
@@ -141,10 +141,22 @@ Item {
         theme: tile.theme
         motion: tile.motion
         selected: tile.connected
-        disabled: !tile.primaryAvailable
+        disabled: false
         stateColor: tile.signalColor
         cornerRadius: tile.theme.radiusLarge
-        Accessible.name: tile.primaryAvailable ? "Toggle " + tile.title : tile.title + " primary action unavailable"
+        Accessible.name: "Open " + tile.title + " details"
+        onActivated: tile.detailsRequested()
+    }
+
+    TileQuickAction {
+        runtime: tile.runtime
+        theme: tile.theme
+        motion: tile.motion
+        shortcut: tile.shortcut
+        actionName: "Toggle " + tile.title
+        available: tile.primaryAvailable && !tile.pending
+        selected: tile.connected
+        emphasisColor: tile.signalColor
         onActivated: tile.activated()
     }
 
