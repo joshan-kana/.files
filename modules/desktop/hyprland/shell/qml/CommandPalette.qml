@@ -30,6 +30,13 @@ Item {
     property bool actionMode: false
     property var actionTarget: null
     property var actionEntries: []
+    property string actionQuery: ""
+
+    ContextActionModel {
+        id: contextActions
+        actions: palette.actionEntries
+        query: palette.actionQuery
+    }
     property var parameterTarget: null
     property string priorQuery: ""
     property string selectionIdentity: ""
@@ -158,9 +165,7 @@ Item {
             return;
         }
         if (actionMode) {
-            actionMode = false;
-            actionTarget = null;
-            results.currentIndex = resultModel.values.length > 0 ? 0 : -1;
+            leaveActions();
             search.forceActiveFocus();
             return;
         }
@@ -340,9 +345,23 @@ Item {
         return actions;
     }
 
+    function leaveActions(): void {
+        const target = actionTarget;
+        actionMode = false;
+        actionTarget = null;
+        actionEntries = [];
+        actionQuery = "";
+        if (target)
+            selectionIdentity = identity(target);
+        search.text = priorQuery;
+        results.currentIndex = target ? Math.max(0, resultModel.values.findIndex(item => identity(item) === identity(target))) : 0;
+    }
+
     function requestFilePreview(entry: var): void {
         actionTarget = entry;
         actionMode = true;
+        actionQuery = "";
+        search.text = "";
         actionEntries = [
             {
                 kind: "paletteInfo",
@@ -522,7 +541,7 @@ Item {
 
     ScriptModel {
         id: displayedModel
-        values: palette.actionMode ? palette.actionEntries : resultModel.values
+        values: palette.actionMode ? contextActions.matches : resultModel.values
         onValuesChanged: {
             if (!palette.open)
                 return;
@@ -911,7 +930,7 @@ Item {
                 icon: "edit-copy",
                 key: ""
             });
-        if (entry.kind === "window")
+        if (entry.kind === "window") {
             options.push({
                 kind: "paletteAction",
                 action: "move",
@@ -920,6 +939,15 @@ Item {
                 icon: "view-grid",
                 key: ""
             });
+            options.push({
+                kind: "paletteAction",
+                action: "float",
+                name: "Toggle Floating",
+                genericName: "Change this window's layout",
+                icon: "window",
+                key: ""
+            });
+        }
         if (entry.kind === "workspace")
             options.push({
                 kind: "paletteAction",
@@ -954,7 +982,7 @@ Item {
 
     function openActions(): void {
         const entry = selectedEntry();
-        if (!entry)
+        if (!entry || actionMode)
             return;
         const options = optionsFor(entry);
         if (options.length === 0) {
@@ -962,12 +990,14 @@ Item {
             return;
         }
         pendingPreviewRequestId = 0;
+        priorQuery = search.text;
         actionTarget = entry;
         actionEntries = options;
         actionMode = true;
-        selectionIdentity = "";
+        actionQuery = "";
+        search.text = "";
         results.currentIndex = 0;
-        results.forceActiveFocus();
+        search.forceActiveFocus();
     }
 
     function copyText(value: string, keepOpen: bool): void {
@@ -1081,8 +1111,7 @@ Item {
         const target = actionTarget;
         if (!target || !option)
             return;
-        actionMode = false;
-        actionTarget = null;
+        leaveActions();
         if (option.action === "primary") {
             runEntry(target, keepOpen);
             return;
@@ -1104,6 +1133,8 @@ Item {
             actionTarget = target;
             actionEntries = optionsFor(target);
             actionMode = true;
+            actionQuery = "";
+            search.text = "";
             results.currentIndex = 0;
             return;
         }
@@ -1127,6 +1158,10 @@ Item {
         }
         if (!keepOpen)
             hide();
+        if (option.action === "float" && target.kind === "window" && /^0x[0-9a-f]+$/i.test(target.address)) {
+            Hyprland.dispatch('hl.dsp.window.float({ action = "toggle", window = "address:' + target.address + '" })');
+            return;
+        }
         if (option.action === "focus" && option.window && option.window.wayland)
             option.window.wayland.activate();
         else if (option.action === "moveFocused" && target.workspaceId > 0 && target.workspaceId <= 10)
@@ -1428,7 +1463,7 @@ Item {
                     Text {
                         anchors.fill: parent
                         visible: search.text.length === 0
-                        text: palette.parameterTarget ? (palette.parameterTarget.parameterMode === "openWith" ? "Find an application…" : palette.parameterTarget.parameterMode === "confirmClipboard" ? "Press " + palette.runtime.shellHint("CommandPalette.confirm") + " to confirm clipboard sharing" : palette.parameterTarget.parameterMode === "confirm" ? "Press " + palette.runtime.shellHint("CommandPalette.confirm") + " again to confirm" : palette.parameterTarget.parameterMode === "move" ? "Workspace number (1–10)…" : palette.parameterTarget.parameterMode === "percent" ? "Percentage (0–100)…" : "Website search terms…") : palette.searchScope === "emoji" ? "Search emoji names…" : palette.searchScope === "apps" ? "Search applications…" : palette.searchScope === "actions" ? "Search desktop actions…" : "Apps, commands, windows, Quicklinks, 15 km to miles…"
+                        text: palette.actionMode ? "Search available actions…" : palette.parameterTarget ? (palette.parameterTarget.parameterMode === "openWith" ? "Find an application…" : palette.parameterTarget.parameterMode === "confirmClipboard" ? "Press " + palette.runtime.shellHint("CommandPalette.confirm") + " to confirm clipboard sharing" : palette.parameterTarget.parameterMode === "confirm" ? "Press " + palette.runtime.shellHint("CommandPalette.confirm") + " again to confirm" : palette.parameterTarget.parameterMode === "move" ? "Workspace number (1–10)…" : palette.parameterTarget.parameterMode === "percent" ? "Percentage (0–100)…" : "Website search terms…") : palette.searchScope === "emoji" ? "Search emoji names…" : palette.searchScope === "apps" ? "Search applications…" : palette.searchScope === "actions" ? "Search desktop actions…" : "Apps, commands, windows, Quicklinks, 15 km to miles…"
                         color: theme.textMuted
                         font: search.font
                         verticalAlignment: Text.AlignVCenter
@@ -1436,10 +1471,14 @@ Item {
 
                     onTextChanged: {
                         palette.copyFeedback = "";
-                        if (!palette.actionMode)
+                        if (palette.actionMode) {
+                            palette.actionQuery = text;
+                            results.currentIndex = contextActions.matches.length > 0 ? 0 : -1;
+                        } else {
                             palette.selectionIdentity = "";
-                        palette.queueFileSearch();
-                        results.currentIndex = displayedModel.values.length > 0 ? 0 : -1;
+                            palette.queueFileSearch();
+                            results.currentIndex = displayedModel.values.length > 0 ? 0 : -1;
+                        }
                     }
 
                     Keys.onPressed: event => {
