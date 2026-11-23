@@ -1927,7 +1927,7 @@ FocusScope {
 
                 if (root.mixerOpen) {
                     mixerView.finishLoading();
-                    if (mixerView.panel && mixerView.panel.handleKey(event.key, event.modifiers))
+                    if (mixerView.panel && mixerView.panel.handleKey(event.key, event.modifiers, event.isAutoRepeat))
                         event.accepted = true;
                     return;
                 }

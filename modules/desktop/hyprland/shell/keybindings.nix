@@ -399,6 +399,9 @@
           "MediaTransport.previous" = ",";
         };
         mixer = {
+          "AudioMixerContent.effectsToggle" = "B";
+          "AudioMixerContent.effectsOpen" = "E";
+          "AudioMixerContent.effectsRefresh" = "R";
           "AudioMixerContent.level" = "NAV_HORIZONTAL";
           "AudioMixerContent.select" = "NAV_VERTICAL";
           "AudioStreamControl.mute" = "M";

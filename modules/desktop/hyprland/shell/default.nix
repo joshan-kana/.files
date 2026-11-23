@@ -782,6 +782,7 @@ in
           networkConnectionEditor = lib.getExe' pkgs.networkmanagerapplet "nm-connection-editor";
           nmcli = lib.getExe' pkgs.networkmanager "nmcli";
           hyprctl = lib.getExe' osConfig.programs.hyprland.package "hyprctl";
+          easyeffects = lib.getExe pkgs.easyeffects;
           vhsControl = lib.getExe vhsControl;
           sessionCommand = lib.getExe sessionCommand;
           urlOpen = lib.getExe' pkgs.xdg-utils "xdg-open";

@@ -42,6 +42,11 @@ FocusScope {
     signal keyboardRequested
     signal expandRequested
 
+    EasyEffectsState {
+        id: effectsState
+        runtime: mixer.runtime
+    }
+
     implicitWidth: compact ? 490 : 950
     readonly property real compactTopInset: Math.max(theme.spacing4, theme.spacing2 * 2 + theme.keycapHeight)
     implicitHeight: body.implicitHeight + (compact ? compactTopInset + theme.spacing3 : theme.spacing2 * 2)
@@ -67,6 +72,8 @@ FocusScope {
             return;
         }
         selectIndex(selectedIndex);
+        if (!compact)
+            effectsState.refresh();
         if (!compact)
             Qt.callLater(() => {
                 if (mixer.active)
@@ -125,7 +132,7 @@ FocusScope {
             outputDevice.toggleDeviceChooser();
     }
 
-    function handleKey(key: int, modifiers: int): bool {
+    function handleKey(key: int, modifiers: int, autoRepeat: bool): bool {
         if (!active)
             return false;
         const picker = outputDevice.chooserOpen ? outputDevice : inputDevice.chooserOpen ? inputDevice : null;
@@ -141,6 +148,21 @@ FocusScope {
             } else {
                 return false;
             }
+            return true;
+        }
+        if (!compact && mixer.runtime.shellMatchesHint("AudioMixerContent.effectsToggle", key, modifiers)) {
+            if (!autoRepeat)
+                effectsState.toggleBypass();
+            return true;
+        }
+        if (!compact && mixer.runtime.shellMatchesHint("AudioMixerContent.effectsOpen", key, modifiers)) {
+            if (!autoRepeat)
+                effectsState.openEditor();
+            return true;
+        }
+        if (!compact && mixer.runtime.shellMatchesHint("AudioMixerContent.effectsRefresh", key, modifiers)) {
+            if (!autoRepeat)
+                effectsState.refresh();
             return true;
         }
         if (key === mixer.runtime.shellKeyCode("mixer", "Escape") && !compact)
@@ -262,6 +284,93 @@ FocusScope {
                         outputDevice.chooserOpen = false;
                 }
                 onSelectedRequested: mixer.selectIndex(mixer.microphoneIndex)
+            }
+        }
+
+        Column {
+            id: postProcessing
+            visible: !mixer.compact && effectsState.supported
+            width: parent.width
+            spacing: mixer.theme.spacing2
+
+            Row {
+                width: parent.width
+                height: 20
+                spacing: mixer.theme.spacing2
+
+                ShellText {
+                    anchors.verticalCenter: parent.verticalCenter
+                    runtime: mixer.runtime
+                    theme: mixer.theme
+                    text: "POST-PROCESSING"
+                    color: mixer.theme.readableRoleColor("audio")
+                    font.pixelSize: mixer.theme.fontSize(10)
+                    font.weight: Font.DemiBold
+                }
+
+                ShellText {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: Math.max(1, parent.width - x - parent.spacing)
+                    runtime: mixer.runtime
+                    theme: mixer.theme
+                    text: effectsState.statusLabel
+                    color: effectsState.error.length > 0 ? mixer.theme.warning : mixer.theme.textMuted
+                    elide: Text.ElideRight
+                    font.pixelSize: mixer.theme.fontSize(10)
+                }
+            }
+
+            Grid {
+                width: parent.width
+                columns: width >= 510 && mixer.theme.textScale < 1.5 ? 3 : 1
+                rowSpacing: mixer.theme.spacing2
+                columnSpacing: mixer.theme.spacing2
+                readonly property real cellWidth: Math.max(1, (width - (columns - 1) * columnSpacing) / columns)
+
+                ShellAction {
+                    width: parent.cellWidth
+                    height: 44
+                    runtime: mixer.runtime
+                    theme: mixer.theme
+                    motion: mixer.motion
+                    compact: true
+                    horizontalCompact: true
+                    icon: effectsState.bypassed ? "󰖁" : "󰕾"
+                    title: effectsState.bypassed ? "Resume processing" : "Bypass effects"
+                    shortcut: mixer.runtime.shellHint("AudioMixerContent.effectsToggle")
+                    active: effectsState.known && effectsState.bypassed
+                    enabled: effectsState.known && !effectsState.busy
+                    onActivated: effectsState.toggleBypass()
+                }
+
+                ShellAction {
+                    width: parent.cellWidth
+                    height: 44
+                    runtime: mixer.runtime
+                    theme: mixer.theme
+                    motion: mixer.motion
+                    compact: true
+                    horizontalCompact: true
+                    icon: "󰍽"
+                    title: "Open EasyEffects"
+                    shortcut: mixer.runtime.shellHint("AudioMixerContent.effectsOpen")
+                    onActivated: effectsState.openEditor()
+                }
+
+                ShellAction {
+                    width: parent.cellWidth
+                    height: 44
+                    runtime: mixer.runtime
+                    theme: mixer.theme
+                    motion: mixer.motion
+                    compact: true
+                    horizontalCompact: true
+                    icon: "󰑐"
+                    title: "Refresh effects"
+                    shortcut: mixer.runtime.shellHint("AudioMixerContent.effectsRefresh")
+                    enabled: !effectsState.busy
+                    onActivated: effectsState.refresh()
+                }
             }
         }
 
