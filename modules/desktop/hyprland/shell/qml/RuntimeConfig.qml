@@ -263,6 +263,7 @@ QtObject {
                 property real vhsNoise: 1.0
                 property real vhsScanlines: 1.0
                 property real vhsSpeed: 1.0
+                property real vhsDropouts: 0.0
                 property string mediaVisualizerMode: "bars"
                 property bool mediaLyricsVisible: false
                 property int mediaSeekSeconds: 10

@@ -421,12 +421,17 @@ in
         vhsNoise = lib.mkOption {
           type = lib.types.numbers.between 0.0 1.0;
           default = 1.0;
-          description = "Strength of tape grain, dropout, and luminance flicker.";
+          description = "Strength of moving tape grain and luminance flicker.";
         };
         vhsScanlines = lib.mkOption {
           type = lib.types.numbers.between 0.0 1.0;
           default = 1.0;
           description = "Strength of VHS scanline darkening.";
+        };
+        vhsDropouts = lib.mkOption {
+          type = lib.types.numbers.between 0.0 1.0;
+          default = 0.0;
+          description = "Strength of irregular horizontal black tape dropouts.";
         };
         vhsSpeed = lib.mkOption {
           type = lib.types.numbers.between 0.25 2.5;
