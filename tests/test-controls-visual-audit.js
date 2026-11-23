@@ -149,7 +149,7 @@ test("night light uses inline, interactive slider with value and shared KeyHint"
   assert.match(tile, /KeyHint \{/);
   assert.match(
     tile,
-    /shortcut: setting\.keyboardSelected \? setting\.runtime\.shellHint\("AdjustableSetting.level"\) : setting\.toggleShortcut/,
+    /primary: true[\s\S]*?shortcut: setting\.toggleShortcut/,
   );
   assert.equal((tile.match(/KeyHint \{/g) || []).length, 1);
   assert.match(state, /function setTemperature\(target: real\)/);
@@ -203,7 +203,7 @@ test("slider keyboard workflow respects direct actions, detail Escape and global
   assert.match(read("ShellSection.qml"), /trailing: true/);
   assert.match(
     opacity,
-    /shortcut: setting\.keyboardSelected \? setting\.runtime\.shellHint\("OpacitySetting.level"\) : setting\.shortcut/,
+    /primary: true[\s\S]*?shortcut: setting\.shortcut/,
   );
   assert.match(slider, /signal valueRequested\(real value\)/);
   assert.match(slider, /signal interactionStarted\(real value\)/);
@@ -847,17 +847,17 @@ test("slider mode retains Tab, J/K selection and H/L edits without duplicate leg
   assert.match(controls, /root.adjustSlider\(1\)/);
   assert.match(
     opacity,
-    /shortcut: setting\.keyboardSelected \? setting\.runtime\.shellHint\("OpacitySetting.level"\) : setting\.shortcut/,
+    /primary: true[\s\S]*?shortcut: setting\.shortcut/,
   );
   assert.match(
     night,
-    /shortcut: setting\.keyboardSelected \? setting\.runtime\.shellHint\("AdjustableSetting.level"\) : setting\.toggleShortcut/,
+    /primary: true[\s\S]*?shortcut: setting\.toggleShortcut/,
   );
   for (const tile of [opacity, night]) {
     assert.equal((tile.match(/TileKeyHint \{/g) || []).length, 1);
     assert.match(
       tile,
-      /TileKeyHint \{[\s\S]*?shortcut: setting.keyboardSelected/,
+      /TileKeyHint \{[\s\S]*?primary: true[\s\S]*?shortcut: setting\./,
     );
     assert.doesNotMatch(tile, /id: adjustHint|adjustHint\.implicitWidth/);
     assert.match(tile, /ShellSlider \{\s*width: parent.width/);
@@ -872,9 +872,12 @@ test("slider mode retains Tab, J/K selection and H/L edits without duplicate leg
   );
 });
 
-test("Visual Modes tile keycaps use one shared corner and motion convention", () => {
+test("Visual Modes primary and secondary hints follow shared opposite-corner motion conventions", () => {
   const shared = read("TileKeyHint.qml");
   assert.match(shared, /property real cornerInset: theme\.spacing2/);
+  assert.match(shared, /property bool primary: false/);
+  assert.match(shared, /left: primary \? parent\.left : undefined/);
+  assert.match(read("TileCornerAction.qml"), /anchors \{[\s\S]*?right: parent\.right/);
   assert.match(
     shared,
     /property real animatedInset: circular \? circleInset : cornerInset/,
@@ -930,7 +933,7 @@ test("calendar dates and overview windows expose actionable accessibility semant
   assert.match(window, /Accessible\.onPressAction:[\s\S]*?tile\.activated\(\)/);
 });
 
-test("compact detail cards expose their own open shortcut in the top-right tile hint", () => {
+test("compact detail cards still expose their primary open action using the shared hint", () => {
   const controls = read("SystemContent.qml");
   for (const [component, action, owner, request] of [
     [
@@ -963,7 +966,7 @@ test("compact detail cards expose their own open shortcut in the top-right tile 
       `${component} must dispatch its displayed action`,
     );
   }
-  assert.match(read("TileKeyHint.qml"), /right: parent\.right/);
+  assert.match(read("TileKeyHint.qml"), /right: primary \? undefined : parent\.right/);
   assert.match(read("TileKeyHint.qml"), /top: parent\.top/);
   assert.match(
     read("ControlsMediaCard.qml"),

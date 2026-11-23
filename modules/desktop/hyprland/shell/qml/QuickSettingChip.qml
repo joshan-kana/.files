@@ -11,6 +11,9 @@ Item {
     property string title: ""
     property string icon: ""
     property string shortcut: ""
+    property string detailShortcut: ""
+    property string detailName: "Open details"
+    signal detailsRequested
     property bool active: false
     property color activeColor: theme.accent
 
@@ -88,8 +91,9 @@ Item {
                 font.weight: chip.active ? Font.DemiBold : Font.Medium
             }
         }
-        // All Visual Modes tiles use the same surface-relative top-right keycap.
+        // Primary action: always in the top-left, even when focused or active.
         TileKeyHint {
+            primary: true
             visible: chip.shortcut.length > 0
             shortcut: chip.shortcut
             compact: true
@@ -111,5 +115,15 @@ Item {
         pressOpacity: 0.11
         cornerRadius: chipSurface.cornerRadius
         onActivated: chip.activated()
+    }
+
+    TileCornerAction {
+        runtime: chip.runtime
+        theme: chip.theme
+        motion: chip.motion
+        shortcut: chip.detailShortcut
+        actionName: chip.detailName
+        emphasisColor: chip.activeColor
+        onActivated: chip.detailsRequested()
     }
 }

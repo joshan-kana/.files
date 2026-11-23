@@ -82,6 +82,9 @@
     "SystemContent.nightLight" = "T";
     "SystemContent.shellGlass" = "SHIFT+R";
     "SystemContent.vhsTune" = "SHIFT+V";
+    "SystemContent.vhsToggle" = "ALT+V";
+    "SystemContent.networkDetails" = "ALT+F";
+    "SystemContent.bluetoothDetails" = "ALT+G";
 
   };
 

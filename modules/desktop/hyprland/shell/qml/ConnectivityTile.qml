@@ -15,6 +15,8 @@ Item {
     property string status: ""
     property string glyph: ""
     property string shortcut: ""
+    property string detailShortcut: ""
+    signal detailsRequested
     property bool connected: false
     property bool pending: false
     property bool scanning: false
@@ -59,6 +61,7 @@ Item {
                 left: parent.left
                 leftMargin: tile.theme.spacing4
                 verticalCenter: parent.verticalCenter
+                verticalCenterOffset: tile.detailShortcut.length > 0 ? tile.theme.spacing3 : 0
             }
             theme: tile.theme
             motion: tile.motion
@@ -81,7 +84,7 @@ Item {
                 right: parent.right
                 verticalCenter: parent.verticalCenter
                 leftMargin: tile.theme.spacing4
-                rightMargin: tile.theme.spacing4 + shortcutHint.implicitWidth + tile.theme.spacing2
+                rightMargin: tile.theme.spacing4 + (tile.detailShortcut.length > 0 ? 46 : 0)
             }
             spacing: tile.theme.spacing2
 
@@ -115,14 +118,11 @@ Item {
             }
         }
 
-        KeyHint {
+        TileKeyHint {
             id: shortcutHint
+            primary: true
+            motion: tile.motion
             visible: tile.shortcut.length > 0
-            anchors {
-                top: parent.top
-                right: parent.right
-                margins: tile.theme.spacing3
-            }
             shortcut: tile.shortcut
             compact: true
             runtime: tile.runtime
@@ -139,5 +139,15 @@ Item {
         stateColor: tile.signalColor
         cornerRadius: tile.theme.radiusLarge
         onActivated: tile.activated()
+    }
+
+    TileCornerAction {
+        runtime: tile.runtime
+        theme: tile.theme
+        motion: tile.motion
+        shortcut: tile.detailShortcut
+        actionName: "Open " + tile.title + " details"
+        emphasisColor: tile.signalColor
+        onActivated: tile.detailsRequested()
     }
 }

@@ -10,6 +10,8 @@ ShellSurface {
     required property string valueText
     property string icon: ""
     property string toggleShortcut: ""
+    property string detailShortcut: ""
+    signal detailRequested
     property bool active: false
     property bool canToggle: true
     property bool canAdjust: true
@@ -141,14 +143,25 @@ ShellSurface {
         }
     }
 
-    // Keep the keycap aligned to the tile, independently of icon and slider layout.
+    // Primary stays top-left during parameter editing.
     TileKeyHint {
-        shortcut: setting.keyboardSelected ? setting.runtime.shellHint("AdjustableSetting.level") : setting.toggleShortcut
+        primary: true
+        shortcut: setting.toggleShortcut
         compact: true
         runtime: setting.runtime
         motion: setting.motion
         theme: setting.theme
         emphasized: setting.active || setting.keyboardSelected
         emphasisColor: setting.roleAccent
+    }
+
+    TileCornerAction {
+        runtime: setting.runtime
+        theme: setting.theme
+        motion: setting.motion
+        shortcut: setting.detailShortcut
+        actionName: "Open " + setting.label + " details"
+        emphasisColor: setting.roleAccent
+        onActivated: setting.detailRequested()
     }
 }

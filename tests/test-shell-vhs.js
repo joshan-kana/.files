@@ -194,8 +194,8 @@ test("VHS tuning exposes correct keyboard focus, pointer and navigation paths", 
   assert.match(controls, /shellMatchesHint\("SystemContent\.vhsTune", event\.key, event\.modifiers\)/);
   assert.match(controls, /vhsPanel\.open \? vhsPanel\.implicitHeight/);
   assert.match(controls, /function closeDetails\(\)[\s\S]*?vhsPanel\.closeView\(\)/);
-  assert.match(tile, /Accessible\.name: "Tune " \+ setting\.label/);
-  assert.match(tile, /height: 36[\s\S]*?onActivated: setting\.detailRequested\(\)/);
+  assert.match(tile, /actionName: "Tune " \+ setting\.label/);
+  assert.match(tile, /TileCornerAction \{[\s\S]*?onActivated: setting\.detailRequested\(\)/);
   assert.match(panel, /onInteractionStarted: panel\.selectParameter\(parameterRow\.index\)/);
   assert.match(panel, /onValueRequested: next => panel\.setParameter/);
   assert.match(panel, /Accessible\.role: Accessible\.Slider/);

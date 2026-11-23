@@ -214,7 +214,7 @@ test("Session uses animated shared tile hints and physical QWE/ASD action positi
 
   assert.match(
     button,
-    /TileKeyHint \{[\s\S]*?motion: button\.motion[\s\S]*?circular: button\.selected \|\| pointer\.pointerHovered/,
+    /TileKeyHint \{[\s\S]*?primary: true[\s\S]*?motion: button\.motion[\s\S]*?circular: button\.selected \|\| pointer\.pointerHovered/,
   );
   assert.match(
     button,
@@ -222,7 +222,7 @@ test("Session uses animated shared tile hints and physical QWE/ASD action positi
   );
   assert.match(
     hint,
-    /anchors \{\s*top: parent\.top\s*right: parent\.right\s*topMargin: animatedInset\s*rightMargin: animatedInset/,
+    /anchors \{[\s\S]*?top: parent\.top[\s\S]*?right: primary \? undefined : parent\.right[\s\S]*?topMargin: animatedInset/,
   );
   assert.match(
     hint,

@@ -173,10 +173,6 @@ FocusScope {
         { key: root.runtime.shellHint("SystemContent.legend.back"), action: root.returnToControls ? "Back to Controls" : "Close" }
     ] : statusOpen ? [
         {
-            key: root.runtime.shellHint("StatusContent.refresh"),
-            action: "Refresh status"
-        },
-        {
             key: root.runtime.shellHint("StatusContent.close"),
             action: root.returnToControls ? "Back to Controls" : "Close"
         }
@@ -1012,11 +1008,16 @@ FocusScope {
                             status: failed ? "CONNECTION FAILED" : pending ? networkPanel.pendingNetwork ? "AUTHENTICATION REQUIRED" : "UPDATING CONNECTION" : unavailable ? "" : root.system.networkConnected ? (root.system.wifiConnected ? "WI-FI · CONNECTED" : "ETHERNET · CONNECTED") : "OFFLINE"
                             glyph: root.system.wifiConnected ? "󰤨" : root.system.networkConnected ? "󰈀" : "󰤭"
                             shortcut: root.runtime.shellHint("SystemContent.network")
-                            connected: root.system.networkConnected
+                            detailShortcut: root.runtime.shellHint("SystemContent.networkDetails")
+                            connected: root.system.wifiEnabled
                             pending: networkPanel.open && (networkPanel.profileActionRunning || networkPanel.pendingNetwork !== null)
                             failed: networkPanel.open && networkPanel.statusError
-                            unavailable: root.system.networkDevices.length === 0
-                            onActivated: root.openNetwork()
+                            unavailable: !root.system.wifiAvailable
+                            onActivated: {
+                                if (root.system.wifiAvailable)
+                                    root.system.setWifiEnabled(!root.system.wifiEnabled);
+                            }
+                            onDetailsRequested: root.openNetwork()
                         }
 
                         ConnectivityTile {
@@ -1030,12 +1031,17 @@ FocusScope {
                             status: failed ? "ACTION FAILED" : scanning ? "SCANNING FOR DEVICES" : pending ? "PAIRING DEVICE" : unavailable ? "" : root.system.bluetoothEnabled ? "ADAPTER ON" : "RADIO OFF"
                             glyph: root.system.bluetoothEnabled ? "󰂯" : "󰂲"
                             shortcut: root.runtime.shellHint("SystemContent.bluetooth")
+                            detailShortcut: root.runtime.shellHint("SystemContent.bluetoothDetails")
                             connected: root.system.bluetoothEnabled
                             scanning: root.system.bluetoothDiscovering
                             pending: root.system.bluetoothDevices.some(device => device && device.pairing)
                             failed: bluetoothPanel.open && bluetoothPanel.statusError
                             unavailable: !root.system.bluetoothAvailable
-                            onActivated: root.openBluetooth()
+                            onActivated: {
+                                if (root.system.bluetoothAvailable)
+                                    root.system.setBluetoothEnabled(!root.system.bluetoothEnabled);
+                            }
+                            onDetailsRequested: root.openBluetooth()
                         }
                     }
                 }
@@ -1343,6 +1349,7 @@ FocusScope {
                             motion: root.motion
                             icon: "󰨛"
                             label: "VHS tape"
+                            shortcut: root.runtime.shellHint("SystemContent.vhsToggle")
                             detailShortcut: root.runtime.shellHint("SystemContent.vhsTune")
                             onDetailRequested: root.openVhs()
                             opacityValue: root.appearance.vhsIntensity
@@ -2202,6 +2209,12 @@ FocusScope {
                 }
                 if (root.runtime.shellMatchesHint("SystemContent.vhsTune", event.key, event.modifiers)) {
                     root.openVhs();
+                } else if (root.runtime.shellMatchesHint("SystemContent.vhsToggle", event.key, event.modifiers)) {
+                    root.appearance.toggleVhs();
+                } else if (root.runtime.shellMatchesHint("SystemContent.networkDetails", event.key, event.modifiers)) {
+                    root.openNetwork();
+                } else if (root.runtime.shellMatchesHint("SystemContent.bluetoothDetails", event.key, event.modifiers)) {
+                    root.openBluetooth();
                 } else if (shifted && event.key === root.runtime.shellKeyCode("controls", "C")) {
                     root.resetConfirmPending = true;
                     root.resetStatus = "";
@@ -2249,10 +2262,12 @@ FocusScope {
                     root.openStatus();
                 } else if (root.runtime.shellMatchesHint("SystemContent.displays", event.key, event.modifiers)) {
                     root.displaySettingsRequested();
-                } else if (event.key === root.runtime.shellKeyCode("controls", "F")) {
-                    root.openNetwork();
-                } else if (event.key === root.runtime.shellKeyCode("controls", "G")) {
-                    root.openBluetooth();
+                } else if (root.runtime.shellMatchesHint("SystemContent.network", event.key, event.modifiers)) {
+                    if (root.system.wifiAvailable)
+                        root.system.setWifiEnabled(!root.system.wifiEnabled);
+                } else if (root.runtime.shellMatchesHint("SystemContent.bluetooth", event.key, event.modifiers)) {
+                    if (root.system.bluetoothAvailable)
+                        root.system.setBluetoothEnabled(!root.system.bluetoothEnabled);
                 } else if (event.key === root.runtime.shellKeyCode("controls", "A")) {
                     root.notificationState.toggleSilent();
                 } else if (event.key === root.runtime.shellKeyCode("controls", "S")) {
