@@ -104,6 +104,26 @@ test("remapping an assigned key changes dispatch and every related hint together
   assert.equal(f.matchesHint(changed, "SessionPanel.lock", 81, 0, Qt), false);
 });
 
+test("palette Enter closes and Shift+Enter preserves the open palette", () => {
+  assert.equal(f.modifier(registry, "palette", "Shift", 0, Qt), false);
+  assert.equal(
+    f.modifier(registry, "palette", "Shift", Qt.ShiftModifier, Qt),
+    true,
+  );
+  const palette = fs.readFileSync(
+    path.join(qmlDir, "CommandPalette.qml"),
+    "utf8",
+  );
+  const dispatches = palette.match(
+    /palette\.launchCurrent\(palette\.runtime\.shellModifier\("palette", "Shift", event\.modifiers\)\)/g,
+  );
+  assert.equal(
+    dispatches?.length,
+    2,
+    "search and results must both forward a boolean keepOpen",
+  );
+});
+
 test("modifier changes, alternatives and special keys remain consistent", () => {
   const changed = {
     ...registry,
