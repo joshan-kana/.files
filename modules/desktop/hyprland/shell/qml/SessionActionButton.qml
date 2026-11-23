@@ -91,6 +91,7 @@ Item {
         }
 
         TileKeyHint {
+            primary: true
             runtime: button.runtime
             theme: button.theme
             motion: button.motion

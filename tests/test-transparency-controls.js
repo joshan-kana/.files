@@ -87,7 +87,7 @@ test("opacity sliders live in visual-mode tiles with normal keyhints, not a sepa
   assert.match(setting, /TileKeyHint \{/);
   assert.match(
     setting,
-    /shortcut: setting\.keyboardSelected \? setting\.runtime\.shellHint\("OpacitySetting.level"\) : setting\.shortcut/,
+    /primary: true[\s\S]*?shortcut: setting\.shortcut/,
   );
   assert.match(setting, /property real minimumValue: 0\.20/);
   assert.match(
