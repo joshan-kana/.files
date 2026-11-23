@@ -34,6 +34,13 @@ class RemoteTarget:
     ssh_target: str
     credential: str
     shell: str
+    execution: Literal["ssh", "systemd-user"] = "ssh"
+    elevation: Literal["deny", "run0"] = "deny"
+
+    def __post_init__(self) -> None:
+        """Reject unsupported remote execution modes before starting the gateway."""
+        if self.execution not in ("ssh", "systemd-user") or self.elevation not in ("deny", "run0"):
+            raise ValueError("unsupported remote execution or elevation mode")
 
 
 CREDENTIALS = os.environ["CREDENTIALS_DIRECTORY"]
@@ -158,10 +165,20 @@ async def _herdr(host: Host, arguments: list[str], *, stdin: str | None = None) 
         raise RuntimeError("Herdr returned an invalid response") from exc
 
 
+def _managed_remote(host: Host) -> bool:
+    """Whether an SSH target executes ordinary commands in named user units."""
+    return host in REMOTE_TARGETS and REMOTE_TARGETS[host].execution == "systemd-user"
+
+
+def _can_elevate(host: Host) -> bool:
+    """Only configured native run0 targets can accept privileged operations."""
+    return host == LOCAL_HOST or (host in REMOTE_TARGETS and REMOTE_TARGETS[host].elevation == "run0")
+
+
 def _command_env(host: Host, *, elevated: bool = False) -> dict[str, str]:
     """Keep credential forwarding separate from ordinary remote SSH commands."""
     environment = {key: value for key, value in COMMAND_ENV.items() if key not in ("SSH_AUTH_SOCK", "GH_TOKEN")}
-    if elevated and host == "nixos-arm-parallels":
+    if elevated and host in REMOTE_TARGETS and REMOTE_TARGETS[host].elevation == "run0":
         environment["SSH_AUTH_SOCK"] = REMOTE_AUTH_AGENT
     return environment
 
@@ -261,9 +278,8 @@ def _build_argv(host: Host, script: str, *, unit_name: str | None = None) -> lis
             f"export PATH={shlex.quote(COMMAND_PATH)}:$PATH\nexec {_worker_command(script, unit_name)}",
         ]
     target = REMOTE_TARGETS[host]
-    if host == "nixos-arm-parallels":
-        # The existing SSH login launches a restricted transient user unit.
-        # No additional host SSH key options or host services are required.
+    if target.execution == "systemd-user":
+        # Use the configured remote account without additional host services.
         unit = [f"--unit=chatgpt-shell-{unit_name}"] if unit_name else []
         options = [
             "systemd-run",
@@ -300,7 +316,7 @@ def _build_elevated_argv(host: Host, script: str) -> list[str]:
             *LOCAL,
             f"export PATH={shlex.quote(COMMAND_PATH)}:$PATH\n{script}",
         ]
-    if host != "nixos-arm-parallels":
+    if not _can_elevate(host):
         raise PermissionError(f"elevation broker unavailable on {host}")
     return [
         *SSH,
@@ -414,7 +430,7 @@ async def _run(job: Job, command: str, cwd: str | None, stdin: str | None) -> No
         if job.host == LOCAL_HOST and not job.elevated:
             await _run_herdr_exec(job, command, cwd, stdin)
             return
-        named_remote_unit = job.host == "nixos-arm-parallels" and not job.elevated
+        named_remote_unit = _managed_remote(job.host) and not job.elevated
         output_marker = None if named_remote_unit else marker
         script = _command_script(command, cwd, output_marker)
         if named_remote_unit:
@@ -472,7 +488,7 @@ def _payload(job: Job, *, include_output: bool = True) -> dict[str, object]:
             payload["omitted_bytes"] = omitted
     if job.awaiting_approval:
         payload["approval_id"] = job.request_id
-    if job.target_pid is not None and job.host != "nixos-arm-parallels":
+    if job.target_pid is not None and not _managed_remote(job.host):
         payload["pid"] = job.target_pid
     payload["request_id"] = job.request_id
     if job.exit_code is not None:
@@ -511,7 +527,7 @@ async def _signal_target(job: Job, sig: str) -> None:
             ]
         )
         argv = _build_elevated_argv(job.host, script)
-    elif job.host == "nixos-arm-parallels":
+    elif _managed_remote(job.host):
         # The PID namespace prevents external PID signalling. Kill the entire
         # named unit: TERM may only stop a shell's current child, allowing its
         # following commands to run before the shell itself exits.
@@ -561,12 +577,12 @@ kill -s {sig} {job.target_pid} $children 2>/dev/null || true
         )
         await asyncio.wait_for(
             process.wait(),
-            timeout=8 if job.host == "nixos-arm-parallels" and not job.elevated else 5,
+            timeout=8 if _managed_remote(job.host) and not job.elevated else 5,
         )
-        if job.host == "nixos-arm-parallels" and not job.elevated and process.returncode != 0:
+        if _managed_remote(job.host) and not job.elevated and process.returncode != 0:
             raise RuntimeError("Remote command interruption was not confirmed")
     except Exception:
-        if job.host == "nixos-arm-parallels" and not job.elevated:
+        if _managed_remote(job.host) and not job.elevated:
             raise
 
 
@@ -730,7 +746,7 @@ async def shell_elevated_exec(
     """
     cwd = _validate_cwd(cwd)
     wait_seconds = _validate_wait_seconds(wait_seconds)
-    if host not in (LOCAL_HOST, "nixos-arm-parallels"):
+    if not _can_elevate(host):
         raise PermissionError(f"elevation broker unavailable on {host}")
     if not argv or any(not item or "\0" in item for item in argv):
         raise ValueError("argv must contain non-empty arguments without NUL bytes")

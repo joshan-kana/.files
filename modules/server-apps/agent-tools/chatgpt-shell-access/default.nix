@@ -14,15 +14,9 @@ let
   approvalRoot = "/run/chatgpt-shell-approvals";
   workspaces = config.systemd.services.agent-workspaces;
   tunnelSecret = "${server.secretsDir}/chatgpt-shell-tunnel.env";
-  macSshKeySecret = "${server.secretsDir}/chatgpt-shell-mac";
-  parallelsSshKeySecret = "${server.secretsDir}/chatgpt-shell-nixos-arm-parallels";
-  parallelsSudoSshKeySecret = "${server.secretsDir}/nixos-arm-parallels-sudo";
   githubSecret = "${server.secretsDir}/github-self-hosted-agents.env";
   knownHostsFile = "${config.users.users.${primary.name}.home}/.ssh/known_hosts";
   remoteAuthAgentSocket = "/run/${gateway}/remote-sudo-agent.sock";
-
-  macHost = "mac.home";
-  parallelsHost = "nixos-arm-parallels.home";
 
   defaultPolicy = {
     commands = "automatic";
@@ -30,26 +24,32 @@ let
   };
   remoteTargets = {
     mac = {
-      sshTarget = "${primary.name}@${macHost}";
-      credential = macSshKeySecret;
+      sshTarget = "${primary.name}@mac.home";
+      credential = "${server.secretsDir}/chatgpt-shell-mac";
       shell = "/bin/zsh";
+      execution = "ssh";
+      elevation = "deny";
       policy = {
         commands = "ask";
         elevation = "deny";
       };
     };
     nixos-arm-parallels = {
-      sshTarget = "${primary.name}@${parallelsHost}";
-      credential = parallelsSshKeySecret;
+      sshTarget = "${primary.name}@nixos-arm-parallels.home";
+      credential = "${server.secretsDir}/chatgpt-shell-nixos-arm-parallels";
       shell = "/run/current-system/sw/bin/bash";
+      execution = "systemd-user";
+      elevation = "run0";
+      elevationCredential = "${server.secretsDir}/nixos-arm-parallels-sudo";
       policy = defaultPolicy;
     };
   };
   remoteTargetConfig = lib.mapAttrs (name: target: {
     ssh_target = target.sshTarget;
     credential = "chatgpt-shell-${name}";
-    inherit (target) shell;
+    inherit (target) shell execution elevation;
   }) remoteTargets;
+  run0Targets = lib.filterAttrs (_: target: target.elevation == "run0") remoteTargets;
   policyDefaults = pkgs.writeText "chatgpt-shell-policies.json" (
     builtins.toJSON (
       lib.mapAttrs (_: target: target.policy) remoteTargets
@@ -122,11 +122,11 @@ in
     unitConfig.RequiresMountsFor = [ stateRoot ];
     unitConfig.AssertPathExists = [
       tunnelSecret
-      parallelsSudoSshKeySecret
       githubSecret
       knownHostsFile
     ]
-    ++ lib.mapAttrsToList (_: target: target.credential) remoteTargets;
+    ++ lib.mapAttrsToList (_: target: target.credential) remoteTargets
+    ++ lib.mapAttrsToList (_: target: target.elevationCredential) run0Targets;
 
     path = shellPackages;
 
@@ -159,10 +159,10 @@ in
       ];
       LoadCredential =
         lib.mapAttrsToList (name: target: "chatgpt-shell-${name}:${target.credential}") remoteTargets
-        ++ [
-          "nixos-arm-parallels-sudo:${parallelsSudoSshKeySecret}"
-          "chatgpt-shell-known-hosts:${knownHostsFile}"
-        ];
+        ++ lib.mapAttrsToList (
+          name: target: "chatgpt-shell-run0-${name}:${target.elevationCredential}"
+        ) run0Targets
+        ++ [ "chatgpt-shell-known-hosts:${knownHostsFile}" ];
       ExecStart = pkgs.writeShellScript "chatgpt-shell-access-start" ''
         set -euo pipefail
         rm -f "$CHATGPT_SHELL_REMOTE_AUTH_AGENT"
@@ -172,9 +172,13 @@ in
           sleep 0.05
         done
         [ -S "$CHATGPT_SHELL_REMOTE_AUTH_AGENT" ]
-        cat "$CREDENTIALS_DIRECTORY/nixos-arm-parallels-sudo" | \
-          ${pkgs.bash}/bin/bash -c \
-            'SSH_AUTH_SOCK="$1" exec ${pkgs.openssh}/bin/ssh-add -' _ "$CHATGPT_SHELL_REMOTE_AUTH_AGENT"
+        ${lib.concatStringsSep "\n" (
+          lib.mapAttrsToList (name: _: ''
+            cat "$CREDENTIALS_DIRECTORY/chatgpt-shell-run0-${name}" | \
+              ${pkgs.bash}/bin/bash -c \
+                'SSH_AUTH_SOCK="$1" exec ${pkgs.openssh}/bin/ssh-add -' _ "$CHATGPT_SHELL_REMOTE_AUTH_AGENT"
+          '') run0Targets
+        )}
         exec ${pkgs.openai-tunnel-client}/bin/tunnel-client run --log.level=info --log.format=struct-text
       '';
       Restart = "always";

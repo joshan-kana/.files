@@ -35,7 +35,11 @@ os.environ.update(
     CHATGPT_SHELL_COMMAND_PATH="/bin",
     CHATGPT_SHELL_BASH="bash",
     CHATGPT_SHELL_LOCAL_HOST="local",
-    CHATGPT_SHELL_REMOTE_TARGETS="{}",
+    CHATGPT_SHELL_REMOTE_TARGETS=(
+        '{"mac":{"ssh_target":"owner@mac.home","credential":"mac-key","shell":"/bin/zsh"},'
+        '"nixos-arm-parallels":{"ssh_target":"owner@parallels.home","credential":"parallels-key",'
+        '"shell":"/bin/bash","execution":"systemd-user","elevation":"run0"}}'
+    ),
     CHATGPT_SHELL_APPROVAL_DIR="/tmp/shell-gateway-test-approvals",
     CHATGPT_SHELL_OPERATOR_STATE_DIR="/tmp/shell-operator-test-state",
     CHATGPT_SHELL_STATE_DIR="/tmp/shell-gateway-test-state",
@@ -87,7 +91,7 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         """Named remote units already identify a command, so do not print an internal PID."""
         with patch.dict(
             shell.REMOTE_TARGETS,
-            {"nixos-arm-parallels": shell.RemoteTarget("owner@parallels", "key", "/bin/bash")},
+            {"nixos-arm-parallels": shell.RemoteTarget("owner@parallels", "key", "/bin/bash", execution="systemd-user", elevation="run0")},
         ):
             result = await shell.shell_exec("nixos-arm-parallels", "cat", stdin="exact\nsecond line\n")
         self.assertTrue(result["success"])
@@ -239,7 +243,9 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
                 shell.REMOTE_TARGETS,
                 {
                     "mac": shell.RemoteTarget("owner@mac.home", "mac-key", "/bin/zsh"),
-                    "nixos-arm-parallels": shell.RemoteTarget("owner@parallels.home", "parallels-key", "/bin/bash"),
+                    "nixos-arm-parallels": shell.RemoteTarget(
+                        "owner@parallels.home", "parallels-key", "/bin/bash", execution="systemd-user", elevation="run0"
+                    ),
                 },
             ):
                 mac = shell._build_argv("mac", "id -u")
@@ -265,6 +271,67 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("run0", " ".join(mac + linux))
         self.assertNotIn("sudo", " ".join(mac + linux))
 
+    def test_additional_remote_target_requires_no_host_specific_code(self):
+        """A new Linux host uses its declared transport, signer and SSH identity."""
+        host = "new-linux-host"
+        target = shell.RemoteTarget(
+            "operator@new-host.example",
+            "new-host-key",
+            "/bin/bash",
+            execution="systemd-user",
+            elevation="run0",
+        )
+        self.argv.stop()
+        self.env.stop()
+        try:
+            with patch.dict(shell.REMOTE_TARGETS, {host: target}):
+                ordinary = shell._build_argv(host, "printf 'ready\n'", unit_name="c" * 32)
+                elevated = shell._build_elevated_argv(host, "run0 --non-interactive --pipe id -u")
+                command_env = shell._command_env(host)
+                elevated_env = shell._command_env(host, elevated=True)
+                self.assertTrue(shell._managed_remote(host))
+                self.assertTrue(shell._can_elevate(host))
+        finally:
+            self.env.start()
+            self.argv.start()
+        self.assertEqual(ordinary[ordinary.index("-i") + 1], f"{shell.CREDENTIALS}/new-host-key")
+        self.assertIn("operator@new-host.example", ordinary)
+        self.assertIn("--unit=chatgpt-shell-" + "c" * 32, ordinary[-1])
+        self.assertIn("PrivatePIDs=yes", ordinary[-1])
+        self.assertIn("-oForwardAgent=no", ordinary)
+        self.assertIn("-oForwardAgent=yes", elevated)
+        self.assertIn("operator@new-host.example", elevated)
+        self.assertNotIn("SSH_AUTH_SOCK", command_env)
+        self.assertEqual(elevated_env["SSH_AUTH_SOCK"], shell.REMOTE_AUTH_AGENT)
+
+    async def test_new_host_named_unit_cancellation_is_generic(self):
+        """Cancellation uses the configured unit type, not a known hostname."""
+        host = "new-linux-host"
+        target = shell.RemoteTarget("operator@new-host.example", "new-host-key", "/bin/bash", execution="systemd-user")
+        job = shell.Job(request_id="a" * 32, host=host)
+        process = AsyncMock()
+        process.returncode = 0
+        with (
+            patch.dict(shell.REMOTE_TARGETS, {host: target}),
+            patch.object(shell.asyncio, "create_subprocess_exec", return_value=process) as spawn,
+        ):
+            await shell._signal_target(job, "TERM")
+        self.assertIn(f"chatgpt-shell-{job.request_id}.service", spawn.call_args.args[-1])
+        self.assertNotIn("run0", spawn.call_args.args[-1])
+        self.assertEqual(job.target_pid, None)
+
+    def test_unconfigured_remote_capabilities_fail_closed(self):
+        """Unsupported transports and undeclared native privilege must not run."""
+        with self.assertRaisesRegex(ValueError, "unsupported remote execution"):
+            shell.RemoteTarget("operator@host", "key", "/bin/sh", execution="unknown")
+        with self.assertRaisesRegex(ValueError, "unsupported remote execution"):
+            shell.RemoteTarget("operator@host", "key", "/bin/sh", elevation="unknown")
+        with patch.dict(shell.REMOTE_TARGETS, {"new-host": shell.RemoteTarget("owner@new", "key", "/bin/sh")}):
+            self.assertFalse(shell._managed_remote("new-host"))
+            self.assertFalse(shell._can_elevate("new-host"))
+            with self.assertRaises(PermissionError):
+                shell._build_elevated_argv("new-host", "id -u")
+
     async def test_approval_uses_configured_execution_identity(self):
         """The review record must identify the account that executes a command."""
         await shell.shell_exec("local", "printf local", wait_seconds=2)
@@ -272,7 +339,11 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         shell.authorization.authorize.reset_mock()
         with patch.dict(
             shell.REMOTE_TARGETS,
-            {"nixos-arm-parallels": shell.RemoteTarget("review-user@parallels.example", "key", "/bin/bash")},
+            {
+                "nixos-arm-parallels": shell.RemoteTarget(
+                    "review-user@parallels.example", "key", "/bin/bash", execution="systemd-user", elevation="run0"
+                )
+            },
         ):
             result = await shell.shell_exec("nixos-arm-parallels", "printf remote", cwd=os.getcwd(), wait_seconds=2)
         self.assertTrue(result["success"])
@@ -282,7 +353,7 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
             await shell.shell_elevated_exec("nixos-arm-parallels", ["/bin/true"], wait_seconds=2)
         self.assertEqual(shell.authorization.authorize.await_args.kwargs["target_identity"], "root")
 
-    async def test_parallels_cancellation_targets_the_named_unit(self):
+    async def test_managed_remote_cancellation_targets_the_named_unit(self):
         """Remote cancellation must not send PIDs across isolated namespaces."""
         job = shell.Job(request_id="b" * 32, host="nixos-arm-parallels", target_pid=7)
         self.assertNotIn("pid", shell._payload(job))
@@ -290,7 +361,11 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         process.returncode = 0
         with patch.dict(
             shell.REMOTE_TARGETS,
-            {"nixos-arm-parallels": shell.RemoteTarget("owner@parallels", "parallels-key", "/bin/bash")},
+            {
+                "nixos-arm-parallels": shell.RemoteTarget(
+                    "owner@parallels", "parallels-key", "/bin/bash", execution="systemd-user", elevation="run0"
+                )
+            },
         ):
             with patch.object(shell.asyncio, "create_subprocess_exec", return_value=process) as spawn:
                 await shell._signal_target(job, "TERM")
@@ -313,7 +388,11 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         try:
             with patch.dict(
                 shell.REMOTE_TARGETS,
-                {"nixos-arm-parallels": shell.RemoteTarget("owner@parallels", "key", "/bin/bash")},
+                {
+                    "nixos-arm-parallels": shell.RemoteTarget(
+                        "owner@parallels", "key", "/bin/bash", execution="systemd-user", elevation="run0"
+                    )
+                },
             ):
                 env = shell._command_env("nixos-arm-parallels")
                 elevated = shell._command_env("nixos-arm-parallels", elevated=True)
