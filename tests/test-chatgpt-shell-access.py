@@ -234,6 +234,23 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("run0", " ".join(mac + linux))
         self.assertNotIn("sudo", " ".join(mac + linux))
 
+    async def test_approval_uses_configured_execution_identity(self):
+        """The review record must identify the account that executes a command."""
+        await shell.shell_exec("local", "printf local", wait_seconds=2)
+        self.assertEqual(shell.authorization.authorize.await_args.kwargs["target_identity"], shell.WORKER_USER)
+        shell.authorization.authorize.reset_mock()
+        with patch.dict(
+            shell.REMOTE_TARGETS,
+            {"nixos-arm-parallels": shell.RemoteTarget("review-user@parallels.example", "key", "/bin/bash")},
+        ):
+            result = await shell.shell_exec("nixos-arm-parallels", "printf remote", cwd=os.getcwd(), wait_seconds=2)
+        self.assertTrue(result["success"])
+        self.assertEqual(shell.authorization.authorize.await_args.kwargs["target_identity"], "review-user")
+        shell.authorization.authorize.reset_mock()
+        with patch.object(shell, "_build_elevated_argv", return_value=["bash", "-c", "printf elevated"]):
+            await shell.shell_elevated_exec("nixos-arm-parallels", ["/bin/true"], wait_seconds=2)
+        self.assertEqual(shell.authorization.authorize.await_args.kwargs["target_identity"], "root")
+
     async def test_parallels_cancellation_targets_the_named_unit(self):
         """Remote cancellation must not send PIDs across isolated namespaces."""
         job = shell.Job(request_id="b" * 32, host="nixos-arm-parallels", target_pid=7)

@@ -93,10 +93,16 @@ class AuthorizationTests(unittest.IsolatedAsyncioTestCase):
         """Bind submitted standard input and escape untrusted terminal control sequences."""
         ident = self.ident()
         payload = "first\n\x1b[2Jsecond"
-        operation = asyncio.create_task(authorization.authorize(ident, "server", "elevation", "cat", "/tmp\nforged", payload))
+        operation = asyncio.create_task(
+            authorization.authorize(ident, "server", "elevation", "cat", "/tmp\nforged", payload, target_identity="root")
+        )
         pending = await self.await_pending(ident)
         request = json.loads(pending.read_text())
         self.assertEqual(request["stdin"], payload)
+        self.assertEqual(request["target_identity"], "root")
+        modified = {key: value for key, value in request.items() if key != "digest"}
+        modified["target_identity"] = "another-user"
+        self.assertNotEqual(authorization._digest(modified), request["digest"])
         output = io.StringIO()
         with contextlib.redirect_stdout(output):
             authorization._list()
@@ -104,6 +110,9 @@ class AuthorizationTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn(r"\u001b", output.getvalue())
         self.assertIn(r"\nforged", output.getvalue())
         self.assertIn(r"first\n", output.getvalue())
+        self.assertIn('target: "root"', output.getvalue())
+        self.assertIn("expires:", output.getvalue())
+        self.assertIn("scope: one operation", output.getvalue())
         authorization._decide(ident, "approve")
         await operation
 

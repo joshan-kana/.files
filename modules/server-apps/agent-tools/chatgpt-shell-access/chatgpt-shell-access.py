@@ -370,6 +370,9 @@ async def _run_herdr_exec(job: Job, command: str, cwd: str | None, stdin: str | 
 
 async def _run(job: Job, command: str, cwd: str | None, stdin: str | None) -> None:
     marker = f"__CHATGPT_SHELL_PID_{job.request_id}__="
+    target_identity = "root" if job.elevated else WORKER_USER
+    if not job.elevated and job.host in REMOTE_TARGETS:
+        target_identity = REMOTE_TARGETS[job.host].ssh_target.split("@", 1)[0]
     try:
         job.awaiting_approval = True
         await authorization.authorize(
@@ -379,6 +382,7 @@ async def _run(job: Job, command: str, cwd: str | None, stdin: str | None) -> No
             command,
             cwd,
             stdin,
+            target_identity=target_identity,
         )
         job.awaiting_approval = False
         if job.host == LOCAL_HOST and not job.elevated:
@@ -554,7 +558,15 @@ async def session_start(
     if cwd is not None:
         arguments.extend(["--cwd", cwd])
     arguments.extend(["bash", "-c", command])
-    await authorization.authorize(uuid.uuid4().hex, host, "commands", shlex.join(arguments), cwd, session=session_name)
+    await authorization.authorize(
+        uuid.uuid4().hex,
+        host,
+        "commands",
+        shlex.join(arguments),
+        cwd,
+        session=session_name,
+        target_identity=WORKER_USER,
+    )
     result = await _herdr(host, arguments)
     address = result.get("address")
     if not isinstance(address, str):
@@ -593,7 +605,15 @@ async def _managed_session_action(host: Host, terminal: str, action: str) -> dic
     if not authorization.owns_terminal(terminal, metadata):
         raise PermissionError("terminal is not an agent-managed workspace")
     arguments = [action, "--json", terminal]
-    await authorization.authorize(uuid.uuid4().hex, host, "commands", shlex.join(arguments), None, session=metadata["name"])
+    await authorization.authorize(
+        uuid.uuid4().hex,
+        host,
+        "commands",
+        shlex.join(arguments),
+        None,
+        session=metadata["name"],
+        target_identity=WORKER_USER,
+    )
     # An operator approval may take minutes; reject replacement sessions.
     current = await _herdr(host, ["get", "--json", terminal])
     if not authorization.owns_terminal(terminal, current):

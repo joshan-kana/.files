@@ -174,6 +174,7 @@ async def authorize(
     cwd: str | None,
     stdin: str | None = None,
     session: str | None = None,
+    target_identity: str | None = None,
 ) -> None:
     """Wait for a one-time human decision where the effective policy requires it."""
     mode = effective(host, kind, session)
@@ -192,6 +193,7 @@ async def authorize(
         "id": request_id,
         "host": host,
         "kind": kind,
+        "target_identity": target_identity,
         "command": command,
         "cwd": cwd,
         "stdin": stdin,
@@ -242,6 +244,9 @@ def _list() -> None:
         if request["expires_at"] <= time.time():
             continue
         print(f"{request['id']}  {request['host']}  {request['kind']}")
+        print(f"  target: {json.dumps(request.get('target_identity'), ensure_ascii=True)}")
+        print(f"  expires: {time.strftime('%Y-%m-%d %H:%M:%S %Z', time.localtime(request['expires_at']))}")
+        print("  scope: one operation")
         print(f"  cwd: {json.dumps(request['cwd'], ensure_ascii=True)}")
         if request.get("session") is not None:
             print(f"  session: {json.dumps(request['session'], ensure_ascii=True)}")
