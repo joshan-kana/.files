@@ -237,7 +237,16 @@ Item {
         keyboardRequested();
     }
 
-    function handleKey(key: int, modifiers: int): bool {
+    function handleKey(key: int, modifiers: int, autoRepeat: bool): bool {
+        if (autoRepeat) {
+            const repeatedAction = [
+                "SettingsDetail.toggle", "SettingsDetail.blur", "SettingsDetail.reset",
+                "SettingsDetail.presentation", "SettingsDetail.history"
+            ].some(name => runtime.shellMatchesHint(name, key, modifiers));
+            const choice = kind === "power" || kind === "stay" ? runtime.shellNumberIndex("controls", key, 5) : -1;
+            if (repeatedAction || choice >= 0)
+                return true;
+        }
         if (runtime.shellMatchesHint("SettingsDetail.toggle", key, modifiers) && hasMaster) {
             if (masterAvailable)
                 toggleMaster();

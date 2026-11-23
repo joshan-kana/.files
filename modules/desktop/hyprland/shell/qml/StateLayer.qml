@@ -97,7 +97,10 @@ MouseArea {
 
     Keys.onPressed: event => {
         if (keyboardFocusable && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space)) {
-            activated(event);
+            // Activation happens on the initial press, never on key-up and
+            // never again just because an activation key is held.
+            if (!event.isAutoRepeat)
+                activated(event);
             event.accepted = true;
         }
     }

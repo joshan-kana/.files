@@ -102,7 +102,7 @@ FocusScope {
     // sliders; H/L and arrows edit the selected value without stealing the
     // existing audio keys outside this mode.
     property string selectedSlider: ""
-    readonly property bool sliderNavigationEnabled: engaged && !resetConfirmPending && !helpOpen && !mixerOpen && !audioChooserOpen && !themeOpen && !wallpaperOpen && !sessionOpen && !networkOpen && !bluetoothOpen && !resourcesOpen && !statusOpen && !recordingsOpen && !trayMenuOpen && !vhsPanel.open
+    readonly property bool sliderNavigationEnabled: engaged && !resetConfirmPending && !helpOpen && !mixerOpen && !audioChooserOpen && !themeOpen && !wallpaperOpen && !sessionOpen && !networkOpen && !bluetoothOpen && !resourcesOpen && !statusOpen && !recordingsOpen && !trayMenuOpen && !vhsPanel.open && !settingsPanel.open
     readonly property var sliderTargets: brightness.supported ? ["brightness"] : []
     function selectSlider(target: string): void {
         selectedSlider = target;
@@ -167,9 +167,15 @@ FocusScope {
     readonly property bool sessionConfirmationPending: sessionPanel.open && sessionPanel.armedAction.length > 0
     readonly property bool resourcesOpen: resourcesPanel.open
     readonly property bool statusOpen: statusPanel.open
+    readonly property bool settingsOpen: settingsPanel.open
+    readonly property bool vhsOpen: vhsPanel.open
     readonly property bool recordingsOpen: recordingsPanel.open
     readonly property string helpTitle: settingsPanel.open ? "Capability details" : statusOpen ? "System status" : recordingsPanel.open ? "Captures" : wallpaperPanel.open ? "Wallpaper library" : mixerOpen ? "Application mixer" : resourcesPanel.open ? "Resource monitor" : (bluetoothPanel.open ? "Bluetooth controls" : (networkPanel.open ? "Network controls" : (themePanel.open ? "Theme controls" : (sessionPanel.open ? "Session controls" : (trayMenu.open ? "Tray menu controls" : "System controls")))))
-    readonly property var helpBindings: vhsPanel.open ? [
+    readonly property var helpBindings: settingsPanel.open ? [
+        { key: root.runtime.shellHint("SettingsDetail.toggle"), action: "Toggle this capability" },
+        { key: root.runtime.shellHint("SettingsDetail.adjust"), action: "Adjust selected parameter" },
+        { key: root.runtime.shellHint("SystemContent.legend.back"), action: "Back to Controls" }
+    ] : vhsPanel.open ? [
         {
             key: root.runtime.shellHint("VhsPanel.select"),
             action: "Select VHS parameter"
@@ -1919,7 +1925,7 @@ FocusScope {
                     if (event.key === root.runtime.shellKeyCode("controls", "Backspace")) {
                         root.backFromDetail();
                         event.accepted = true;
-                    } else if (settingsPanel.invoke("handleKey", event.key, event.modifiers)) {
+                    } else if (settingsPanel.invoke("handleKey", event.key, event.modifiers, event.isAutoRepeat)) {
                         event.accepted = true;
                     }
                     return;
@@ -2235,6 +2241,25 @@ FocusScope {
                     return;
                 }
 
+                // One-shot actions run on physical key-down only. Holding a
+                // key must not alternately enable/disable a capability, while
+                // repeat of local navigation or range adjustment stays useful.
+                if (event.isAutoRepeat) {
+                    const oneShot = [
+                        "SystemContent.alerts", "SystemContent.stayAwake", "SystemContent.powerProfile",
+                        "SystemContent.nightLight", "SystemContent.windowTransparency",
+                        "SystemContent.shellGlass", "SystemContent.vhsToggle",
+                        "SystemContent.vhsTune", "SystemContent.networkDetails",
+                        "SystemContent.bluetoothDetails", "SystemContent.windowsDetails",
+                        "SystemContent.glassDetails", "SystemContent.nightLightDetails",
+                        "SystemContent.alertsDetails", "SystemContent.stayDetails",
+                        "SystemContent.powerDetails"
+                    ].some(name => root.runtime.shellMatchesHint(name, event.key, event.modifiers));
+                    if (oneShot) {
+                        event.accepted = true;
+                        return;
+                    }
+                }
                 const shifted = !!(root.runtime.shellModifier("controls", "Shift", event.modifiers));
                 // Shift release/press is not a command. Previously pressing
                 // Shift by itself cleared selectedSlider, so the next Backtab
