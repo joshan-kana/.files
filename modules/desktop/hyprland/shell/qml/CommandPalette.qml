@@ -1511,8 +1511,7 @@ Item {
                             results.currentIndex = Math.max(0, results.currentIndex - 1);
                             event.accepted = true;
                         } else if (event.key === palette.runtime.shellKeyCode("palette", "Return") || event.key === palette.runtime.shellKeyCode("palette", "Enter")) {
-                            const keepOpen = (palette.runtime.shellModifier("palette", "Shift", event.modifiers)) !== 0;
-                            palette.launchCurrent(keepOpen);
+                            palette.launchCurrent(palette.runtime.shellModifier("palette", "Shift", event.modifiers));
                             event.accepted = true;
                         }
                     }
@@ -1563,7 +1562,7 @@ Item {
                         const rows = Math.max(1, Math.floor(results.height / (57 + results.spacing) / 2));
                         results.currentIndex = Math.max(0, Math.min(displayedModel.values.length - 1, results.currentIndex + ((event.key === palette.runtime.shellKeyCode("palette", "D") || event.key === palette.runtime.shellKeyCode("palette", "PageDown")) ? rows : -rows)));
                     } else if (event.key === palette.runtime.shellKeyCode("palette", "Return") || event.key === palette.runtime.shellKeyCode("palette", "Enter")) {
-                        palette.launchCurrent((palette.runtime.shellModifier("palette", "Shift", event.modifiers)) !== 0);
+                        palette.launchCurrent(palette.runtime.shellModifier("palette", "Shift", event.modifiers));
                     } else {
                         return;
                     }
