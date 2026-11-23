@@ -647,8 +647,8 @@ Item {
                         Text {
                             width: 64
                             anchors.verticalCenter: parent.verticalCenter
-                            text: panel.actionMode ? "ACTION" : item.modelData.pinned ? "PINNED" : item.modelData.kind
-                            color: panel.theme.readableRoleColor(item.modelData.kind !== "TEXT" ? "capture" : "clipboard")
+                            text: item.modelData ? (panel.actionMode ? "ACTION" : item.modelData.pinned ? "PINNED" : item.modelData.kind || "") : ""
+                            color: panel.theme.readableRoleColor(item.modelData && item.modelData.kind === "TEXT" ? "clipboard" : "capture")
                             font.family: panel.runtime.fontSans
                             font.pixelSize: panel.theme.fontSize(9)
                             font.weight: Font.DemiBold
@@ -658,7 +658,7 @@ Item {
                         MarqueeText {
                             width: parent.width - 64 - parent.spacing - 36
                             anchors.verticalCenter: parent.verticalCenter
-                            text: panel.actionMode ? item.modelData.name : item.modelData.preview
+                            text: item.modelData ? (panel.actionMode ? item.modelData.name || "" : item.modelData.preview || "") : ""
                             color: panel.theme.text
                             font.family: panel.runtime.fontMono
                             font.pixelSize: panel.theme.fontSize(12)
