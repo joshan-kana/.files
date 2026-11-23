@@ -579,10 +579,10 @@ kill -s {sig} {job.target_pid} $children 2>/dev/null || true
             process.wait(),
             timeout=8 if _managed_remote(job.host) and not job.elevated else 5,
         )
-        if _managed_remote(job.host) and not job.elevated and process.returncode != 0:
-            raise RuntimeError("Remote command interruption was not confirmed")
+        if (job.elevated or _managed_remote(job.host)) and process.returncode != 0:
+            raise RuntimeError("Command interruption was not confirmed")
     except Exception:
-        if _managed_remote(job.host) and not job.elevated:
+        if job.elevated or _managed_remote(job.host):
             raise
 
 

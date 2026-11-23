@@ -382,6 +382,20 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
             ):
                 await shell._signal_target(job, "KILL")
 
+    async def test_elevated_cancellation_requires_positive_confirmation(self):
+        """Never claim a privileged operation stopped when its signal failed."""
+        job = shell.Job(request_id="f" * 32, host="local", elevated=True)
+        process = AsyncMock()
+        process.returncode = 1
+        with (
+            patch.object(shell.asyncio, "create_subprocess_exec", return_value=process),
+            self.assertRaisesRegex(RuntimeError, "not confirmed"),
+        ):
+            await shell._signal_target(job, "TERM")
+        process.returncode = 0
+        with patch.object(shell.asyncio, "create_subprocess_exec", return_value=process):
+            await shell._signal_target(job, "TERM")
+
     def test_remote_ssh_does_not_receive_controller_elevation_credentials(self):
         """Never put the privileged agent socket in an ordinary SSH environment."""
         self.env.stop()
