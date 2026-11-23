@@ -25,6 +25,7 @@ QtObject {
     readonly property string resourceProbe: root.configData.tools.resourceProbe
     readonly property string clipboardCopy: root.configData.tools.clipboardCopy
     readonly property string clipboardPreview: root.configData.tools.clipboardPreview
+    readonly property string clipboardOperations: root.configData.tools.clipboardOperations
     readonly property string lockSession: root.configData.tools.lockSession
     readonly property string networkConnectionEditor: root.configData.tools.networkConnectionEditor
     readonly property string nmcli: root.configData.tools.nmcli
@@ -287,6 +288,7 @@ QtObject {
                 property string resourceProbe: ""
                 property string clipboardCopy: ""
                 property string clipboardPreview: ""
+                property string clipboardOperations: ""
                 property string lockSession: ""
                 property string networkConnectionEditor: ""
                 property string nmcli: ""

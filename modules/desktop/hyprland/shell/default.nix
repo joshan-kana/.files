@@ -594,6 +594,7 @@ in
       clipboardPreview = pkgs.writeShellApplication {
         name = "desktop-shell-clipboard-preview";
         runtimeInputs = [
+          clipboardOperations
           pkgs.cliphist
           pkgs.coreutils
           pkgs.imagemagick
@@ -608,6 +609,20 @@ in
           pkgs.wl-clipboard
         ];
         text = builtins.readFile ../../../../scripts/desktop-shell/clipboard-copy.sh;
+      };
+
+      clipboardOperationsSource = ../../../../scripts/desktop-shell/clipboard-operations.py;
+
+      clipboardOperations = pkgs.writeShellApplication {
+        name = "desktop-shell-clipboard-operations";
+        runtimeInputs = [
+          pkgs.cliphist
+          pkgs.python3
+          pkgs.wl-clipboard
+        ];
+        text = ''
+          exec python3 ${clipboardOperationsSource} "$@"
+        '';
       };
 
       spectrumAnalyzer = pkgs.desktop-shell-spectrum;
@@ -732,6 +747,7 @@ in
           resourceProbe = lib.getExe resourceProbe;
           clipboardCopy = lib.getExe clipboardCopy;
           clipboardPreview = lib.getExe clipboardPreview;
+          clipboardOperations = lib.getExe clipboardOperations;
           lockSession = lib.getExe lockCommand;
           networkConnectionEditor = lib.getExe' pkgs.networkmanagerapplet "nm-connection-editor";
           nmcli = lib.getExe' pkgs.networkmanager "nmcli";
@@ -939,6 +955,7 @@ in
         lockCommand
         sessionCommand
         clipboardCopy
+        clipboardOperations
         wallpaperLibrary
         recordingToggle
         imageMarkup
