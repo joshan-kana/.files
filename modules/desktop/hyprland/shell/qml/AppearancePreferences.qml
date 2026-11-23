@@ -23,6 +23,7 @@ QtObject {
         property bool shellGlassEnabled: appearance.runtime.appearanceDefaults.shellGlassEnabled
         property real windowOpacity: appearance.runtime.appearanceDefaults.windowOpacity
         property real glassOpacity: appearance.runtime.appearanceDefaults.glassOpacity
+        property bool blurEnabled: appearance.runtime.appearanceDefaults.blurEnabled
         property int blurSize: appearance.runtime.appearanceDefaults.blurSize
         property bool vhsEnabled: appearance.runtime.appearanceDefaults.vhsEnabled
         property real vhsIntensity: appearance.runtime.appearanceDefaults.vhsIntensity
@@ -49,6 +50,7 @@ QtObject {
     readonly property bool shellGlassEnabled: effective("shellGlassEnabled")
     readonly property real windowOpacity: Math.max(0.20, Math.min(1, effective("windowOpacity")))
     readonly property real glassOpacity: Math.max(0.20, Math.min(1, effective("glassOpacity")))
+    readonly property bool blurEnabled: effective("blurEnabled")
     readonly property int blurSize: Math.max(5, Math.min(25, effective("blurSize")))
     readonly property bool vhsEnabled: effective("vhsEnabled")
     readonly property real vhsIntensity: Math.max(0, Math.min(1, effective("vhsIntensity")))
@@ -226,16 +228,7 @@ QtObject {
     function applyVhs(): void {
         if (runtime.vhsControl.length === 0)
             return;
-        Quickshell.execDetached([
-            runtime.vhsControl, vhsEnabled ? "on" : "off",
-            String(Math.round(vhsIntensity * 100)),
-            String(Math.round(vhsTracking * 100)),
-            String(Math.round(vhsChroma * 100)),
-            String(Math.round(vhsNoise * 100)),
-            String(Math.round(vhsScanlines * 100)),
-            String(Math.round(vhsSpeed * 100)),
-            String(Math.round(vhsDropouts * 100))
-        ]);
+        Quickshell.execDetached([runtime.vhsControl, vhsEnabled ? "on" : "off", String(Math.round(vhsIntensity * 100)), String(Math.round(vhsTracking * 100)), String(Math.round(vhsChroma * 100)), String(Math.round(vhsNoise * 100)), String(Math.round(vhsScanlines * 100)), String(Math.round(vhsSpeed * 100)), String(Math.round(vhsDropouts * 100))]);
     }
 
     function toggleVhs(): void {
@@ -276,7 +269,23 @@ QtObject {
     function applyBlurSize(): void {
         if (runtime.hyprctl.length === 0)
             return;
-        Quickshell.execDetached([runtime.hyprctl, "eval", "hl.config({ decoration = { blur = { size = " + blurSize + " } } })"]);
+        Quickshell.execDetached([runtime.hyprctl, "eval", "hl.config({ decoration = { blur = { enabled = " + (blurEnabled ? "true" : "false") + ", size = " + blurSize + " } } })"]);
+    }
+
+    function clearOverride(key: string): void {
+        if (!overrideKeys.includes(key))
+            return;
+        const remaining = overrideKeys.filter(value => value !== key);
+        saved.userOverrides = JSON.stringify(remaining);
+        saved.setValue("userOverrides", saved.userOverrides);
+        saved.sync();
+    }
+
+    function toggleBlur(): void {
+        const next = !blurEnabled;
+        storeOverride("blurEnabled", next);
+        saved.sync();
+        applyBlurSize();
     }
 
     function setBlurSize(value: real): void {

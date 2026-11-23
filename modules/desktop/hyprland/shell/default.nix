@@ -393,11 +393,6 @@ in
           default = 0.70;
           description = "Opacity of translucent shell surfaces, from 0.2 to 1.0 inclusive.";
         };
-        blurSize = lib.mkOption {
-          type = lib.types.ints.between 5 25;
-          default = 15;
-          description = "Compositor-wide backdrop blur radius, adjustable without restarting the shell.";
-        };
         vhsEnabled = lib.mkOption {
           type = lib.types.bool;
           default = false;
@@ -737,7 +732,12 @@ in
           inherit (scopeConfig) snippets;
           fileRoots = scopeConfig.fileSearchRoots;
         };
-        inherit (scopeConfig) appearance;
+        # Compositor blur is declared by Hyprland itself. The shell only
+        # receives evaluated defaults for its transient/persistent user overrides.
+        appearance = scopeConfig.appearance // {
+          blurEnabled = config.wayland.windowManager.hyprland.settings.config.decoration.blur.enabled;
+          blurSize = config.wayland.windowManager.hyprland.settings.config.decoration.blur.size;
+        };
         capture.freezeEnabled = scopeConfig.captureFreezeEnabled;
         notifications = {
           silent = scopeConfig.notificationsSilent;
