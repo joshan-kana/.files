@@ -12,7 +12,7 @@ let
   stateRoot = "${server.storage.appData.root}/chatgpt-shell-gateway";
   operatorStateRoot = "${server.storage.appData.root}/chatgpt-shell-operator-secure";
   approvalRoot = "/run/chatgpt-shell-approvals";
-  workspaces = config.systemd.services.agent-workspaces;
+  inherit (config.systemd.services) agent-workspaces;
   tunnelSecret = "${server.secretsDir}/chatgpt-shell-tunnel.env";
   githubSecret = "${server.secretsDir}/github-self-hosted-agents.env";
   knownHostsFile = "${config.users.users.${primary.name}.home}/.ssh/known_hosts";
@@ -65,7 +65,7 @@ let
     export CHATGPT_SHELL_POLICIES_FILE=${policyDefaults}
     exec ${pkgs.python3}/bin/python3 ${./.}/authorization.py "$@"
   '';
-  shellPackages = workspaces.path;
+  shellPackages = agent-workspaces.path;
 
 in
 {
@@ -135,8 +135,8 @@ in
       MCP_COMMAND = "${pkgs.coreutils}/bin/env -u CONTROL_PLANE_API_KEY -u CONTROL_PLANE_TUNNEL_ID ${pkgs.chatgpt-shell-mcp-python}/bin/python3 ${./.}/chatgpt-shell-access.py";
       CHATGPT_SHELL_COMMAND_PATH = lib.makeBinPath shellPackages;
       CHATGPT_SHELL_LOCAL_HOST = config.networking.hostName;
-      CHATGPT_SHELL_WORKER = workspaces.serviceConfig.User;
-      CHATGPT_SHELL_WORKER_ENV = builtins.toJSON workspaces.environment;
+      CHATGPT_SHELL_WORKER = agent-workspaces.serviceConfig.User;
+      CHATGPT_SHELL_WORKER_ENV = builtins.toJSON agent-workspaces.environment;
       CHATGPT_SHELL_RUN0 = "${pkgs.systemd}/bin/run0";
       CHATGPT_SHELL_BASH = "${pkgs.bash}/bin/bash";
       CHATGPT_SHELL_HC = "${pkgs.herdr-core}/bin/hc";
