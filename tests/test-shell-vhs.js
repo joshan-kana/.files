@@ -25,7 +25,10 @@ test("VHS persists through the existing appearance preferences with Nix off by d
   const module = read(path.join(shell, "default.nix"));
   const preferences = read(path.join(shell, "qml/AppearancePreferences.qml"));
   const ui = read(path.join(shell, "qml/SystemContent.qml"));
-  assert.match(module, /vhsEnabled = lib\.mkOption \{\s*type = lib\.types\.bool;\s*default = false;/);
+  assert.match(
+    module,
+    /vhsEnabled = lib\.mkOption \{\s*type = lib\.types\.bool;\s*default = false;/,
+  );
   assert.match(preferences, /function toggleVhs\(\)/);
   assert.match(preferences, /function setVhsIntensity\(value: real\)/);
   assert.match(preferences, /onVhsControlChanged/);
@@ -41,7 +44,11 @@ test("controller rejects invalid intensities and builds cached shader variants",
   try {
     const bin = path.join(tmp, "bin");
     fs.mkdirSync(bin);
-    fs.writeFileSync(path.join(bin, "hyprctl"), '#!/bin/sh\nprintf "%s\\n" "$*" >> "$VHS_CALLS"\n', { mode: 0o755 });
+    fs.writeFileSync(
+      path.join(bin, "hyprctl"),
+      '#!/bin/sh\nprintf "%s\\n" "$*" >> "$VHS_CALLS"\n',
+      { mode: 0o755 },
+    );
     const env = {
       ...process.env,
       PATH: bin + ":" + process.env.PATH,
@@ -49,7 +56,8 @@ test("controller rejects invalid intensities and builds cached shader variants",
       VHS_CALLS: path.join(tmp, "calls"),
       VHS_SHADER_SOURCE: shader,
     };
-    const run = (...args) => spawnSync("bash", [command, ...args], { env, encoding: "utf8" });
+    const run = (...args) =>
+      spawnSync("bash", [command, ...args], { env, encoding: "utf8" });
     for (const bad of ["-1", "101", "3.2", "oops"]) {
       assert.equal(run("on", bad).status, 2, bad + " should be rejected");
     }
@@ -58,10 +66,23 @@ test("controller rejects invalid intensities and builds cached shader variants",
     }
     assert.equal(run("off").status, 0);
     const state = path.join(tmp, "desktop-shell", path.basename(shader));
-    assert.deepEqual(fs.readdirSync(state).sort(), ["000.frag", "045.frag", "100.frag"]);
-    assert.match(read(path.join(state, "000.frag")), /const float VHS_INTENSITY = 0\.00;/);
-    assert.match(read(path.join(state, "045.frag")), /const float VHS_INTENSITY = 0\.45;/);
-    assert.match(read(path.join(state, "100.frag")), /const float VHS_INTENSITY = 1\.00;/);
+    assert.deepEqual(fs.readdirSync(state).sort(), [
+      "000.frag",
+      "045.frag",
+      "100.frag",
+    ]);
+    assert.match(
+      read(path.join(state, "000.frag")),
+      /const float VHS_INTENSITY = 0\.00;/,
+    );
+    assert.match(
+      read(path.join(state, "045.frag")),
+      /const float VHS_INTENSITY = 0\.45;/,
+    );
+    assert.match(
+      read(path.join(state, "100.frag")),
+      /const float VHS_INTENSITY = 1\.00;/,
+    );
     const calls = read(path.join(tmp, "calls")).trim().split("\n");
     assert.equal(calls.length, 5);
     assert.match(calls[0], /screen_shader.*000\.frag/);
