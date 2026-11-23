@@ -97,7 +97,7 @@ test("stream selection stays with the node across reordering and services share 
   assert.match(controls, /audioDeck\.toggleSelectedDeviceChooser\(\)/);
   assert.match(
     controls,
-    /mixerView\.panel\.handleKey\(event\.key, event\.modifiers\)/,
+    /mixerView\.panel\.handleKey\(event\.key, event\.modifiers, event\.isAutoRepeat\)/,
   );
 });
 
