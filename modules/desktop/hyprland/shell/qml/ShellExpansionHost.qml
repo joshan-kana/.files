@@ -147,10 +147,6 @@ PanelWindow {
             action: "Browse forecast days"
         },
         {
-            key: host.runtime.shellHint("ShellExpansionHost.legend.refresh_forecast"),
-            action: "Refresh forecast"
-        },
-        {
             key: host.runtime.shellHint("ShellExpansionHost.legend.return_to_calendar"),
             action: "Return to calendar"
         },
