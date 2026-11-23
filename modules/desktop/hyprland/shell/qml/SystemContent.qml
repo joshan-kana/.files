@@ -396,10 +396,6 @@ FocusScope {
                             action: root.selectedSlider.length > 0 ? "Adjust selected slider" : "Adjust selected device level"
                         },
                         {
-                            key: root.runtime.shellHint("SystemContent.legend.cycle_available_brightness_window_glass_and_night_light_sliders"),
-                            action: "Cycle brightness and Visual Modes sliders"
-                        },
-                        {
                             key: root.runtime.shellHint("SystemContent.legend.activate_selected_setting_exit_parameter_focus"),
                             action: "Activate selected setting / exit parameter focus"
                         },
@@ -996,7 +992,7 @@ FocusScope {
                                 width: parent.width
                                 spacing: root.theme.spacing2
                                 ShellSlider {
-                                    width: Math.max(1, parent.width - (root.selectedSlider === "brightness" ? brightnessHint.implicitWidth + parent.spacing : 0))
+                                    width: Math.max(1, parent.width - (root.brightness.supported ? brightnessHint.implicitWidth + parent.spacing : 0))
                                     theme: root.theme
                                     motion: root.motion
                                     from: 1
@@ -1011,8 +1007,9 @@ FocusScope {
                                 }
                                 KeyHint {
                                     id: brightnessHint
-                                    visible: root.selectedSlider === "brightness"
-                                    shortcut: root.runtime.shellHint("SystemContent.audioLevel")
+                                    visible: root.brightness.supported
+                                    shortcut: root.selectedSlider === "brightness" ? root.runtime.shellHint("SystemContent.audioLevel") : root.runtime.shellHint("SystemContent.brightnessFocus")
+                                    label: root.selectedSlider === "brightness" ? "Adjust" : "Focus"
                                     compact: true
                                     runtime: root.runtime
                                     theme: root.theme
@@ -1288,30 +1285,6 @@ FocusScope {
                             font.pixelSize: root.theme.fontPanelEyebrow
                             font.weight: Font.DemiBold
                             font.letterSpacing: 1.0
-                        }
-                        Item {
-                            width: Math.max(0, parent.width - parent.children[0].implicitWidth - sliderSelectionHint.implicitWidth - (sliderNavigationHint.visible ? sliderNavigationHint.implicitWidth + parent.spacing : 0) - parent.spacing * 2)
-                            height: 1
-                        }
-                        KeyHint {
-                            id: sliderSelectionHint
-                            anchors.verticalCenter: parent.verticalCenter
-                            shortcut: root.runtime.shellHint("SystemContent.tabSelect")
-                            label: root.selectedSlider.length > 0 ? "Next slider" : "Select slider"
-                            compact: true
-                            runtime: root.runtime
-                            theme: root.theme
-                            emphasized: root.selectedSlider.length > 0
-                        }
-                        KeyHint {
-                            id: sliderNavigationHint
-                            visible: root.selectedSlider.length > 0
-                            anchors.verticalCenter: parent.verticalCenter
-                            shortcut: root.runtime.shellHint("SystemContent.rowSelect")
-                            label: "Select"
-                            compact: true
-                            runtime: root.runtime
-                            theme: root.theme
                         }
                     }
 
@@ -2296,7 +2269,9 @@ FocusScope {
                         return;
                     }
                 }
-                if (root.runtime.shellMatchesHint("SystemContent.windowsDetails", event.key, event.modifiers)) {
+                if (root.runtime.shellMatchesHint("SystemContent.brightnessFocus", event.key, event.modifiers) && root.brightness.supported) {
+                    root.selectSlider("brightness");
+                } else if (root.runtime.shellMatchesHint("SystemContent.windowsDetails", event.key, event.modifiers)) {
                     root.openSetting("windows");
                 } else if (root.runtime.shellMatchesHint("SystemContent.glassDetails", event.key, event.modifiers)) {
                     root.openSetting("glass");
