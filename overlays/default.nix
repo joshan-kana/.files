@@ -62,6 +62,7 @@ _: {
     ./hermes-agent
     ./matrix-bridges
     ./neodisk
+    ./nowcaption
     ./ncmpcpp
     ./mpv
     ./xytz

@@ -25,6 +25,12 @@ in
       home.sessionVariables.BROWSER = config.dotfiles.defaults.browser;
     };
 
+  nowcaption =
+    _:
+    lib.optionalAttrs isLinux {
+      home = _: { home.packages = [ pkgs.nowcaption ]; };
+    };
+
   brave = _: {
     home = _: {
       home.packages = [ pkgs.brave ];
