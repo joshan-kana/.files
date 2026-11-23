@@ -399,6 +399,7 @@ FocusScope {
     }
 
     TileKeyHint {
+        primary: true
         visible: mixer.compact && shortcut.length > 0
         shortcut: mixer.runtime.shellHint("AudioMixerContent.open")
         runtime: mixer.runtime
