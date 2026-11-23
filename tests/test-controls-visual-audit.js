@@ -114,8 +114,8 @@ test("Visual Modes and Quick Actions have distinct full-width balanced sections"
     /title: root.resetRunning \? "Restoring…" : "Restore defaults"/,
   );
   assert.doesNotMatch(visual, /Restore defaults/);
-  assert.match(controls, /id: sliderSelectionHint/);
-  assert.match(controls, /id: sliderNavigationHint/);
+  assert.doesNotMatch(controls, /id: sliderSelectionHint|id: sliderNavigationHint/);
+  assert.match(controls, /SystemContent\.brightnessFocus/);
   assert.match(visual, /active: root.barVisible/);
   assert.match(visual, /active: root.motion.enabled/);
   assert.doesNotMatch(
@@ -182,14 +182,14 @@ test("slider keyboard workflow respects direct actions, detail Escape and global
   );
   assert.match(
     controls,
-    /shortcut: root\.runtime\.shellHint\("SystemContent.tabSelect"\)/,
+    /shortcut: root\.selectedSlider === "brightness" \? root\.runtime\.shellHint\("SystemContent.audioLevel"\) : root\.runtime\.shellHint\("SystemContent.brightnessFocus"\)/,
   );
   assert.match(
     controls,
     /hints: root\.selectedSlider\.length === 0 \? \[\s*\{\s*shortcut: root\.runtime\.shellHint\("SystemContent.audioSelect"\)/,
   );
   assert.match(read("ShellSection.qml"), /trailing: true/);
-  assert.match(detail, /function handleKey\(key: int, modifiers: int\): bool/);
+  assert.match(detail, /function handleKey\(key: int, modifiers: int, autoRepeat: bool\): bool/);
   assert.match(detail, /shellNavigates\("controls", "right", key\)/);
   assert.match(detail, /shellNavigates\("controls", "down", key\)/);
   assert.match(slider, /signal valueRequested\(real value\)/);
@@ -814,47 +814,24 @@ test("Controls Media groups shuffle, transport, and repeat in one centered row",
   assert.match(transport, /action: "play"/);
   assert.match(card, /spectrum: card.spectrum/);
 });
-test("slider mode retains Tab, J/K selection and H/L edits without duplicate legends", () => {
+test("brightness direct focus, scoped detail parameters and clean Visual Modes headers", () => {
   const controls = read("SystemContent.qml");
-  const opacity = read("OpacitySetting.qml");
-  const night = read("AdjustableSetting.qml");
-  assert.match(
-    controls,
-    /id: sliderNavigationHint[\s\S]*?shortcut: root\.runtime\.shellHint\("SystemContent.rowSelect"\)/,
-  );
-  assert.match(
-    controls,
-    /root\.runtime\.shellNavigates\("controls", "up", event\.key\)/,
-  );
-  assert.match(
-    controls,
-    /root\.runtime\.shellNavigates\("controls", "down", event\.key\)/,
-  );
-  assert.match(controls, /root.adjustSlider\(-1\)/);
-  assert.match(controls, /root.adjustSlider\(1\)/);
-  assert.match(
-    opacity,
-    /primary: true[\s\S]*?shortcut: setting\.shortcut/,
-  );
-  assert.match(
-    night,
-    /primary: true[\s\S]*?shortcut: setting\.toggleShortcut/,
-  );
-  for (const tile of [opacity, night]) {
-    assert.equal((tile.match(/TileKeyHint \{/g) || []).length, 1);
-    assert.match(
-      tile,
-      /TileKeyHint \{[\s\S]*?primary: true[\s\S]*?shortcut: setting\./,
-    );
-    assert.doesNotMatch(tile, /id: adjustHint|adjustHint\.implicitWidth/);
-    assert.match(tile, /ShellSlider \{\s*width: parent.width/);
-    assert.match(tile, /hovered: tileHover.hovered/);
-  }
+  const detail = read("SettingsDetail.qml");
+  const chip = read("QuickSettingChip.qml");
+  const keymap = fs.readFileSync(path.join(__dirname, "../modules/desktop/hyprland/shell/keybindings.nix"), "utf8");
+  assert.match(keymap, /"SystemContent\.brightnessFocus" = "SHIFT\+B"/);
+  assert.match(controls, /shellMatchesHint\("SystemContent\.brightnessFocus", event\.key, event\.modifiers\)/);
+  assert.match(controls, /root\.selectSlider\("brightness"\)/);
+  assert.match(controls, /root\.adjustSlider\(-1\)/);
+  assert.match(controls, /root\.adjustSlider\(1\)/);
+  assert.doesNotMatch(controls, /id: sliderSelectionHint|id: sliderNavigationHint/);
+  assert.match(detail, /function handleKey\(key: int, modifiers: int, autoRepeat: bool\): bool/);
+  assert.match(detail, /shellNavigates\("controls", "left", key\)/);
+  assert.match(detail, /shellNavigates\("controls", "right", key\)/);
+  assert.match(chip, /TileQuickAction \{/);
+  assert.doesNotMatch(controls, /OpacitySetting \{|AdjustableSetting \{/);
   assert.doesNotMatch(
-    controls.slice(
-      controls.indexOf('title: "Media"'),
-      controls.indexOf("ControlsMediaCard {"),
-    ),
+    controls.slice(controls.indexOf('title: "Media"'),controls.indexOf("ControlsMediaCard {")),
     /hints: \[/,
   );
 });

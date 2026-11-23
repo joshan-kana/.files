@@ -85,6 +85,7 @@
     "SystemContent.vhsToggle" = "ALT+V";
     "SystemContent.networkDetails" = "ALT+F";
     "SystemContent.bluetoothDetails" = "ALT+G";
+    "SystemContent.brightnessFocus" = "SHIFT+B";
     "SystemContent.alertsDetails" = "ALT+A";
     "SystemContent.stayDetails" = "ALT+S";
     "SystemContent.powerDetails" = "ALT+SHIFT+V";
@@ -230,8 +231,6 @@
           "SystemContent.legend.close" = "ESC";
           "SystemContent.legend.confirm_move_to_trash" = "D · ENTER";
           "SystemContent.legend.connect_disconnect" = "ENTER";
-          "SystemContent.legend.cycle_available_brightness_window_glass_and_night_light_sliders" =
-            "TAB / SHIFT+TAB";
           "SystemContent.legend.details_refresh_current_view" = "I / R";
           "SystemContent.legend.edit_or_copy_selected_image" = "E / C";
           "SystemContent.legend.esc" = "ESC";
