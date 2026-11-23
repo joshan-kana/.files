@@ -398,6 +398,16 @@ in
           default = 15;
           description = "Compositor-wide backdrop blur radius, adjustable without restarting the shell.";
         };
+        vhsEnabled = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Apply the VHS tape screen effect.";
+        };
+        vhsIntensity = lib.mkOption {
+          type = lib.types.numbers.between 0.0 1.0;
+          default = 0.45;
+          description = "Strength of the VHS tape effect.";
+        };
         mediaVisualizerMode = lib.mkOption {
           type = lib.types.enum [
             "bars"
@@ -654,6 +664,19 @@ in
         }) (lib.filter (binding: binding.id != null) keybindings)
       );
 
+      vhsControl = pkgs.writeShellApplication {
+        name = "desktop-shell-vhs";
+        runtimeInputs = [
+          pkgs.coreutils
+          pkgs.gnused
+          osConfig.programs.hyprland.package
+        ];
+        text = ''
+          export VHS_SHADER_SOURCE=${lib.escapeShellArg "${./shaders/vhs.frag}"}
+          ${builtins.readFile ../../../../scripts/desktop-shell/vhs.sh}
+        '';
+      };
+
       runtimeConfig = json.generate "desktop-shell-runtime.json" {
         wallpaperVideoDefault = scopeConfig.videoWallpaper;
         defaults = {
@@ -713,6 +736,7 @@ in
           networkConnectionEditor = lib.getExe' pkgs.networkmanagerapplet "nm-connection-editor";
           nmcli = lib.getExe' pkgs.networkmanager "nmcli";
           hyprctl = lib.getExe' osConfig.programs.hyprland.package "hyprctl";
+          vhsControl = lib.getExe vhsControl;
           sessionCommand = lib.getExe sessionCommand;
           urlOpen = lib.getExe' pkgs.xdg-utils "xdg-open";
           paletteSearch = lib.getExe paletteSearch;

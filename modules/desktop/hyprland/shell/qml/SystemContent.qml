@@ -100,7 +100,7 @@ FocusScope {
     // existing audio keys outside this mode.
     property string selectedSlider: ""
     readonly property bool sliderNavigationEnabled: engaged && !resetConfirmPending && !helpOpen && !mixerOpen && !audioChooserOpen && !themeOpen && !wallpaperOpen && !sessionOpen && !networkOpen && !bluetoothOpen && !resourcesOpen && !statusOpen && !recordingsOpen && !trayMenuOpen
-    readonly property var sliderTargets: (brightness.supported ? ["brightness"] : []).concat(["windows", "glass", "blur"], nightLight.supported ? ["nightLight"] : [])
+    readonly property var sliderTargets: (brightness.supported ? ["brightness"] : []).concat(["windows", "glass", "blur", "vhs"], nightLight.supported ? ["nightLight"] : [])
     function selectSlider(target: string): void {
         selectedSlider = target;
         keyboardFocus.forceActiveFocus();
@@ -124,6 +124,8 @@ FocusScope {
             appearance.setGlassOpacity(Math.max(0.20, Math.min(1, Math.round((appearance.glassOpacity + direction * 0.05) * 100) / 100)));
         else if (selectedSlider === "blur")
             appearance.setBlurSize(appearance.blurSize + direction);
+        else if (selectedSlider === "vhs")
+            appearance.setVhsIntensity(appearance.vhsIntensity + direction * 0.05);
         else if (selectedSlider === "nightLight" && nightLight.supported)
             nightLight.adjustTemperature(direction * 200);
     }
@@ -133,6 +135,8 @@ FocusScope {
             windowTransparencyToggleRequested();
         else if (selectedSlider === "glass")
             shellGlassToggleRequested();
+        else if (selectedSlider === "vhs")
+            appearance.toggleVhs();
         else if (selectedSlider === "nightLight")
             nightLight.toggle();
         else if (selectedSlider === "brightness")
@@ -1306,6 +1310,25 @@ FocusScope {
                             roleAccent: root.theme.roleColor("connectivity")
                             onToggleRequested: root.shellGlassToggleRequested()
                             onOpacityRequested: value => root.appearance.setGlassOpacity(value)
+                        }
+
+                        OpacitySetting {
+                            width: visualTiles.cellWidth(this)
+                            height: root.dashboardTileHeight
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: "󰨛"
+                            label: "VHS tape"
+                            opacityValue: root.appearance.vhsIntensity
+                            minimumValue: 0
+                            valueUnit: "intensity"
+                            active: root.appearance.vhsEnabled
+                            keyboardSelected: root.selectedSlider === "vhs"
+                            onSliderActivated: root.selectSlider("vhs")
+                            roleAccent: root.theme.roleColor("display")
+                            onToggleRequested: root.appearance.toggleVhs()
+                            onOpacityRequested: value => root.appearance.setVhsIntensity(value)
                         }
 
                         QuickSettingChip {

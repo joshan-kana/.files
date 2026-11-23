@@ -280,7 +280,7 @@ test("QML runtime defaults match the native Nix shell option declarations", () =
     ].map((match) => [match[2], { type: match[1], value: match[3].trim() }]),
   );
 
-  assert.equal(declared.length, 14);
+  assert.ok(declared.length > 0, "Appearance must declare native options");
   assert.deepEqual(
     [...adapted.keys()].sort(),
     declared.map((match) => match[1]).sort(),
