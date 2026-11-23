@@ -372,10 +372,6 @@ Item {
             theme: panel.theme
             hints: [
                 {
-                    shortcut: panel.runtime.shellHint("ResourceDashboard.toggleCoresHint"),
-                    label: "Cores/history"
-                },
-                {
                     shortcut: panel.runtime.shellHint("ResourceDashboard.refresh"),
                     label: "Refresh"
                 }

@@ -194,7 +194,7 @@ ShellSurface {
                 spacing: deviceControl.theme.spacing2
                 MarqueeText {
                     anchors.verticalCenter: parent.verticalCenter
-                    width: Math.max(1, parent.width - pickerHint.implicitWidth - parent.spacing)
+                    width: Math.max(1, parent.width - (pickerHint.visible ? pickerHint.implicitWidth : chooserChevron.implicitWidth) - parent.spacing)
                     text: deviceControl.device ? (deviceControl.device.description || deviceControl.device.name) : "Hardware unavailable"
                     color: deviceControl.theme.textMuted
                     font.family: deviceControl.runtime.fontSans
@@ -206,8 +206,18 @@ ShellSurface {
                     theme: deviceControl.theme
                     runtime: deviceControl.runtime
                     compact: true
+                    visible: deviceControl.selected
                     emphasized: deviceControl.chooserOpen
-                    shortcut: deviceControl.selected ? deviceControl.runtime.shellHint("AudioDeviceControl.chooser") : "⌄"
+                    shortcut: deviceControl.runtime.shellHint("AudioDeviceControl.chooser")
+                }
+                Text {
+                    id: chooserChevron
+                    visible: !deviceControl.selected
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "⌄"
+                    color: deviceControl.theme.textMuted
+                    font.family: deviceControl.runtime.fontSans
+                    font.pixelSize: deviceControl.theme.fontSize(16)
                 }
             }
         }

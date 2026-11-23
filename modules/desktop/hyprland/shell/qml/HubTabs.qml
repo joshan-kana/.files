@@ -125,7 +125,7 @@ Item {
     // is dispatched by the active view, not by an extra header history.
     ShellSurface {
         id: backButton
-        width: 42
+        width: Math.max(64, backHint.implicitWidth + root.theme.fontSize(16) + root.theme.spacing2 * 2)
         height: 42
         anchors.left: parent.left
         theme: root.theme
@@ -136,13 +136,27 @@ Item {
         Accessible.role: Accessible.Button
         Accessible.name: root.backLabel + " (" + root.runtime.shellHint("ShellExpansionHost.back") + ")"
 
-        Text {
+        Row {
             anchors.centerIn: parent
-            text: "←"
-            font.family: root.runtime.fontSans
-            font.pixelSize: root.theme.fontSize(22)
-            font.weight: Font.DemiBold
-            color: root.theme.textStrong
+            spacing: root.theme.spacing1
+
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: "←"
+                font.family: root.runtime.fontSans
+                font.pixelSize: root.theme.fontSize(18)
+                font.weight: Font.DemiBold
+                color: root.theme.textStrong
+            }
+
+            KeyHint {
+                id: backHint
+                anchors.verticalCenter: parent.verticalCenter
+                runtime: root.runtime
+                theme: root.theme
+                shortcut: root.runtime.shellHint("ShellExpansionHost.back")
+                compact: true
+            }
         }
 
         StateLayer {
