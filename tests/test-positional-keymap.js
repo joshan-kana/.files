@@ -264,8 +264,11 @@ test("mixer and device hints match the shared Controls keyboard dispatcher", () 
   assert.doesNotMatch(mixer, /id: expandAction/);
   assert.match(
     device,
-    /shortcut: deviceControl\.selected \? deviceControl\.runtime\.shellHint\("AudioDeviceControl.chooser"\) : "⌄"/,
+    /shortcut: deviceControl\.runtime\.shellHint\("AudioDeviceControl.chooser"\)/,
   );
+  assert.match(device, /visible: deviceControl.selected/);
+  assert.match(device, /visible: !deviceControl.selected[\s\S]*?text: "⌄"/);
+  assert.doesNotMatch(device, /shortcut:[^\n]*: "⌄"/);
   assert.match(
     controls,
     /shellMatchesHint\("AudioMixerContent\.open", event\.key, event\.modifiers\)\)\s*\{\s*root\.openMixer\(\)/,

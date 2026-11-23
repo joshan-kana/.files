@@ -184,7 +184,6 @@
           "RecordingLibrary.word" = "NAV_HORIZONTAL";
           "ResourceDashboard.refresh" = "R";
           "ResourceDashboard.toggleCores" = "C";
-          "ResourceDashboard.toggleCoresHint" = "C";
           "SessionPanel.confirm" = "ENTER";
           "SessionPanel.lock" = "Q";
           "SessionPanel.logout" = "E";

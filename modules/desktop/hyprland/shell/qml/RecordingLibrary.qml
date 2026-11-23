@@ -734,6 +734,7 @@ Item {
                         compact: true
                         horizontalCompact: true
                         title: "Copy selection"
+                        shortcut: library.runtime.shellHint("RecordingLibrary.copy")
                         enabled: recognisedText.selectedText.length > 0 || library.wordSelectionAvailable
                         onActivated: library.copyHighlightedText()
                     }
@@ -863,10 +864,6 @@ Item {
                 {
                     shortcut: library.runtime.shellHint("RecordingLibrary.extend"),
                     label: "Extend"
-                },
-                {
-                    shortcut: library.runtime.shellHint("RecordingLibrary.copy"),
-                    label: "Copy selection"
                 }
             ] : [
                 {
