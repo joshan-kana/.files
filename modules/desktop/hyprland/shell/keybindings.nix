@@ -85,6 +85,12 @@
     "SystemContent.vhsToggle" = "ALT+V";
     "SystemContent.networkDetails" = "ALT+F";
     "SystemContent.bluetoothDetails" = "ALT+G";
+    "SystemContent.alertsDetails" = "ALT+A";
+    "SystemContent.stayDetails" = "ALT+S";
+    "SystemContent.powerDetails" = "ALT+SHIFT+V";
+    "SystemContent.windowsDetails" = "ALT+SHIFT+D";
+    "SystemContent.glassDetails" = "ALT+SHIFT+R";
+    "SystemContent.nightLightDetails" = "ALT+T";
 
   };
 
@@ -192,6 +198,12 @@
           "SessionPanel.restoreWindows" = "D";
           "SessionPanel.shutdown" = "S";
           "SessionPanel.suspend" = "W";
+          "SettingsDetail.toggle" = "T";
+          "SettingsDetail.blur" = "B";
+          "SettingsDetail.reset" = "R";
+          "SettingsDetail.adjust" = "NAV_HORIZONTAL";
+          "SettingsDetail.presentation" = "P";
+          "SettingsDetail.history" = "Y";
           "SystemContent.alerts" = "A";
           "SystemContent.audioAdjust" = "NAV_HORIZONTAL";
           "SystemContent.audioLevel" = "NAV_HORIZONTAL";
