@@ -26,6 +26,7 @@ _: {
     ./raycast
     ./agentgateway
     ./aldente
+    ./anima-engine
     ./arduino-ide
     ./chatgpt
     ./chatgpt-shell-mcp

@@ -139,6 +139,14 @@ in
     };
   };
 
+  animaEngine =
+    _:
+    lib.optionalAttrs isLinux {
+      home = _: {
+        home.packages = [ pkgs.anima-engine ];
+      };
+    };
+
   alacritty = _: {
     home = _: {
       programs.alacritty = { };
