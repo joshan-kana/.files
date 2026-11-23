@@ -43,7 +43,7 @@ FocusScope {
     property real dashboardWidthBudget: theme.controlsDetailWidth
     readonly property int dashboardTileHeight: 72
     readonly property int dashboardBrightnessHeight: 90
-    readonly property bool detailsVisible: trayMenu.open || networkPanel.open || bluetoothPanel.open || themePanel.open || wallpaperPanel.open || sessionPanel.open || resourcesPanel.open || statusOpen || mixerOpen || recordingsPanel.open
+    readonly property bool detailsVisible: vhsPanel.open || trayMenu.open || networkPanel.open || bluetoothPanel.open || themePanel.open || wallpaperPanel.open || sessionPanel.open || resourcesPanel.open || statusOpen || mixerOpen || recordingsPanel.open
     property bool resetConfirmPending: false
     property bool resetRunning: false
     property string resetStatus: ""
@@ -99,7 +99,7 @@ FocusScope {
     // sliders; H/L and arrows edit the selected value without stealing the
     // existing audio keys outside this mode.
     property string selectedSlider: ""
-    readonly property bool sliderNavigationEnabled: engaged && !resetConfirmPending && !helpOpen && !mixerOpen && !audioChooserOpen && !themeOpen && !wallpaperOpen && !sessionOpen && !networkOpen && !bluetoothOpen && !resourcesOpen && !statusOpen && !recordingsOpen && !trayMenuOpen
+    readonly property bool sliderNavigationEnabled: engaged && !resetConfirmPending && !helpOpen && !mixerOpen && !audioChooserOpen && !themeOpen && !wallpaperOpen && !sessionOpen && !networkOpen && !bluetoothOpen && !resourcesOpen && !statusOpen && !recordingsOpen && !trayMenuOpen && !vhsPanel.open
     readonly property var sliderTargets: (brightness.supported ? ["brightness"] : []).concat(["windows", "glass", "blur", "vhs"], nightLight.supported ? ["nightLight"] : [])
     function selectSlider(target: string): void {
         selectedSlider = target;
@@ -166,7 +166,12 @@ FocusScope {
     readonly property bool statusOpen: statusPanel.open
     readonly property bool recordingsOpen: recordingsPanel.open
     readonly property string helpTitle: statusOpen ? "System status" : recordingsPanel.open ? "Captures" : wallpaperPanel.open ? "Wallpaper library" : mixerOpen ? "Application mixer" : resourcesPanel.open ? "Resource monitor" : (bluetoothPanel.open ? "Bluetooth controls" : (networkPanel.open ? "Network controls" : (themePanel.open ? "Theme controls" : (sessionPanel.open ? "Session controls" : (trayMenu.open ? "Tray menu controls" : "System controls")))))
-    readonly property var helpBindings: statusOpen ? [
+    readonly property var helpBindings: vhsPanel.open ? [
+        { key: root.runtime.shellHint("VhsPanel.select"), action: "Select VHS parameter" },
+        { key: root.runtime.shellHint("VhsPanel.adjust"), action: "Adjust selected parameter" },
+        { key: root.runtime.shellHint("VhsPanel.toggle"), action: "Toggle VHS" },
+        { key: root.runtime.shellHint("SystemContent.legend.back"), action: root.returnToControls ? "Back to Controls" : "Close" }
+    ] : statusOpen ? [
         {
             key: root.runtime.shellHint("StatusContent.refresh"),
             action: "Refresh status"
@@ -375,7 +380,7 @@ FocusScope {
                         },
                         {
                             key: root.runtime.shellHint("SystemContent.legend.cycle_available_brightness_window_glass_and_night_light_sliders"),
-                            action: "Cycle available brightness, window, glass and Night Light sliders"
+                            action: "Cycle brightness and Visual Modes sliders"
                         },
                         {
                             key: root.runtime.shellHint("SystemContent.legend.activate_selected_setting_exit_parameter_focus"),
@@ -448,10 +453,11 @@ FocusScope {
     signal revealContent(real top, real bottom)
 
     implicitWidth: sessionPanel.open ? sessionPanel.implicitWidth : detailsVisible ? theme.controlsDetailWidth : dashboardWidthBudget
-    implicitHeight: statusOpen ? statusPanel.implicitHeight : recordingsPanel.open ? recordingsPanel.implicitHeight : wallpaperPanel.open ? wallpaperPanel.implicitHeight : mixerOpen ? mixerView.implicitHeight : sessionPanel.open ? sessionPanel.implicitHeight : resourcesPanel.open ? resourcesPanel.implicitHeight : networkPanel.open ? networkPanel.implicitHeight : bluetoothPanel.open ? bluetoothPanel.implicitHeight : themePanel.open ? themePanel.implicitHeight : content.implicitHeight
+    implicitHeight: vhsPanel.open ? vhsPanel.implicitHeight : statusOpen ? statusPanel.implicitHeight : recordingsPanel.open ? recordingsPanel.implicitHeight : wallpaperPanel.open ? wallpaperPanel.implicitHeight : mixerOpen ? mixerView.implicitHeight : sessionPanel.open ? sessionPanel.implicitHeight : resourcesPanel.open ? resourcesPanel.implicitHeight : networkPanel.open ? networkPanel.implicitHeight : bluetoothPanel.open ? bluetoothPanel.implicitHeight : themePanel.open ? themePanel.implicitHeight : content.implicitHeight
     focus: engaged
 
     function closeDetails(): void {
+        vhsPanel.closeView();
         trayMenu.closeMenu();
         wallpaperPanel.closeView();
         networkPanel.closeView();
@@ -465,6 +471,8 @@ FocusScope {
     }
 
     function backFromDetail(): void {
+        if (vhsPanel.open)
+            selectedSlider = "vhs";
         backRequested();
         keyboardFocus.forceActiveFocus();
     }
@@ -533,7 +541,9 @@ FocusScope {
         if (!engaged)
             return;
 
-        if (requestedView === "theme")
+        if (requestedView === "vhs")
+            openVhs();
+        else if (requestedView === "theme")
             openTheme();
         else if (requestedView === "session")
             openSession();
@@ -584,6 +594,7 @@ FocusScope {
         // Stage heavy views after the three primary tabs are ready. No timers
         // and no duplicate state: each Loader retains its constructed item.
         mixerView.prewarm();
+        vhsPanel.prewarm();
         recordingsPanel.prewarm();
         resourcesPanel.prewarm();
         networkPanel.prewarm();
@@ -661,6 +672,14 @@ FocusScope {
         sessionPanel.closeView();
         wallpaperPanel.openView();
         markDetail("wallpaper");
+    }
+
+    function openVhs(): void {
+        helpOpen = false;
+        selectedSlider = "";
+        closeDetails();
+        vhsPanel.openView();
+        markDetail("vhs");
     }
 
     function openTheme(): void {
@@ -1324,6 +1343,8 @@ FocusScope {
                             motion: root.motion
                             icon: "󰨛"
                             label: "VHS tape"
+                            detailShortcut: root.runtime.shellHint("SystemContent.vhsTune")
+                            onDetailRequested: root.openVhs()
                             opacityValue: root.appearance.vhsIntensity
                             minimumValue: 0
                             valueUnit: "intensity"
@@ -1717,6 +1738,21 @@ FocusScope {
         }
 
         DeferredDetail {
+            id: vhsPanel
+            motion: root.motion
+            anchors.fill: parent
+            sourceComponent: Component {
+                VhsPanel {
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    appearance: root.appearance
+                    onKeyboardRequested: keyboardFocus.forceActiveFocus()
+                }
+            }
+        }
+
+        DeferredDetail {
             id: themePanel
             motion: root.motion
             anchors.fill: parent
@@ -1770,7 +1806,7 @@ FocusScope {
             // can interpret Shift+Tab as ordinary focus traversal; a held key
             // repeats through the same path as an individual press.
             Keys.onShortcutOverride: event => {
-                if ((root.sliderNavigationEnabled || root.mixerOpen) && (event.key === root.runtime.shellKeyCode("controls", "Tab") || event.key === root.runtime.shellKeyCode("controls", "Backtab")))
+                if ((root.sliderNavigationEnabled || root.mixerOpen || vhsPanel.open) && (event.key === root.runtime.shellKeyCode("controls", "Tab") || event.key === root.runtime.shellKeyCode("controls", "Backtab")))
                     event.accepted = true;
             }
 
@@ -1815,6 +1851,16 @@ FocusScope {
                 if (helpKey) {
                     root.helpOpen = true;
                     event.accepted = true;
+                    return;
+                }
+
+                if (vhsPanel.open) {
+                    if (event.key === root.runtime.shellKeyCode("controls", "Backspace")) {
+                        root.backFromDetail();
+                        event.accepted = true;
+                    } else if (vhsPanel.invoke("handleKey", event.key, event.modifiers)) {
+                        event.accepted = true;
+                    }
                     return;
                 }
 
@@ -2154,7 +2200,9 @@ FocusScope {
                         return;
                     }
                 }
-                if (shifted && event.key === root.runtime.shellKeyCode("controls", "C")) {
+                if (root.runtime.shellMatchesHint("SystemContent.vhsTune", event.key, event.modifiers)) {
+                    root.openVhs();
+                } else if (shifted && event.key === root.runtime.shellKeyCode("controls", "C")) {
                     root.resetConfirmPending = true;
                     root.resetStatus = "";
                 } else if (shifted && event.key === root.runtime.shellKeyCode("controls", "F")) {

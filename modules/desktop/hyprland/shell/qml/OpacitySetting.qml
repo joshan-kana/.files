@@ -14,6 +14,8 @@ ShellSurface {
     property string valueUnit: "opacity"
     property string icon: ""
     property string shortcut: ""
+    property string detailShortcut: ""
+    signal detailRequested
     property bool active: false
     property bool keyboardSelected: false
     property bool blurAdjustable: false
@@ -196,9 +198,41 @@ ShellSurface {
         }
     }
 
+    // The secondary action stays inside the same compound tile; its pointer
+    // target is at least 36 logical pixels and never overlaps the slider.
+    Item {
+        visible: setting.detailShortcut.length > 0
+        width: Math.max(91, detailHint.implicitWidth + setting.theme.spacing1 * 2)
+        height: 36
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.topMargin: setting.theme.spacing1
+        anchors.rightMargin: setting.theme.spacing1
+
+        StateLayer {
+            theme: setting.theme
+            motion: setting.motion
+            cornerRadius: setting.theme.radiusSmall
+            Accessible.role: Accessible.Button
+            Accessible.name: "Tune " + setting.label + " parameters"
+            onActivated: setting.detailRequested()
+        }
+
+        KeyHint {
+            id: detailHint
+            anchors.centerIn: parent
+            runtime: setting.runtime
+            theme: setting.theme
+            shortcut: setting.detailShortcut
+            label: "Tune"
+            compact: true
+            emphasized: setting.keyboardSelected
+        }
+    }
+
     // Keep the keycap aligned to the tile, independently of icon and slider layout.
     TileKeyHint {
-        visible: setting.shortcut.length > 0 || setting.keyboardSelected
+        visible: setting.detailShortcut.length === 0 && (setting.shortcut.length > 0 || setting.keyboardSelected)
         shortcut: setting.keyboardSelected ? setting.runtime.shellHint("OpacitySetting.level") : setting.shortcut
         compact: true
         runtime: setting.runtime
