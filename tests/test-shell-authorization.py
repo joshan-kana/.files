@@ -167,6 +167,29 @@ class AuthorizationTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaisesRegex(PermissionError, "policy changed"):
             await operation
 
+    async def test_identical_policy_rewrite_invalidates_pending_approval(self):
+        """Even an ask-to-ask operator update must invalidate an older grant."""
+        authorization._set_policy("server", "elevation", "ask", None)
+        ident = self.ident()
+        operation = asyncio.create_task(authorization.authorize(ident, "server", "elevation", "true", None))
+        await self.await_pending(ident)
+        authorization._set_policy("server", "elevation", "ask", None)
+        authorization._decide(ident, "approve")
+        with self.assertRaisesRegex(PermissionError, "policy changed"):
+            await operation
+
+    async def test_policy_change_and_restore_invalidates_pending_approval(self):
+        """An ask-to-deny-to-ask transition cannot reuse the original decision."""
+        authorization._set_policy("server", "elevation", "ask", None)
+        ident = self.ident()
+        operation = asyncio.create_task(authorization.authorize(ident, "server", "elevation", "true", None))
+        await self.await_pending(ident)
+        authorization._set_policy("server", "elevation", "deny", None)
+        authorization._set_policy("server", "elevation", "ask", None)
+        authorization._decide(ident, "approve")
+        with self.assertRaisesRegex(PermissionError, "policy changed"):
+            await operation
+
     async def test_unrelated_policy_does_not_invalidate_pending_approval(self):
         """An unrelated command-policy change does not revoke an elevation review."""
         ident = self.ident()

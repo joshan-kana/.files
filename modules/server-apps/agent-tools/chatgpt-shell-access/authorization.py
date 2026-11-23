@@ -7,6 +7,7 @@ import json
 import os
 import tempfile
 import time
+import uuid
 from pathlib import Path
 
 APPROVAL_DIR = Path(os.environ["CHATGPT_SHELL_APPROVAL_DIR"])
@@ -306,6 +307,8 @@ def _set_policy(host: str, kind: str, mode: str, ttl: int | None, session: str |
     target[kind] = {
         "mode": mode,
         "expires_at": time.time() + ttl if ttl is not None else None,
+        # An unchanged or reverted value is still a new operator decision.
+        "revision": uuid.uuid4().hex,
     }
     _write_atomic(policy_file, policies)
     audit("policy-changed", {"host": host, "kind": kind, "mode": mode, "ttl": ttl, "session": session})
