@@ -20,6 +20,7 @@ Item {
     property int selectedIndex: 0
     property string kindFilter: "all"
     property bool actionMode: false
+    property bool actionReturnToList: false
     property int actionIndex: 0
     property var actionTarget: null
     property string priorQuery: ""
@@ -300,6 +301,7 @@ Item {
         if (actionMode || !currentEntry)
             return;
         priorQuery = search.text;
+        actionReturnToList = list.activeFocus;
         actionTarget = currentEntry;
         actionIndex = 0;
         deleteArmed = false;
@@ -317,6 +319,15 @@ Item {
         if (target)
             selectedIndex = Math.max(0, filteredEntries.findIndex(item => item.id === target.id));
         search.forceActiveFocus();
+    }
+
+    function toggleActions(): void {
+        if (actionMode) {
+            leaveActions();
+            if (actionReturnToList && filteredEntries.length > 0)
+                list.forceActiveFocus();
+        } else
+            openActions();
     }
 
     function executeAction(): void {
@@ -473,15 +484,15 @@ Item {
                         }
 
                         Keys.onPressed: event => {
-                            if (!panel.actionMode && (event.key === panel.runtime.shellKeyCode("clipboard", "Return") || event.key === panel.runtime.shellKeyCode("clipboard", "Enter")) && panel.runtime.shellModifier("clipboard", "Alt", event.modifiers)) {
-                                panel.openActions();
+                            if ((event.key === panel.runtime.shellKeyCode("clipboard", "Return") || event.key === panel.runtime.shellKeyCode("clipboard", "Enter")) && panel.runtime.shellModifier("clipboard", "Alt", event.modifiers)) {
+                                panel.toggleActions();
                                 event.accepted = true;
                             } else if (event.key === panel.runtime.shellKeyCode("clipboard", "Tab")) {
                                 list.forceActiveFocus();
                                 event.accepted = true;
                             } else if (event.key === panel.runtime.shellKeyCode("clipboard", "Escape")) {
                                 if (panel.actionMode)
-                                    panel.leaveActions();
+                                    panel.toggleActions();
                                 else
                                     panel.hide();
                                 event.accepted = true;
@@ -568,13 +579,13 @@ Item {
 
                 Keys.priority: Keys.BeforeItem
                 Keys.onPressed: event => {
-                    if (!panel.actionMode && (event.key === panel.runtime.shellKeyCode("clipboard", "Return") || event.key === panel.runtime.shellKeyCode("clipboard", "Enter")) && panel.runtime.shellModifier("clipboard", "Alt", event.modifiers)) {
-                        panel.openActions();
+                    if ((event.key === panel.runtime.shellKeyCode("clipboard", "Return") || event.key === panel.runtime.shellKeyCode("clipboard", "Enter")) && panel.runtime.shellModifier("clipboard", "Alt", event.modifiers)) {
+                        panel.toggleActions();
                     } else if (event.key === panel.runtime.shellKeyCode("clipboard", "Tab") || event.key === panel.runtime.shellKeyCode("clipboard", "I") || event.key === panel.runtime.shellKeyCode("clipboard", "Slash")) {
                         search.forceActiveFocus();
                     } else if (event.key === panel.runtime.shellKeyCode("clipboard", "Escape")) {
                         if (panel.actionMode)
-                            panel.leaveActions();
+                            panel.toggleActions();
                         else
                             panel.hide();
                     } else if (panel.runtime.shellNavigates("clipboard", "down", event.key)) {
@@ -873,8 +884,7 @@ Item {
                     },
                     {
                         shortcut: panel.runtime.shellHint("ClipboardPanel.actionMenu"),
-                        label: "Actions",
-                        visible: !panel.actionMode
+                        label: panel.actionMode ? "Clipboard" : "Actions"
                     },
                     {
                         shortcut: panel.runtime.shellHint("ClipboardPanel.close"),

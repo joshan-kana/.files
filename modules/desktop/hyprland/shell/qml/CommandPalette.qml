@@ -28,6 +28,7 @@ Item {
     signal argumentCommandTriggered(string commandId, string argument)
 
     property bool actionMode: false
+    property bool actionReturnToResults: false
     property var actionTarget: null
     property var actionEntries: []
     property string actionQuery: ""
@@ -165,8 +166,7 @@ Item {
             return;
         }
         if (actionMode) {
-            leaveActions();
-            search.forceActiveFocus();
+            toggleActions();
             return;
         }
         if (parameterTarget) {
@@ -355,6 +355,17 @@ Item {
             selectionIdentity = identity(target);
         search.text = priorQuery;
         results.currentIndex = target ? Math.max(0, resultModel.values.findIndex(item => identity(item) === identity(target))) : 0;
+    }
+
+    function toggleActions(): void {
+        if (actionMode) {
+            leaveActions();
+            if (actionReturnToResults && results.currentIndex >= 0)
+                results.forceActiveFocus();
+            else
+                search.forceActiveFocus();
+        } else
+            openActions();
     }
 
     function requestFilePreview(entry: var): void {
@@ -991,6 +1002,7 @@ Item {
         }
         pendingPreviewRequestId = 0;
         priorQuery = search.text;
+        actionReturnToResults = results.activeFocus;
         actionTarget = entry;
         actionEntries = options;
         actionMode = true;
@@ -1483,7 +1495,7 @@ Item {
 
                     Keys.onPressed: event => {
                         if ((event.key === palette.runtime.shellKeyCode("palette", "Return") || event.key === palette.runtime.shellKeyCode("palette", "Enter")) && (palette.runtime.shellModifier("palette", "Alt", event.modifiers))) {
-                            palette.openActions();
+                            palette.toggleActions();
                             event.accepted = true;
                         } else if (event.key === palette.runtime.shellKeyCode("palette", "Tab")) {
                             if (displayedModel.values.length > 0)
@@ -1538,7 +1550,7 @@ Item {
                 Keys.priority: Keys.BeforeItem
                 Keys.onPressed: event => {
                     if ((event.key === palette.runtime.shellKeyCode("palette", "Return") || event.key === palette.runtime.shellKeyCode("palette", "Enter")) && (palette.runtime.shellModifier("palette", "Alt", event.modifiers))) {
-                        palette.openActions();
+                        palette.toggleActions();
                     } else if (event.key === palette.runtime.shellKeyCode("palette", "Tab") || event.key === palette.runtime.shellKeyCode("palette", "I") || event.key === palette.runtime.shellKeyCode("palette", "Slash")) {
                         search.forceActiveFocus();
                     } else if (event.key === palette.runtime.shellKeyCode("palette", "Escape")) {
@@ -1738,6 +1750,10 @@ Item {
                     runtime: palette.runtime
                     theme: palette.theme
                     hints: palette.actionMode ? [
+                        {
+                            shortcut: palette.runtime.shellHint("CommandPalette.actionMenu"),
+                            label: "Results"
+                        },
                         {
                             shortcut: palette.runtime.shellHint("CommandPalette.select"),
                             label: "Select"
