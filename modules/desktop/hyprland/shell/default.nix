@@ -408,6 +408,31 @@ in
           default = 0.45;
           description = "Strength of the VHS tape effect.";
         };
+        vhsTracking = lib.mkOption {
+          type = lib.types.numbers.between 0.0 1.0;
+          default = 1.0;
+          description = "Amount of rolling tracking distortion in the VHS effect.";
+        };
+        vhsChroma = lib.mkOption {
+          type = lib.types.numbers.between 0.0 1.0;
+          default = 1.0;
+          description = "Strength of red-blue colour separation in the VHS effect.";
+        };
+        vhsNoise = lib.mkOption {
+          type = lib.types.numbers.between 0.0 1.0;
+          default = 1.0;
+          description = "Strength of tape grain, dropout, and luminance flicker.";
+        };
+        vhsScanlines = lib.mkOption {
+          type = lib.types.numbers.between 0.0 1.0;
+          default = 1.0;
+          description = "Strength of VHS scanline darkening.";
+        };
+        vhsSpeed = lib.mkOption {
+          type = lib.types.numbers.between 0.25 2.5;
+          default = 1.0;
+          description = "Playback speed multiplier for animated VHS distortion.";
+        };
         mediaVisualizerMode = lib.mkOption {
           type = lib.types.enum [
             "bars"

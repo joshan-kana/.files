@@ -26,6 +26,11 @@ QtObject {
         property int blurSize: appearance.runtime.appearanceDefaults.blurSize
         property bool vhsEnabled: appearance.runtime.appearanceDefaults.vhsEnabled
         property real vhsIntensity: appearance.runtime.appearanceDefaults.vhsIntensity
+        property real vhsTracking: appearance.runtime.appearanceDefaults.vhsTracking
+        property real vhsChroma: appearance.runtime.appearanceDefaults.vhsChroma
+        property real vhsNoise: appearance.runtime.appearanceDefaults.vhsNoise
+        property real vhsScanlines: appearance.runtime.appearanceDefaults.vhsScanlines
+        property real vhsSpeed: appearance.runtime.appearanceDefaults.vhsSpeed
         property string mediaVisualizerMode: appearance.runtime.appearanceDefaults.mediaVisualizerMode
         property bool mediaLyricsVisible: appearance.runtime.appearanceDefaults.mediaLyricsVisible
         property int mediaSeekSeconds: appearance.runtime.appearanceDefaults.mediaSeekSeconds
@@ -46,6 +51,11 @@ QtObject {
     readonly property int blurSize: Math.max(5, Math.min(25, effective("blurSize")))
     readonly property bool vhsEnabled: effective("vhsEnabled")
     readonly property real vhsIntensity: Math.max(0, Math.min(1, effective("vhsIntensity")))
+    readonly property real vhsTracking: Math.max(0, Math.min(1, effective("vhsTracking")))
+    readonly property real vhsChroma: Math.max(0, Math.min(1, effective("vhsChroma")))
+    readonly property real vhsNoise: Math.max(0, Math.min(1, effective("vhsNoise")))
+    readonly property real vhsScanlines: Math.max(0, Math.min(1, effective("vhsScanlines")))
+    readonly property real vhsSpeed: Math.max(0.25, Math.min(2.5, effective("vhsSpeed")))
     function hasOverride(key: string): bool {
         return overrideKeys.includes(key);
     }
@@ -214,7 +224,15 @@ QtObject {
     function applyVhs(): void {
         if (runtime.vhsControl.length === 0)
             return;
-        Quickshell.execDetached([runtime.vhsControl, vhsEnabled ? "on" : "off", String(Math.round(vhsIntensity * 100))]);
+        Quickshell.execDetached([
+            runtime.vhsControl, vhsEnabled ? "on" : "off",
+            String(Math.round(vhsIntensity * 100)),
+            String(Math.round(vhsTracking * 100)),
+            String(Math.round(vhsChroma * 100)),
+            String(Math.round(vhsNoise * 100)),
+            String(Math.round(vhsScanlines * 100)),
+            String(Math.round(vhsSpeed * 100))
+        ]);
     }
 
     function toggleVhs(): void {
@@ -223,6 +241,20 @@ QtObject {
         saved.sync();
         vhsApply.stop();
         applyVhs();
+    }
+
+    function setVhsParameter(key: string, value: real): void {
+        if (!["vhsTracking", "vhsChroma", "vhsNoise", "vhsScanlines", "vhsSpeed"].includes(key))
+            return;
+        const lower = key === "vhsSpeed" ? 0.25 : 0;
+        const upper = key === "vhsSpeed" ? 2.5 : 1;
+        const next = Math.round(Math.max(lower, Math.min(upper, value)) * 100) / 100;
+        if (next === effective(key) && vhsEnabled)
+            return;
+        storeOverride(key, next);
+        storeOverride("vhsEnabled", true);
+        saved.sync();
+        vhsApply.restart();
     }
 
     function setVhsIntensity(value: real): void {

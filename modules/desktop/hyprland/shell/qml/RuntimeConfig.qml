@@ -258,6 +258,11 @@ QtObject {
                 property int blurSize: 15
                 property bool vhsEnabled: false
                 property real vhsIntensity: 0.45
+                property real vhsTracking: 1.0
+                property real vhsChroma: 1.0
+                property real vhsNoise: 1.0
+                property real vhsScanlines: 1.0
+                property real vhsSpeed: 1.0
                 property string mediaVisualizerMode: "bars"
                 property bool mediaLyricsVisible: false
                 property int mediaSeekSeconds: 10

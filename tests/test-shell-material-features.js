@@ -134,7 +134,7 @@ test("System Status consumes its refresh shortcut before Controls actions", () =
   );
   assert.match(
     controls,
-    /readonly property var helpBindings: statusOpen \? \[/,
+    /readonly property var helpBindings: vhsPanel\.open \? \[[\s\S]*?statusOpen \? \[/,
   );
   assert.deepEqual(shellHints["StatusContent.refresh"], {
     scope: "status",

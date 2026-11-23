@@ -81,6 +81,8 @@
     "SystemContent.frame" = "SHIFT+S";
     "SystemContent.nightLight" = "T";
     "SystemContent.shellGlass" = "SHIFT+R";
+    "SystemContent.vhsTune" = "SHIFT+V";
+
   };
 
   # Action-owned keyhints. Display strings resolve their symbols through base
@@ -279,6 +281,9 @@
           "SystemContent.trayOpen" = "ENTER";
           "SystemContent.wallpaper" = "W";
           "SystemContent.wallpaperSpectrum" = "SHIFT+F";
+          "VhsPanel.adjust" = "NAV_HORIZONTAL";
+          "VhsPanel.toggle" = "T";
+          "VhsPanel.select" = "NAV_VERTICAL · TAB/SHIFT+TAB";
           "SystemContent.windowTransparency" = "SHIFT+D";
           "ThemePanel.apply" = "ENTER";
           "ThemePanel.cancel" = "X";

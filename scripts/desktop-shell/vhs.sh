@@ -54,8 +54,19 @@ if [[ "$mode" == off ]]; then
 fi
 
 level="${2:-}"
-if ! [[ "$level" =~ ^([0-9]|[1-9][0-9]|100)$ ]]; then
-  printf 'VHS intensity must be an integer from 0 to 100\n' >&2
+tracking="${3:-100}"
+chroma="${4:-100}"
+noise="${5:-100}"
+scanlines="${6:-100}"
+speed="${7:-100}"
+for value in "$level" "$tracking" "$chroma" "$noise" "$scanlines"; do
+  if ! [[ "$value" =~ ^([0-9]|[1-9][0-9]|100)$ ]]; then
+    printf 'VHS strengths must be whole percentages from 0 to 100\n' >&2
+    exit 2
+  fi
+done
+if ! [[ "$speed" =~ ^([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|250)$ ]] || ((speed < 25)); then
+  printf 'VHS speed must be 25 to 250 percent\n' >&2
   exit 2
 fi
 
@@ -69,12 +80,20 @@ shaderSource="${VHS_SHADER_SOURCE:?VHS shader source not configured}"
 mkdir -p "$runtimeDir"
 shaderDir="$runtimeDir/$(basename "$shaderSource")"
 mkdir -p "$shaderDir"
-shader="$shaderDir/$(printf '%03d' "$level").frag"
+printf -v shaderName '%03d-%03d-%03d-%03d-%03d-%03d.frag' "$level" "$tracking" "$chroma" "$noise" "$scanlines" "$speed"
+shader="$shaderDir/$shaderName"
 if [[ ! -f "$shader" ]]; then
-  printf -v intensity '%d.%02d' "$((10#$level / 100))" "$((10#$level % 100))"
+  filters=()
+  names=(INTENSITY TRACKING CHROMA NOISE SCANLINES SPEED)
+  values=("$level" "$tracking" "$chroma" "$noise" "$scanlines" "$speed")
+  for index in "${!names[@]}"; do
+    amount="${values[index]}"
+    printf -v strength '%d.%02d' "$((amount / 100))" "$((amount % 100))"
+    filters+=(-e "s/^const float VHS_${names[index]} = .*;/const float VHS_${names[index]} = $strength;/")
+  done
   temporary="$(mktemp "$shader.XXXXXX")"
   trap 'rm -f "$temporary"' EXIT
-  sed "s/^const float VHS_INTENSITY = .*;/const float VHS_INTENSITY = $intensity;/" "$shaderSource" >"$temporary"
+  sed "${filters[@]}" "$shaderSource" >"$temporary"
   mv "$temporary" "$shader"
 fi
 
