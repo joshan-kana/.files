@@ -497,8 +497,12 @@ FocusScope {
             recordingsPanel.invoke("cancelDelete");
         } else if (sessionPanel.open && sessionPanel.armedAction.length > 0) {
             sessionPanel.invoke("cancelConfirmation");
+        } else if (bluetoothPanel.open && bluetoothPanel.panel && bluetoothPanel.panel.forgetAddress.length > 0) {
+            bluetoothPanel.invoke("clearTransientState");
         } else if (networkPanel.open && networkPanel.detailView) {
             networkPanel.invoke("toggleDetailView");
+        } else if (networkPanel.open && networkPanel.savedView) {
+            networkPanel.invoke("toggleSavedView");
         } else if (trayMenu.open) {
             if (trayMenu.panel && trayMenu.panel.stack.length <= 1) {
                 trayMenu.closeMenu();
@@ -1945,7 +1949,7 @@ FocusScope {
 
                 if (bluetoothPanel.open) {
                     if (event.key === root.runtime.shellKeyCode("controls", "Backspace")) {
-                        root.backFromDetail();
+                        root.navigateBack();
                         event.accepted = true;
                     } else if ((root.runtime.shellNavigates("controls", "up", event.key))) {
                         bluetoothPanel.invoke("moveSelection", -1);
@@ -2046,10 +2050,7 @@ FocusScope {
                         return;
 
                     if (event.key === root.runtime.shellKeyCode("controls", "Backspace")) {
-                        if (networkPanel.detailView)
-                            networkPanel.invoke("toggleDetailView");
-                        else
-                            root.backFromDetail();
+                        root.navigateBack();
                         event.accepted = true;
                     } else if ((root.runtime.shellNavigates("controls", "up", event.key))) {
                         networkPanel.invoke("moveSelection", -1);
