@@ -297,6 +297,23 @@ test("semantic action bindings change their handler and hint without changing a 
     );
 });
 
+test("power and stay-awake numbered actions use positional control slots", () => {
+  const detail = fs.readFileSync(
+    path.join(qmlDir, "SettingsDetail.qml"),
+    "utf8",
+  );
+  assert.match(detail, /shellNumberIndex\("controls", key, 5\)/);
+  assert.match(detail, /shellNumberHint\("controls", index\)/);
+  assert.doesNotMatch(
+    detail,
+    /key >= runtime\.shellKeyCode\("controls", "1"\)/,
+  );
+  assert.doesNotMatch(detail, /shortcut: String\(index \+ 1\)/);
+  const remapped = { ...registry, overrides: { controls: { 1: "9", 9: "1" } } };
+  assert.equal(f.numberIndex(remapped, "controls", 57, 5, Qt), 0);
+  assert.equal(f.numberHint(remapped, "controls", 0), "9");
+});
+
 test("compact detail open actions follow remapped keys in labels and dispatch", () => {
   for (const action of ["AudioMixerContent.open", "ControlsMediaCard.open"]) {
     assert.ok(f.hint(registry, action), `${action} must be assigned`);

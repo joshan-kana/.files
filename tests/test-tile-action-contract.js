@@ -49,7 +49,7 @@ test("tile click, nested detail click and slider drag use distinct handlers", ()
   assert.match(qml("ConnectivityTile"), /onActivated: tile\.detailsRequested\(\)/);
   assert.match(controls, /onDetailsRequested: root\.openNetwork\(\)/);
   assert.match(controls, /onDetailsRequested: root\.openBluetooth\(\)/);
-  assert.match(controls, /onDetailRequested: root\.openVhs\(\)/);
+  assert.match(controls, /onDetailsRequested: root\.openVhs\(\)/);
 });
 
 test("primary and detail keyboard actions dispatch directly without prior selection", () => {
@@ -111,8 +111,8 @@ test("Ethernet-only connectivity keeps status accurate and disables unsupported 
     assert.ok(controls.includes(sourceLine), sourceLine);
   for (const sourceLine of [
     "property bool primaryAvailable: !unavailable",
-    "disabled: !tile.primaryAvailable",
-    "available: tile.primaryAvailable",
+    "disabled: false",
+    "available: tile.primaryAvailable && !tile.pending",
     "onActivated: tile.detailsRequested()",
   ])
     assert.ok(tile.includes(sourceLine), sourceLine);

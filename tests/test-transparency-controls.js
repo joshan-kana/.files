@@ -77,62 +77,28 @@ test("frosted-glass percentage maps directly to actual pane alpha", () => {
   assert.match(theme, /shellGlassEnabled \? glassOpacity : 1/);
 });
 
-test("opacity sliders live in visual-mode tiles with normal keyhints, not a separate menu", () => {
-  const setting = qml("OpacitySetting.qml");
+test("opacity and shared blur parameters live in focused details, not compact tiles", () => {
+  const detail = qml("SettingsDetail.qml");
   const controls = qml("SystemContent.qml");
   const host = qml("ShellExpansionHost.qml");
-  assert.match(setting, /ShellSurface \{/);
-  assert.match(setting, /StateLayer \{/);
-  assert.match(setting, /ShellSlider \{/);
-  assert.match(setting, /TileKeyHint \{/);
-  assert.match(
-    setting,
-    /primary: true[\s\S]*?shortcut: setting\.shortcut/,
-  );
-  assert.match(setting, /property real minimumValue: 0\.20/);
-  assert.match(
-    setting,
-    /from: setting\.blurEditing \? 5 : setting\.minimumValue/,
-  );
-  assert.match(
-    setting,
-    /to: setting\.blurEditing \? 25 : setting\.maximumValue/,
-  );
-  assert.match(
-    setting,
-    /value: setting\.blurEditing \? setting\.blurValue : setting\.opacityValue/,
-  );
-  assert.match(setting, /Math\.round\(setting\.opacityValue \* 100\) \+ "%"/);
-  assert.match(
-    setting,
-    /onValueRequested: next => \{[\s\S]*?setting\.opacityRequested\(next\)/,
-  );
-  assert.match(setting, /onActivated: setting\.toggleRequested\(\)/);
-  assert.match(
-    controls,
-    /OpacitySetting \{[\s\S]*?label: "Windows"[\s\S]*?onOpacityRequested: value => root\.appearance\.setWindowOpacity\(value\)/,
-  );
-  assert.match(
-    controls,
-    /OpacitySetting \{[\s\S]*?label: "Frosted glass"[\s\S]*?onOpacityRequested: value => root\.appearance\.setGlassOpacity\(value\)/,
-  );
-  assert.match(
-    controls,
-    /shortcut: root\.runtime\.shellHint\("SystemContent.windowTransparency"\)/,
-  );
-  assert.match(
-    controls,
-    /shortcut: root\.runtime\.shellHint\("SystemContent.shellGlass"\)/,
-  );
-  assert.doesNotMatch(
-    controls,
-    /id: transparencyPanel|openTransparency|opacitySettingsButton|SHIFT\+O/,
-  );
+  const preferences = qml("AppearancePreferences.qml");
+  assert.match(detail, /ShellSlider \{/);
+  for (const key of ["windowOpacity", "glassOpacity", "blurSize"])
+    assert.ok(detail.includes('key: "' + key + '"'), key);
+  assert.match(detail, /appearance\.setWindowOpacity\(value \/ 100\)/);
+  assert.match(detail, /appearance\.setGlassOpacity\(value \/ 100\)/);
+  assert.match(detail, /appearance\.setBlurSize\(value\)/);
+  assert.match(detail, /appearance\.toggleBlur\(\)/);
+  assert.match(preferences, /function toggleBlur\(\): void/);
+  assert.match(preferences, /function clearOverride\(key: string\): void/);
+  assert.doesNotMatch(controls, /OpacitySetting \{|AdjustableSetting \{/);
+  assert.match(controls, /onDetailsRequested: root\.openSetting\("windows"\)/);
+  assert.match(controls, /onDetailsRequested: root\.openSetting\("glass"\)/);
+  assert.match(controls, /shortcut: root\.runtime\.shellHint\("SystemContent\.windowTransparency"\)/);
+  assert.match(controls, /shortcut: root\.runtime\.shellHint\("SystemContent\.shellGlass"\)/);
+  assert.doesNotMatch(controls, /id: transparencyPanel|openTransparency|opacitySettingsButton|SHIFT\+O/);
   assert.doesNotMatch(host, /systemContent\.transparencyOpen/);
-  assert.equal(
-    fs.existsSync(path.join(qmlDir, "TransparencyPanel.qml")),
-    false,
-  );
+  assert.equal(fs.existsSync(path.join(qmlDir, "TransparencyPanel.qml")), false);
 });
 
 test("bounds are inclusive and the displayed percentage is opacity, not transparency", () => {

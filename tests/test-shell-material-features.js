@@ -20,43 +20,101 @@ const shellHints = JSON.parse(
   ),
 ).hints;
 
-test("blur uses one live compositor parameter within the frosted-glass tile", () => {
+test("shared blur has one Nix baseline and one runtime override in both detail panels", () => {
   const settings = qml("AppearancePreferences.qml");
   const controls = qml("SystemContent.qml");
-  const tile = qml("OpacitySetting.qml");
+  const detail = qml("SettingsDetail.qml");
   const runtime = qml("RuntimeConfig.qml");
   const nix = fs.readFileSync(path.join(root, "default.nix"), "utf8");
 
+  assert.doesNotMatch(
+    nix,
+    /blurEnabled = lib\.mkOption|blurSize = lib\.mkOption/,
+  );
   assert.match(
     nix,
-    /blurSize = lib\.mkOption \{\s*type = lib\.types\.ints\.between 5 25;/,
+    /blurEnabled = config\.wayland\.windowManager\.hyprland\.settings\.config\.decoration\.blur\.enabled;/,
   );
+  assert.match(
+    nix,
+    /blurSize = config\.wayland\.windowManager\.hyprland\.settings\.config\.decoration\.blur\.size;/,
+  );
+  assert.match(runtime, /property bool blurEnabled: true/);
   assert.match(runtime, /property int blurSize: 15/);
+  assert.match(
+    settings,
+    /readonly property bool blurEnabled: effective\("blurEnabled"\)/,
+  );
   assert.match(
     settings,
     /readonly property int blurSize: .*effective\("blurSize"\)/,
   );
-  assert.match(settings, /function setBlurSize\(value: real\): void/);
-  assert.match(settings, /"hl\.config\(\{ decoration = \{ blur = \{ size = "/);
+  assert.match(settings, /function toggleBlur\(\): void/);
+  assert.match(settings, /function clearOverride\(key: string\): void/);
+  assert.match(settings, /enabled = " \+ \(blurEnabled \? "true" : "false"\)/);
   assert.match(
     settings,
     /property Timer blurSizeApply: Timer \{\s*interval: 75/,
   );
-  assert.doesNotMatch(controls, /title: "Blur softness"/);
+  assert.match(detail, /hasBlur: \["windows", "glass"\]\.includes\(kind\)/);
+  assert.match(detail, /key: "blurSize"/);
+  assert.match(detail, /onActivated: panel\.appearance\.toggleBlur\(\)/);
+  assert.match(detail, /appearance\.clearOverride\("blurEnabled"\)/);
+  assert.match(controls, /onDetailsRequested: root\.openSetting\("windows"\)/);
+  assert.match(controls, /onDetailsRequested: root\.openSetting\("glass"\)/);
+  assert.doesNotMatch(controls, /OpacitySetting \{|AdjustableSetting \{/);
+});
+
+test("split tile hit targets keep quick and detail actions independently keyboard accessible", () => {
+  const quick = qml("TileQuickAction.qml");
+  const connectivity = qml("ConnectivityTile.qml");
+  const chip = qml("QuickSettingChip.qml");
+  const controls = qml("SystemContent.qml");
+  assert.match(quick, /anchors \{[\s\S]*?left: parent\.left/);
+  assert.match(quick, /actionName: "Toggle"/);
+  assert.match(connectivity, /onActivated: tile\.detailsRequested\(\)/);
+  assert.match(
+    connectivity,
+    /TileQuickAction \{[\s\S]*?onActivated: tile\.activated\(\)/,
+  );
+  assert.match(
+    chip,
+    /onActivated: chip\.detailShortcut\.length > 0 \? chip\.detailsRequested\(\) : chip\.activated\(\)/,
+  );
+  assert.match(
+    chip,
+    /TileQuickAction \{[\s\S]*?onActivated: chip\.activated\(\)/,
+  );
+  for (const key of [
+    "windowsDetails",
+    "glassDetails",
+    "nightLightDetails",
+    "alertsDetails",
+    "stayDetails",
+    "powerDetails",
+  ]) {
+    assert.match(
+      controls,
+      new RegExp('shellMatchesHint\\("SystemContent\\.' + key),
+    );
+  }
+});
+
+test("compact Visual Modes tiles have no embedded parameter sliders", () => {
+  const controls = qml("SystemContent.qml");
+  const visuals = controls.slice(
+    controls.indexOf("id: visualTiles"),
+    controls.indexOf("id: mediaMatrix"),
+  );
+  assert.doesNotMatch(
+    visuals,
+    /ShellSlider \{|OpacitySetting \{|AdjustableSetting \{/,
+  );
   assert.match(
     controls,
-    /label: "Frosted glass"[\s\S]*?blurAdjustable: true[\s\S]*?onBlurRequested: value => root\.appearance\.setBlurSize\(value\)/,
+    /readonly property var sliderTargets: brightness\.supported \? \["brightness"\] : \[\]/,
   );
-  assert.match(tile, /property bool blurAdjustable: false/);
-  assert.match(tile, /Accessible\.name: "Adjust frosted-glass blur softness"/);
-  assert.match(
-    tile,
-    /value: setting\.blurEditing \? setting\.blurValue : setting\.opacityValue/,
-  );
-  assert.match(
-    controls,
-    /readonly property var sliderTargets:.*"glass", "blur"/,
-  );
+  assert.match(qml("SettingsDetail.qml"), /ShellSlider \{/);
 });
 
 test("visual parameter controls do not add a separate appearance action row", () => {

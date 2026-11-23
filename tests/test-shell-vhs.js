@@ -45,9 +45,10 @@ test("VHS persists through appearance preferences and defaults to off", () => {
   assert.match(preferences, /function setVhsIntensity\(value: real\)/);
   assert.match(preferences, /onVhsControlChanged/);
   assert.match(preferences, /appearance\.applyVhs\(\)/);
-  assert.match(ui, /label: "VHS tape"/);
-  assert.match(ui, /minimumValue: 0/);
-  assert.match(ui, /selectedSlider === "vhs"/);
+  assert.match(ui, /title: "VHS " \+ Math\.round\(root\.appearance\.vhsIntensity \* 100\)/);
+  assert.match(ui, /onActivated: root\.appearance\.toggleVhs\(\)/);
+  assert.match(ui, /onDetailsRequested: root\.openVhs\(\)/);
+  assert.doesNotMatch(ui, /OpacitySetting \{/);
 });
 
 function withCompositor(fn, options = {}) {
@@ -173,7 +174,7 @@ test("independent VHS parameters compile their own variants and validate bounds"
 
 test("VHS tuning exposes correct keyboard focus, pointer and navigation paths", () => {
   const controls = read(path.join(shell, "qml/SystemContent.qml"));
-  const tile = read(path.join(shell, "qml/OpacitySetting.qml"));
+  const tile = read(path.join(shell, "qml/QuickSettingChip.qml"));
   const panel = read(path.join(shell, "qml/VhsPanel.qml"));
   const keymap = read(path.join(shell, "keybindings.nix"));
   const preferences = read(path.join(shell, "qml/AppearancePreferences.qml"));
@@ -187,15 +188,15 @@ test("VHS tuning exposes correct keyboard focus, pointer and navigation paths", 
     assert.ok(panel.includes('key: "' + key + '"'));
   }
   assert.match(controls, /detailShortcut: root\.runtime\.shellHint\("SystemContent\.vhsTune"\)/);
-  assert.match(controls, /onDetailRequested: root\.openVhs\(\)/);
+  assert.match(controls, /onDetailsRequested: root\.openVhs\(\)/);
   assert.match(controls, /function openVhs\(\)/);
   assert.match(controls, /requestedView === "vhs"/);
   assert.match(controls, /vhsPanel\.invoke\("handleKey", event\.key, event\.modifiers\)/);
   assert.match(controls, /shellMatchesHint\("SystemContent\.vhsTune", event\.key, event\.modifiers\)/);
   assert.match(controls, /vhsPanel\.open \? vhsPanel\.implicitHeight/);
   assert.match(controls, /function closeDetails\(\)[\s\S]*?vhsPanel\.closeView\(\)/);
-  assert.match(tile, /actionName: "Tune " \+ setting\.label/);
-  assert.match(tile, /TileCornerAction \{[\s\S]*?onActivated: setting\.detailRequested\(\)/);
+  assert.match(tile, /TileQuickAction \{[\s\S]*?onActivated: chip\.activated\(\)/);
+  assert.match(tile, /TileCornerAction \{[\s\S]*?onActivated: chip\.detailsRequested\(\)/);
   assert.match(panel, /onInteractionStarted: panel\.selectParameter\(parameterRow\.index\)/);
   assert.match(panel, /onValueRequested: next => panel\.setParameter/);
   assert.match(panel, /Accessible\.role: Accessible\.Slider/);
