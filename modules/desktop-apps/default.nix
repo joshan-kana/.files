@@ -31,6 +31,14 @@ in
     };
   };
 
+  waifuland =
+    _:
+    lib.optionalAttrs isLinux {
+      home = _: {
+        home.packages = [ pkgs.waifuland ];
+      };
+    };
+
   neodisk = _: {
     home = _: {
       home.packages = [ pkgs.neodisk ];
