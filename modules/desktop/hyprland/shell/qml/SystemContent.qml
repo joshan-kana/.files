@@ -42,7 +42,9 @@ FocusScope {
     property bool mixerOpen: false
     property real dashboardWidthBudget: theme.controlsDetailWidth
     readonly property int dashboardTileHeight: 72
-    readonly property int dashboardBrightnessHeight: 90
+    // Connectivity keeps its three readback lines readable at larger
+    // text scales without shortening icons or truncating the last row.
+    readonly property int dashboardBrightnessHeight: Math.max(90, theme.fontSize(66) + theme.spacing3 * 2)
     readonly property bool detailsVisible: vhsPanel.open || trayMenu.open || networkPanel.open || bluetoothPanel.open || themePanel.open || wallpaperPanel.open || sessionPanel.open || resourcesPanel.open || statusOpen || mixerOpen || recordingsPanel.open
     property bool resetConfirmPending: false
     property bool resetRunning: false

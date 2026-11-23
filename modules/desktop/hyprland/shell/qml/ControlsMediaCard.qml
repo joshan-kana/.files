@@ -19,7 +19,8 @@ ShellSurface {
 
     readonly property real heroSize: 64
     readonly property real visualizerWidth: width >= 520 ? Math.min(180, width * 0.27) : 0
-    implicitHeight: media.available ? 178 : 152
+    readonly property real contentTopInset: openHint.visible ? Math.max(theme.spacing3, theme.spacing2 * 2 + openHint.implicitHeight) : theme.spacing3
+    implicitHeight: Math.max(media.available ? 178 : 152, content.implicitHeight + contentTopInset + theme.spacing3)
     surfaceLayer: ShellSurface.Group
     cornerRadius: theme.radiusLarge
     fillColor: media.available ? theme.blend(theme.groupBase, theme.roleColor("media"), theme.dark ? 0.075 : 0.045) : theme.groupBase
@@ -45,13 +46,17 @@ ShellSurface {
 
     Column {
         anchors {
-            fill: parent
-            margins: card.theme.spacing3
+            left: parent.left
+            right: parent.right
+            top: parent.top
+            leftMargin: card.theme.spacing3
+            rightMargin: card.theme.spacing3
+            topMargin: card.contentTopInset
         }
         spacing: card.theme.spacing2
 
         Row {
-            width: Math.max(1, parent.width - (openHint.visible ? openHint.implicitWidth + card.theme.spacing2 : 0))
+            width: parent.width
             height: card.heroSize
             spacing: card.theme.spacing3
 
