@@ -97,10 +97,58 @@ test("clipboard search combines persistent pins, type filtering and list focus",
   assert.match(clipboard, /ContextActionModel \{/);
   assert.match(
     clipboard,
-    /if\s*\(panel\.actionMode\)\s*panel\.leaveActions\(\)/,
+    /if\s*\(panel\.actionMode\)\s*panel\.toggleActions\(\)/,
   );
   assert.match(clipboard, /deleteArmed = true;/);
   assert.match(clipboard, /panel\.kindFilter === modelData\.id/);
   assert.match(clipboard, /clipboardOperations/);
   assert.match(clipboard, /text: item\.modelData \? \(panel\.actionMode \?/);
+});
+
+test("Alt+Enter toggles actions from either focus region and Escape returns to the prior mode", () => {
+  assert.match(
+    palette,
+    /function toggleActions\(\): void \{\s*if \(actionMode\) \{\s*leaveActions\(\);/,
+  );
+  assert.match(
+    clipboard,
+    /function toggleActions\(\): void \{\s*if \(actionMode\) \{\s*leaveActions\(\);/,
+  );
+
+  // Each panel has two independent input owners: search and the results list.
+  assert.equal((palette.match(/palette\.toggleActions\(\);/g) || []).length, 2);
+  assert.equal((clipboard.match(/panel\.toggleActions\(\);/g) || []).length, 4);
+  assert.match(palette, /if \(actionMode\) \{\s*toggleActions\(\);\s*return;/);
+  assert.match(
+    clipboard,
+    /if \(panel\.actionMode\)\s*panel\.toggleActions\(\);\s*else\s*panel\.hide\(\);/,
+  );
+  assert.match(palette, /actionReturnToResults && results\.currentIndex >= 0/);
+  assert.match(clipboard, /actionReturnToList && filteredEntries\.length > 0/);
+  assert.match(palette, /search\.text = priorQuery;/);
+  assert.match(clipboard, /search\.text = priorQuery;/);
+
+  // Alt+Enter must take precedence over the plain-Enter activation branch.
+  assert.doesNotMatch(
+    clipboard,
+    /!panel\.actionMode && \(event\.key === panel\.runtime\.shellKeyCode\("clipboard", "Return"\)/,
+  );
+  for (const owner of ["palette", "panel"]) {
+    const source = owner === "palette" ? palette : clipboard;
+    const input = owner === "palette" ? "palette" : "clipboard";
+    const alt = new RegExp(
+      owner +
+        '\\.runtime\\.shellModifier\\("' +
+        input +
+        '", "Alt", event\\.modifiers\\)[^{]*\\{\\s*' +
+        owner +
+        "\\.toggleActions\\(\\);",
+      "g",
+    );
+    assert.equal(
+      (source.match(alt) || []).length,
+      2,
+      input + ": both focus regions must recognize Alt+Enter",
+    );
+  }
 });
