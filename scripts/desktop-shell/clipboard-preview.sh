@@ -8,7 +8,13 @@ clear)
   rm -rf -- "$private_dir"
   ;;
 image)
-  [[ $id =~ ^[0-9]+$ ]] || exit 2
+  if [[ $id =~ ^pin:[a-f0-9]{64}$ ]]; then
+    decoder=(desktop-shell-clipboard-operations read "$id")
+  elif [[ $id =~ ^[0-9]+$ ]]; then
+    decoder=(cliphist decode "$id")
+  else
+    exit 2
+  fi
   umask 077
   mkdir -p -- "$private_dir"
   chmod 700 -- "$private_dir"
@@ -17,7 +23,7 @@ image)
   find "$private_dir" -maxdepth 1 -type f -name 'preview-*.png' -delete
   tmp="$(mktemp "$private_dir/preview-XXXXXXXX.png")"
   trap 'rm -f -- "$tmp"' EXIT
-  if cliphist decode "$id" | magick \
+  if "${decoder[@]}" | magick \
     -limit memory 96MiB -limit map 192MiB \
     -limit width 8192 -limit height 8192 \
     - -auto-orient -thumbnail '520x340>' -strip "png:$tmp"; then

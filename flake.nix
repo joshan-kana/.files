@@ -796,6 +796,7 @@
                   QT_QPA_PLATFORM=offscreen qmltestrunner -input tests/qml -import ${pkgs.kdePackages.qtdeclarative}/lib/qt-6/qml -platform offscreen
                 ''}
                 python3 tests/test-desktop-scripts.py
+                python3 tests/test-clipboard-operations.py
                 python3 tests/test-palette-index.py
                 python3 tests/test-calendar-sync.py
                 touch "$out"

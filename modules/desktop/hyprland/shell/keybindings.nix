@@ -130,6 +130,7 @@
           "ScreenshotPicker.toggleRecord" = "Z";
         };
         clipboard = {
+          "ClipboardPanel.actionMenu" = "ALT+ENTER";
           "ClipboardPanel.close" = "ESC";
           "ClipboardPanel.copy" = "ENTER";
           "ClipboardPanel.focusSearch" = "TAB";

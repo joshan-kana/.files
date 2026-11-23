@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import "DesktopIcons.js" as DesktopIcons
+import "ContextActions.js" as ContextActions
 import Quickshell
 import Quickshell.Io
 
@@ -17,28 +18,36 @@ Item {
     property bool closing: false
     property var entries: []
     property int selectedIndex: 0
+    property string kindFilter: "all"
+    property bool actionMode: false
+    property int actionIndex: 0
+    property var actionTarget: null
+    property string priorQuery: ""
+    property bool deleteArmed: false
     property bool hideAfterCopy: false
+
+    ContextActionModel {
+        id: contextActions
+        actions: ContextActions.clipboardActions(panel.actionTarget, !!panel.safeSelectedLink)
+        query: panel.actionMode ? search.text : ""
+    }
+
+    readonly property string safeSelectedLink: panel.actionTarget && panel.actionTarget.id === panel.previewTextEntryId ? ContextActions.safeWebUrl(panel.previewText) : ""
+
     property string copyFeedback: ""
     property string previewText: ""
-    property int previewTextEntryId: -1
+    property var previewTextEntryId: -1
     // cliphist list already supplies selected text: render that in the same
     // frame as navigation, then replace it with the full decoded entry.
     readonly property string selectedText: currentEntry && currentEntry.kind === "TEXT" ? (previewTextEntryId === currentEntry.id ? previewText : currentEntry.preview) : ""
     property string previewImagePath: ""
-    property int previewJobId: -1
+    property var previewJobId: -1
     property string previewJobKind: ""
     readonly property var currentEntry: filteredEntries.length > 0 ? filteredEntries[Math.max(0, Math.min(selectedIndex, filteredEntries.length - 1))] : null
     signal copyCompleted(bool success)
 
-    readonly property var filteredEntries: {
-        const query = search.text.trim().toLowerCase();
-        const source = entries || [];
-
-        if (query.length === 0)
-            return source.slice(0, 100);
-
-        return source.filter(entry => entry.preview.toLowerCase().includes(query) || entry.kind.toLowerCase().includes(query)).slice(0, 100);
-    }
+    readonly property var filteredEntries: ContextActions.historyFilter(entries, actionMode ? priorQuery : search.text, kindFilter)
+    readonly property var visibleEntries: actionMode ? contextActions.matches : filteredEntries
 
     visible: open || closing
 
@@ -47,6 +56,16 @@ Item {
     property StdioCollector queryOutput: StdioCollector {}
     property StdioCollector queryError: StdioCollector {}
     property StdioCollector copyError: StdioCollector {}
+    property StdioCollector operationError: StdioCollector {}
+    property Process operationProcess: Process {
+        stderr: panel.operationError
+        onExited: (exitCode, exitStatus) => {
+            panel.copyFeedback = exitCode === 0 ? "UPDATED" : "OPERATION FAILED";
+            panel.deleteArmed = false;
+            if (exitCode === 0)
+                panel.refresh();
+        }
+    }
 
     property Process queryProcess: Process {
         stdout: panel.queryOutput
@@ -103,7 +122,7 @@ Item {
         previewJobId = currentEntry.id;
         previewJobKind = currentEntry.kind === "TEXT" ? "text" : "image";
         if (previewJobKind === "text")
-            previewProcess.exec([runtime.cliphist, "decode", String(previewJobId)]);
+            previewProcess.exec(currentEntry.pinned ? [runtime.clipboardOperations, "read", String(previewJobId)] : [runtime.cliphist, "decode", String(previewJobId)]);
         else
             previewProcess.exec([runtime.clipboardPreview, "image", String(previewJobId)]);
     }
@@ -186,14 +205,29 @@ Item {
             if (tab <= 0)
                 continue;
 
-            const id = parseInt(line.slice(0, tab));
-            if (!isFinite(id))
+            const identity = line.slice(0, tab);
+            if (/^pin:[a-f0-9]{64}$/.test(identity)) {
+                const next = line.indexOf("\t", tab + 1);
+                if (next < 0)
+                    continue;
+                const kind = line.slice(tab + 1, next);
+                if (!["TEXT", "IMAGE", "BINARY"].includes(kind))
+                    continue;
+                parsed.push({
+                    id: identity,
+                    kind: kind,
+                    pinned: true,
+                    preview: line.slice(next + 1)
+                });
                 continue;
-
+            }
+            if (!/^[0-9]+$/.test(identity))
+                continue;
             const safe = sanitisePreview(line.slice(tab + 1));
             parsed.push({
-                id: id,
+                id: parseInt(identity),
                 kind: safe.kind,
+                pinned: false,
                 preview: safe.preview
             });
         }
@@ -202,10 +236,12 @@ Item {
     }
 
     function refresh(): void {
-        if (runtime.cliphist.length === 0 || queryProcess.running)
+        if (queryProcess.running)
             return;
-
-        queryProcess.exec([runtime.cliphist, "list"]);
+        if (runtime.clipboardOperations.length > 0)
+            queryProcess.exec([runtime.clipboardOperations, "list"]);
+        else if (runtime.cliphist.length > 0)
+            queryProcess.exec([runtime.cliphist, "list"]);
     }
 
     function show(): void {
@@ -215,6 +251,10 @@ Item {
         search.text = "";
         copyFeedback = "";
         selectedIndex = 0;
+        actionMode = false;
+        actionTarget = null;
+        kindFilter = "all";
+        deleteArmed = false;
         refresh();
         previewTimer.restart();
         search.forceActiveFocus();
@@ -223,6 +263,9 @@ Item {
     function hide(): void {
         if (!open)
             return;
+        actionMode = false;
+        actionTarget = null;
+        deleteArmed = false;
 
         // Preserve the Wayland surface until the longer spatial exit finishes.
         closing = motion.enabled;
@@ -241,20 +284,81 @@ Item {
             show();
     }
 
-    function copyEntry(entryId: int, closeOnSuccess: bool): bool {
-        if (runtime.clipboardCopy.length === 0 || copyProcess.running)
+    function copyEntry(entry: var, closeOnSuccess: bool): bool {
+        if (!entry || copyProcess.running)
+            return false;
+        const tool = entry.pinned ? runtime.clipboardOperations : runtime.clipboardCopy;
+        if (!tool)
             return false;
         hideAfterCopy = closeOnSuccess;
         copyFeedback = "COPYING";
-        copyProcess.exec([runtime.clipboardCopy, String(entryId)]);
+        copyProcess.exec(entry.pinned ? [tool, "copy", entry.id] : [tool, String(entry.id)]);
         return true;
     }
 
-    function activateSelected(): void {
-        if (filteredEntries.length === 0)
+    function openActions(): void {
+        if (actionMode || !currentEntry)
             return;
-        const safeIndex = Math.max(0, Math.min(selectedIndex, filteredEntries.length - 1));
-        copyEntry(filteredEntries[safeIndex].id, true);
+        priorQuery = search.text;
+        actionTarget = currentEntry;
+        actionIndex = 0;
+        deleteArmed = false;
+        actionMode = true;
+        search.text = "";
+        search.forceActiveFocus();
+    }
+
+    function leaveActions(): void {
+        const target = actionTarget;
+        actionMode = false;
+        actionTarget = null;
+        deleteArmed = false;
+        search.text = priorQuery;
+        if (target)
+            selectedIndex = Math.max(0, filteredEntries.findIndex(item => item.id === target.id));
+        search.forceActiveFocus();
+    }
+
+    function executeAction(): void {
+        if (!actionMode || actionIndex < 0 || actionIndex >= contextActions.matches.length)
+            return;
+        const action = contextActions.matches[actionIndex].action;
+        const entry = actionTarget;
+        if (!entry)
+            return;
+        if (action === "delete" && !deleteArmed) {
+            deleteArmed = true;
+            copyFeedback = "SELECT DELETE AGAIN TO CONFIRM";
+            return;
+        }
+        leaveActions();
+        if (action === "copy") {
+            copyEntry(entry, true);
+            return;
+        }
+        if (action === "openLink") {
+            const url = ContextActions.safeWebUrl(previewText);
+            if (url && entry.id === previewTextEntryId) {
+                hide();
+                Quickshell.execDetached([runtime.urlOpen, url]);
+            }
+            return;
+        }
+        if (operationProcess.running || !runtime.clipboardOperations) {
+            copyFeedback = "OPERATION IN PROGRESS";
+            return;
+        }
+        copyFeedback = "APPLYING";
+        operationProcess.exec(action === "pin" ? [runtime.clipboardOperations, "pin", String(entry.id), entry.kind] : [runtime.clipboardOperations, action, String(entry.id)]);
+    }
+
+    function activateSelected(): void {
+        if (actionMode) {
+            executeAction();
+            return;
+        }
+        if (currentEntry)
+            copyEntry(currentEntry, true);
     }
 
     Rectangle {
@@ -326,7 +430,7 @@ Item {
                     glyphColor: panel.theme.roleColor("clipboard")
                     eyebrow: "History / Clipboard"
                     title: "Clipboard"
-                    detail: panel.entries.length + (panel.entries.length === 1 ? " item" : " items")
+                    detail: panel.actionMode ? "Actions for selected item" : panel.entries.length + (panel.entries.length === 1 ? " item" : " items")
                 }
 
                 SearchFieldSurface {
@@ -356,28 +460,87 @@ Item {
                         Text {
                             anchors.fill: parent
                             verticalAlignment: Text.AlignVCenter
-                            text: "Search clipboard…"
+                            text: panel.actionMode ? "Search actions…" : "Search clipboard…"
                             visible: search.text.length === 0
                             color: panel.theme.textMuted
                             font: search.font
                         }
 
+                        onTextChanged: {
+                            if (panel.actionMode)
+                                panel.actionIndex = 0;
+                            panel.deleteArmed = false;
+                        }
+
                         Keys.onPressed: event => {
-                            if (event.key === panel.runtime.shellKeyCode("clipboard", "Tab")) {
+                            if (!panel.actionMode && (event.key === panel.runtime.shellKeyCode("clipboard", "Return") || event.key === panel.runtime.shellKeyCode("clipboard", "Enter")) && panel.runtime.shellModifier("clipboard", "Alt", event.modifiers)) {
+                                panel.openActions();
+                                event.accepted = true;
+                            } else if (event.key === panel.runtime.shellKeyCode("clipboard", "Tab")) {
                                 list.forceActiveFocus();
                                 event.accepted = true;
                             } else if (event.key === panel.runtime.shellKeyCode("clipboard", "Escape")) {
-                                panel.hide();
+                                if (panel.actionMode)
+                                    panel.leaveActions();
+                                else
+                                    panel.hide();
                                 event.accepted = true;
                             } else if (panel.runtime.shellNavigates("clipboard", "down", event.key, "arrows")) {
-                                panel.selectedIndex = Math.min(panel.filteredEntries.length - 1, panel.selectedIndex + 1);
+                                if (panel.actionMode)
+                                    panel.actionIndex = Math.min(panel.visibleEntries.length - 1, panel.actionIndex + 1);
+                                else
+                                    panel.selectedIndex = Math.min(panel.filteredEntries.length - 1, panel.selectedIndex + 1);
                                 event.accepted = true;
                             } else if (panel.runtime.shellNavigates("clipboard", "up", event.key, "arrows")) {
-                                panel.selectedIndex = Math.max(0, panel.selectedIndex - 1);
+                                if (panel.actionMode)
+                                    panel.actionIndex = Math.max(0, panel.actionIndex - 1);
+                                else
+                                    panel.selectedIndex = Math.max(0, panel.selectedIndex - 1);
                                 event.accepted = true;
                             } else if (event.key === panel.runtime.shellKeyCode("clipboard", "Return") || event.key === panel.runtime.shellKeyCode("clipboard", "Enter")) {
                                 panel.activateSelected();
                                 event.accepted = true;
+                            }
+                        }
+                    }
+                }
+
+                Row {
+                    visible: !panel.actionMode
+                    height: visible ? 32 : 0
+                    spacing: panel.theme.spacing2
+                    Repeater {
+                        model: [
+                            {
+                                id: "all",
+                                name: "All"
+                            },
+                            {
+                                id: "TEXT",
+                                name: "Text"
+                            },
+                            {
+                                id: "IMAGE",
+                                name: "Images"
+                            },
+                            {
+                                id: "pinned",
+                                name: "Pinned"
+                            }
+                        ]
+                        delegate: ShellAction {
+                            required property var modelData
+                            width: 85
+                            height: 32
+                            runtime: panel.runtime
+                            theme: panel.theme
+                            motion: panel.motion
+                            compact: true
+                            title: modelData.name
+                            active: panel.kindFilter === modelData.id
+                            onActivated: {
+                                panel.kindFilter = modelData.id;
+                                panel.selectedIndex = 0;
                             }
                         }
                     }
@@ -397,26 +560,41 @@ Item {
                     bottomMargin: panel.theme.spacing4
                 }
 
-                model: panel.filteredEntries
+                model: panel.visibleEntries
                 spacing: panel.theme.spacing2
                 clip: true
-                currentIndex: panel.selectedIndex
+                currentIndex: panel.actionMode ? panel.actionIndex : panel.selectedIndex
                 boundsBehavior: Flickable.StopAtBounds
 
                 Keys.priority: Keys.BeforeItem
                 Keys.onPressed: event => {
-                    if (event.key === panel.runtime.shellKeyCode("clipboard", "Tab") || event.key === panel.runtime.shellKeyCode("clipboard", "I") || event.key === panel.runtime.shellKeyCode("clipboard", "Slash")) {
+                    if (!panel.actionMode && (event.key === panel.runtime.shellKeyCode("clipboard", "Return") || event.key === panel.runtime.shellKeyCode("clipboard", "Enter")) && panel.runtime.shellModifier("clipboard", "Alt", event.modifiers)) {
+                        panel.openActions();
+                    } else if (event.key === panel.runtime.shellKeyCode("clipboard", "Tab") || event.key === panel.runtime.shellKeyCode("clipboard", "I") || event.key === panel.runtime.shellKeyCode("clipboard", "Slash")) {
                         search.forceActiveFocus();
                     } else if (event.key === panel.runtime.shellKeyCode("clipboard", "Escape")) {
-                        panel.hide();
+                        if (panel.actionMode)
+                            panel.leaveActions();
+                        else
+                            panel.hide();
                     } else if (panel.runtime.shellNavigates("clipboard", "down", event.key)) {
-                        panel.selectedIndex = Math.min(panel.filteredEntries.length - 1, panel.selectedIndex + 1);
+                        if (panel.actionMode)
+                            panel.actionIndex = Math.min(panel.visibleEntries.length - 1, panel.actionIndex + 1);
+                        else
+                            panel.selectedIndex = Math.min(panel.filteredEntries.length - 1, panel.selectedIndex + 1);
                     } else if (panel.runtime.shellNavigates("clipboard", "up", event.key)) {
-                        panel.selectedIndex = Math.max(0, panel.selectedIndex - 1);
+                        if (panel.actionMode)
+                            panel.actionIndex = Math.max(0, panel.actionIndex - 1);
+                        else
+                            panel.selectedIndex = Math.max(0, panel.selectedIndex - 1);
                     } else if (event.key === panel.runtime.shellKeyCode("clipboard", "U") || event.key === panel.runtime.shellKeyCode("clipboard", "PageUp") || event.key === panel.runtime.shellKeyCode("clipboard", "D") || event.key === panel.runtime.shellKeyCode("clipboard", "PageDown")) {
                         const rowHeight = list.currentItem ? list.currentItem.height + list.spacing : 62;
                         const rows = Math.max(1, Math.floor(list.height / Math.max(1, rowHeight) / 2));
-                        panel.selectedIndex = Math.max(0, Math.min(panel.filteredEntries.length - 1, panel.selectedIndex + ((event.key === panel.runtime.shellKeyCode("clipboard", "D") || event.key === panel.runtime.shellKeyCode("clipboard", "PageDown")) ? rows : -rows)));
+                        const delta = ((event.key === panel.runtime.shellKeyCode("clipboard", "D") || event.key === panel.runtime.shellKeyCode("clipboard", "PageDown")) ? rows : -rows);
+                        if (panel.actionMode)
+                            panel.actionIndex = Math.max(0, Math.min(panel.visibleEntries.length - 1, panel.actionIndex + delta));
+                        else
+                            panel.selectedIndex = Math.max(0, Math.min(panel.filteredEntries.length - 1, panel.selectedIndex + delta));
                     } else if (event.key === panel.runtime.shellKeyCode("clipboard", "Return") || event.key === panel.runtime.shellKeyCode("clipboard", "Enter")) {
                         panel.activateSelected();
                     } else {
@@ -435,18 +613,26 @@ Item {
                     height: 62
                     exponent: panel.theme.squircleExponent
                     cornerRadius: panel.theme.radiusMedium
-                    fillColor: index === panel.selectedIndex ? panel.theme.focusFill : panel.theme.background
-                    borderColor: index === panel.selectedIndex ? panel.theme.roleColor("clipboard") : panel.theme.outline
-                    borderWidth: index === panel.selectedIndex ? panel.theme.borderFocus : panel.theme.borderThin
+                    fillColor: index === list.currentIndex ? panel.theme.focusFill : panel.theme.background
+                    borderColor: index === list.currentIndex ? panel.theme.roleColor("clipboard") : panel.theme.outline
+                    borderWidth: index === list.currentIndex ? panel.theme.borderFocus : panel.theme.borderThin
 
                     StateLayer {
                         theme: panel.theme
                         motion: panel.motion
-                        selected: item.index === panel.selectedIndex
+                        selected: item.index === list.currentIndex
                         cornerRadius: panel.theme.radiusMedium
-                        onActivated: panel.selectedIndex = item.index
+                        onActivated: {
+                            if (panel.actionMode)
+                                panel.actionIndex = item.index;
+                            else
+                                panel.selectedIndex = item.index;
+                        }
                         onDoubleClicked: {
-                            panel.selectedIndex = item.index;
+                            if (panel.actionMode)
+                                panel.actionIndex = item.index;
+                            else
+                                panel.selectedIndex = item.index;
                             panel.activateSelected();
                         }
                     }
@@ -461,7 +647,7 @@ Item {
                         Text {
                             width: 64
                             anchors.verticalCenter: parent.verticalCenter
-                            text: item.modelData.kind
+                            text: panel.actionMode ? "ACTION" : item.modelData.pinned ? "PINNED" : item.modelData.kind
                             color: panel.theme.readableRoleColor(item.modelData.kind !== "TEXT" ? "capture" : "clipboard")
                             font.family: panel.runtime.fontSans
                             font.pixelSize: panel.theme.fontSize(9)
@@ -470,17 +656,40 @@ Item {
                         }
 
                         MarqueeText {
-                            width: parent.width - 64 - parent.spacing
+                            width: parent.width - 64 - parent.spacing - 36
                             anchors.verticalCenter: parent.verticalCenter
-                            text: item.modelData.preview
+                            text: panel.actionMode ? item.modelData.name : item.modelData.preview
                             color: panel.theme.text
                             font.family: panel.runtime.fontMono
                             font.pixelSize: panel.theme.fontSize(12)
                         }
                     }
+
+                    ShellAction {
+                        anchors.right: parent.right
+                        anchors.rightMargin: panel.theme.spacing2
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 32
+                        height: 32
+                        visible: !panel.actionMode && item.index === panel.selectedIndex
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        motion: panel.motion
+                        compact: true
+                        iconOnly: true
+                        icon: "󰍉"
+                        title: "More actions (" + panel.runtime.shellHint("ClipboardPanel.actionMenu") + ")"
+                        onActivated: {
+                            panel.selectedIndex = item.index;
+                            panel.openActions();
+                        }
+                    }
                 }
 
-                onCurrentIndexChanged: positionViewAtIndex(currentIndex, ListView.Contain)
+                onCurrentIndexChanged: {
+                    positionViewAtIndex(currentIndex, ListView.Contain);
+                    panel.deleteArmed = false;
+                }
             }
 
             ShellSurface {
@@ -620,7 +829,7 @@ Item {
 
             Text {
                 anchors.centerIn: list
-                visible: !panel.queryProcess.running && panel.filteredEntries.length === 0
+                visible: !panel.queryProcess.running && panel.visibleEntries.length === 0
                 text: search.text.length > 0 ? "NO MATCHES" : "CLIPBOARD HISTORY IS EMPTY"
                 color: panel.theme.textMuted
                 font.family: panel.runtime.fontSans
@@ -660,11 +869,16 @@ Item {
                     },
                     {
                         shortcut: panel.runtime.shellHint("ClipboardPanel.copy"),
-                        label: "Copy"
+                        label: panel.actionMode ? "Run" : "Copy"
+                    },
+                    {
+                        shortcut: panel.runtime.shellHint("ClipboardPanel.actionMenu"),
+                        label: "Actions",
+                        visible: !panel.actionMode
                     },
                     {
                         shortcut: panel.runtime.shellHint("ClipboardPanel.close"),
-                        label: "Close"
+                        label: panel.actionMode ? "Back" : "Close"
                     }
                 ]
             }
