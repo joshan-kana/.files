@@ -293,10 +293,30 @@ def _build_argv(host: Host, script: str, *, unit_name: str | None = None) -> lis
             "--property=PrivateTmp=yes",
             "--property=PrivatePIDs=yes",
             "--property=ProtectSystem=full",
+            "--property=TemporaryFileSystem=/run/user:ro",
         ]
-        # Expand HOME in the remote login shell, before systemd validates paths.
-        private_paths = '--property="InaccessiblePaths=$HOME/.ssh $HOME/.secrets /run/user"'
-        remote_command = f"exec {shlex.join(options)} {private_paths} {shlex.join([target.shell, '-lc', script])}"
+        # Give the user unit only its compositor sockets, not SSH agents,
+        # the systemd user bus or unrelated private runtime sockets.
+        # Discover an active desktop at execution time; headless jobs still work.
+        desktop = """
+runtime=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
+wayland=$(systemctl --user show-environment | sed -n 's/^WAYLAND_DISPLAY=//p' | head -1)
+set --
+case "$wayland" in
+  wayland-[0-9]*)
+    if [ -S "$runtime/$wayland" ]; then
+      if [ -d "$runtime/hypr" ]; then
+        set -- "--property=BindReadOnlyPaths=$runtime/$wayland $runtime/hypr"
+      else
+        set -- "--property=BindReadOnlyPaths=$runtime/$wayland"
+      fi
+    fi
+    ;;
+esac
+"""
+        # Expand HOME in the remote login shell before systemd validates paths.
+        private_paths = '--property="InaccessiblePaths=$HOME/.ssh $HOME/.secrets"'
+        remote_command = desktop + f'exec {shlex.join(options)} {private_paths} "$@" {shlex.join([target.shell, "-lc", script])}'
     else:
         remote_command = f"exec {shlex.join([target.shell, '-lc', script])}"
     return [
