@@ -29,6 +29,7 @@ QtObject {
     readonly property string networkConnectionEditor: root.configData.tools.networkConnectionEditor
     readonly property string nmcli: root.configData.tools.nmcli
     readonly property string hyprctl: root.configData.tools.hyprctl
+    readonly property string vhsControl: root.configData.tools.vhsControl
     readonly property string sessionCommand: Quickshell.env("DESKTOP_SHELL_SESSION_COMMAND") || root.configData.tools.sessionCommand
     readonly property string themeSet: Quickshell.env("DESKTOP_SHELL_THEME_SET") || root.themeAdapter.tools.themeSet
     readonly property string urlOpen: root.configData.tools.urlOpen
@@ -254,6 +255,8 @@ QtObject {
                 property real windowOpacity: 0.82
                 property real glassOpacity: 0.70
                 property int blurSize: 15
+                property bool vhsEnabled: false
+                property real vhsIntensity: 0.45
                 property string mediaVisualizerMode: "bars"
                 property bool mediaLyricsVisible: false
                 property int mediaSeekSeconds: 10
@@ -288,6 +291,7 @@ QtObject {
                 property string networkConnectionEditor: ""
                 property string nmcli: ""
                 property string hyprctl: ""
+                property string vhsControl: ""
                 property string sessionCommand: ""
                 property string urlOpen: ""
                 property string paletteSearch: ""

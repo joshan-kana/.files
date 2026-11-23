@@ -24,6 +24,8 @@ QtObject {
         property real windowOpacity: appearance.runtime.appearanceDefaults.windowOpacity
         property real glassOpacity: appearance.runtime.appearanceDefaults.glassOpacity
         property int blurSize: appearance.runtime.appearanceDefaults.blurSize
+        property bool vhsEnabled: appearance.runtime.appearanceDefaults.vhsEnabled
+        property real vhsIntensity: appearance.runtime.appearanceDefaults.vhsIntensity
         property string mediaVisualizerMode: appearance.runtime.appearanceDefaults.mediaVisualizerMode
         property bool mediaLyricsVisible: appearance.runtime.appearanceDefaults.mediaLyricsVisible
         property int mediaSeekSeconds: appearance.runtime.appearanceDefaults.mediaSeekSeconds
@@ -42,6 +44,8 @@ QtObject {
     readonly property real windowOpacity: Math.max(0.20, Math.min(1, effective("windowOpacity")))
     readonly property real glassOpacity: Math.max(0.20, Math.min(1, effective("glassOpacity")))
     readonly property int blurSize: Math.max(5, Math.min(25, effective("blurSize")))
+    readonly property bool vhsEnabled: effective("vhsEnabled")
+    readonly property real vhsIntensity: Math.max(0, Math.min(1, effective("vhsIntensity")))
     function hasOverride(key: string): bool {
         return overrideKeys.includes(key);
     }
@@ -96,6 +100,7 @@ QtObject {
     // The override list is the source of preference precedence. Existing INI
     // values are retained during migration; reset clears only their authority.
     Component.onCompleted: {
+        applyVhs();
         if (saved.userOverrides !== "")
             return;
         const legacy = Object.keys(runtime.appearanceDefaults).filter(key => key !== "objectName" && saved.value(key, null) !== null);
@@ -113,6 +118,8 @@ QtObject {
         saved.sync();
         windowOpacityApply.stop();
         blurSizeApply.stop();
+        vhsApply.stop();
+        applyVhs();
         applyWindowTransparency();
         applyShellGlass();
         applyBlurSize();
@@ -161,6 +168,9 @@ QtObject {
     // the saved preference when that path changes, without polling or sleeps.
     property Connections runtimeChanges: Connections {
         target: appearance.runtime
+        function onVhsControlChanged(): void {
+            appearance.applyVhs();
+        }
         function onHyprctlChanged(): void {
             appearance.applyWindowTransparency();
             appearance.applyShellGlass();
@@ -176,6 +186,7 @@ QtObject {
             if (event.name === "configreloaded") {
                 appearance.applyWindowTransparency();
                 appearance.applyShellGlass();
+                appearance.applyVhs();
             }
         }
     }
@@ -192,6 +203,39 @@ QtObject {
         interval: 75
         repeat: false
         onTriggered: appearance.applyBlurSize()
+    }
+
+    property Timer vhsApply: Timer {
+        interval: 180
+        repeat: false
+        onTriggered: appearance.applyVhs()
+    }
+
+    function applyVhs(): void {
+        if (runtime.vhsControl.length === 0)
+            return;
+        Quickshell.execDetached([runtime.vhsControl, vhsEnabled ? "on" : "off", String(Math.round(vhsIntensity * 100))]);
+    }
+
+    function toggleVhs(): void {
+        saved.vhsEnabled = !vhsEnabled;
+        storeOverride("vhsEnabled", saved.vhsEnabled);
+        saved.sync();
+        vhsApply.stop();
+        applyVhs();
+    }
+
+    function setVhsIntensity(value: real): void {
+        const next = Math.round(Math.max(0, Math.min(1, value)) * 100) / 100;
+        if (next === vhsIntensity && vhsEnabled)
+            return;
+        saved.vhsIntensity = next;
+        saved.vhsEnabled = true;
+        storeOverride("vhsIntensity", next);
+        storeOverride("vhsEnabled", true);
+        saved.sync();
+        // Reload after the slider settles to avoid shader recompilation every pointer event.
+        vhsApply.restart();
     }
 
     function applyBlurSize(): void {

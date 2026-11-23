@@ -9,6 +9,9 @@ ShellSurface {
     required property RuntimeConfig runtime
     required property string label
     required property real opacityValue
+    property real minimumValue: 0.20
+    property real maximumValue: 1
+    property string valueUnit: "opacity"
     property string icon: ""
     property string shortcut: ""
     property bool active: false
@@ -26,7 +29,7 @@ ShellSurface {
 
     height: 78
     Accessible.role: Accessible.Button
-    Accessible.name: label + ", " + Math.round(opacityValue * 100) + "% opacity" + (blurAdjustable ? ", blur " + blurValue + " pixels" : "")
+    Accessible.name: label + ", " + Math.round(opacityValue * 100) + "% " + valueUnit + (blurAdjustable ? ", blur " + blurValue + " pixels" : "")
 
     // Scale inward at rest and fill the allocated bounds on hover.
     // The hub viewport clips content outside its edge during panel morphs.
@@ -172,8 +175,8 @@ ShellSurface {
             height: 19
             theme: setting.theme
             motion: setting.motion
-            from: setting.blurEditing ? 5 : 0.20
-            to: setting.blurEditing ? 25 : 1
+            from: setting.blurEditing ? 5 : setting.minimumValue
+            to: setting.blurEditing ? 25 : setting.maximumValue
             value: setting.blurEditing ? setting.blurValue : setting.opacityValue
             trackHeight: 6
             handleSize: 16
@@ -195,7 +198,7 @@ ShellSurface {
 
     // Keep the keycap aligned to the tile, independently of icon and slider layout.
     TileKeyHint {
-        visible: setting.shortcut.length > 0
+        visible: setting.shortcut.length > 0 || setting.keyboardSelected
         shortcut: setting.keyboardSelected ? setting.runtime.shellHint("OpacitySetting.level") : setting.shortcut
         compact: true
         runtime: setting.runtime
