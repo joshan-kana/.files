@@ -133,6 +133,10 @@ FocusScope {
             replyOwner = null;
             replyEditing = false;
             focusKeyboard();
+        } else if (expandedGroupKey.length > 0) {
+            expandedGroupKey = "";
+            selectedMemberIndex = 0;
+            focusKeyboard();
         } else {
             closeRequested();
         }

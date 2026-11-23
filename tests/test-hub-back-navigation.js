@@ -92,7 +92,23 @@ test("Escape and Back share the same Controls cancellation priorities", () => {
   );
   assert.match(
     system,
+    /else if \(bluetoothPanel\.open && bluetoothPanel\.panel && bluetoothPanel\.panel\.forgetAddress\.length > 0\)[\s\S]*?clearTransientState/,
+  );
+  assert.match(
+    system,
+    /if \(bluetoothPanel\.open\)[\s\S]*?if \(event\.key === root\.runtime\.shellKeyCode\("controls", "Backspace"\)\) \{\s*root\.navigateBack\(\)/,
+  );
+  assert.match(
+    system,
     /else if \(networkPanel\.open && networkPanel\.detailView\)[\s\S]*?toggleDetailView/,
+  );
+  assert.match(
+    system,
+    /else if \(networkPanel\.open && networkPanel\.savedView\)[\s\S]*?toggleSavedView/,
+  );
+  assert.match(
+    system,
+    /if \(networkPanel\.open\)[\s\S]*?if \(event\.key === root\.runtime\.shellKeyCode\("controls", "Backspace"\)\) \{\s*root\.navigateBack\(\)/,
   );
   assert.match(system, /else if \(trayMenu\.open\)[\s\S]*?goBack/);
   assert.match(
@@ -116,4 +132,18 @@ test("Back cancels the Home calendar picker and inline Activity reply locally", 
     /function navigateBack\(\): void \{\s*if \(replyEditing\) \{\s*replyOwner = null;\s*replyEditing = false;\s*focusKeyboard\(\)/,
   );
   assert.match(activity, /center\.navigateBack\(\)/);
+});
+
+test("Activity Escape collapses nested notification groups before closing", () => {
+  const activity = qml("NotificationContent.qml");
+  const back = activity
+    .split("function navigateBack(): void {")[1]
+    .split("\n    }")[0];
+  assert.match(back, /if \(replyEditing\)[\s\S]*?focusKeyboard\(\)/);
+  assert.match(
+    back,
+    /else if \(expandedGroupKey\.length > 0\) \{\s*expandedGroupKey = "";\s*selectedMemberIndex = 0;\s*focusKeyboard\(\)/,
+  );
+  assert.match(back, /else \{\s*closeRequested\(\);/);
+  assert.match(activity, /Keys\.onPressed:[\s\S]*?center\.navigateBack\(\)/);
 });
