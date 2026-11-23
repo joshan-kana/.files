@@ -62,9 +62,8 @@ Item {
             height: 47
             anchors {
                 left: parent.left
-                leftMargin: tile.theme.spacing4
+                leftMargin: Math.max(tile.theme.spacing4, tile.theme.spacing2 + shortcutHint.implicitWidth + tile.theme.spacing3)
                 verticalCenter: parent.verticalCenter
-                verticalCenterOffset: tile.detailShortcut.length > 0 ? tile.theme.spacing3 : 0
             }
             theme: tile.theme
             motion: tile.motion
@@ -77,7 +76,7 @@ Item {
                 text: tile.glyph
                 color: tile.unavailable ? tile.theme.textMuted : tile.connected || tile.pending || tile.scanning || tile.failed ? tile.signalColor : tile.foreground
                 font.family: "Symbols Nerd Font"
-                font.pixelSize: tile.theme.fontSize(24)
+                font.pixelSize: tile.theme.fontSize(27)
             }
         }
 
@@ -87,12 +86,14 @@ Item {
                 right: parent.right
                 verticalCenter: parent.verticalCenter
                 leftMargin: tile.theme.spacing4
-                rightMargin: tile.theme.spacing4 + (tile.detailShortcut.length > 0 ? 46 : 0)
+                rightMargin: tile.theme.spacing4
             }
             spacing: tile.theme.spacing2
 
             MarqueeText {
-                width: parent.width
+                // Only the first line shares vertical space with the
+                // right-corner shortcut. Descriptions keep the full width.
+                width: Math.max(1, parent.width - (detailAction.visible ? detailAction.width + tile.theme.spacing2 : 0))
                 text: tile.title
                 color: tile.foreground
                 font.family: tile.runtime.fontSans
@@ -148,6 +149,7 @@ Item {
     }
 
     TileCornerAction {
+        id: detailAction
         runtime: tile.runtime
         theme: tile.theme
         motion: tile.motion

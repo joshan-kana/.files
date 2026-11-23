@@ -43,7 +43,8 @@ FocusScope {
     signal expandRequested
 
     implicitWidth: compact ? 490 : 950
-    implicitHeight: body.implicitHeight + (compact ? theme.spacing4 * 2 : theme.spacing2 * 2)
+    readonly property real compactTopInset: openHint.visible ? Math.max(theme.spacing4, theme.spacing2 * 2 + openHint.implicitHeight) : theme.spacing4
+    implicitHeight: body.implicitHeight + (compact ? compactTopInset + theme.spacing3 : theme.spacing2 * 2)
     visible: active
     focus: active && !compact
 
@@ -193,7 +194,7 @@ FocusScope {
     Column {
         id: body
         x: mixer.compact ? mixer.theme.spacing4 : mixer.theme.spacing2
-        y: mixer.compact ? Math.max(mixer.theme.spacing4, (mixer.height - implicitHeight) / 2) : mixer.theme.spacing2
+        y: mixer.compact ? mixer.compactTopInset : mixer.theme.spacing2
         width: Math.max(1, parent.width - (mixer.compact ? mixer.theme.spacing4 : mixer.theme.spacing2) * 2)
         spacing: mixer.theme.spacing3
 
@@ -399,6 +400,7 @@ FocusScope {
     }
 
     TileKeyHint {
+        id: openHint
         primary: true
         visible: mixer.compact && shortcut.length > 0
         shortcut: mixer.runtime.shellHint("AudioMixerContent.open")

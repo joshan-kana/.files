@@ -448,7 +448,7 @@ test("The compact mixer uses content-driven height and does not delay rendering"
   const mixer = read("AudioMixerContent.qml");
   assert.match(
     mixer,
-    /implicitHeight: body.implicitHeight \+ \(compact \? theme.spacing4 \* 2/,
+    /implicitHeight: body.implicitHeight \+ \(compact \? compactTopInset \+ theme.spacing3/,
   );
   assert.match(mixer, /onActivated: mixer.expandRequested\(\)/);
   assert.doesNotMatch(mixer, /id: expandAction/);
@@ -490,7 +490,7 @@ test("Compact Media shares a live spectrum, controls and full Now Playing naviga
   const transport = read("MediaTransport.qml");
   assert.match(controls, /onFullRequested: root.mediaRequested\(\)/);
   assert.match(controls, /spectrum: root.spectrum/);
-  assert.match(card, /implicitHeight: media.available \? 178 : 152/);
+  assert.match(card, /implicitHeight: Math.max\(media.available \? 178 : 152, content.implicitHeight \+ contentTopInset/);
   assert.match(
     card,
     /text: card.media.available \? card.media.title : "No active player"/,
@@ -622,7 +622,7 @@ test("main panel and compact Media use measured geometry with bounded empty stat
       "implicitWidth: sessionPanel.open ? sessionPanel.implicitWidth : detailsVisible ? theme.controlsDetailWidth : dashboardWidthBudget",
     ],
     [controls, "active: root.engaged && !root.detailsVisible"],
-    [media, "implicitHeight: media.available ? 178 : 152"],
+    [media, "implicitHeight: Math.max(media.available ? 178 : 152, content.implicitHeight + contentTopInset"],
     [host, "height: Math.min(host.viewportHeight, host.targetHeight)"],
     [host, "(fraction - 0.68) / 0.30"],
   ])
@@ -641,7 +641,7 @@ test("Controls sizes naturally without inflating tiles or forcing scroll hints",
   );
   assert.match(controls, /spacing: root.theme.spacing3/);
   assert.match(controls, /dashboardTileHeight: 72/);
-  assert.match(controls, /dashboardBrightnessHeight: 90/);
+  assert.match(controls, /dashboardBrightnessHeight: Math.max\(90, theme.fontSize\(66\) \+ theme.spacing3 \* 2\)/);
   assert.doesNotMatch(controls, /dashboardConnectivityHeight/);
   assert.match(
     controls,
@@ -773,7 +773,7 @@ test("all visual and action tile heights remain fixed when categories rebalance"
 test("compact Media anchors artwork and player information above footer controls", () => {
   const card = read("ControlsMediaCard.qml");
   assert.match(card, /height: card.heroSize/);
-  assert.match(card, /implicitHeight: media.available \? 178 : 152/);
+  assert.match(card, /implicitHeight: Math.max\(media.available \? 178 : 152, content.implicitHeight \+ contentTopInset/);
   assert.match(card, /onActivated: card.fullRequested\(\)/);
   assert.doesNotMatch(card, /id: fullPlayer/);
 });
@@ -970,6 +970,6 @@ test("compact detail cards still expose their primary open action using the shar
   assert.match(read("TileKeyHint.qml"), /top: parent\.top/);
   assert.match(
     read("ControlsMediaCard.qml"),
-    /width: Math\.max\(1, parent\.width - \(openHint\.visible \? openHint\.implicitWidth/,
+    /width: parent.width/,
   );
 });
