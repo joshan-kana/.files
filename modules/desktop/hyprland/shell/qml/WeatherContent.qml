@@ -39,7 +39,7 @@ FocusScope {
             if (event.key === panel.runtime.shellKeyCode("weather", "Escape")) {
                 panel.closeRequested();
                 event.accepted = true;
-            } else if (event.key === panel.runtime.shellKeyCode("weather", "R")) {
+            } else if (panel.runtime.shellMatchesHint("WeatherContent.refresh", event.key, event.modifiers)) {
                 panel.weather.refresh();
                 event.accepted = true;
             } else if (event.key === panel.runtime.shellKeyCode("weather", "C") || event.key === panel.runtime.shellKeyCode("weather", "Backspace")) {
@@ -85,33 +85,22 @@ FocusScope {
                 }
             }
 
-            ShellSurface {
+            ShellAction {
                 id: refreshButton
-
-                width: 38
-                height: 38
+                width: 48
+                height: 42
                 anchors.verticalCenter: parent.verticalCenter
+                runtime: panel.runtime
                 theme: panel.theme
                 motion: panel.motion
-                surfaceLayer: ShellSurface.Control
-                cornerRadius: panel.theme.radiusMedium
-
-                Text {
-                    anchors.centerIn: parent
-                    text: "󰑐"
-                    color: panel.theme.roleColor("weather")
-                    font.family: "Symbols Nerd Font"
-                    font.pixelSize: panel.theme.fontSize(20)
-                    opacity: panel.weather.loading ? 0.4 : 1
-                }
-
-                StateLayer {
-                    theme: panel.theme
-                    motion: panel.motion
-                    cornerRadius: panel.theme.radiusMedium
-                    disabled: panel.weather.loading
-                    onActivated: panel.weather.refresh()
-                }
+                iconOnly: true
+                iconHint: true
+                inlineIconHint: true
+                icon: "󰑐"
+                shortcut: panel.runtime.shellHint("WeatherContent.refresh")
+                title: "Refresh forecast"
+                enabled: !panel.weather.loading
+                onActivated: panel.weather.refresh()
             }
         }
 
@@ -261,10 +250,6 @@ FocusScope {
                 {
                     shortcut: panel.runtime.shellHint("WeatherContent.calendar"),
                     label: "Calendar"
-                },
-                {
-                    shortcut: panel.runtime.shellHint("WeatherContent.refresh"),
-                    label: "Refresh"
                 }
             ]
         }
