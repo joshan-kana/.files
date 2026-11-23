@@ -266,6 +266,7 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("InaccessiblePaths=$HOME/.ssh $HOME/.secrets", managed[-1])
         self.assertIn("TemporaryFileSystem=/run/user:ro", managed[-1])
         self.assertIn("BindReadOnlyPaths=$runtime/$wayland", managed[-1])
+        self.assertNotIn("$runtime/hypr", managed[-1])
         self.assertNotIn("BindReadOnlyPaths=$runtime/bus", managed[-1])
         self.assertIn("systemd-run --user", linux[-1])
         self.assertNotIn("systemd-run --user", mac[-1])

@@ -295,8 +295,9 @@ def _build_argv(host: Host, script: str, *, unit_name: str | None = None) -> lis
             "--property=ProtectSystem=full",
             "--property=TemporaryFileSystem=/run/user:ro",
         ]
-        # Give the user unit only its compositor sockets, not SSH agents,
-        # the systemd user bus or unrelated private runtime sockets.
+        # Expose the Wayland display only, not the compositor's control socket.
+        # Hyprland control IPC could launch commands outside the isolated unit.
+        # Keep SSH agents and the session bus hidden from ordinary jobs.
         # Discover an active desktop at execution time; headless jobs still work.
         desktop = """
 runtime=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
@@ -305,11 +306,7 @@ set --
 case "$wayland" in
   wayland-[0-9]*)
     if [ -S "$runtime/$wayland" ]; then
-      if [ -d "$runtime/hypr" ]; then
-        set -- "--property=BindReadOnlyPaths=$runtime/$wayland $runtime/hypr"
-      else
-        set -- "--property=BindReadOnlyPaths=$runtime/$wayland"
-      fi
+      set -- "--property=BindReadOnlyPaths=$runtime/$wayland"
     fi
     ;;
 esac
