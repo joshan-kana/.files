@@ -255,6 +255,7 @@ QtObject {
                 property bool shellGlassEnabled: false
                 property real windowOpacity: 0.82
                 property real glassOpacity: 0.70
+                property bool blurEnabled: true
                 property int blurSize: 15
                 property bool vhsEnabled: false
                 property real vhsIntensity: 0.45
