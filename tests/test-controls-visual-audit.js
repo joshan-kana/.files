@@ -81,12 +81,22 @@ test("Visual Modes and Quick Actions have distinct full-width balanced sections"
   const actions = controls
     .split("id: actionTiles")[1]
     .split("ShellSurface {")[0];
-  const visualCount = (visual.match(/width: visualTiles\.cellWidth\(this\)/g) || []).length;
-  const actionCount = (actions.match(/width: actionTiles\.cellWidth\(this\)/g) || []).length;
+  const visualCount = (
+    visual.match(/width: visualTiles\.cellWidth\(this\)/g) || []
+  ).length;
+  const actionCount = (
+    actions.match(/width: actionTiles\.cellWidth\(this\)/g) || []
+  ).length;
   assert.ok(visualCount > 0);
   assert.ok(actionCount > 0);
-  assert.equal(visualCount, (visual.match(/height: root.dashboardTileHeight/g) || []).length);
-  assert.equal(actionCount, (actions.match(/height: root.dashboardTileHeight/g) || []).length);
+  assert.equal(
+    visualCount,
+    (visual.match(/height: root.dashboardTileHeight/g) || []).length,
+  );
+  assert.equal(
+    actionCount,
+    (actions.match(/height: root.dashboardTileHeight/g) || []).length,
+  );
   assert.ok((visual.match(/OpacitySetting \{/g) || []).length >= 2);
   assert.equal((visual.match(/AdjustableSetting \{/g) || []).length, 1);
   assert.match(controls, /id: visualModesGroup/);
@@ -532,7 +542,11 @@ test("both Controls sections use the same balanced row width calculation", () =>
   assert.match(flow, /function cellWidth\(tile: Item\): real \{/);
   assert.equal((controls.match(/BalancedTileFlow \{/g) || []).length, 2);
   for (const owner of ["visualTiles", "actionTiles"]) {
-    const widths = (controls.match(new RegExp("width: " + owner + "\\.cellWidth\\(this\\)", "g")) || []).length;
+    const widths = (
+      controls.match(
+        new RegExp("width: " + owner + "\\.cellWidth\\(this\\)", "g"),
+      ) || []
+    ).length;
     assert.ok(widths > 0, owner + " must contain tiles");
   }
 });
@@ -723,10 +737,20 @@ test("all visual and action tile heights remain fixed when categories rebalance"
   const actions = controls
     .split("id: actionTiles")[1]
     .split("ShellSurface {")[0];
-  const visualCount = (visual.match(/width: visualTiles\.cellWidth\(this\)/g) || []).length;
-  const actionCount = (actions.match(/width: actionTiles\.cellWidth\(this\)/g) || []).length;
-  assert.equal((visual.match(/height: root.dashboardTileHeight/g) || []).length, visualCount);
-  assert.equal((actions.match(/height: root.dashboardTileHeight/g) || []).length, actionCount);
+  const visualCount = (
+    visual.match(/width: visualTiles\.cellWidth\(this\)/g) || []
+  ).length;
+  const actionCount = (
+    actions.match(/width: actionTiles\.cellWidth\(this\)/g) || []
+  ).length;
+  assert.equal(
+    (visual.match(/height: root.dashboardTileHeight/g) || []).length,
+    visualCount,
+  );
+  assert.equal(
+    (actions.match(/height: root.dashboardTileHeight/g) || []).length,
+    actionCount,
+  );
   assert.match(controls, /readonly property int dashboardTileHeight: 72/);
   for (const count of [1, 2, 5, 6, 8, 9, 15, 20]) {
     const layout = tileLayout(1120, 1, count);
@@ -734,8 +758,14 @@ test("all visual and action tile heights remain fixed when categories rebalance"
   }
   const visualLayout = tileLayout(1120, 1, visualCount);
   const actionLayout = tileLayout(1120, 1, actionCount);
-  assert.ok(visualLayout.rows <= 2, "Visual Modes should fit two rows at dashboard width");
-  assert.ok(actionLayout.rows <= 2, "Quick Actions should fit two rows at dashboard width");
+  assert.ok(
+    visualLayout.rows <= 2,
+    "Visual Modes should fit two rows at dashboard width",
+  );
+  assert.ok(
+    actionLayout.rows <= 2,
+    "Quick Actions should fit two rows at dashboard width",
+  );
   assert.ok(visualLayout.rows * visualLayout.columns >= visualCount);
   assert.ok(actionLayout.rows * actionLayout.columns >= actionCount);
 });
