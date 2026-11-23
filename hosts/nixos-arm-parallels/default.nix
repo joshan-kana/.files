@@ -22,16 +22,54 @@ let
       exec ${pkgs.bash}/bin/bash -c "$SSH_ORIGINAL_COMMAND"
     fi
 
-    # The ordinary shell retains the normal account and writable workspaces,
-    # but cannot inherit its SSH credentials or escape via the user manager.
     export XDG_RUNTIME_DIR="/run/user/$(${pkgs.coreutils}/bin/id -u)"
+
+    validRequest() {
+      [[ "$1" =~ ^[0-9a-f]{32}$ ]]
+    }
+
+    command="$SSH_ORIGINAL_COMMAND"
+    unit=()
+    case "$command" in
+      "chatgpt-shell-run "*)
+        payload="''${command#chatgpt-shell-run }"
+        request="''${payload%% *}"
+        validRequest "$request" && [ "$payload" != "$request" ] || exit 2
+        command="''${payload#* }"
+        [ -n "$command" ] || exit 2
+        unit=(--unit="chatgpt-shell-$request")
+        ;;
+      "chatgpt-shell-cancel "*)
+        payload="''${command#chatgpt-shell-cancel }"
+        request="''${payload%% *}"
+        signal="''${payload#* }"
+        validRequest "$request" || exit 2
+        [ "$signal" = KILL ] || exit 2
+        # A kill before systemd starts the unit's main process can succeed
+        # without stopping the command. Wait only for this specific unit.
+        for ((attempt = 0; attempt < 50; attempt++)); do
+          mainpid="$(${pkgs.systemd}/bin/systemctl --user show \
+            --property=MainPID --value "chatgpt-shell-$request.service" 2>/dev/null || :)"
+          if [[ "$mainpid" =~ ^[1-9][0-9]*$ ]]; then
+            exec ${pkgs.systemd}/bin/systemctl --user kill --kill-whom=all \
+              --signal=KILL "chatgpt-shell-$request.service"
+          fi
+          ${pkgs.coreutils}/bin/sleep 0.1
+        done
+        exit 1
+        ;;
+    esac
+
+    # The private PID namespace isolates peer sessions. A named unit still
+    # permits an authenticated request-specific interruption.
     exec ${pkgs.systemd}/bin/systemd-run --user --quiet --wait --pipe --collect \
+      "''${unit[@]}" \
       --property=NoNewPrivileges=yes \
       --property=PrivateTmp=yes \
       --property=PrivatePIDs=yes \
       --property=ProtectSystem=full \
       --property='InaccessiblePaths=${home}/.ssh ${home}/.secrets /run/user' \
-      ${pkgs.bash}/bin/bash -c "$SSH_ORIGINAL_COMMAND"
+      ${pkgs.bash}/bin/bash -c "$command"
   '';
 in
 

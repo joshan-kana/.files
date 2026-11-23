@@ -261,13 +261,16 @@ def _build_argv(host: Host, script: str, *, unit_name: str | None = None) -> lis
             f"export PATH={shlex.quote(COMMAND_PATH)}:$PATH\nexec {_worker_command(script, unit_name)}",
         ]
     target = REMOTE_TARGETS[host]
+    remote_command = f"exec {target.shell} -lc {shlex.quote(script)}"
+    if unit_name is not None:
+        remote_command = f"chatgpt-shell-run {unit_name} {remote_command}"
     return [
         *SSH,
         "-oForwardAgent=no",
         "-i",
         f"{CREDENTIALS}/{target.credential}",
         target.ssh_target,
-        f"exec {target.shell} -lc {shlex.quote(script)}",
+        remote_command,
     ]
 
 
@@ -381,9 +384,14 @@ async def _run(job: Job, command: str, cwd: str | None, stdin: str | None) -> No
         if job.host == LOCAL_HOST and not job.elevated:
             await _run_herdr_exec(job, command, cwd, stdin)
             return
-        build = _build_elevated_argv if job.elevated else _build_argv
+        script = _command_script(command, cwd, marker)
+        if job.host == "nixos-arm-parallels" and not job.elevated:
+            argv = _build_argv(job.host, script, unit_name=job.request_id)
+        else:
+            build = _build_elevated_argv if job.elevated else _build_argv
+            argv = build(job.host, script)
         job.process = await asyncio.create_subprocess_exec(
-            *build(job.host, _command_script(command, cwd, marker)),
+            *argv,
             stdin=asyncio.subprocess.PIPE if stdin is not None else asyncio.subprocess.DEVNULL,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,
@@ -432,7 +440,7 @@ def _payload(job: Job, *, include_output: bool = True) -> dict[str, object]:
             payload["omitted_bytes"] = omitted
     if job.awaiting_approval:
         payload["approval_id"] = job.request_id
-    if job.target_pid is not None:
+    if job.target_pid is not None and job.host != "nixos-arm-parallels":
         payload["pid"] = job.target_pid
     payload["request_id"] = job.request_id
     if job.exit_code is not None:
@@ -470,9 +478,21 @@ async def _signal_target(job: Job, sig: str) -> None:
                 f"chatgpt-shell-{job.request_id}.service",
             ]
         )
-        build = _build_elevated_argv
+        argv = _build_elevated_argv(job.host, script)
+    elif job.host == "nixos-arm-parallels":
+        # The PID namespace prevents external PID signalling. Kill the entire
+        # named unit: TERM may only stop a shell's current child, allowing its
+        # following commands to run before the shell itself exits.
+        target = REMOTE_TARGETS[job.host]
+        argv = [
+            *SSH,
+            "-oForwardAgent=no",
+            "-i",
+            f"{CREDENTIALS}/{target.credential}",
+            target.ssh_target,
+            f"chatgpt-shell-cancel {job.request_id} KILL",
+        ]
     elif job.target_pid is not None:
-        build = _build_argv
         script = f"""
 descendants() {{
   for child in $(pgrep -P "$1" 2>/dev/null); do
@@ -483,21 +503,28 @@ descendants() {{
 children=$(descendants {job.target_pid})
 kill -s {sig} {job.target_pid} $children 2>/dev/null || true
 """
+        argv = _build_argv(job.host, script)
     else:
         return
 
     try:
         process = await asyncio.create_subprocess_exec(
-            *build(job.host, script),
+            *argv,
             stdin=asyncio.subprocess.DEVNULL,
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.DEVNULL,
             env=_command_env(job.host, elevated=job.elevated),
             start_new_session=True,
         )
-        await asyncio.wait_for(process.wait(), timeout=5)
+        await asyncio.wait_for(
+            process.wait(),
+            timeout=8 if job.host == "nixos-arm-parallels" and not job.elevated else 5,
+        )
+        if job.host == "nixos-arm-parallels" and not job.elevated and process.returncode != 0:
+            raise RuntimeError("Remote command interruption was not confirmed")
     except Exception:
-        pass
+        if job.host == "nixos-arm-parallels" and not job.elevated:
+            raise
 
 
 @mcp.tool()
@@ -718,12 +745,16 @@ async def shell_cancel(request_id: str) -> dict[str, object]:
         with suppress(asyncio.CancelledError):
             await job.task
         return _payload(job)
-    await _signal_target(job, "TERM")
-    if job.task is not None and not job.task.done():
-        try:
-            await asyncio.wait_for(asyncio.shield(job.task), timeout=CANCEL_GRACE_SECONDS)
-        except TimeoutError:
-            await _signal_target(job, "KILL")
+    try:
+        await _signal_target(job, "TERM")
+        if job.task is not None and not job.task.done():
+            try:
+                await asyncio.wait_for(asyncio.shield(job.task), timeout=CANCEL_GRACE_SECONDS)
+            except TimeoutError:
+                await _signal_target(job, "KILL")
+    except Exception:
+        job.cancel_requested = False
+        raise
 
     if job.task is not None and not job.task.done() and job.process is not None:
         with suppress(ProcessLookupError, PermissionError):

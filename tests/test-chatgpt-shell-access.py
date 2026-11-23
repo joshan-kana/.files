@@ -219,6 +219,7 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
             ):
                 mac = shell._build_argv("mac", "id -u")
                 linux = shell._build_argv("nixos-arm-parallels", "id -u")
+                managed = shell._build_argv("nixos-arm-parallels", "id -u", unit_name="a" * 32)
         finally:
             self.argv.start()
         self.assertIn("-oForwardAgent=no", mac)
@@ -227,9 +228,34 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("owner@parallels.home", linux)
         self.assertIn("exec /bin/zsh -lc", mac[-1])
         self.assertIn("exec /bin/bash -lc", linux[-1])
+        self.assertTrue(managed[-1].startswith(f"chatgpt-shell-run {'a' * 32} exec /bin/bash -lc "))
+        self.assertNotIn("chatgpt-shell-run", linux[-1])
         self.assertNotIn("agent-workspaces", " ".join(mac + linux))
         self.assertNotIn("run0", " ".join(mac + linux))
         self.assertNotIn("sudo", " ".join(mac + linux))
+
+    async def test_parallels_cancellation_targets_the_named_unit(self):
+        """Remote cancellation must not send PIDs across isolated namespaces."""
+        job = shell.Job(request_id="b" * 32, host="nixos-arm-parallels", target_pid=7)
+        self.assertNotIn("pid", shell._payload(job))
+        process = AsyncMock()
+        process.returncode = 0
+        with patch.dict(
+            shell.REMOTE_TARGETS,
+            {"nixos-arm-parallels": shell.RemoteTarget("owner@parallels", "parallels-key", "/bin/bash")},
+        ):
+            with patch.object(shell.asyncio, "create_subprocess_exec", return_value=process) as spawn:
+                await shell._signal_target(job, "TERM")
+            argv = spawn.call_args.args
+            self.assertEqual(argv[-1], f"chatgpt-shell-cancel {job.request_id} KILL")
+            self.assertIn("-oForwardAgent=no", argv)
+            self.assertNotIn("run0", argv)
+            process.returncode = 1
+            with (
+                patch.object(shell.asyncio, "create_subprocess_exec", return_value=process),
+                self.assertRaisesRegex(RuntimeError, "not confirmed"),
+            ):
+                await shell._signal_target(job, "KILL")
 
     def test_remote_ssh_does_not_receive_controller_elevation_credentials(self):
         """Never put the privileged agent socket in an ordinary SSH environment."""
