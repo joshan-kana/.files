@@ -45,7 +45,8 @@ FocusScope {
     // Connectivity keeps its three readback lines readable at larger
     // text scales without shortening icons or truncating the last row.
     readonly property int dashboardBrightnessHeight: Math.max(90, theme.fontSize(66) + theme.spacing3 * 2)
-    readonly property bool detailsVisible: vhsPanel.open || trayMenu.open || networkPanel.open || bluetoothPanel.open || themePanel.open || wallpaperPanel.open || sessionPanel.open || resourcesPanel.open || statusOpen || mixerOpen || recordingsPanel.open
+    property string settingKind: ""
+    readonly property bool detailsVisible: settingsPanel.open || vhsPanel.open || trayMenu.open || networkPanel.open || bluetoothPanel.open || themePanel.open || wallpaperPanel.open || sessionPanel.open || resourcesPanel.open || statusOpen || mixerOpen || recordingsPanel.open
     property bool resetConfirmPending: false
     property bool resetRunning: false
     property string resetStatus: ""
@@ -102,7 +103,7 @@ FocusScope {
     // existing audio keys outside this mode.
     property string selectedSlider: ""
     readonly property bool sliderNavigationEnabled: engaged && !resetConfirmPending && !helpOpen && !mixerOpen && !audioChooserOpen && !themeOpen && !wallpaperOpen && !sessionOpen && !networkOpen && !bluetoothOpen && !resourcesOpen && !statusOpen && !recordingsOpen && !trayMenuOpen && !vhsPanel.open
-    readonly property var sliderTargets: (brightness.supported ? ["brightness"] : []).concat(["windows", "glass", "blur", "vhs"], nightLight.supported ? ["nightLight"] : [])
+    readonly property var sliderTargets: brightness.supported ? ["brightness"] : []
     function selectSlider(target: string): void {
         selectedSlider = target;
         keyboardFocus.forceActiveFocus();
@@ -167,12 +168,24 @@ FocusScope {
     readonly property bool resourcesOpen: resourcesPanel.open
     readonly property bool statusOpen: statusPanel.open
     readonly property bool recordingsOpen: recordingsPanel.open
-    readonly property string helpTitle: statusOpen ? "System status" : recordingsPanel.open ? "Captures" : wallpaperPanel.open ? "Wallpaper library" : mixerOpen ? "Application mixer" : resourcesPanel.open ? "Resource monitor" : (bluetoothPanel.open ? "Bluetooth controls" : (networkPanel.open ? "Network controls" : (themePanel.open ? "Theme controls" : (sessionPanel.open ? "Session controls" : (trayMenu.open ? "Tray menu controls" : "System controls")))))
+    readonly property string helpTitle: settingsPanel.open ? "Capability details" : statusOpen ? "System status" : recordingsPanel.open ? "Captures" : wallpaperPanel.open ? "Wallpaper library" : mixerOpen ? "Application mixer" : resourcesPanel.open ? "Resource monitor" : (bluetoothPanel.open ? "Bluetooth controls" : (networkPanel.open ? "Network controls" : (themePanel.open ? "Theme controls" : (sessionPanel.open ? "Session controls" : (trayMenu.open ? "Tray menu controls" : "System controls")))))
     readonly property var helpBindings: vhsPanel.open ? [
-        { key: root.runtime.shellHint("VhsPanel.select"), action: "Select VHS parameter" },
-        { key: root.runtime.shellHint("VhsPanel.adjust"), action: "Adjust selected parameter" },
-        { key: root.runtime.shellHint("VhsPanel.toggle"), action: "Toggle VHS" },
-        { key: root.runtime.shellHint("SystemContent.legend.back"), action: root.returnToControls ? "Back to Controls" : "Close" }
+        {
+            key: root.runtime.shellHint("VhsPanel.select"),
+            action: "Select VHS parameter"
+        },
+        {
+            key: root.runtime.shellHint("VhsPanel.adjust"),
+            action: "Adjust selected parameter"
+        },
+        {
+            key: root.runtime.shellHint("VhsPanel.toggle"),
+            action: "Toggle VHS"
+        },
+        {
+            key: root.runtime.shellHint("SystemContent.legend.back"),
+            action: root.returnToControls ? "Back to Controls" : "Close"
+        }
     ] : statusOpen ? [
         {
             key: root.runtime.shellHint("StatusContent.close"),
@@ -451,10 +464,11 @@ FocusScope {
     signal revealContent(real top, real bottom)
 
     implicitWidth: sessionPanel.open ? sessionPanel.implicitWidth : detailsVisible ? theme.controlsDetailWidth : dashboardWidthBudget
-    implicitHeight: vhsPanel.open ? vhsPanel.implicitHeight : statusOpen ? statusPanel.implicitHeight : recordingsPanel.open ? recordingsPanel.implicitHeight : wallpaperPanel.open ? wallpaperPanel.implicitHeight : mixerOpen ? mixerView.implicitHeight : sessionPanel.open ? sessionPanel.implicitHeight : resourcesPanel.open ? resourcesPanel.implicitHeight : networkPanel.open ? networkPanel.implicitHeight : bluetoothPanel.open ? bluetoothPanel.implicitHeight : themePanel.open ? themePanel.implicitHeight : content.implicitHeight
+    implicitHeight: settingsPanel.open ? settingsPanel.implicitHeight : vhsPanel.open ? vhsPanel.implicitHeight : statusOpen ? statusPanel.implicitHeight : recordingsPanel.open ? recordingsPanel.implicitHeight : wallpaperPanel.open ? wallpaperPanel.implicitHeight : mixerOpen ? mixerView.implicitHeight : sessionPanel.open ? sessionPanel.implicitHeight : resourcesPanel.open ? resourcesPanel.implicitHeight : networkPanel.open ? networkPanel.implicitHeight : bluetoothPanel.open ? bluetoothPanel.implicitHeight : themePanel.open ? themePanel.implicitHeight : content.implicitHeight
     focus: engaged
 
     function closeDetails(): void {
+        settingsPanel.closeView();
         vhsPanel.closeView();
         trayMenu.closeMenu();
         wallpaperPanel.closeView();
@@ -469,8 +483,6 @@ FocusScope {
     }
 
     function backFromDetail(): void {
-        if (vhsPanel.open)
-            selectedSlider = "vhs";
         backRequested();
         keyboardFocus.forceActiveFocus();
     }
@@ -539,7 +551,9 @@ FocusScope {
         if (!engaged)
             return;
 
-        if (requestedView === "vhs")
+        if (["windows", "glass", "nightLight", "alerts", "stay", "power"].includes(requestedView))
+            openSetting(requestedView);
+        else if (requestedView === "vhs")
             openVhs();
         else if (requestedView === "theme")
             openTheme();
@@ -592,6 +606,7 @@ FocusScope {
         // Stage heavy views after the three primary tabs are ready. No timers
         // and no duplicate state: each Loader retains its constructed item.
         mixerView.prewarm();
+        settingsPanel.prewarm();
         vhsPanel.prewarm();
         recordingsPanel.prewarm();
         resourcesPanel.prewarm();
@@ -630,8 +645,20 @@ FocusScope {
 
     onRequestedViewChanged: requestedViewTimer.restart()
 
+    function openSetting(name: string): void {
+        if (!["windows", "glass", "nightLight", "alerts", "stay", "power"].includes(name))
+            return;
+        helpOpen = false;
+        closeDetails();
+        selectedSlider = "";
+        settingKind = name;
+        settingsPanel.openView();
+        markDetail(name);
+    }
+
     function openNetwork(): void {
         helpOpen = false;
+        settingsPanel.closeView();
         recordingsPanel.closeView();
         mixerOpen = false;
         resourcesPanel.closeView();
@@ -646,6 +673,7 @@ FocusScope {
 
     function openBluetooth(): void {
         helpOpen = false;
+        settingsPanel.closeView();
         recordingsPanel.closeView();
         mixerOpen = false;
         resourcesPanel.closeView();
@@ -660,6 +688,7 @@ FocusScope {
 
     function openWallpaper(): void {
         helpOpen = false;
+        settingsPanel.closeView();
         recordingsPanel.closeView();
         mixerOpen = false;
         resourcesPanel.closeView();
@@ -682,6 +711,7 @@ FocusScope {
 
     function openTheme(): void {
         helpOpen = false;
+        settingsPanel.closeView();
         recordingsPanel.closeView();
         mixerOpen = false;
         resourcesPanel.closeView();
@@ -700,6 +730,7 @@ FocusScope {
 
     function openSession(): void {
         helpOpen = false;
+        settingsPanel.closeView();
         recordingsPanel.closeView();
         mixerOpen = false;
         resourcesPanel.closeView();
@@ -718,6 +749,7 @@ FocusScope {
 
     function openResources(): void {
         helpOpen = false;
+        settingsPanel.closeView();
         recordingsPanel.closeView();
         mixerOpen = false;
         trayMenu.closeMenu();
@@ -737,6 +769,7 @@ FocusScope {
 
     function openStatus(): void {
         helpOpen = false;
+        settingsPanel.closeView();
         closeDetails();
         statusPanel.openView();
         markDetail("status");
@@ -745,6 +778,7 @@ FocusScope {
 
     function openMixer(): void {
         helpOpen = false;
+        settingsPanel.closeView();
         recordingsPanel.closeView();
         trayMenu.closeMenu();
         wallpaperPanel.closeView();
@@ -759,6 +793,7 @@ FocusScope {
 
     function openRecordings(): void {
         helpOpen = false;
+        settingsPanel.closeView();
         mixerOpen = false;
         trayMenu.closeMenu();
         wallpaperPanel.closeView();
@@ -1079,6 +1114,8 @@ FocusScope {
                             icon: root.notificationState.silent ? "󰂛" : "󰂚"
                             title: root.notificationState.silent ? "Silent" : "Alerts"
                             shortcut: root.runtime.shellHint("SystemContent.alerts")
+                            detailShortcut: root.runtime.shellHint("SystemContent.alertsDetails")
+                            onDetailsRequested: root.openSetting("alerts")
                             active: root.notificationState.silent
                             activeColor: root.notificationState.silent ? root.theme.roleColor("warning") : root.theme.roleColor("attention")
                             onActivated: root.notificationState.toggleSilent()
@@ -1093,6 +1130,8 @@ FocusScope {
                             icon: root.system.idleInhibited ? "󰅶" : "󰒲"
                             title: root.system.idleInhibited ? "Stay awake" : "Idle allowed"
                             shortcut: root.runtime.shellHint("SystemContent.stayAwake")
+                            detailShortcut: root.runtime.shellHint("SystemContent.stayDetails")
+                            onDetailsRequested: root.openSetting("stay")
                             active: root.system.idleInhibited
                             activeColor: root.theme.roleColor("warmth")
                             onActivated: root.system.toggleIdleInhibited()
@@ -1107,7 +1146,8 @@ FocusScope {
                             icon: root.system.batteryAvailable ? root.system.batteryLevelIcon : "󰐥"
                             title: (root.powerProfile.available ? root.powerProfile.label(root.powerProfile.current) : "Power") + (root.system.batteryAvailable ? " " + root.system.batteryPercent + "%" : "")
                             shortcut: root.runtime.shellHint("SystemContent.powerProfile")
-                            enabled: root.powerProfile.available && !root.powerProfile.applying
+                            detailShortcut: root.runtime.shellHint("SystemContent.powerDetails")
+                            onDetailsRequested: root.openSetting("power")
                             active: root.powerProfile.current === "power-saver"
                             activeColor: root.theme.powerProfileColor(root.powerProfile.current)
                             onActivated: root.powerProfile.cycle()
@@ -1303,67 +1343,55 @@ FocusScope {
                             onActivated: root.musicReactiveToggleRequested()
                         }
 
-                        OpacitySetting {
+                        QuickSettingChip {
                             width: visualTiles.cellWidth(this)
                             height: root.dashboardTileHeight
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
                             icon: "󰍹"
-                            label: "Windows"
-                            opacityValue: root.appearance.windowOpacity
+                            title: "Windows " + Math.round(root.appearance.windowOpacity * 100) + "%"
                             shortcut: root.runtime.shellHint("SystemContent.windowTransparency")
+                            detailShortcut: root.runtime.shellHint("SystemContent.windowsDetails")
+                            detailName: "Window transparency details"
                             active: root.windowTransparencyEnabled
-                            keyboardSelected: root.selectedSlider === "windows"
-                            onSliderActivated: root.selectSlider("windows")
-                            roleAccent: root.theme.roleColor("display")
-                            onToggleRequested: root.windowTransparencyToggleRequested()
-                            onOpacityRequested: value => root.appearance.setWindowOpacity(value)
+                            activeColor: root.theme.roleColor("display")
+                            onActivated: root.windowTransparencyToggleRequested()
+                            onDetailsRequested: root.openSetting("windows")
                         }
 
-                        OpacitySetting {
+                        QuickSettingChip {
                             width: visualTiles.cellWidth(this)
                             height: root.dashboardTileHeight
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
                             icon: "󰊠"
-                            label: "Frosted glass"
-                            opacityValue: root.appearance.glassOpacity
+                            title: "Glass " + Math.round(root.appearance.glassOpacity * 100) + "%"
                             shortcut: root.runtime.shellHint("SystemContent.shellGlass")
+                            detailShortcut: root.runtime.shellHint("SystemContent.glassDetails")
+                            detailName: "Frosted glass details"
                             active: root.shellGlassEnabled
-                            keyboardSelected: root.selectedSlider === "glass" || root.selectedSlider === "blur"
-                            blurAdjustable: true
-                            blurValue: root.appearance.blurSize
-                            blurEditing: root.selectedSlider === "blur"
-                            onSliderActivated: root.selectSlider("glass")
-                            onBlurActivated: root.selectSlider("blur")
-                            onBlurRequested: value => root.appearance.setBlurSize(value)
-                            roleAccent: root.theme.roleColor("connectivity")
-                            onToggleRequested: root.shellGlassToggleRequested()
-                            onOpacityRequested: value => root.appearance.setGlassOpacity(value)
+                            activeColor: root.theme.roleColor("connectivity")
+                            onActivated: root.shellGlassToggleRequested()
+                            onDetailsRequested: root.openSetting("glass")
                         }
 
-                        OpacitySetting {
+                        QuickSettingChip {
                             width: visualTiles.cellWidth(this)
                             height: root.dashboardTileHeight
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
                             icon: "󰨛"
-                            label: "VHS tape"
+                            title: "VHS " + Math.round(root.appearance.vhsIntensity * 100) + "%"
                             shortcut: root.runtime.shellHint("SystemContent.vhsToggle")
                             detailShortcut: root.runtime.shellHint("SystemContent.vhsTune")
-                            onDetailRequested: root.openVhs()
-                            opacityValue: root.appearance.vhsIntensity
-                            minimumValue: 0
-                            valueUnit: "intensity"
+                            detailName: "VHS tuning"
                             active: root.appearance.vhsEnabled
-                            keyboardSelected: root.selectedSlider === "vhs"
-                            onSliderActivated: root.selectSlider("vhs")
-                            roleAccent: root.theme.roleColor("display")
-                            onToggleRequested: root.appearance.toggleVhs()
-                            onOpacityRequested: value => root.appearance.setVhsIntensity(value)
+                            activeColor: root.theme.roleColor("display")
+                            onActivated: root.appearance.toggleVhs()
+                            onDetailsRequested: root.openVhs()
                         }
 
                         QuickSettingChip {
@@ -1407,27 +1435,22 @@ FocusScope {
                             onActivated: root.motion.toggle()
                         }
 
-                        AdjustableSetting {
+                        QuickSettingChip {
                             width: visualTiles.cellWidth(this)
                             height: root.dashboardTileHeight
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
                             icon: root.nightLight.active ? "󰖔" : "󰖙"
-                            label: "Night Light"
-                            valueText: root.nightLight.supported ? root.nightLight.temperature + " K" : "Unavailable"
-                            keyboardSelected: root.selectedSlider === "nightLight"
-                            onSliderActivated: root.selectSlider("nightLight")
-                            value: root.nightLight.temperature
-                            from: 2500
-                            to: 6500
-                            onValueRequested: value => root.nightLight.setTemperature(value)
-                            toggleShortcut: root.runtime.shellHint("SystemContent.nightLight")
-                            roleAccent: root.theme.roleColor("warmth")
+                            title: root.nightLight.supported ? "Night " + root.nightLight.temperature + " K" : "Night unavailable"
+                            shortcut: root.runtime.shellHint("SystemContent.nightLight")
+                            detailShortcut: root.runtime.shellHint("SystemContent.nightLightDetails")
+                            detailName: "Night Light details"
                             active: root.nightLight.active
-                            canToggle: root.nightLight.supported && !root.nightLight.busy
-                            canAdjust: root.nightLight.supported
-                            onToggleRequested: root.nightLight.toggle()
+                            activeColor: root.theme.roleColor("warmth")
+                            onActivated: if (root.nightLight.supported && !root.nightLight.busy)
+                                root.nightLight.toggle()
+                            onDetailsRequested: root.openSetting("nightLight")
                         }
                     }
                 }
@@ -1748,6 +1771,34 @@ FocusScope {
         }
 
         DeferredDetail {
+            id: settingsPanel
+            motion: root.motion
+            anchors.fill: parent
+            sourceComponent: Component {
+                SettingsDetail {
+                    kind: root.settingKind
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    appearance: root.appearance
+                    nightLight: root.nightLight
+                    notifications: root.notificationState
+                    powerProfile: root.powerProfile
+                    system: root.system
+                    wallpaperSpectrumEnabled: root.wallpaperSpectrumEnabled
+                    musicReactiveEnabled: root.musicReactiveEnabled
+                    barVisible: root.barVisible
+                    frameVisible: root.frameVisible
+                    onWallpaperSpectrumToggleRequested: root.wallpaperSpectrumToggleRequested()
+                    onMusicReactiveToggleRequested: root.musicReactiveToggleRequested()
+                    onBarToggleRequested: root.barToggleRequested()
+                    onFrameToggleRequested: root.frameToggleRequested()
+                    onKeyboardRequested: keyboardFocus.forceActiveFocus()
+                }
+            }
+        }
+
+        DeferredDetail {
             id: vhsPanel
             motion: root.motion
             anchors.fill: parent
@@ -1816,7 +1867,7 @@ FocusScope {
             // can interpret Shift+Tab as ordinary focus traversal; a held key
             // repeats through the same path as an individual press.
             Keys.onShortcutOverride: event => {
-                if ((root.sliderNavigationEnabled || root.mixerOpen || vhsPanel.open) && (event.key === root.runtime.shellKeyCode("controls", "Tab") || event.key === root.runtime.shellKeyCode("controls", "Backtab")))
+                if ((root.sliderNavigationEnabled || root.mixerOpen || vhsPanel.open || settingsPanel.open) && (event.key === root.runtime.shellKeyCode("controls", "Tab") || event.key === root.runtime.shellKeyCode("controls", "Backtab")))
                     event.accepted = true;
             }
 
@@ -1861,6 +1912,16 @@ FocusScope {
                 if (helpKey) {
                     root.helpOpen = true;
                     event.accepted = true;
+                    return;
+                }
+
+                if (settingsPanel.open) {
+                    if (event.key === root.runtime.shellKeyCode("controls", "Backspace")) {
+                        root.backFromDetail();
+                        event.accepted = true;
+                    } else if (settingsPanel.invoke("handleKey", event.key, event.modifiers)) {
+                        event.accepted = true;
+                    }
                     return;
                 }
 
@@ -2210,7 +2271,19 @@ FocusScope {
                         return;
                     }
                 }
-                if (root.runtime.shellMatchesHint("SystemContent.vhsTune", event.key, event.modifiers)) {
+                if (root.runtime.shellMatchesHint("SystemContent.windowsDetails", event.key, event.modifiers)) {
+                    root.openSetting("windows");
+                } else if (root.runtime.shellMatchesHint("SystemContent.glassDetails", event.key, event.modifiers)) {
+                    root.openSetting("glass");
+                } else if (root.runtime.shellMatchesHint("SystemContent.nightLightDetails", event.key, event.modifiers)) {
+                    root.openSetting("nightLight");
+                } else if (root.runtime.shellMatchesHint("SystemContent.alertsDetails", event.key, event.modifiers)) {
+                    root.openSetting("alerts");
+                } else if (root.runtime.shellMatchesHint("SystemContent.stayDetails", event.key, event.modifiers)) {
+                    root.openSetting("stay");
+                } else if (root.runtime.shellMatchesHint("SystemContent.powerDetails", event.key, event.modifiers)) {
+                    root.openSetting("power");
+                } else if (root.runtime.shellMatchesHint("SystemContent.vhsTune", event.key, event.modifiers)) {
                     root.openVhs();
                 } else if (root.runtime.shellMatchesHint("SystemContent.vhsToggle", event.key, event.modifiers)) {
                     root.appearance.toggleVhs();
