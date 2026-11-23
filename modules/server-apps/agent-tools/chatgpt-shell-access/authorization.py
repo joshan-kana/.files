@@ -117,6 +117,18 @@ def _digest(request: dict) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
+def _policy_revision(host: str, kind: str, session: str | None) -> str:
+    """Bind a pending approval to the relevant root-owned policy records."""
+    policies = _read_json(POLICY_FILE, {}).get(host, {})
+    return _digest(
+        {
+            "default": _defaults()[host][kind],
+            "host": policies.get(kind),
+            "session": policies.get("sessions", {}).get(session, {}).get(kind) if session is not None else None,
+        }
+    )
+
+
 def _valid_session(session: str) -> str:
     """Keep session policy keys bounded and unambiguous."""
     if not session or len(session) > 64 or not all(c.isascii() and (c.isalnum() or c in "-_") for c in session):
@@ -198,6 +210,7 @@ async def authorize(
         "cwd": cwd,
         "stdin": stdin,
         "session": session,
+        "policy_revision": _policy_revision(host, kind, session),
         "expires_at": time.time() + APPROVAL_TIMEOUT,
     }
     digest = _digest(request)
@@ -208,6 +221,10 @@ async def authorize(
 
     try:
         while time.time() < request["expires_at"]:
+            if effective(host, kind, session) == "deny":
+                raise PermissionError("policy changed to deny while awaiting approval")
+            if effective(host, kind, session) != "ask" or _policy_revision(host, kind, session) != request["policy_revision"]:
+                raise PermissionError("policy changed while awaiting approval")
             try:
                 decision = _read_json(decision_file)
                 # The decision directory is root-owned and deliberately not writable
@@ -217,8 +234,6 @@ async def authorize(
                 continue
             if decision.get("digest") != digest or decision.get("decision") not in ("approve", "deny"):
                 raise PermissionError("approval record does not match the requested operation")
-            if effective(host, kind, session) == "deny":
-                raise PermissionError("policy changed to deny while awaiting approval")
             if decision["decision"] == "approve":
                 audit("approval-granted", {"request": request_id, "host": host, "kind": kind})
                 return

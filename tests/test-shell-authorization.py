@@ -157,6 +157,25 @@ class AuthorizationTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaisesRegex(PermissionError, "changed to deny"):
             await operation
 
+    async def test_policy_revision_invalidates_pending_approval(self):
+        """Rewriting an ask policy invalidates approvals submitted before the change."""
+        ident = self.ident()
+        operation = asyncio.create_task(authorization.authorize(ident, "server", "elevation", "true", None))
+        await self.await_pending(ident)
+        authorization._set_policy("server", "elevation", "ask", None)
+        authorization._decide(ident, "approve")
+        with self.assertRaisesRegex(PermissionError, "policy changed"):
+            await operation
+
+    async def test_unrelated_policy_does_not_invalidate_pending_approval(self):
+        """An unrelated command-policy change does not revoke an elevation review."""
+        ident = self.ident()
+        operation = asyncio.create_task(authorization.authorize(ident, "server", "elevation", "true", None))
+        await self.await_pending(ident)
+        authorization._set_policy("server", "commands", "ask", None)
+        authorization._decide(ident, "approve")
+        await operation
+
     async def test_bounded_elevation_policy(self):
         """Automatic elevation requires an expiry and falls back to the safe default."""
         with self.assertRaises(ValueError):
