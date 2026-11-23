@@ -261,9 +261,28 @@ def _build_argv(host: Host, script: str, *, unit_name: str | None = None) -> lis
             f"export PATH={shlex.quote(COMMAND_PATH)}:$PATH\nexec {_worker_command(script, unit_name)}",
         ]
     target = REMOTE_TARGETS[host]
-    remote_command = f"exec {target.shell} -lc {shlex.quote(script)}"
-    if unit_name is not None:
-        remote_command = f"chatgpt-shell-run {unit_name} {remote_command}"
+    if host == "nixos-arm-parallels":
+        # The existing SSH login launches a restricted transient user unit.
+        # No additional host SSH key options or host services are required.
+        unit = [f"--unit=chatgpt-shell-{unit_name}"] if unit_name else []
+        options = [
+            "systemd-run",
+            "--user",
+            "--quiet",
+            "--wait",
+            "--pipe",
+            "--collect",
+            *unit,
+            "--property=NoNewPrivileges=yes",
+            "--property=PrivateTmp=yes",
+            "--property=PrivatePIDs=yes",
+            "--property=ProtectSystem=full",
+        ]
+        # Expand HOME in the remote login shell, before systemd validates paths.
+        private_paths = '--property="InaccessiblePaths=$HOME/.ssh $HOME/.secrets /run/user"'
+        remote_command = f"exec {shlex.join(options)} {private_paths} {shlex.join([target.shell, '-lc', script])}"
+    else:
+        remote_command = f"exec {shlex.join([target.shell, '-lc', script])}"
     return [
         *SSH,
         "-oForwardAgent=no",
@@ -287,8 +306,8 @@ def _build_elevated_argv(host: Host, script: str) -> list[str]:
         *SSH,
         "-oForwardAgent=yes",
         "-i",
-        f"{CREDENTIALS}/chatgpt-shell-nixos-arm-parallels",
-        f"{os.environ['CHATGPT_SHELL_PRIMARY_USER']}@{REMOTE_TARGETS[host].ssh_target.split('@', 1)[1]}",
+        f"{CREDENTIALS}/{REMOTE_TARGETS[host].credential}",
+        REMOTE_TARGETS[host].ssh_target,
         f"exec {REMOTE_TARGETS[host].shell} -lc {shlex.quote(script)}",
     ]
 
@@ -497,13 +516,24 @@ async def _signal_target(job: Job, sig: str) -> None:
         # named unit: TERM may only stop a shell's current child, allowing its
         # following commands to run before the shell itself exits.
         target = REMOTE_TARGETS[job.host]
+        unit = f"chatgpt-shell-{job.request_id}.service"
+        # Wait for the named user unit to start before signalling it. This
+        # covers SSH startup races without a forced-command hook on the host.
+        cancel = f"""for attempt in $(seq 1 50); do
+  mainpid=$(systemctl --user show --property=MainPID --value {unit} 2>/dev/null || :)
+  if [[ $mainpid =~ ^[1-9][0-9]*$ ]]; then
+    exec systemctl --user kill --kill-whom=all --signal=KILL {unit}
+  fi
+  sleep 0.1
+done
+exit 1"""
         argv = [
             *SSH,
             "-oForwardAgent=no",
             "-i",
             f"{CREDENTIALS}/{target.credential}",
             target.ssh_target,
-            f"chatgpt-shell-cancel {job.request_id} KILL",
+            f"exec {shlex.join([target.shell, '-lc', cancel])}",
         ]
     elif job.target_pid is not None:
         script = f"""

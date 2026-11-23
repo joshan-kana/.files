@@ -135,7 +135,6 @@ in
       MCP_COMMAND = "${pkgs.coreutils}/bin/env -u CONTROL_PLANE_API_KEY -u CONTROL_PLANE_TUNNEL_ID ${pkgs.chatgpt-shell-mcp-python}/bin/python3 ${./.}/chatgpt-shell-access.py";
       CHATGPT_SHELL_COMMAND_PATH = lib.makeBinPath shellPackages;
       CHATGPT_SHELL_LOCAL_HOST = config.networking.hostName;
-      CHATGPT_SHELL_PRIMARY_USER = primary.name;
       CHATGPT_SHELL_WORKER = workspaces.serviceConfig.User;
       CHATGPT_SHELL_WORKER_ENV = builtins.toJSON workspaces.environment;
       CHATGPT_SHELL_RUN0 = "${pkgs.systemd}/bin/run0";
