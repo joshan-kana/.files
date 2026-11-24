@@ -84,8 +84,11 @@ test("all data and capability roles are declared in the theme adapter", () => {
     "schedule",
   ]) {
     assert.match(
-      qml("RuntimeConfig.qml"),
-      new RegExp("property string " + role + ': ""'),
+      fs.readFileSync(
+        path.join(__dirname, "../modules/theme/desktop-shell-theme.nix"),
+        "utf8",
+      ),
+      new RegExp("\\b" + role + " = colors\\.base"),
     );
   }
 });

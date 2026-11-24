@@ -206,6 +206,10 @@ test("Theme-owned shell presentation is applied through the theme app scope", ()
     "utf8",
   );
   const runtime = read("qml/RuntimeConfig.qml");
+  const mapping = fs.readFileSync(
+    path.join(__dirname, "../modules/theme/desktop-shell-theme.nix"),
+    "utf8",
+  );
 
   assert.match(
     themeNix,
@@ -213,7 +217,7 @@ test("Theme-owned shell presentation is applied through the theme app scope", ()
   );
   assert.match(
     themeNix,
-    /xdg\.configFile\."desktop-shell\/theme\.json"\.source =[\s\S]*?visual = \{/,
+    /xdg\.configFile\."desktop-shell\/theme\.json"\.source =[\s\S]*?import \.\/desktop-shell-theme\.nix/,
   );
   for (const [name, value] of [
     ["panelOpacity", "1.0"],
@@ -221,10 +225,7 @@ test("Theme-owned shell presentation is applied through the theme app scope", ()
     ["scrimOpacity", "0.50"],
     ["squircleExponent", "4.5"],
   ]) {
-    assert.match(
-      themeNix,
-      new RegExp(name + " = " + value.replace(".", "\\.")),
-    );
+    assert.match(mapping, new RegExp(name + " = " + value.replace(".", "\\.")));
     assert.match(
       runtime,
       new RegExp(
@@ -252,9 +253,23 @@ test("Theme-owned shell presentation is applied through the theme app scope", ()
   );
   assert.doesNotMatch(hyprlandNix, /stylix\.|lib\.stylix/);
   assert.match(readScript("markup.sh"), /--font-family monospace/);
-  assert.equal(
-    (runtime.match(/property JsonObject visual: JsonObject/g) || []).length,
-    1,
+  assert.match(
+    shellNix,
+    /fallbackTheme =[\s\S]*?import .*desktop-shell-theme\.nix/,
+  );
+  assert.doesNotMatch(runtime, /JsonAdapter|property JsonObject visual/);
+  const body = runtime
+    .split("function parseTheme(text: string, fallback: var): var {")[1]
+    .split("\n    }")[0];
+  const parse = new Function("text", "fallback", body);
+  const fallback = {
+    visual: { panelOpacity: 1, focusOpacity: 0.96 },
+    wallpaper: "",
+  };
+  assert.deepEqual(parse("", fallback), fallback);
+  assert.deepEqual(
+    parse('{"visual":{"panelOpacity":0.8,"focusOpacity":"invalid"}}', fallback),
+    { visual: { panelOpacity: 0.8, focusOpacity: 0.96 }, wallpaper: "" },
   );
 });
 
@@ -280,6 +295,7 @@ test("QML consumes evaluated runtime values without its own default adapter", ()
     .split("\n    }")[0];
   const parseConfig = new Function("text", "Qt", "console", body);
   const groups = [
+    "fallbackTheme",
     "constraints",
     "accessibility",
     "defaults",

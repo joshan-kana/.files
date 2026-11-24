@@ -10,11 +10,12 @@ QtObject {
     required property var defaults
     property string location: "file://" + (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/desktop-shell/preferences.ini"
     property Settings backend: Settings {
+        id: persisted
         location: store.location
         category: store.category
         property string overridesJson: ""
     }
-    readonly property var overrides: objectFromJson(backend.overridesJson)
+    readonly property var overrides: objectFromJson(persisted.overridesJson)
 
     function objectFromJson(raw: string): var {
         try {
@@ -69,13 +70,13 @@ QtObject {
     }
 
     function write(next: var): void {
-        backend.overridesJson = JSON.stringify(next);
-        backend.setValue("overridesJson", backend.overridesJson);
+        persisted.overridesJson = JSON.stringify(next);
+        backend.setValue("overridesJson", persisted.overridesJson);
         backend.sync();
     }
 
     function initialize(old: var): void {
-        if (backend.overridesJson === "") {
+        if (persisted.overridesJson === "") {
             const next = {};
             for (const key of Object.keys(old))
                 if (valid(key, old[key]))

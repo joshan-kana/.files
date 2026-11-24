@@ -1315,6 +1315,13 @@ in
 
       runtimeConfig = json.generate "desktop-shell-runtime.json" {
         inherit constraints;
+        fallbackTheme =
+          let
+            registry = import ../../../theme/registry.nix { inherit lib; };
+          in
+          import ../../../theme/desktop-shell-theme.nix {
+            colors = lib.mapAttrs (_: color: "#${color}") registry.variants.${registry.default}.colors;
+          };
         wallpaperVideoDefault = scopeConfig.videoWallpaper;
         defaults = {
           terminal = osConfig.dotfiles.defaults.terminal;

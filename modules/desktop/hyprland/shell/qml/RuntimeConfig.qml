@@ -8,7 +8,7 @@ QtObject {
     id: root
 
     signal themeChanged
-    readonly property var themeAdapter: themeData
+    readonly property var themeAdapter: parseTheme(themeFile.text(), configData.fallbackTheme)
     readonly property var configData: parseConfig(configFile.text())
 
     readonly property string terminal: root.configData.defaults.terminal
@@ -168,81 +168,36 @@ QtObject {
             root.themeChanged();
         }
 
-        JsonAdapter {
-            id: themeData
-            property JsonObject theme: JsonObject {
-                property string background: "#111111"
-                property string surface: "#1a1a1a"
-                property string surfaceRaised: "#3a3a3a"
-                property string outline: "#505050"
-                property string textMuted: "#d0d0d0"
-                property string text: "#f0f0f0"
-                property string textStrong: "#ffffff"
-                property string critical: "#ff7a5c"
-                property string warning: "#ffd24a"
-                property string positive: "#3de5f0"
-                property string accent: "#33a8ff"
-                property string accentSecondary: "#c79cff"
-                property string accentTertiary: "#bde6ff"
-                property string accentWarm: "#ff3366"
-                property string accentWorkspace: "#33a8ff"
-                property string accentUtility: "#c9664a"
-                property string accentEnergy: "#ffd24a"
-                property string accentNature: "#3de5f0"
-            }
+        printErrors: false
+    }
 
-            property JsonObject roles: JsonObject {
-                property string media: ""
-                property string workspace: ""
-                property string attention: ""
-                property string display: ""
-                property string connectivity: ""
-                property string warmth: ""
-                property string capture: ""
-                property string screenshot: ""
-                property string audio: ""
-                property string resources: ""
-                property string power: ""
-                property string notifications: ""
-                property string calendar: ""
-                property string wallpaper: ""
-                property string clipboard: ""
-                property string weather: ""
-                property string daylight: ""
-                property string night: ""
-                property string temperature: ""
-                property string wind: ""
-                property string cold: ""
-                property string motion: ""
-                property string spectrum: ""
-                property string reactive: ""
-                property string inhibition: ""
-                property string schedule: ""
-                property string precipitation: ""
-                property string positive: ""
-                property string warning: ""
-                property string critical: ""
-            }
-
-            property JsonObject fonts: JsonObject {
-                property string sans: "sans-serif"
-                property string serif: "serif"
-                property string mono: "monospace"
-            }
-
-            property JsonObject visual: JsonObject {
-                property real panelOpacity: 1.0
-                property real focusOpacity: 0.96
-                property real scrimOpacity: 0.50
-                property real squircleExponent: 4.5
-            }
-
-            property string wallpaper: ""
-
-            property JsonObject tools: JsonObject {
-                property string themeSet: ""
+    // An optional Stylix theme may be absent. Both presentations come from
+    // the same Nix mapping; missing or malformed fields use its fallback.
+    function parseTheme(text: string, fallback: var): var {
+        let selected;
+        try {
+            selected = JSON.parse(text);
+        } catch (_) {
+            return fallback;
+        }
+        if (!selected || typeof selected !== "object")
+            return fallback;
+        const result = Object.assign({}, fallback);
+        for (const group of Object.keys(fallback)) {
+            const baseline = fallback[group];
+            const incoming = selected[group];
+            if (typeof baseline === "object") {
+                result[group] = Object.assign({}, baseline);
+                for (const key of Object.keys(baseline)) {
+                    const value = incoming?.[key];
+                    if (typeof value === typeof baseline[key] && (typeof value !== "number" || Number.isFinite(value)))
+                        result[group][key] = value;
+                }
+            } else if (typeof incoming === typeof baseline) {
+                result[group] = incoming;
             }
         }
+        return result;
     }
 
     // Runtime configuration is evaluated by Nix; missing configuration is
@@ -250,7 +205,7 @@ QtObject {
     function parseConfig(text: string): var {
         try {
             const config = JSON.parse(text);
-            for (const key of ["constraints", "accessibility", "defaults", "motion", "resourceSampling", "session", "palette", "appearance", "capture", "notifications", "weather", "tools", "shortcuts", "shortcutHints", "shellBindings", "nightLight", "wallpaperRotation"]) {
+            for (const key of ["fallbackTheme", "constraints", "accessibility", "defaults", "motion", "resourceSampling", "session", "palette", "appearance", "capture", "notifications", "weather", "tools", "shortcuts", "shortcutHints", "shellBindings", "nightLight", "wallpaperRotation"]) {
                 if (!config[key] || typeof config[key] !== "object" || Array.isArray(config[key]))
                     throw new Error("Missing runtime configuration object: " + key);
             }
