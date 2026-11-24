@@ -30,8 +30,12 @@ SquircleSurface {
     property color foregroundColor: theme.accent
 
     Loader {
-        parent: root
-        anchors.fill: root
+        // The content slot can retain a different width during a morph.
+        // Offset the outline back to the live painted surface.
+        x: (root.contentLayoutWidth - root.width) / 2
+        y: 0
+        width: root.width
+        height: root.height
         z: 100
         active: root.visible && root.foregroundBusy
         sourceComponent: Component {
