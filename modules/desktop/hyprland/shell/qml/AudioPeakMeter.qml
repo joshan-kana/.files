@@ -80,15 +80,20 @@ Item {
                     radius: height / 2
                     color: meter.theme.layer1
 
-                    Rectangle {
-                        anchors {
-                            left: parent.left
-                            top: parent.top
-                            bottom: parent.bottom
+                    Row {
+                        anchors.fill: parent
+                        spacing: 2
+                        Repeater {
+                            model: Math.max(1, Math.min(16, Math.floor(channelRow.width / 5)))
+                            delegate: Rectangle {
+                                required property int index
+                                readonly property real count: Math.max(1, Math.min(16, Math.floor(channelRow.width / 5)))
+                                width: Math.max(1, (parent.width - (count - 1) * 2) / count)
+                                height: parent.height
+                                radius: Math.min(3, width / 2)
+                                color: !meter.muted && channelRow.displayedAmplitude > index / count ? ((index + 1) / count >= 0.95 ? meter.theme.critical : (index + 1) / count >= 0.75 ? meter.theme.warning : meter.theme.positive) : meter.theme.layer3
+                            }
                         }
-                        radius: parent.radius
-                        width: parent.width * (meter.muted ? 0 : channelRow.displayedAmplitude)
-                        color: meter.muted ? meter.theme.warning : channelRow.amplitude > 0.9 ? meter.theme.critical : channelRow.amplitude > 0.72 ? meter.theme.warning : meter.theme.positive
                     }
                 }
             }

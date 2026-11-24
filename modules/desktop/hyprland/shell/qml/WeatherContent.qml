@@ -250,12 +250,12 @@ FocusScope {
 
         ShellSurface {
             width: parent.width
-            height: 124
+            height: panel.theme.fontSize(150)
             theme: panel.theme
             motion: panel.motion
             surfaceLayer: ShellSurface.Control
             cornerRadius: panel.theme.radiusLarge
-            fillColor: panel.theme.layer3
+            fillColor: panel.theme.blend(panel.theme.groupBase, panel.theme.weatherColor(panel.weather.weatherCode, panel.weather.isDay), panel.theme.dark ? 0.15 : 0.09)
 
             Row {
                 anchors.centerIn: parent
@@ -264,9 +264,9 @@ FocusScope {
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: panel.weather.icon
-                    color: panel.theme.roleColor("weather")
+                    color: panel.theme.weatherColor(panel.weather.weatherCode, panel.weather.isDay)
                     font.family: "Symbols Nerd Font"
-                    font.pixelSize: panel.theme.fontSize(75)
+                    font.pixelSize: panel.theme.fontSize(88)
                 }
 
                 Column {
@@ -301,6 +301,7 @@ FocusScope {
                 motion: panel.motion
                 icon: "󰔏"
                 title: "Feels like"
+                role: "temperature"
                 value: panel.weather.available ? panel.weather.temperatureText(panel.weather.feelsLike) : "--°"
             }
 
@@ -310,6 +311,7 @@ FocusScope {
                 motion: panel.motion
                 icon: "󰖎"
                 title: "Humidity"
+                role: "precipitation"
                 value: panel.weather.available ? panel.weather.humidity + "%" : "--%"
             }
 
@@ -319,6 +321,7 @@ FocusScope {
                 motion: panel.motion
                 icon: "󰖝"
                 title: "Wind"
+                role: "wind"
                 value: panel.weather.available ? panel.weather.windText(panel.weather.windSpeed) : "-- km/h"
             }
         }
@@ -333,6 +336,7 @@ FocusScope {
                 motion: panel.motion
                 icon: "󰖜"
                 title: "Sunrise"
+                role: "daylight"
                 value: panel.weather.available ? panel.weather.timeText(panel.weather.sunrise) : "--:--"
             }
 
@@ -342,12 +346,13 @@ FocusScope {
                 motion: panel.motion
                 icon: "󰖛"
                 title: "Sunset"
+                role: "night"
                 value: panel.weather.available ? panel.weather.timeText(panel.weather.sunset) : "--:--"
             }
         }
 
         Text {
-            text: "7-DAY FORECAST"
+            text: "7-day forecast"
             color: panel.theme.textStrong
             font.family: panel.runtime.fontSans
             font.pixelSize: panel.theme.fontSize(12)
@@ -357,7 +362,7 @@ FocusScope {
         Grid {
             id: forecastRow
             width: parent.width
-            columns: panel.theme.textScale >= 1.5 || width < 480 ? 4 : 7
+            columns: 1
             rowSpacing: panel.theme.spacing2
             columnSpacing: panel.theme.spacing2
 
@@ -372,6 +377,8 @@ FocusScope {
                     motion: panel.motion
                     weather: panel.weather
                     day: modelData
+                    lowBound: Math.min(...panel.weather.forecast.map(item => item.low))
+                    highBound: Math.max(...panel.weather.forecast.map(item => item.high))
                     active: panel.selectedDay === index
                     onActivated: panel.selectedDay = index
                 }

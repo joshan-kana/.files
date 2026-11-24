@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "ClockFormatting.js" as ClockFormatting
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Wayland
@@ -553,7 +554,7 @@ Variants {
 
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: Qt.formatDateTime(clock.date, "h:mm AP")
+                        text: ClockFormatting.wallClock(clock.date)
                         color: bars.theme.textStrong
                         font.family: bars.runtime.fontMono
                         font.pixelSize: bars.theme.fontSize(16)

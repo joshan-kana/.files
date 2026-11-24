@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "ClockFormatting.js" as ClockFormatting
 import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Pam
@@ -236,7 +237,7 @@ WlSessionLock {
 
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    text: Qt.formatDateTime(lock.clock.date, "h:mm AP")
+                    text: ClockFormatting.wallClock(lock.clock.date)
                     color: lock.theme.textStrong
                     font.family: lock.runtime.fontMono
                     font.pixelSize: lock.theme.fontSize(Math.max(62, Math.min(104, parent.parent.width * 0.055)))

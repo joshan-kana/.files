@@ -192,10 +192,13 @@ test("reply draft and focus follow the notification across incoming alerts", () 
   const card = qml("NotificationCard.qml");
   assert.match(center, /property var replyDrafts: new Map\(\)/);
   assert.match(center, /property var replyOwner: null/);
-  assert.match(center, /replyDraft: center\.replyDraftFor\(modelData\)/);
   assert.match(
     center,
-    /onReplyTextEdited: message => center\.storeReplyDraft\(modelData, message\)/,
+    /replyDraft: center\.replyDraftFor\(member\.modelData\)/,
+  );
+  assert.match(
+    center,
+    /onReplyTextEdited: message => center\.storeReplyDraft\(member\.modelData, message\)/,
   );
   assert.match(
     center,

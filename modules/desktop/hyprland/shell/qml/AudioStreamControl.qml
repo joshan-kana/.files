@@ -26,7 +26,7 @@ Item {
 
     signal selectedRequested
 
-    implicitHeight: compact ? 64 : 70
+    implicitHeight: compact ? 64 : 82
     Accessible.role: Accessible.Grouping
     Accessible.name: displayName + ", " + (capture ? "capture" : "playback") + ", " + (muted ? "muted" : percent + " percent")
 
@@ -54,7 +54,7 @@ Item {
                 spacing: channel.theme.spacing2
 
                 Column {
-                    width: Math.max(1, parent.width - volumeLabel.implicitWidth - muteButton.width - parent.spacing * 2)
+                    width: Math.max(1, parent.width - volumeLabel.width - muteButton.width - parent.spacing * 2)
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 1
 
@@ -80,7 +80,9 @@ Item {
                 Text {
                     id: volumeLabel
                     anchors.verticalCenter: parent.verticalCenter
-                    text: channel.available ? (channel.muted ? "MUTED" : channel.percent + "%") : "—"
+                    visible: channel.compact || channel.selected || channel.muted || !channel.available
+                    width: visible ? implicitWidth : 0
+                    text: channel.available ? (channel.muted ? "Muted" : channel.percent + "%") : "Unavailable"
                     color: channel.theme.audioLevelColor(channel.muted)
                     font.family: channel.runtime.fontMono
                     font.pixelSize: channel.theme.fontSize(10)
@@ -91,7 +93,7 @@ Item {
                     id: muteButton
                     anchors.verticalCenter: parent.verticalCenter
                     width: Math.max(channel.theme.fontSize(70), implicitWidth)
-                    height: channel.compact ? 30 : 36
+                    height: Math.max(channel.compact ? 30 : 36, implicitHeight)
                     runtime: channel.runtime
                     theme: channel.theme
                     motion: channel.motion
@@ -115,14 +117,14 @@ Item {
 
         Row {
             width: parent.width
-            height: 27
+            height: 36
             spacing: channel.theme.spacing2
 
             AudioPeakMeter {
                 id: streamMeter
                 visible: !channel.compact
-                width: visible ? Math.min(154, Math.max(105, parent.width * 0.23)) : 0
-                height: 27
+                width: visible ? Math.min(320, Math.max(105, parent.width * 0.42)) : 0
+                height: 32
                 anchors.verticalCenter: parent.verticalCenter
                 theme: channel.theme
                 node: channel.stream
@@ -141,7 +143,7 @@ Item {
                 accentColor: channel.theme.audioLevelColor(channel.muted)
                 density: channel.compact ? ShellSlider.Compact : ShellSlider.Standard
                 Accessible.role: Accessible.Slider
-                Accessible.name: channel.displayName + " volume"
+                Accessible.name: channel.displayName + " volume, " + channel.percent + " percent"
                 onInteractionStarted: channel.selectedRequested()
                 onValueRequested: value => {
                     channel.selectedRequested();

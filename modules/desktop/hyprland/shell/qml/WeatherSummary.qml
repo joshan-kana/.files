@@ -19,7 +19,7 @@ Item {
         motion: summary.motion
         keyboardFocusable: true
         cornerRadius: summary.theme.radiusLarge
-        stateColor: summary.theme.roleColor("weather")
+        stateColor: summary.theme.weatherColor(summary.weather.weatherCode, summary.weather.isDay)
         Accessible.role: Accessible.Button
         Accessible.name: "Open detailed weather forecast"
         Accessible.onPressAction: summary.forecastRequested()
@@ -34,7 +34,7 @@ Item {
             z: -1
             anchors.fill: parent
             foregroundBusy: summary.presentationActive && summary.weather.loading && summary.weather.foregroundLoading
-            foregroundColor: summary.theme.roleColor("weather")
+            foregroundColor: summary.theme.weatherColor(summary.weather.weatherCode, summary.weather.isDay)
             theme: summary.theme
             motion: summary.motion
             surfaceLayer: ShellSurface.Group
@@ -42,7 +42,7 @@ Item {
             hovered: forecastHit.pointerHovered || forecastHit.activeFocus
             luminousColor: theme.textStrong
             lightIntensity: 1.35
-            fillColor: theme.blend(theme.groupBase, theme.roleColor("weather"), theme.dark ? 0.15 : 0.08)
+            fillColor: theme.blend(theme.groupBase, theme.weatherColor(summary.weather.weatherCode, summary.weather.isDay), theme.dark ? 0.15 : 0.08)
             cornerRadius: theme.radiusLarge
         }
         Text {
@@ -56,7 +56,7 @@ Item {
             text: summary.weather.icon
             font.family: "Symbols Nerd Font"
             font.pixelSize: summary.theme.fontSize(124)
-            color: summary.theme.roleColor("weather")
+            color: summary.theme.weatherColor(summary.weather.weatherCode, summary.weather.isDay)
             opacity: 0.19
         }
 
@@ -75,7 +75,7 @@ Item {
                 Text {
                     width: Math.max(1, parent.width - forecastHint.width - parent.spacing)
                     anchors.verticalCenter: parent.verticalCenter
-                    text: (summary.weather.city || "YOUR LOCATION").toUpperCase() + " · WEATHER"
+                    text: (summary.weather.city || "Your location") + " · Weather"
                     color: summary.theme.readableRoleColor("weather")
                     opacity: 0.89
                     font.family: summary.theme.runtime.fontSans

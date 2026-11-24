@@ -31,7 +31,7 @@ ShellSurface {
     implicitHeight: deviceContents.implicitHeight + (compact ? theme.spacing3 * 2 : theme.spacing2 * 2)
     surfaceLayer: ShellSurface.Control
     cornerRadius: theme.radiusMedium
-    fillColor: compact ? "transparent" : selected ? theme.expressiveSurfaceStrong : theme.expressiveSurface
+    fillColor: compact ? "transparent" : theme.blend(theme.expressiveSurface, theme.roleColor(microphone ? "connectivity" : "audio"), selected ? 0.14 : 0.07)
     borderColor: !compact && selected ? theme.roleColor("audio") : "transparent"
     borderWidth: !compact && selected ? theme.borderFocus : 0
     Accessible.role: Accessible.Grouping
@@ -114,7 +114,7 @@ ShellSurface {
                 }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
-                    width: Math.max(1, parent.width - parent.children[0].implicitWidth - muteHint.implicitWidth - levelLabel.implicitWidth - parent.spacing * 3)
+                    width: Math.max(1, parent.width - parent.children[0].implicitWidth - muteHint.implicitWidth - levelLabel.width - parent.spacing * 3)
                     text: deviceControl.microphone ? "Input" : "Output"
                     color: deviceControl.theme.textStrong
                     font.family: deviceControl.runtime.fontSans
@@ -125,7 +125,9 @@ ShellSurface {
                 Text {
                     id: levelLabel
                     anchors.verticalCenter: parent.verticalCenter
-                    text: deviceControl.available ? (deviceControl.muted ? "MUTED" : deviceControl.percent + "%") : "OFFLINE"
+                    visible: deviceControl.compact || deviceControl.selected || deviceControl.muted || !deviceControl.available
+                    width: visible ? implicitWidth : 0
+                    text: deviceControl.available ? (deviceControl.muted ? "Muted" : deviceControl.percent + "%") : "Unavailable"
                     color: deviceControl.theme.audioLevelColor(deviceControl.muted)
                     font.family: deviceControl.runtime.fontMono
                     font.pixelSize: deviceControl.theme.fontSize(deviceControl.compact ? 12 : 10)
@@ -149,7 +151,7 @@ ShellSurface {
             AudioPeakMeter {
                 id: meter
                 visible: !deviceControl.compact
-                width: visible ? Math.min(105, Math.max(60, parent.width * 0.20)) : 0
+                width: visible ? Math.min(230, Math.max(60, parent.width * 0.40)) : 0
                 height: 26
                 anchors.verticalCenter: parent.verticalCenter
                 theme: deviceControl.theme

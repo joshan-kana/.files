@@ -13,6 +13,7 @@ Item {
     // Animate external/keyboard changes, never fight pointer dragging.
     property bool animateValueChanges: true
     property color accentColor: theme.accent
+    property bool temperatureTrack: false
     enum Density {
         Compact,
         Standard,
@@ -82,7 +83,33 @@ Item {
     // Split the active and inactive tracks around the thumb instead of
     // painting a fake gap with an opaque colour over frosted surfaces.
     Rectangle {
+        visible: root.temperatureTrack
+        x: root.handleSize / 2
+        width: Math.max(0, root.width - root.handleSize)
+        height: root.trackHeight
+        radius: height / 2
+        anchors.verticalCenter: parent.verticalCenter
+        // Physical colour temperature: warm at 2500 K, near-neutral at 6500 K.
+        gradient: Gradient {
+            orientation: Gradient.Horizontal
+            GradientStop {
+                position: 0
+                color: "#ff9e50"
+            }
+            GradientStop {
+                position: 0.5
+                color: "#ffdbb5"
+            }
+            GradientStop {
+                position: 1
+                color: "#fff9f5"
+            }
+        }
+    }
+
+    Rectangle {
         id: activeTrack
+        visible: !root.temperatureTrack
         anchors.verticalCenter: parent.verticalCenter
         x: root.handleSize / 2
         width: Math.max(0, root.thumbCenterX - root.thumbTrackGap - x)
@@ -93,6 +120,7 @@ Item {
 
     Rectangle {
         id: inactiveTrack
+        visible: !root.temperatureTrack
         anchors.verticalCenter: parent.verticalCenter
         x: root.thumbCenterX + root.thumbTrackGap
         width: Math.max(0, root.width - root.handleSize / 2 - x)
@@ -108,7 +136,9 @@ Item {
         radius: width / 2
         x: root.thumbCenterX - width / 2
         anchors.verticalCenter: parent.verticalCenter
-        color: root.accentColor
+        color: root.temperatureTrack ? root.theme.textStrong : root.accentColor
+        border.width: root.temperatureTrack ? 1 : 0
+        border.color: root.theme.background
 
         Behavior on width {
             Anim {

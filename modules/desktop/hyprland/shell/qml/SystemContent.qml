@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "ClockFormatting.js" as ClockFormatting
 import "DesktopIcons.js" as DesktopIcons
 import Quickshell
 import Quickshell.Io
@@ -869,7 +870,7 @@ FocusScope {
                 }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: Qt.formatDateTime(controlsDateTime.date, "h:mm AP")
+                    text: ClockFormatting.wallClock(controlsDateTime.date)
                     color: root.theme.textStrong
                     font.family: root.runtime.fontMono
                     font.pixelSize: root.theme.fontSize(16)

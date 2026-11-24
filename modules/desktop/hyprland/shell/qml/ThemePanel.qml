@@ -428,10 +428,72 @@ Item {
         }
     }
 
+    Flow {
+        id: galleryButtons
+        anchors {
+            top: searchSurface.bottom
+            left: parent.left
+            right: parent.right
+            topMargin: panel.theme.spacing2
+        }
+        spacing: panel.theme.spacing2
+        Repeater {
+            model: [
+                {
+                    action: "ThemePanel.favorite",
+                    glyph: panel.selectedTheme() && panel.favoriteNames.includes(panel.selectedTheme().name) ? "󰋑" : "󰋕",
+                    iconOnly: true,
+                    title: panel.selectedTheme() && panel.favoriteNames.includes(panel.selectedTheme().name) ? "Remove favourite" : "Favourite",
+                    enabled: !!panel.selectedTheme()
+                },
+                {
+                    action: "ThemePanel.favorites",
+                    glyph: "󰓎",
+                    active: panel.favoritesOnly,
+                    title: panel.favoritesOnly ? "Favourites only" : "All themes",
+                    enabled: true
+                },
+                {
+                    action: "ThemePanel.polarity",
+                    glyph: panel.polarityFilter === 1 ? "󰖔" : panel.polarityFilter === 2 ? "󰖙" : "󰔎",
+                    title: ["Any polarity", "Dark", "Light"][panel.polarityFilter],
+                    enabled: true
+                },
+                {
+                    action: "ThemePanel.previous",
+                    glyph: "󰑐",
+                    iconOnly: true,
+                    title: panel.previousTheme ? "Restore " + panel.themeLabel(panel.previousTheme) : "No previous theme",
+                    enabled: !!panel.previousTheme && !panel.operationRunning && panel.previousTheme !== panel.currentTheme
+                }
+            ]
+            delegate: ShellAction {
+                required property var modelData
+                width: Math.min(galleryButtons.width, implicitWidth)
+                height: Math.max(42, implicitHeight)
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                compact: true
+                horizontalCompact: true
+                title: modelData.title
+                icon: modelData.glyph || ""
+                iconOnly: !!modelData.iconOnly
+                inlineIconHint: iconOnly
+                quietAction: iconOnly
+                active: !!modelData.active
+                activeColor: panel.theme.roleColor("wallpaper")
+                enabled: modelData.enabled
+                shortcut: panel.runtime.shellHint(modelData.action)
+                onActivated: panel.galleryAction(modelData.action)
+            }
+        }
+    }
+
     PanelStatus {
         id: operationBanner
         anchors {
-            top: searchSurface.bottom
+            top: galleryButtons.bottom
             left: parent.left
             right: parent.right
             topMargin: panel.theme.spacing2
@@ -461,7 +523,7 @@ Item {
         }
         readonly property int columnCount: panel.theme.textScale >= 1.5 || width < 580 ? 1 : width < 950 ? 2 : 3
         cellWidth: width / columnCount
-        cellHeight: 230
+        cellHeight: Math.max(204, panel.theme.fontSize(204))
         model: panel.filteredThemes
         clip: true
         currentIndex: panel.selectedIndex
@@ -508,6 +570,7 @@ Item {
                 theme: panel.theme
                 motion: panel.motion
                 surfaceLayer: ShellSurface.Control
+                fillColor: themeCard.index === panel.selectedIndex ? panel.theme.layer2 : "transparent"
                 cornerRadius: panel.theme.radiusLarge
                 borderColor: themeCard.index === panel.selectedIndex ? panel.theme.accent : "transparent"
                 borderWidth: themeCard.index === panel.selectedIndex ? panel.theme.borderFocus * 2 : 0
@@ -525,7 +588,7 @@ Item {
                     ShellSurface {
                         id: palettePreview
                         width: parent.width
-                        height: 145
+                        height: Math.max(145, parent.height - panel.theme.fontSize(34))
                         theme: panel.theme
                         motion: panel.motion
                         surfaceLayer: ShellSurface.Group
@@ -770,50 +833,6 @@ Item {
             left: parent.left
         }
         spacing: panel.theme.spacing2
-
-        Flow {
-            id: galleryButtons
-            width: parent.width
-            spacing: panel.theme.spacing2
-            Repeater {
-                model: [
-                    {
-                        action: "ThemePanel.favorite",
-                        title: panel.selectedTheme() && panel.favoriteNames.includes(panel.selectedTheme().name) ? "Remove favourite" : "Favourite",
-                        enabled: !!panel.selectedTheme()
-                    },
-                    {
-                        action: "ThemePanel.favorites",
-                        title: panel.favoritesOnly ? "Favourites only" : "All themes",
-                        enabled: true
-                    },
-                    {
-                        action: "ThemePanel.polarity",
-                        title: ["Any polarity", "Dark", "Light"][panel.polarityFilter],
-                        enabled: true
-                    },
-                    {
-                        action: "ThemePanel.previous",
-                        title: panel.previousTheme ? "Restore " + panel.themeLabel(panel.previousTheme) : "No previous theme",
-                        enabled: !!panel.previousTheme && !panel.operationRunning && panel.previousTheme !== panel.currentTheme
-                    }
-                ]
-                delegate: ShellAction {
-                    required property var modelData
-                    width: Math.min(galleryButtons.width, Math.max(implicitWidth, Math.floor((galleryButtons.width - 3 * galleryButtons.spacing) / 4)))
-                    height: Math.max(42, implicitHeight)
-                    runtime: panel.runtime
-                    theme: panel.theme
-                    motion: panel.motion
-                    compact: true
-                    horizontalCompact: true
-                    title: modelData.title
-                    enabled: modelData.enabled
-                    shortcut: panel.runtime.shellHint(modelData.action)
-                    onActivated: panel.galleryAction(modelData.action)
-                }
-            }
-        }
 
         KeyHintStrip {
             width: parent.width

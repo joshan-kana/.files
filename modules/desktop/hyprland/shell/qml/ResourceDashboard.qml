@@ -240,67 +240,56 @@ Item {
             }
         }
 
-        ShellSurface {
+        Flow {
             width: parent.width
-            height: Math.max(82, panel.theme.fontSize(55) + panel.theme.spacing3 * 2)
-            theme: panel.theme
-            motion: panel.motion
-            surfaceLayer: ShellSurface.Group
-            cornerRadius: panel.theme.radiusMedium
-
-            Row {
-                anchors.fill: parent
-                anchors.margins: panel.theme.spacing3
-                spacing: panel.theme.spacing4
-                Repeater {
-                    model: [
-                        {
-                            title: "GPU load",
-                            value: panel.resourceState.gpuPercent >= 0 ? Math.round(panel.resourceState.gpuPercent) + "%" : "Unavailable",
-                            detail: "Supported driver counter"
-                        },
-                        {
-                            title: "CPU temperature",
-                            value: panel.resourceState.cpuTemperature >= 0 ? panel.resourceState.cpuTemperature.toFixed(1) + "°C" : "Unavailable",
-                            detail: "Supported thermal sensor"
-                        },
-                        {
-                            title: "GPU temperature",
-                            value: panel.resourceState.gpuTemperature >= 0 ? panel.resourceState.gpuTemperature.toFixed(1) + "°C" : "Unavailable",
-                            detail: "Supported thermal sensor"
-                        }
-                    ]
-                    delegate: Column {
-                        id: sensorColumn
-                        required property var modelData
-                        width: (parent.width - 2 * panel.theme.spacing4) / 3
-                        spacing: 2
-                        Text {
-                            text: sensorColumn.modelData.title
-                            color: panel.theme.textMuted
-                            font.family: panel.runtime.fontSans
-                            font.pixelSize: panel.theme.fontSize(10)
-                        }
-                        Text {
-                            width: parent.width
-                            text: sensorColumn.modelData.value
-                            color: sensorColumn.modelData.value === "Unavailable" ? panel.theme.textMuted : panel.theme.textStrong
-                            font.family: panel.runtime.fontMono
-                            font.pixelSize: panel.theme.fontReadback
-                            font.weight: Font.DemiBold
-                            elide: Text.ElideRight
-                        }
-                        Text {
-                            width: parent.width
-                            text: sensorColumn.modelData.detail
-                            color: panel.theme.textMuted
-                            font.family: panel.runtime.fontSans
-                            font.pixelSize: panel.theme.fontUtility
-                            elide: Text.ElideRight
-                        }
+            spacing: panel.theme.spacing3
+            Repeater {
+                model: [
+                    {
+                        label: "GPU",
+                        value: panel.resourceState.gpuPercent >= 0 ? Math.round(panel.resourceState.gpuPercent) + "%" : "",
+                        role: "resources"
+                    },
+                    {
+                        label: "CPU temperature",
+                        value: panel.resourceState.cpuTemperature >= 0 ? panel.resourceState.cpuTemperature.toFixed(1) + "°C" : "",
+                        role: "temperature"
+                    },
+                    {
+                        label: "GPU temperature",
+                        value: panel.resourceState.gpuTemperature >= 0 ? panel.resourceState.gpuTemperature.toFixed(1) + "°C" : "",
+                        role: "temperature"
+                    }
+                ].filter(sensor => sensor.value.length > 0)
+                delegate: ShellSurface {
+                    id: sensor
+                    required property var modelData
+                    width: sensorReadback.implicitWidth + panel.theme.spacing3 * 2
+                    height: sensorReadback.implicitHeight + panel.theme.spacing2 * 2
+                    theme: panel.theme
+                    motion: panel.motion
+                    surfaceLayer: ShellSurface.Group
+                    cornerRadius: height / 2
+                    ShellText {
+                        id: sensorReadback
+                        anchors.centerIn: parent
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        text: sensor.modelData.label + " · " + sensor.modelData.value
+                        color: panel.theme.readableRoleColor(sensor.modelData.role)
+                        textRole: ShellText.Readback
                     }
                 }
             }
+        }
+        ShellText {
+            width: parent.width
+            visible: panel.resourceState.gpuPercent < 0 || panel.resourceState.cpuTemperature < 0 || panel.resourceState.gpuTemperature < 0
+            runtime: panel.runtime
+            theme: panel.theme
+            text: "Unavailable: " + [panel.resourceState.gpuPercent < 0 ? "GPU load" : "", panel.resourceState.cpuTemperature < 0 ? "CPU temperature" : "", panel.resourceState.gpuTemperature < 0 ? "GPU temperature" : ""].filter(Boolean).join(" · ")
+            textRole: ShellText.Supporting
+            wrapMode: Text.WordWrap
         }
 
         ShellText {
@@ -335,7 +324,7 @@ Item {
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         width: Math.max(1, parent.width - viewToggle.width - parent.spacing)
-                        text: panel.showProcesses ? (panel.resourceState.sortByMemory ? "TOP PROCESSES · MEMORY" : "TOP PROCESSES · LIFETIME CPU") : panel.showCores ? "LOGICAL CORES · " + panel.resourceState.coreUsage.length + " ACTIVE COUNTERS" : "RESOURCE HISTORY · LAST " + panel.resourceState.historySeconds + "s"
+                        text: panel.showProcesses ? (panel.resourceState.sortByMemory ? "Top processes · memory" : "Top processes · CPU average") : panel.showCores ? "Logical cores · " + panel.resourceState.coreUsage.length + " active counters" : "Resource history · last " + panel.resourceState.historySeconds + "s"
                         color: panel.theme.textStrong
                         font.family: panel.runtime.fontSans
                         font.pixelSize: panel.theme.fontSection
@@ -353,7 +342,7 @@ Item {
                         compact: true
                         horizontalCompact: true
                         icon: panel.showCores ? "󰥔" : "󰍛"
-                        title: panel.showCores ? "HISTORY" : "CORES"
+                        title: panel.showCores ? "History" : "Cores"
                         shortcut: panel.runtime.shellHint("ResourceDashboard.toggleCores")
                         onActivated: panel.toggleCoreView()
                     }
@@ -369,7 +358,7 @@ Item {
                             id: historyGraph
                             required property int index
                             width: parent.width
-                            height: panel.theme.fontSize(67)
+                            height: panel.theme.fontSize(90)
                             runtime: panel.runtime
                             theme: panel.theme
                             label: index === 0 ? "CPU" : index === 1 ? "MEMORY" : "NETWORK · RX+TX"
@@ -510,9 +499,9 @@ Item {
             }
         }
 
-        Row {
+        Flow {
             width: parent.width
-            height: 40
+            height: implicitHeight
             spacing: panel.theme.spacing2
             Repeater {
                 model: [
@@ -543,7 +532,7 @@ Item {
                 ]
                 delegate: ShellAction {
                     required property var modelData
-                    width: (panel.width - 5 * panel.theme.spacing2) / 6
+                    width: Math.min(parent.width, implicitWidth)
                     height: 40
                     runtime: panel.runtime
                     theme: panel.theme

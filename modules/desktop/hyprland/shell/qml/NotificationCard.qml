@@ -169,12 +169,12 @@ SquircleSurface {
                 anchors.verticalCenter: parent.verticalCenter
                 text: card.notification && card.notification.appName || "System"
                 elide: Text.ElideRight
-                width: Math.min(implicitWidth, Math.max(70, card.width * 0.38))
+                width: Math.max(1, Math.min(implicitWidth, card.width - cardActions.implicitWidth - 24 - unreadMarker.width - card.theme.spacing4 * 2 - card.theme.spacing2 * 5))
                 color: card.notification && card.notification.urgency === NotificationUrgency.Critical ? card.theme.readableRoleColor("critical") : card.read ? card.theme.textMuted : card.theme.readableRoleColor("notifications")
                 font.family: card.runtime.fontSans
-                font.pixelSize: card.theme.fontSize(9)
+                font.pixelSize: card.theme.fontAction
                 font.weight: Font.DemiBold
-                font.letterSpacing: 1.2
+                font.letterSpacing: 0
             }
 
             Rectangle {
@@ -198,18 +198,25 @@ SquircleSurface {
                 spacing: card.theme.spacing2
                 anchors.verticalCenter: parent.verticalCenter
 
-                Text {
+                ShellAction {
                     id: details
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: (card.groupCount > 1 ? card.groupCount + " ITEMS · " : "") + (card.expanded ? "󰅃" : "󰅀") + (card.safeActions.length > 0 ? "  " + card.safeActions.length + " ACTIONS" : card.notification && card.notification.hasInlineReply ? "  REPLY" : card.notificationState.hasDefaultAction(card.notification) ? "  OPEN" : "  EXPAND")
-                    color: card.theme.textMuted
-                    font.family: card.runtime.fontSans
-                    font.pixelSize: card.theme.fontUtility
+                    width: implicitWidth
+                    height: implicitHeight
+                    runtime: card.runtime
+                    theme: card.theme
+                    motion: card.motion
+                    compact: true
+                    horizontalCompact: true
+                    quietAction: true
+                    icon: card.expanded ? "󰅃" : card.groupCount > 1 ? "󰓩" : "󰅀"
+                    title: card.groupCount > 1 ? card.groupCount + " items" : card.expanded ? "Collapse" : "Details"
+                    shortcut: card.selected ? card.runtime.shellHint("NotificationContent.expand") : ""
+                    onActivated: card.activated()
                 }
 
                 ShellAction {
                     id: readToggle
-                    width: Math.max(56, implicitWidth)
+                    width: implicitWidth
                     height: Math.max(36, implicitHeight)
                     runtime: card.runtime
                     theme: card.theme
@@ -226,7 +233,7 @@ SquircleSurface {
 
                 ShellAction {
                     visible: !!card.notification && card.notification.hasInlineReply
-                    width: visible ? Math.max(56, implicitWidth) : 0
+                    width: visible ? implicitWidth : 0
                     height: Math.max(36, implicitHeight)
                     runtime: card.runtime
                     theme: card.theme
@@ -241,7 +248,7 @@ SquircleSurface {
                 }
 
                 ShellAction {
-                    width: Math.max(64, implicitWidth)
+                    width: implicitWidth
                     height: Math.max(36, implicitHeight)
                     runtime: card.runtime
                     theme: card.theme
@@ -311,84 +318,124 @@ SquircleSurface {
                     title: modelData.text || "Action"
                     iconName: card.notificationState.safeActionIcon(card.notification, modelData)
                     shortcut: card.selected && index < 9 ? card.runtime.shellChoiceHint(index) : ""
-                    width: Math.min(actionButtons.width, Math.max(130, implicitWidth))
+                    width: Math.min(actionButtons.width, implicitWidth)
+                    activeColor: card.theme.roleColor("notifications")
                     onActivated: card.actionRequested(index)
                 }
             }
         }
 
-        Flow {
+        ShellSurface {
             id: applicationOptions
             visible: card.expanded && !!card.notification
             width: parent.width
-            spacing: card.theme.spacing2
+            height: visible ? policyContent.implicitHeight + card.theme.spacing3 * 2 : 0
+            theme: card.theme
+            motion: card.motion
+            surfaceLayer: ShellSurface.Group
+            cornerRadius: card.theme.radiusMedium
             readonly property var preferences: card.notificationState.applicationPreferences(card.notification)
 
-            ShellAction {
-                runtime: card.runtime
-                theme: card.theme
-                motion: card.motion
-                compact: true
-                horizontalCompact: true
-                title: applicationOptions.preferences.popups === false ? "Allow popups" : "Mute popups"
-                shortcut: card.selected ? card.runtime.shellHint("NotificationCard.popup") : ""
-                width: Math.min(parent.width, Math.max(142, implicitWidth))
-                onActivated: card.notificationState.setApplicationPreference(card.notification, "popups", applicationOptions.preferences.popups === false)
-            }
-            ShellAction {
-                runtime: card.runtime
-                theme: card.theme
-                motion: card.motion
-                compact: true
-                horizontalCompact: true
-                title: applicationOptions.preferences.history === false ? "Save history" : "Hide history"
-                shortcut: card.selected ? card.runtime.shellHint("NotificationCard.history") : ""
-                width: Math.min(parent.width, Math.max(142, implicitWidth))
-                onActivated: card.notificationState.setApplicationPreference(card.notification, "history", applicationOptions.preferences.history === false)
-            }
-            ShellAction {
-                runtime: card.runtime
-                theme: card.theme
-                motion: card.motion
-                compact: true
-                horizontalCompact: true
-                title: applicationOptions.preferences.silent === true ? "Unmute app" : "Quiet app"
-                shortcut: card.selected ? card.runtime.shellHint("NotificationCard.silent") : ""
-                width: Math.min(parent.width, Math.max(142, implicitWidth))
-                onActivated: card.notificationState.setApplicationPreference(card.notification, "silent", applicationOptions.preferences.silent !== true)
-            }
-            ShellAction {
-                runtime: card.runtime
-                theme: card.theme
-                motion: card.motion
-                compact: true
-                horizontalCompact: true
-                title: applicationOptions.preferences.criticalOnly ? "All urgencies" : "Critical only"
-                shortcut: card.selected ? card.runtime.shellHint("NotificationCard.criticalOnly") : ""
-                width: Math.min(parent.width, Math.max(142, implicitWidth))
-                onActivated: card.notificationState.setApplicationPreference(card.notification, "criticalOnly", !applicationOptions.preferences.criticalOnly)
-            }
-            ShellAction {
-                runtime: card.runtime
-                theme: card.theme
-                motion: card.motion
-                compact: true
-                horizontalCompact: true
-                title: applicationOptions.preferences.privatePreview ? "Show preview" : "Hide preview"
-                shortcut: card.selected ? card.runtime.shellHint("NotificationCard.privatePreview") : ""
-                width: Math.min(parent.width, Math.max(142, implicitWidth))
-                onActivated: card.notificationState.setApplicationPreference(card.notification, "privatePreview", !applicationOptions.preferences.privatePreview)
-            }
-            ShellAction {
-                runtime: card.runtime
-                theme: card.theme
-                motion: card.motion
-                compact: true
-                horizontalCompact: true
-                title: "App defaults"
-                shortcut: card.selected ? card.runtime.shellHint("NotificationCard.defaults") : ""
-                width: Math.min(parent.width, Math.max(142, implicitWidth))
-                onActivated: card.notificationState.resetApplicationPreferences(card.notification)
+            Column {
+                id: policyContent
+                width: parent.width - card.theme.spacing3 * 2
+                anchors.centerIn: parent
+                spacing: card.theme.spacing2
+
+                Row {
+                    width: parent.width
+                    spacing: card.theme.spacing2
+                    ShellText {
+                        width: Math.max(1, parent.width - resetPolicy.width - parent.spacing)
+                        anchors.verticalCenter: parent.verticalCenter
+                        runtime: card.runtime
+                        theme: card.theme
+                        text: "App notification policy"
+                        textRole: ShellText.Section
+                        wrapMode: Text.WordWrap
+                    }
+                    ShellAction {
+                        id: resetPolicy
+                        width: implicitWidth
+                        height: implicitHeight
+                        runtime: card.runtime
+                        theme: card.theme
+                        motion: card.motion
+                        compact: true
+                        iconOnly: true
+                        inlineIconHint: true
+                        quietAction: true
+                        icon: "󰑐"
+                        title: "Restore app defaults"
+                        shortcut: card.selected ? card.runtime.shellHint("NotificationCard.defaults") : ""
+                        onActivated: card.notificationState.resetApplicationPreferences(card.notification)
+                    }
+                }
+                Repeater {
+                    model: [
+                        {
+                            key: "popups",
+                            title: "Show popups",
+                            action: "NotificationCard.popup",
+                            inverted: true
+                        },
+                        {
+                            key: "history",
+                            title: "Save history",
+                            action: "NotificationCard.history",
+                            inverted: true
+                        },
+                        {
+                            key: "silent",
+                            title: "Quiet app",
+                            action: "NotificationCard.silent",
+                            inverted: false
+                        },
+                        {
+                            key: "criticalOnly",
+                            title: "Critical only",
+                            action: "NotificationCard.criticalOnly",
+                            inverted: false
+                        },
+                        {
+                            key: "privatePreview",
+                            title: "Hide preview",
+                            action: "NotificationCard.privatePreview",
+                            inverted: false
+                        }
+                    ]
+                    delegate: Row {
+                        id: policyRow
+                        required property var modelData
+                        width: policyContent.width
+                        spacing: card.theme.spacing2
+                        ShellText {
+                            width: Math.max(1, parent.width - policySwitch.width - parent.spacing)
+                            anchors.verticalCenter: parent.verticalCenter
+                            runtime: card.runtime
+                            theme: card.theme
+                            text: policyRow.modelData.title
+                            textRole: ShellText.Action
+                            wrapMode: Text.WordWrap
+                        }
+                        ShellAction {
+                            id: policySwitch
+                            width: implicitWidth
+                            height: implicitHeight
+                            runtime: card.runtime
+                            theme: card.theme
+                            motion: card.motion
+                            compact: true
+                            iconOnly: true
+                            switchControl: true
+                            active: policyRow.modelData.inverted ? applicationOptions.preferences[policyRow.modelData.key] !== false : applicationOptions.preferences[policyRow.modelData.key] === true
+                            activeColor: card.theme.roleColor("notifications")
+                            title: policyRow.modelData.title
+                            shortcut: card.selected ? card.runtime.shellHint(policyRow.modelData.action) : ""
+                            onActivated: card.notificationState.setApplicationPreference(card.notification, policyRow.modelData.key, !active)
+                        }
+                    }
+                }
             }
         }
 

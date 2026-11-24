@@ -600,7 +600,7 @@ FocusScope {
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     width: Math.max(1, parent.width - channelCount.implicitWidth - parent.spacing)
-                    text: mixer.compact ? "APPLICATION AUDIO" : "APPLICATION CHANNELS"
+                    text: mixer.compact ? "Application audio" : "Application channels"
                     color: mixer.theme.readableRoleColor("audio")
                     font.family: mixer.runtime.fontSans
                     font.pixelSize: mixer.theme.fontSize(10)
@@ -620,7 +620,7 @@ FocusScope {
             ListView {
                 id: list
                 width: parent.width
-                height: !mixer.compact && mixer.streams.length > 0 ? Math.min(330, mixer.streams.length * 102 + 36) : 0
+                height: !mixer.compact && mixer.streams.length > 0 ? Math.min(330, mixer.streams.length * 112 + 36) : 0
                 visible: !mixer.compact && mixer.streams.length > 0
                 model: mixer.compact ? 0 : mixer.streams.length
                 orientation: ListView.Vertical
@@ -643,12 +643,12 @@ FocusScope {
                     readonly property bool sectionStart: index === 0 || index === mixer.system.audioApplicationStreams.length
                     readonly property bool inViewport: y + height > list.contentY && y < list.contentY + list.height
                     width: list.width
-                    height: (mixer.compact ? 72 : 102) + (sectionStart && !mixer.compact ? 18 : 0)
+                    height: (mixer.compact ? 72 : 112) + (sectionStart && !mixer.compact ? 18 : 0)
 
                     Text {
                         visible: streamRow.sectionStart && !mixer.compact
                         height: visible ? 18 : 0
-                        text: streamRow.capture ? "CAPTURE" : "PLAYBACK"
+                        text: streamRow.capture ? "Capture" : "Playback"
                         color: mixer.theme.readableRoleColor("audio")
                         font.family: mixer.runtime.fontSans
                         font.pixelSize: mixer.theme.fontSize(9)
@@ -661,7 +661,7 @@ FocusScope {
                             top: parent.top
                             topMargin: streamRow.sectionStart && !mixer.compact ? 18 : 0
                         }
-                        height: mixer.compact ? 72 : 102
+                        height: mixer.compact ? 72 : 112
                         theme: mixer.theme
                         motion: mixer.motion
                         surfaceLayer: ShellSurface.Control

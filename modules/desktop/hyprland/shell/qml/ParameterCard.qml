@@ -13,6 +13,7 @@ ShellSurface {
     required property real value
     property color accentColor: theme.accent
     property bool adjustable: true
+    property bool temperatureTrack: false
     property bool resetAvailable: true
     property string adjustShortcut: ""
     property string resetShortcut: ""
@@ -29,7 +30,7 @@ ShellSurface {
     cornerRadius: theme.radiusMedium
     outlined: selectedParameter
     borderWidth: outlined ? theme.borderFocus : 0
-    borderColor: outlined ? accentColor : "transparent"
+    borderColor: outlined ? theme.accent : "transparent"
     fillColor: theme.expressiveSurfaceStrong
 
     Column {
@@ -138,6 +139,8 @@ ShellSurface {
             value: card.value
             enabled: card.adjustable
             accentColor: card.accentColor
+            temperatureTrack: card.temperatureTrack
+            density: card.temperatureTrack ? ShellSlider.Prominent : ShellSlider.Standard
             Accessible.role: Accessible.Slider
             Accessible.name: card.title + ": " + card.readback
             Accessible.description: card.description

@@ -549,6 +549,16 @@ in
                         wallpaper = colors.base0B;
                         clipboard = colors.base0F;
                         weather = colors.base09;
+                        daylight = colors.base0A;
+                        night = colors.base0E;
+                        temperature = colors.base09;
+                        wind = colors.base0B;
+                        cold = colors.base0D;
+                        motion = colors.base0E;
+                        spectrum = colors.base0E;
+                        reactive = colors.base0F;
+                        inhibition = colors.base0A;
+                        schedule = colors.base0E;
                         precipitation = colors.base0C;
                         positive = colors.base0B;
                         warning = colors.base0A;

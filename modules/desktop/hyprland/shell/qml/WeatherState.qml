@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "ClockFormatting.js" as ClockFormatting
 import QtCore
 import Quickshell
 import Quickshell.Io
@@ -150,7 +151,7 @@ QtObject {
     }
 
     function timeText(value: string): string {
-        return value ? Qt.formatTime(new Date(value), "h:mm AP") : "--:--";
+        return value ? ClockFormatting.wallClock(new Date(value)) : "--:--";
     }
 
     function refresh(foreground = false): void {
@@ -246,7 +247,7 @@ QtObject {
                         });
                     }
                     weather.forecast = days;
-                    weather.updatedAt = Qt.formatTime(new Date(), "h:mm AP");
+                    weather.updatedAt = ClockFormatting.wallClock(new Date());
                     weather.available = true;
                     weather.status = "";
                 } catch (error) {

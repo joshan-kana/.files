@@ -6,6 +6,7 @@ ShellSurface {
     property string icon: ""
     property string title: ""
     property string value: ""
+    property string role: "weather"
 
     implicitWidth: 178
     implicitHeight: 72
@@ -19,7 +20,7 @@ ShellSurface {
         Text {
             anchors.verticalCenter: parent.verticalCenter
             text: metric.icon
-            color: metric.theme.roleColor("weather")
+            color: metric.theme.readableRoleColor(metric.role)
             font.family: "Symbols Nerd Font"
             font.pixelSize: metric.theme.fontSize(24)
         }
@@ -38,7 +39,7 @@ ShellSurface {
 
             Text {
                 text: metric.value
-                color: metric.theme.textStrong
+                color: metric.theme.readableRoleColor(metric.role)
                 font.family: metric.theme.runtime.fontMono
                 font.pixelSize: metric.theme.fontSize(15)
                 font.weight: Font.DemiBold

@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "ClockFormatting.js" as ClockFormatting
 import "DesktopIcons.js" as DesktopIcons
 import Quickshell
 import Quickshell.Io
@@ -106,7 +107,7 @@ Item {
         selectedIndex = 0;
     }
     function timeLabel(minutes: int): string {
-        return String(Math.floor(minutes / 60)).padStart(2, "0") + ":" + String(minutes % 60).padStart(2, "0");
+        return ClockFormatting.minutesLabel(minutes);
     }
     function togglePolicyView(): void {
         if (policyView) {
@@ -121,21 +122,28 @@ Item {
     readonly property var galleryPolicyActions: [
         {
             action: "WallpaperPanel.favorite",
+            glyph: favoritePaths.includes(selectedPath()) ? "󰋑" : "󰋕",
+            iconOnly: true,
             title: favoritePaths.includes(selectedPath()) ? "Remove favourite" : "Favourite",
             enabled: policyKnown && !policyBusy && selectedPath() !== ""
         },
         {
             action: "WallpaperPanel.favorites",
+            glyph: "󰓎",
+            active: favoritesOnly,
             title: favoritesOnly ? "Favourites only" : "All wallpapers",
             enabled: true
         },
         {
             action: "WallpaperPanel.collection",
+            glyph: "󰉋",
             title: collectionFilter || "All folders",
             enabled: collections.length > 1
         },
         {
             action: "WallpaperPanel.rotation",
+            glyph: "󰥔",
+            active: policy.mode !== "off",
             title: "Rotation · " + (policy.mode === "dayNight" ? "Day/night" : policy.mode === "interval" ? "Interval" : "Off"),
             enabled: !!runtime.wallpaperPolicy
         }
@@ -195,6 +203,8 @@ Item {
         },
         {
             action: "WallpaperPanel.rotation",
+            glyph: "󰥔",
+            active: policy.mode !== "off",
             title: "Back to wallpapers"
         }
     ]
@@ -621,6 +631,66 @@ Item {
             }
         }
 
+        Flow {
+            id: galleryButtons
+            width: parent.width
+            spacing: panel.theme.spacing2
+            ShellAction {
+                width: implicitWidth
+                height: implicitHeight
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                compact: true
+                icon: panel.resizeMode === "fit" ? "󰩨" : "󰊓"
+                title: panel.resizeMode === "fit" ? "Fit" : "Fill"
+                shortcut: panel.runtime.shellHint("WallpaperPanel.fit")
+                horizontalCompact: true
+                onActivated: panel.toggleFit()
+            }
+
+            ShellAction {
+                width: implicitWidth
+                height: implicitHeight
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                compact: true
+                title: "Restore default wallpaper"
+                iconOnly: true
+                inlineIconHint: true
+                icon: "󰑐"
+                shortcut: panel.runtime.shellHint("WallpaperPanel.default")
+                horizontalCompact: true
+                enabled: !panel.busy
+                onActivated: panel.resetWallpaper()
+            }
+            Repeater {
+                model: panel.galleryPolicyActions
+                delegate: ShellAction {
+                    id: galleryAction
+                    required property var modelData
+                    width: Math.min(galleryButtons.width, implicitWidth)
+                    height: Math.max(40, implicitHeight)
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    motion: panel.motion
+                    compact: true
+                    horizontalCompact: true
+                    title: modelData.title
+                    icon: modelData.glyph || ""
+                    iconOnly: !!modelData.iconOnly
+                    inlineIconHint: iconOnly
+                    quietAction: iconOnly
+                    active: !!modelData.active
+                    activeColor: panel.theme.roleColor("wallpaper")
+                    shortcut: panel.runtime.shellHint(modelData.action)
+                    enabled: modelData.enabled
+                    onActivated: panel.invokePolicyAction(galleryAction.modelData.action)
+                }
+            }
+        }
+
         PanelStatus {
             id: statusBanner
             width: parent.width
@@ -904,62 +974,6 @@ Item {
             }
         }
 
-        Row {
-            width: parent.width
-            spacing: panel.theme.spacing2
-
-            ShellAction {
-                width: (parent.width - parent.spacing) / 2
-                height: 40
-                runtime: panel.runtime
-                theme: panel.theme
-                motion: panel.motion
-                compact: true
-                title: panel.resizeMode === "fit" ? "Fit" : "Fill"
-                shortcut: panel.runtime.shellHint("WallpaperPanel.fit")
-                horizontalCompact: true
-                onActivated: panel.toggleFit()
-            }
-
-            ShellAction {
-                width: (parent.width - parent.spacing) / 2
-                height: 40
-                runtime: panel.runtime
-                theme: panel.theme
-                motion: panel.motion
-                compact: true
-                title: "Default"
-                shortcut: panel.runtime.shellHint("WallpaperPanel.default")
-                horizontalCompact: true
-                enabled: !panel.busy
-                onActivated: panel.resetWallpaper()
-            }
-        }
-
-        Flow {
-            id: galleryButtons
-            width: parent.width
-            spacing: panel.theme.spacing2
-            Repeater {
-                model: panel.galleryPolicyActions
-                delegate: ShellAction {
-                    id: galleryAction
-                    required property var modelData
-                    width: Math.min(galleryButtons.width, Math.max(implicitWidth, Math.floor((galleryButtons.width - 3 * galleryButtons.spacing) / 4)))
-                    height: Math.max(40, implicitHeight)
-                    runtime: panel.runtime
-                    theme: panel.theme
-                    motion: panel.motion
-                    compact: true
-                    horizontalCompact: true
-                    title: modelData.title
-                    shortcut: panel.runtime.shellHint(modelData.action)
-                    enabled: modelData.enabled
-                    onActivated: panel.invokePolicyAction(galleryAction.modelData.action)
-                }
-            }
-        }
-
         KeyHintStrip {
             width: parent.width
             runtime: panel.runtime
@@ -1011,7 +1025,7 @@ Item {
             width: parent.width
             runtime: panel.runtime
             theme: panel.theme
-            text: panel.policyError || (panel.policyBusy ? "Applying policy…" : panel.policy.mode === "off" ? "Automatic wallpaper changes disabled" : panel.policy.mode === "interval" ? "Next rotation · " + (panel.nextDue > 0 ? Qt.formatDateTime(new Date(panel.nextDue * 1000), "ddd HH:mm") : "Not scheduled") : "Current phase · " + (panel.policyPhase || "Waiting for valid selections"))
+            text: panel.policyError || (panel.policyBusy ? "Applying policy…" : panel.policy.mode === "off" ? "Automatic wallpaper changes disabled" : panel.policy.mode === "interval" ? "Next rotation · " + (panel.nextDue > 0 ? Qt.formatDate(new Date(panel.nextDue * 1000), "ddd") + ", " + ClockFormatting.wallClock(new Date(panel.nextDue * 1000)) : "Not scheduled") : "Current phase · " + (panel.policyPhase || "Waiting for valid selections"))
             color: panel.policyError ? panel.theme.warning : panel.theme.textMuted
             wrapMode: Text.WordWrap
         }
@@ -1022,27 +1036,78 @@ Item {
             text: "Selected wallpaper · " + (panel.scheduleCandidate ? panel.scheduleCandidate.slice(panel.scheduleCandidate.lastIndexOf("/") + 1) : "None")
             elide: Text.ElideRight
         }
-        ShellText {
+        ScheduleBand {
+            visible: panel.policy.mode === "dayNight"
             width: parent.width
+            height: visible ? implicitHeight : 0
             runtime: panel.runtime
             theme: panel.theme
-            text: "Day " + panel.timeLabel(panel.policy.dayStart) + " · " + (panel.policy.dayWallpaper || "Not selected") + "    |    Night " + panel.timeLabel(panel.policy.nightStart) + " · " + (panel.policy.nightWallpaper || "Not selected")
-            wrapMode: Text.WordWrap
-            color: panel.theme.textMuted
+            motion: panel.motion
+            label: "Night wallpaper phase"
+            startMinute: panel.policy.nightStart
+            endMinute: panel.policy.dayStart
+            phaseColor: panel.theme.roleColor("night")
         }
-        Grid {
+        Flow {
+            visible: panel.policy.mode === "dayNight"
+            width: parent.width
+            spacing: panel.theme.spacing2
+            Repeater {
+                model: [
+                    {
+                        name: "Day",
+                        path: panel.policy.dayWallpaper,
+                        role: "daylight"
+                    },
+                    {
+                        name: "Night",
+                        path: panel.policy.nightWallpaper,
+                        role: "night"
+                    }
+                ]
+                delegate: ShellSurface {
+                    id: phase
+                    required property var modelData
+                    width: (panel.width - panel.theme.spacing2) / 2
+                    height: phaseInfo.implicitHeight + panel.theme.spacing3 * 2
+                    theme: panel.theme
+                    motion: panel.motion
+                    surfaceLayer: ShellSurface.Group
+                    cornerRadius: panel.theme.radiusMedium
+                    Column {
+                        id: phaseInfo
+                        width: parent.width - panel.theme.spacing3 * 2
+                        anchors.centerIn: parent
+                        spacing: panel.theme.spacing2
+                        ShellText {
+                            runtime: panel.runtime
+                            theme: panel.theme
+                            text: phase.modelData.name
+                            textRole: ShellText.Section
+                            color: panel.theme.readableRoleColor(phase.modelData.role)
+                        }
+                        ShellText {
+                            width: parent.width
+                            runtime: panel.runtime
+                            theme: panel.theme
+                            text: phase.modelData.path ? phase.modelData.path.split("/").pop() : "Not selected"
+                            wrapMode: Text.Wrap
+                        }
+                    }
+                }
+            }
+        }
+        Flow {
             id: scheduleGrid
             width: parent.width
-            columns: panel.theme.textScale >= 1.5 ? 2 : 3
-            rowSpacing: panel.theme.spacing2
-            columnSpacing: panel.theme.spacing2
+            spacing: panel.theme.spacing2
             Repeater {
                 model: panel.scheduleActions
                 delegate: ShellAction {
                     id: scheduleAction
                     required property var modelData
-                    width: (panel.width - (scheduleGrid.columns - 1) * panel.theme.spacing2) / scheduleGrid.columns
-                    height: 44
+                    width: Math.min(scheduleGrid.width, implicitWidth)
+                    height: implicitHeight
                     runtime: panel.runtime
                     theme: panel.theme
                     motion: panel.motion

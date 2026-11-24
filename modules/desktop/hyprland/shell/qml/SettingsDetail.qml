@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "ClockFormatting.js" as ClockFormatting
 import "DesktopIcons.js" as DesktopIcons
 
 // One capability at a time. Parameters and quick actions share their existing
@@ -108,7 +109,7 @@ Item {
         batteryAvailable: system.batteryAvailable,
         batteryLevelIcon: system.batteryLevelIcon
     })
-    readonly property string foregroundRole: "display"
+    readonly property string foregroundRole: theme.capabilityRole(kind)
     readonly property bool displayOperationBusy: displayDetails.foregroundBusy
     readonly property bool foregroundBusy: kind === "displays" ? displayOperationBusy : kind === "nightLight" && nightLight.foregroundBusy
     readonly property bool masterAvailable: kind !== "nightLight" || nightLight.supported && !nightLight.busy
@@ -363,7 +364,7 @@ Item {
     function valueLabel(entry: var): string {
         const value = currentValue(entry.key);
         if (entry.suffix === "time")
-            return String(Math.floor(value / 60)).padStart(2, "0") + ":" + String(value % 60).padStart(2, "0");
+            return ClockFormatting.minutesLabel(value);
         return value + entry.suffix;
     }
 
@@ -659,7 +660,7 @@ Item {
                 text: panel.capabilityIcon
                 font.family: "Symbols Nerd Font"
                 font.pixelSize: panel.theme.fontSize(23)
-                color: panel.theme.accent
+                color: panel.theme.readableRoleColor(panel.foregroundRole)
                 horizontalAlignment: Text.AlignHCenter
             }
 
@@ -704,6 +705,7 @@ Item {
                 title: (panel.masterState ? "Disable " : "Enable ") + panel.titleText
                 shortcut: panel.runtime.shellHint("SettingsDetail.toggle")
                 active: panel.masterState
+                activeColor: panel.theme.roleColor(panel.foregroundRole)
                 enabled: panel.masterAvailable
                 onActivated: panel.toggleMaster()
             }
@@ -775,12 +777,81 @@ Item {
             width: parent.width
             spacing: panel.theme.spacing2
 
-            ShellText {
-                runtime: panel.runtime
+            ShellSurface {
+                width: parent.width
+                height: liveSignal.implicitHeight + panel.theme.spacing4 * 2
                 theme: panel.theme
-                text: !panel.spectrum.connected ? "Audio analyser disconnected" : !panel.spectrum.hasEnergy ? "Listening · no audio energy" : "Live audio · " + Math.round(panel.spectrum.rms * 100) + "% level"
-                color: panel.theme.textMuted
-                font.pixelSize: panel.theme.fontSize(11)
+                motion: panel.motion
+                surfaceLayer: ShellSurface.Group
+                cornerRadius: panel.theme.radiusLarge
+                fillColor: panel.theme.reactiveColor(panel.theme.groupBase, 0.5)
+                Column {
+                    id: liveSignal
+                    width: parent.width - panel.theme.spacing4 * 2
+                    anchors.centerIn: parent
+                    spacing: panel.theme.spacing2
+                    Row {
+                        width: parent.width
+                        ShellText {
+                            runtime: panel.runtime
+                            theme: panel.theme
+                            text: panel.spectrum.connected ? panel.spectrum.hasEnergy ? "Live audio" : "Listening · silence" : "Analyser disconnected"
+                            textRole: ShellText.Section
+                        }
+                    }
+                    SpectrumBars {
+                        width: parent.width
+                        height: panel.theme.fontSize(76)
+                        theme: panel.theme
+                        spectrum: panel.spectrum
+                        frequencyScale: SpectrumScale {
+                            lowHz: panel.spectrum.lowHz
+                            highHz: panel.spectrum.highHz
+                        }
+                    }
+                    Row {
+                        width: parent.width
+                        spacing: panel.theme.spacing3
+                        Repeater {
+                            model: [
+                                {
+                                    name: "Bass",
+                                    amount: panel.spectrum.bass
+                                },
+                                {
+                                    name: "Mid",
+                                    amount: panel.spectrum.mid
+                                },
+                                {
+                                    name: "Treble",
+                                    amount: panel.spectrum.high
+                                }
+                            ]
+                            delegate: Column {
+                                id: bandMetric
+                                required property int index
+                                required property var modelData
+                                width: (liveSignal.width - panel.theme.spacing3 * 2) / 3
+                                spacing: panel.theme.spacing1
+                                ShellText {
+                                    runtime: panel.runtime
+                                    theme: panel.theme
+                                    text: bandMetric.modelData.name
+                                    textRole: ShellText.Utility
+                                }
+                                LevelTrack {
+                                    width: parent.width
+                                    height: panel.theme.standardTrack
+                                    theme: panel.theme
+                                    motion: panel.motion
+                                    known: panel.spectrum.connected
+                                    fraction: bandMetric.modelData.amount
+                                    accentColor: panel.theme.spectrumColor(bandMetric.index / 2)
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             ShellText {
@@ -811,6 +882,8 @@ Item {
                         shortcut: panel.runtime.shellChoiceHint(index)
                         compact: true
                         horizontalCompact: true
+                        connectedGroup: true
+                        activeColor: panel.theme.roleColor("reactive")
                         active: panel.appearance.musicReactivePreset === modelData
                         onActivated: panel.appearance.applyReactivePreset(modelData)
                     }
@@ -845,11 +918,27 @@ Item {
                         shortcut: panel.runtime.shellChoiceHint(index + 3)
                         compact: true
                         horizontalCompact: true
+                        connectedGroup: true
+                        activeColor: panel.theme.roleColor("reactive")
                         active: panel.appearance.musicReactiveEmphasis === modelData
                         onActivated: panel.appearance.setReactiveEmphasis(modelData)
                     }
                 }
             }
+        }
+
+        ScheduleBand {
+            visible: panel.kind === "alerts" || panel.kind === "nightLight" && panel.nightLight.mode === "custom"
+            width: parent.width
+            height: visible ? implicitHeight : 0
+            runtime: panel.runtime
+            theme: panel.theme
+            motion: panel.motion
+            label: panel.kind === "alerts" ? "Quiet hours" : "Night Light schedule"
+            startMinute: panel.kind === "alerts" ? panel.notifications.quietStart : panel.nightLight.startMinute
+            endMinute: panel.kind === "alerts" ? panel.notifications.quietEnd : panel.nightLight.endMinute
+            scheduleEnabled: panel.kind === "alerts" ? panel.notifications.quietEnabled : panel.nightLight.mode === "custom"
+            phaseColor: panel.theme.roleColor(panel.kind === "alerts" ? "schedule" : "warmth")
         }
 
         Flow {
@@ -864,7 +953,7 @@ Item {
                     id: parameterCard
                     required property int index
                     required property var modelData
-                    width: index === panel.parameters.length - 1 && panel.parameters.length % parameterFlow.columns === 1 ? parameterFlow.width : Math.floor((parameterFlow.width - (parameterFlow.columns - 1) * parameterFlow.spacing) / parameterFlow.columns)
+                    width: modelData.key === "temperature" || index === panel.parameters.length - 1 && panel.parameters.length % parameterFlow.columns === 1 ? parameterFlow.width : Math.floor((parameterFlow.width - (parameterFlow.columns - 1) * parameterFlow.spacing) / parameterFlow.columns)
                     height: implicitHeight
                     runtime: panel.runtime
                     theme: panel.theme
@@ -875,6 +964,8 @@ Item {
                     from: modelData.minimum
                     to: modelData.maximum
                     value: panel.currentValue(modelData.key)
+                    accentColor: panel.theme.readableRoleColor(modelData.suffix === "time" ? "schedule" : panel.foregroundRole)
+                    temperatureTrack: modelData.key === "temperature" && panel.kind === "nightLight"
                     selectedParameter: panel.selectedIndex === index
                     adjustable: panel.kind !== "nightLight" || panel.nightLight.supported
                     adjustShortcut: panel.runtime.shellHint("SettingsDetail.adjust")
@@ -940,6 +1031,8 @@ Item {
                         horizontalCompact: true
                         title: modelData.title
                         shortcut: panel.runtime.shellChoiceHint(index)
+                        connectedGroup: true
+                        activeColor: panel.theme.roleColor("warmth")
                         active: panel.nightLight.mode === modelData.id
                         enabled: panel.masterAvailable && (modelData.id !== "solar" || panel.nightLight.solarAvailable)
                         onActivated: panel.nightLight.setMode(modelData.id)
@@ -987,6 +1080,8 @@ Item {
                         compact: true
                         horizontalCompact: true
                         title: modelData.title
+                        connectedGroup: true
+                        activeColor: panel.theme.roleColor("schedule")
                         active: panel.nightLight.days === modelData.days
                         shortcut: panel.runtime.shellChoiceHint(index + 4)
                         enabled: panel.masterAvailable
@@ -1032,8 +1127,8 @@ Item {
             }
             ShellAction {
                 visible: panel.nightLight.mode === "custom" || panel.nightLight.mode === "solar"
-                width: parent.width
-                height: visible ? 40 : 0
+                width: implicitWidth
+                height: visible ? implicitHeight : 0
                 runtime: panel.runtime
                 theme: panel.theme
                 motion: panel.motion
@@ -1045,8 +1140,8 @@ Item {
                 onActivated: panel.nightLight.change("pause", "0")
             }
             ShellAction {
-                width: parent.width
-                height: 40
+                width: implicitWidth
+                height: implicitHeight
                 runtime: panel.runtime
                 theme: panel.theme
                 motion: panel.motion
@@ -1110,6 +1205,7 @@ Item {
                         icon: DesktopIcons.powerProfileGlyph(modelData)
                         title: panel.powerProfile.label(modelData)
                         shortcut: panel.runtime.shellChoiceHint(index)
+                        connectedGroup: true
                         active: panel.powerProfile.current === modelData
                         activeColor: panel.theme.powerProfileColor(modelData)
                         enabled: panel.powerProfile.available && !panel.powerProfile.applying
@@ -1192,8 +1288,8 @@ Item {
                 }
             }
             ShellAction {
-                width: parent.width
-                height: 40
+                width: implicitWidth
+                height: implicitHeight
                 runtime: panel.runtime
                 theme: panel.theme
                 motion: panel.motion
@@ -1209,14 +1305,45 @@ Item {
             visible: panel.kind === "stay"
             width: parent.width
             spacing: panel.theme.spacing2
-            ShellText {
-                runtime: panel.runtime
-                theme: panel.theme
-                text: panel.idleStatus
-                textRole: ShellText.Display
-                color: panel.theme.roleColor("power")
+            ShellSurface {
                 width: parent.width
-                wrapMode: Text.WordWrap
+                height: awakeContent.implicitHeight + panel.theme.spacing4 * 2
+                theme: panel.theme
+                motion: panel.motion
+                surfaceLayer: ShellSurface.Group
+                cornerRadius: panel.theme.radiusLarge
+                fillColor: panel.theme.blend(panel.theme.groupBase, panel.theme.roleColor("inhibition"), panel.system.idleInhibited ? 0.13 : 0.04)
+                Column {
+                    id: awakeContent
+                    width: parent.width - panel.theme.spacing4 * 2
+                    anchors.centerIn: parent
+                    spacing: panel.theme.spacing2
+                    ShellText {
+                        width: parent.width
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        text: panel.idleStatus
+                        textRole: ShellText.Display
+                        color: panel.theme.readableRoleColor("inhibition")
+                        wrapMode: Text.WordWrap
+                    }
+                    ShellText {
+                        visible: panel.system.idleInhibited && panel.system.idleInhibitDeadline > 0
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        text: "Ends at " + ClockFormatting.wallClock(new Date(panel.system.idleInhibitDeadline))
+                        textRole: ShellText.Supporting
+                    }
+                    LevelTrack {
+                        visible: panel.system.idleInhibited && panel.system.idleInhibitDeadline > 0 && panel.system.idleInhibitMinutes > 0
+                        width: parent.width
+                        height: visible ? panel.theme.prominentTrack : 0
+                        theme: panel.theme
+                        motion: panel.motion
+                        fraction: Math.max(0, (panel.system.idleInhibitDeadline - panel.clockMs) / Math.max(1, panel.system.idleInhibitMinutes * 60000))
+                        accentColor: panel.theme.roleColor("inhibition")
+                    }
+                }
             }
             ShellSection {
                 runtime: panel.runtime
@@ -1227,7 +1354,7 @@ Item {
                 Flow {
                     id: durationFlow
                     width: parent.width
-                    readonly property int columns: width >= panel.theme.fontSize(480) ? 2 : 1
+                    readonly property int columns: width >= panel.theme.fontSize(480) ? 4 : 2
                     spacing: panel.theme.spacing2
                     Repeater {
                         model: [15, 30, 60, 120, 0]
@@ -1243,6 +1370,7 @@ Item {
                             horizontalCompact: true
                             title: modelData === 0 ? "Until disabled" : modelData + " minutes"
                             shortcut: panel.runtime.shellChoiceHint(index)
+                            activeColor: panel.theme.roleColor("inhibition")
                             active: panel.system.idleInhibited && panel.system.idleInhibitMinutes === modelData
                             onActivated: panel.system.setIdleInhibitMinutes(modelData)
                         }
@@ -1356,6 +1484,8 @@ Item {
                             shortcut: panel.runtime.shellChoiceHint(index + 3)
                             compact: true
                             horizontalCompact: true
+                            connectedGroup: true
+                            activeColor: panel.theme.roleColor("schedule")
                             active: panel.notifications.quietDays === modelData.days
                             onActivated: panel.notifications.setQuietPreference("days", modelData.days)
                         }

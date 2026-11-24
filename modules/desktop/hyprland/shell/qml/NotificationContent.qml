@@ -437,10 +437,6 @@ FocusScope {
                 {
                     shortcut: center.runtime.shellHint("NotificationContent.groups"),
                     label: "Groups"
-                },
-                {
-                    shortcut: center.runtime.shellHint("NotificationContent.expand"),
-                    label: "Expand"
                 }
             ]
         }
@@ -490,7 +486,8 @@ FocusScope {
                 clip: true
 
                 function memberAt(index: int): var {
-                    return members.itemAt(index);
+                    const member = members.itemAt(index);
+                    return member ? member.card : null;
                 }
                 onHeightChanged: {
                     if (expanded && center.selectedIndex === index && center.selectedMemberIndex > 0)
@@ -520,15 +517,16 @@ FocusScope {
 
                     Item {
                         width: parent.width
-                        height: visible ? 32 : 0
-                        visible: groupItem.modelData.notifications.length > 1
+                        height: visible ? Math.max(34, groupLabel.implicitHeight + center.theme.spacing2) : 0
+                        visible: groupItem.modelData.notifications.length > 1 && groupItem.expanded
 
                         Row {
                             anchors.verticalCenter: parent.verticalCenter
                             spacing: center.theme.spacing2
 
                             Text {
-                                text: groupItem.modelData.name.toUpperCase()
+                                id: groupLabel
+                                text: groupItem.modelData.name
                                 color: center.theme.readableRoleColor("notifications")
                                 font.family: center.runtime.fontSans
                                 font.pixelSize: center.theme.fontSize(10)
@@ -560,62 +558,87 @@ FocusScope {
                         id: members
                         model: !groupItem || !groupItem.modelData ? [] : groupItem.expanded ? groupItem.modelData.notifications : groupItem.modelData.notifications.slice(0, 1)
 
-                        delegate: NotificationCard {
-                            id: notificationCard
+                        delegate: Item {
+                            id: member
                             required property var modelData
                             required property int index
+                            readonly property bool stacked: !groupItem.expanded && groupItem.modelData.notifications.length > 1
                             width: groupColumn.width
-                            notification: modelData
-                            replyDraft: center.replyDraftFor(modelData)
-                            read: center.notificationState.isRead(modelData)
-                            runtime: center.runtime
-                            theme: center.theme
-                            motion: center.motion
-                            notificationState: center.notificationState
-                            groupCount: !groupItem || !groupItem.modelData ? 1 : groupItem.expanded ? 1 : groupItem.modelData.notifications.length
-                            selected: !!groupItem && center.selectedIndex === groupItem.index && center.selectedMemberIndex === index
-                            expanded: !!groupItem && groupItem.expanded && selected
-                            onActivated: {
-                                const sameSelection = center.selectedIndex === groupItem.index && center.selectedMemberIndex === index;
-                                center.selectedIndex = groupItem.index;
-                                center.selectedMemberIndex = index;
-                                if (sameSelection)
-                                    center.toggleExpanded();
-                                else
-                                    center.expandedGroupKey = groupItem.modelData.key;
-                            }
-                            onDefaultRequested: {
-                                if (!center.notificationState.invokeDefault(modelData))
-                                    center.toggleExpanded();
-                            }
-                            onActionRequested: action => center.notificationState.invokeAction(modelData, action)
-                            onReplyRequested: message => {
-                                center.storeReplyDraft(modelData, "");
-                                center.replyOwner = null;
-                                center.replyEditing = false;
-                                center.notificationState.sendReply(modelData, message);
-                                center.focusKeyboard();
-                            }
-                            onReplyTextEdited: message => center.storeReplyDraft(modelData, message)
-                            onReplyFocusRequested: {
-                                center.selectedIndex = groupItem.index;
-                                center.selectedMemberIndex = index;
-                                center.rememberSelection();
-                                center.focusReply();
-                            }
-                            onReplyFocusChanged: focused => {
-                                if (focused) {
-                                    center.replyOwner = modelData;
-                                    center.replyEditing = true;
+                            height: notificationCard.implicitHeight + (stacked ? center.theme.spacing3 : 0)
+                            property alias card: notificationCard
+
+                            Repeater {
+                                model: member.stacked ? 2 : 0
+                                delegate: SquircleSurface {
+                                    required property int index
+                                    x: center.theme.spacing2 * (2 - index)
+                                    y: notificationCard.height - center.theme.spacing3 + center.theme.spacing1 * (2 - index)
+                                    width: member.width - x * 2
+                                    height: center.theme.spacing3 * 2
+                                    cornerRadius: center.theme.radiusSmall
+                                    exponent: center.theme.squircleExponent
+                                    fillColor: center.theme.layer2
+                                    borderColor: center.theme.subtleBorder
+                                    borderWidth: center.theme.borderThin
                                 }
                             }
-                            onReplyFinished: {
-                                center.replyOwner = null;
-                                center.replyEditing = false;
-                                center.focusKeyboard();
+
+                            NotificationCard {
+                                id: notificationCard
+                                width: member.width
+                                height: implicitHeight
+                                notification: member.modelData
+                                replyDraft: center.replyDraftFor(member.modelData)
+                                read: center.notificationState.isRead(member.modelData)
+                                runtime: center.runtime
+                                theme: center.theme
+                                motion: center.motion
+                                notificationState: center.notificationState
+                                groupCount: !groupItem || !groupItem.modelData ? 1 : groupItem.expanded ? 1 : groupItem.modelData.notifications.length
+                                selected: !!groupItem && center.selectedIndex === groupItem.index && center.selectedMemberIndex === member.index
+                                expanded: !!groupItem && groupItem.expanded && selected
+                                onActivated: {
+                                    const sameSelection = center.selectedIndex === groupItem.index && center.selectedMemberIndex === member.index;
+                                    center.selectedIndex = groupItem.index;
+                                    center.selectedMemberIndex = member.index;
+                                    if (sameSelection)
+                                        center.toggleExpanded();
+                                    else
+                                        center.expandedGroupKey = groupItem.modelData.key;
+                                }
+                                onDefaultRequested: {
+                                    if (!center.notificationState.invokeDefault(member.modelData))
+                                        center.toggleExpanded();
+                                }
+                                onActionRequested: action => center.notificationState.invokeAction(member.modelData, action)
+                                onReplyRequested: message => {
+                                    center.storeReplyDraft(member.modelData, "");
+                                    center.replyOwner = null;
+                                    center.replyEditing = false;
+                                    center.notificationState.sendReply(member.modelData, message);
+                                    center.focusKeyboard();
+                                }
+                                onReplyTextEdited: message => center.storeReplyDraft(member.modelData, message)
+                                onReplyFocusRequested: {
+                                    center.selectedIndex = groupItem.index;
+                                    center.selectedMemberIndex = member.index;
+                                    center.rememberSelection();
+                                    center.focusReply();
+                                }
+                                onReplyFocusChanged: focused => {
+                                    if (focused) {
+                                        center.replyOwner = member.modelData;
+                                        center.replyEditing = true;
+                                    }
+                                }
+                                onReplyFinished: {
+                                    center.replyOwner = null;
+                                    center.replyEditing = false;
+                                    center.focusKeyboard();
+                                }
+                                onReadToggled: center.notificationState.toggleRead(member.modelData)
+                                onDismissRequested: center.dismissNotification(member.modelData)
                             }
-                            onReadToggled: center.notificationState.toggleRead(modelData)
-                            onDismissRequested: center.dismissNotification(modelData)
                         }
                     }
                 }

@@ -23,6 +23,35 @@ QtObject {
         return chosen ? chosen : accent;
     }
 
+    function weatherColor(code: int, daylight: bool): color {
+        if (code < 0 || code === 3 || code === 45 || code === 48)
+            return textMuted;
+        if (code >= 95)
+            return roleColor("warning");
+        if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82))
+            return roleColor("precipitation");
+        if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86))
+            return roleColor("cold");
+        return roleColor(daylight ? "daylight" : "night");
+    }
+
+    function capabilityRole(kind: string): string {
+        return ({
+                windows: "display",
+                glass: "connectivity",
+                nightLight: "warmth",
+                alerts: "notifications",
+                stay: "inhibition",
+                power: "power",
+                spectrum: "spectrum",
+                reactive: "reactive",
+                bar: "workspace",
+                frame: "display",
+                motion: "motion",
+                displays: "display"
+            })[kind] || "display";
+    }
+
     function audioLevelColor(muted: bool): color {
         return muted ? warning : roleColor("audio");
     }
