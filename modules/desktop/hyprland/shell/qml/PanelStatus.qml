@@ -49,25 +49,53 @@ Item {
         spacing: status.theme.spacing2
         visible: status.hasMessage
 
-        Text {
+        Item {
             id: phaseIcon
             anchors.verticalCenter: parent.verticalCenter
             width: status.theme.fontSize(18)
-            text: status.symbol
-            horizontalAlignment: Text.AlignHCenter
-            font.family: "Symbols Nerd Font"
-            font.pixelSize: status.theme.fontSize(17)
-            color: status.semanticColor
+            height: width
+            readonly property bool animatedBusy: status.busy && status.motion.enabled && status.visible && status.hasMessage
 
-            NumberAnimation on rotation {
-                running: status.busy && status.motion.enabled
-                loops: Animation.Infinite
-                from: 0
-                to: 360
-                duration: status.motion.spinnerCycle
-                onRunningChanged: {
-                    if (!running)
-                        phaseIcon.rotation = 0;
+            Text {
+                anchors.fill: parent
+                visible: !phaseIcon.animatedBusy
+                text: status.symbol
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                font.family: "Symbols Nerd Font"
+                font.pixelSize: status.theme.fontSize(17)
+                color: status.semanticColor
+            }
+
+            Rectangle {
+                id: busyShape
+                anchors.centerIn: parent
+                visible: phaseIcon.animatedBusy
+                width: Math.max(1, phaseIcon.width * 0.70)
+                height: width
+                color: status.theme.accent
+                radius: width / 2
+                SequentialAnimation on radius {
+                    running: phaseIcon.animatedBusy
+                    loops: Animation.Infinite
+                    NumberAnimation {
+                        to: busyShape.width * 0.20
+                        duration: status.motion.spinnerCycle / 2
+                        easing.type: Easing.InOutSine
+                    }
+                    NumberAnimation {
+                        to: busyShape.width / 2
+                        duration: status.motion.spinnerCycle / 2
+                        easing.type: Easing.InOutSine
+                    }
+                }
+                NumberAnimation on rotation {
+                    running: phaseIcon.animatedBusy
+                    loops: Animation.Infinite
+                    from: 0
+                    to: 180
+                    duration: status.motion.spinnerCycle
+                    easing.type: Easing.Linear
                 }
             }
         }

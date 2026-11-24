@@ -8,8 +8,15 @@ ShellSurface {
     property bool fieldFocused: false
 
     surfaceLayer: ShellSurface.Control
-    cornerRadius: theme.radiusMedium
-    fillColor: theme.controlBase
+    cornerRadius: fieldFocused ? theme.radiusSmall : theme.radiusMedium
+
+    Behavior on cornerRadius {
+        Anim {
+            motion: field.motion
+            type: Anim.FastSpatial
+        }
+    }
+    fillColor: fieldFocused ? theme.expressiveSurfaceStrong : theme.controlBase
     borderWidth: fieldFocused ? theme.borderFocus : theme.borderThin
     borderColor: fieldFocused ? theme.accent : theme.subtleBorder
 }
