@@ -68,7 +68,7 @@ FocusScope {
     // Keep every action reachable without paging away from its controls on
     // 768p/compact screens; larger viewports retain the immersive spectrum.
     readonly property bool compactHeight: height < 760
-    implicitHeight: compactHeight ? 550 : 620
+    implicitHeight: compactHeight ? 640 : 720
     focus: engaged
 
     onEngagedChanged: {
@@ -498,7 +498,7 @@ FocusScope {
 
                 ShellAction {
                     id: playerAction
-                    width: 148
+                    width: implicitWidth
                     height: 46
                     runtime: content.runtime
                     theme: content.theme
@@ -530,7 +530,7 @@ FocusScope {
                 spacing: content.theme.spacing2
 
                 ShellAction {
-                    width: 114
+                    width: implicitWidth
                     height: 42
                     runtime: content.runtime
                     theme: content.theme
@@ -544,7 +544,7 @@ FocusScope {
                 }
 
                 ShellAction {
-                    width: 116
+                    width: implicitWidth
                     height: 42
                     runtime: content.runtime
                     theme: content.theme
@@ -558,7 +558,7 @@ FocusScope {
                 }
 
                 ShellAction {
-                    width: 116
+                    width: implicitWidth
                     height: 42
                     runtime: content.runtime
                     theme: content.theme
@@ -581,7 +581,7 @@ FocusScope {
                 }
 
                 ShellAction {
-                    width: 116
+                    width: implicitWidth
                     height: 42
                     runtime: content.runtime
                     theme: content.theme
@@ -599,7 +599,7 @@ FocusScope {
                 spacing: content.theme.spacing2
                 ShellAction {
                     id: preferredAction
-                    width: 180
+                    width: implicitWidth
                     height: 40
                     runtime: content.runtime
                     theme: content.theme
@@ -614,7 +614,7 @@ FocusScope {
                 }
                 ShellAction {
                     id: resetPreferredAction
-                    width: 115
+                    width: implicitWidth
                     height: 40
                     runtime: content.runtime
                     theme: content.theme
@@ -632,13 +632,18 @@ FocusScope {
                     text: content.media.preferenceStatus
                     color: content.theme.textMuted
                     font.pixelSize: content.theme.fontSize(10)
-                    width: 180
+                    width: Math.min(180, implicitWidth)
                     elide: Text.ElideRight
                 }
+            }
+            Row {
+                visible: content.media.rateAvailable
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: content.theme.spacing2
                 ShellAction {
                     id: slowerAction
                     visible: content.media.rateAvailable
-                    width: 80
+                    width: implicitWidth
                     height: 40
                     runtime: content.runtime
                     theme: content.theme
@@ -659,7 +664,7 @@ FocusScope {
                 ShellAction {
                     id: fasterAction
                     visible: content.media.rateAvailable
-                    width: 80
+                    width: implicitWidth
                     height: 40
                     runtime: content.runtime
                     theme: content.theme

@@ -129,13 +129,10 @@ test("global keybinding descriptions match the configurable seek interval", () =
 
 test("Now Playing seek-step controls have readable words and enough width", () => {
   const page = read("MediaContent.qml");
-  for (const [title, width] of [
-    ["Shorter", 116],
-    ["Longer", 116],
-  ]) {
+  for (const title of ["Shorter", "Longer"]) {
     assert.match(
       page,
-      new RegExp("width: " + width + '[\\s\\S]*?title: "' + title + '"'),
+      new RegExp('width: implicitWidth[\\s\\S]*?title: "' + title + '"'),
     );
   }
   assert.match(page, /text: "Seek " \+ content\.media\.seekSeconds \+ "s"/);
