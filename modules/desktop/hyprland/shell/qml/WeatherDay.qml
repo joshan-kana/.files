@@ -48,7 +48,7 @@ ShellSurface {
 
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
-            text: Math.round(dayCard.day.high) + "°  " + Math.round(dayCard.day.low) + "°"
+            text: dayCard.weather.temperatureText(dayCard.day.high) + "  " + dayCard.weather.temperatureText(dayCard.day.low)
             color: dayCard.theme.textStrong
             font.family: dayCard.theme.runtime.fontMono
             font.pixelSize: dayCard.theme.fontSize(13)

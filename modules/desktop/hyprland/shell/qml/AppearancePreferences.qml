@@ -42,6 +42,7 @@ QtObject {
         property real vhsDropouts: appearance.runtime.appearanceDefaults.vhsDropouts
         property string mediaVisualizerMode: appearance.runtime.appearanceDefaults.mediaVisualizerMode
         property bool mediaLyricsVisible: appearance.runtime.appearanceDefaults.mediaLyricsVisible
+        property string mediaPreferredPlayer: appearance.runtime.appearanceDefaults.mediaPreferredPlayer
         property int mediaSeekSeconds: appearance.runtime.appearanceDefaults.mediaSeekSeconds
         property string userOverrides: ""
     }
@@ -105,7 +106,17 @@ QtObject {
     readonly property string mediaVisualizerMode: effective("mediaVisualizerMode") === "curve" ? "curve" : "bars"
     readonly property bool mediaLyricsVisible: effective("mediaLyricsVisible")
     readonly property var seekIntervals: [5, 10, 15, 30, 60]
+    readonly property string mediaPreferredPlayer: effective("mediaPreferredPlayer")
     readonly property int mediaSeekSeconds: seekIntervals.includes(effective("mediaSeekSeconds")) ? effective("mediaSeekSeconds") : runtime.appearanceDefaults.mediaSeekSeconds
+
+    function setMediaPreferredPlayer(identity: string): void {
+        storeOverride("mediaPreferredPlayer", identity);
+        saved.sync();
+    }
+
+    function resetMediaPreferredPlayer(): void {
+        clearOverride("mediaPreferredPlayer");
+    }
 
     function parseOverrideKeys(value: string): var {
         try {

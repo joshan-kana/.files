@@ -11,6 +11,20 @@ FocusScope {
     required property WeatherState weather
     property bool engaged: false
     property int selectedDay: 0
+    property bool locationEditing: false
+    function editLocation(): void {
+        locationEditing = true;
+        locationField.text = weather.preferredLocation;
+        locationField.forceActiveFocus();
+        locationField.selectAll();
+    }
+    function finishLocation(apply: bool): void {
+        if (apply)
+            weather.setLocation(locationField.text);
+        locationEditing = false;
+        keys.forceActiveFocus();
+    }
+
 
     signal closeRequested
     signal calendarRequested
@@ -28,6 +42,8 @@ FocusScope {
         if (engaged) {
             selectedDay = 0;
             Qt.callLater(() => keys.forceActiveFocus());
+        } else {
+            locationEditing = false;
         }
     }
 
@@ -39,8 +55,23 @@ FocusScope {
             if (event.key === panel.runtime.shellKeyCode("weather", "Escape")) {
                 panel.closeRequested();
                 event.accepted = true;
+            } else if (panel.runtime.shellMatchesHint("WeatherContent.location", event.key, event.modifiers)) {
+                if (!event.isAutoRepeat)
+                    panel.editLocation();
+                event.accepted = true;
+            } else if (panel.runtime.shellMatchesHint("WeatherContent.units", event.key, event.modifiers)) {
+                if (!event.isAutoRepeat)
+                    panel.weather.toggleUnits();
+                event.accepted = true;
+            } else if (panel.runtime.shellMatchesHint("WeatherContent.reset", event.key, event.modifiers)) {
+                if (!event.isAutoRepeat) {
+                    panel.weather.resetLocation();
+                    panel.weather.resetUnits();
+                }
+                event.accepted = true;
             } else if (panel.runtime.shellMatchesHint("WeatherContent.refresh", event.key, event.modifiers)) {
-                panel.weather.refresh();
+                if (!event.isAutoRepeat)
+                    panel.weather.refresh();
                 event.accepted = true;
             } else if (event.key === panel.runtime.shellKeyCode("weather", "C") || event.key === panel.runtime.shellKeyCode("weather", "Backspace")) {
                 panel.calendarRequested();
@@ -101,6 +132,113 @@ FocusScope {
                 title: "Refresh forecast"
                 enabled: !panel.weather.loading
                 onActivated: panel.weather.refresh()
+            }
+        }
+
+        Row {
+            width: parent.width
+            height: 40
+            spacing: panel.theme.spacing2
+            ShellAction {
+                width: Math.max(1, parent.width - unitsButton.width - defaultsButton.width - 2 * parent.spacing)
+                height: parent.height
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                compact: true
+                horizontalCompact: true
+                title: panel.weather.preferredLocation || "Approximate location"
+                shortcut: panel.runtime.shellHint("WeatherContent.location")
+                active: panel.locationEditing
+                onActivated: panel.editLocation()
+            }
+            ShellAction {
+                id: unitsButton
+                width: 105
+                height: parent.height
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                compact: true
+                horizontalCompact: true
+                title: panel.weather.units === "metric" ? "°C / km/h" : "°F / mph"
+                shortcut: panel.runtime.shellHint("WeatherContent.units")
+                onActivated: panel.weather.toggleUnits()
+            }
+            ShellAction {
+                id: defaultsButton
+                width: 105
+                height: parent.height
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                compact: true
+                horizontalCompact: true
+                title: "Defaults"
+                shortcut: panel.runtime.shellHint("WeatherContent.reset")
+                onActivated: {
+                    panel.weather.resetLocation();
+                    panel.weather.resetUnits();
+                }
+            }
+        }
+
+        SearchFieldSurface {
+            visible: panel.locationEditing
+            width: parent.width
+            height: visible ? 42 : 0
+            theme: panel.theme
+            motion: panel.motion
+            fieldFocused: locationField.activeFocus
+            TextInput {
+                id: locationField
+                anchors {
+                    fill: parent
+                    leftMargin: panel.theme.spacing3
+                    rightMargin: applyLocation.width + panel.theme.spacing3 * 2
+                }
+                verticalAlignment: TextInput.AlignVCenter
+                color: panel.theme.textStrong
+                selectionColor: panel.theme.accent
+                font.family: panel.runtime.fontSans
+                font.pixelSize: panel.theme.fontSize(12)
+                maximumLength: 128
+                Accessible.name: "Weather city or latitude,longitude"
+                Keys.onPressed: event => {
+                    if (event.key === panel.runtime.shellKeyCode("weather", "Escape")) {
+                        panel.finishLocation(false);
+                        event.accepted = true;
+                    } else if (event.key === panel.runtime.shellKeyCode("weather", "Return") || event.key === panel.runtime.shellKeyCode("weather", "Enter")) {
+                        if (!event.isAutoRepeat)
+                            panel.finishLocation(true);
+                        event.accepted = true;
+                    }
+                }
+            }
+            ShellText {
+                anchors.fill: locationField
+                verticalAlignment: Text.AlignVCenter
+                visible: locationField.text.length === 0
+                runtime: panel.runtime
+                theme: panel.theme
+                color: panel.theme.textMuted
+                text: "City or latitude,longitude; empty uses approximate location"
+                elide: Text.ElideRight
+            }
+            ShellAction {
+                id: applyLocation
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                width: 85
+                height: 36
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                compact: true
+                horizontalCompact: true
+                title: "Apply"
+                shortcut: panel.runtime.shellHint("WeatherContent.applyLocation")
+                onActivated: panel.finishLocation(true)
             }
         }
 
@@ -175,7 +313,7 @@ FocusScope {
                 motion: panel.motion
                 icon: "󰖝"
                 title: "Wind"
-                value: panel.weather.available ? Math.round(panel.weather.windSpeed) + " km/h" : "-- km/h"
+                value: panel.weather.available ? panel.weather.windText(panel.weather.windSpeed) : "-- km/h"
             }
         }
 
@@ -210,10 +348,12 @@ FocusScope {
             font.weight: Font.DemiBold
         }
 
-        Row {
+        Grid {
             id: forecastRow
             width: parent.width
-            spacing: panel.theme.spacing2
+            columns: panel.theme.textScale >= 1.5 || width < 480 ? 4 : 7
+            rowSpacing: panel.theme.spacing2
+            columnSpacing: panel.theme.spacing2
 
             Repeater {
                 model: panel.weather.forecast
@@ -221,6 +361,7 @@ FocusScope {
                 delegate: WeatherDay {
                     required property var modelData
 
+                    width: (forecastRow.width - (forecastRow.columns - 1) * forecastRow.columnSpacing) / forecastRow.columns
                     theme: panel.theme
                     motion: panel.motion
                     weather: panel.weather
@@ -229,6 +370,15 @@ FocusScope {
                     onActivated: panel.selectedDay = index
                 }
             }
+        }
+
+        ShellText {
+            width: parent.width
+            runtime: panel.runtime
+            theme: panel.theme
+            text: panel.weather.forecast[panel.selectedDay] ? Qt.formatDate(new Date(panel.weather.forecast[panel.selectedDay].date + "T12:00:00"), "dddd, d MMMM") + " · " + panel.weather.conditionFor(panel.weather.forecast[panel.selectedDay].code) + " · " + Math.round(panel.weather.forecast[panel.selectedDay].rain ?? 0) + "% chance of precipitation" : "No forecast for selected day"
+            color: panel.theme.textMuted
+            wrapMode: Text.WordWrap
         }
 
         Text {

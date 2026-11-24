@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell.Services.Mpris
+import "MediaSelection.js" as Selection
 
 QtObject {
     id: media
@@ -35,6 +36,42 @@ QtObject {
     readonly property real position: available && player.positionSupported ? player.position : 0
     readonly property real length: available && player.lengthSupported ? player.length : 0
     readonly property bool seekable: available && player.canSeek && player.positionSupported && player.lengthSupported
+    readonly property string persistentPreference: appearance.mediaPreferredPlayer
+    readonly property bool preferredCurrent: available && persistentPreference !== "" && stablePlayerId(player) === persistentPreference
+    readonly property bool rateAvailable: available && player.canControl && player.minRate < player.maxRate && Number.isFinite(player.rate)
+    readonly property real rate: rateAvailable ? player.rate : 1
+    readonly property string preferenceStatus: persistentPreference === "" ? "Automatic" : preferredCurrent ? "Preferred player" : "Preferred app unavailable or session selection"
+    onPlayersChanged: {
+        if (preferredPlayerId !== "" && !players.some(candidate => playerId(candidate) === preferredPlayerId))
+            preferredPlayerId = "";
+    }
+
+    function stablePlayerId(candidate: var): string {
+        return Selection.stablePlayerId(candidate);
+    }
+
+    function togglePreferredPlayer(): void {
+        if (preferredCurrent || !available) {
+            appearance.setMediaPreferredPlayer("");
+        } else {
+            const identity = stablePlayerId(player);
+            if (identity)
+                appearance.setMediaPreferredPlayer(identity);
+        }
+        preferredPlayerId = "";
+    }
+
+    function resetPreferredPlayer(): void {
+        preferredPlayerId = "";
+        appearance.resetMediaPreferredPlayer();
+    }
+
+    function adjustRate(delta: real): void {
+        if (!rateAvailable)
+            return;
+        player.rate = Math.max(player.minRate, Math.min(player.maxRate, Math.round((rate + delta) * 100) / 100));
+    }
+
     readonly property int playerCount: players.length
     readonly property int selectedPlayerIndex: available ? players.indexOf(player) : -1
     readonly property bool shuffleAvailable: available && player.shuffleSupported
@@ -44,34 +81,11 @@ QtObject {
     readonly property string repeatLabel: repeatState === MprisLoopState.Track ? "ONE" : repeatState === MprisLoopState.Playlist ? "ALL" : "OFF"
 
     function playerId(candidate): string {
-        if (!candidate)
-            return "";
-
-        return candidate.dbusName || candidate.uniqueId || candidate.identity || "";
+        return Selection.playerId(candidate);
     }
 
     function selectPlayer(): var {
-        if (players.length === 0)
-            return null;
-
-        if (preferredPlayerId.length > 0) {
-            for (const candidate of players) {
-                if (playerId(candidate) === preferredPlayerId)
-                    return candidate;
-            }
-        }
-
-        for (const candidate of players) {
-            if (candidate.isPlaying)
-                return candidate;
-        }
-
-        for (const candidate of players) {
-            if (candidate.trackTitle && candidate.trackTitle.length > 0)
-                return candidate;
-        }
-
-        return players[0];
+        return Selection.choosePlayer(players, preferredPlayerId, persistentPreference);
     }
 
     function cyclePlayer(): void {

@@ -487,6 +487,11 @@ in
           default = false;
           description = "Show synchronized lyrics in the media view when the player supplies them.";
         };
+        mediaPreferredPlayer = lib.mkOption {
+          type = lib.types.str;
+          default = "";
+          description = "Preferred MPRIS desktop entry or stable application identity; empty selects automatically.";
+        };
         mediaSeekSeconds = lib.mkOption {
           type = lib.types.enum [
             5
@@ -641,6 +646,12 @@ in
     };
     default = { };
     description = "Night Light baseline, with individual runtime user overrides.";
+  };
+
+  scopeOptions.weatherUnits = lib.mkOption {
+    type = lib.types.enum [ "metric" "imperial" ];
+    default = "metric";
+    description = "Default units for the shared weather forecast.";
   };
 
   scopeOptions.weatherLocation = lib.mkOption {
@@ -903,6 +914,7 @@ in
         };
         inherit (scopeConfig) powerPolicy;
         weather.location = scopeConfig.weatherLocation;
+        weather.units = scopeConfig.weatherUnits;
         keybindings = cheatsheetBindings;
         shortcutHints = {
           launcherSlots = launcherSlotsHint;

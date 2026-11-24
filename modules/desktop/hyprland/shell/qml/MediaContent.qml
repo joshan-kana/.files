@@ -508,7 +508,7 @@ FocusScope {
             }
         }
 
-        Row {
+        Column {
             id: mediaActions
             anchors {
                 top: transport.bottom
@@ -516,6 +516,9 @@ FocusScope {
                 topMargin: content.theme.spacing2
             }
             spacing: content.theme.spacing2
+            Row {
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: content.theme.spacing2
 
             ShellAction {
                 width: 114
@@ -581,6 +584,84 @@ FocusScope {
                 enabled: content.media.seekSeconds < 60
                 onActivated: content.media.adjustSeekStep(1)
             }
+            }
+            Row {
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: content.theme.spacing2
+                ShellAction {
+                    id: preferredAction
+                    width: 180
+                    height: 40
+                    runtime: content.runtime
+                    theme: content.theme
+                    motion: content.motion
+                    compact: true
+                    horizontalCompact: true
+                    title: content.media.preferredCurrent ? "Use auto selection" : "Prefer current app"
+                    shortcut: content.runtime.shellHint("MediaContent.prefer")
+                    active: content.media.preferredCurrent
+                    enabled: content.media.available || content.media.persistentPreference !== ""
+                    onActivated: content.media.togglePreferredPlayer()
+                }
+                ShellAction {
+                    id: resetPreferredAction
+                    width: 115
+                    height: 40
+                    runtime: content.runtime
+                    theme: content.theme
+                    motion: content.motion
+                    compact: true
+                    horizontalCompact: true
+                    title: "Default player"
+                    shortcut: content.runtime.shellHint("MediaContent.preferReset")
+                    onActivated: content.media.resetPreferredPlayer()
+                }
+                ShellText {
+                    anchors.verticalCenter: parent.verticalCenter
+                    runtime: content.runtime
+                    theme: content.theme
+                    text: content.media.preferenceStatus
+                    color: content.theme.textMuted
+                    font.pixelSize: content.theme.fontSize(10)
+                    width: 180
+                    elide: Text.ElideRight
+                }
+                ShellAction {
+                    id: slowerAction
+                    visible: content.media.rateAvailable
+                    width: 80
+                    height: 40
+                    runtime: content.runtime
+                    theme: content.theme
+                    motion: content.motion
+                    compact: true
+                    horizontalCompact: true
+                    title: "Slower"
+                    shortcut: content.runtime.shellHint("MediaContent.rateDown")
+                    onActivated: content.media.adjustRate(-0.25)
+                }
+                ShellText {
+                    visible: content.media.rateAvailable
+                    anchors.verticalCenter: parent.verticalCenter
+                    runtime: content.runtime
+                    theme: content.theme
+                    text: content.media.rate.toFixed(2) + "×"
+                }
+                ShellAction {
+                    id: fasterAction
+                    visible: content.media.rateAvailable
+                    width: 80
+                    height: 40
+                    runtime: content.runtime
+                    theme: content.theme
+                    motion: content.motion
+                    compact: true
+                    horizontalCompact: true
+                    title: "Faster"
+                    shortcut: content.runtime.shellHint("MediaContent.rateUp")
+                    onActivated: content.media.adjustRate(0.25)
+                }
+            }
         }
 
         FocusScope {
@@ -633,6 +714,22 @@ FocusScope {
                 } else if (event.key === content.runtime.shellKeyCode("media", "R")) {
                     if (!event.isAutoRepeat)
                         repeatAction.trigger();
+                    event.accepted = true;
+                } else if (content.runtime.shellMatchesHint("MediaContent.prefer", event.key, event.modifiers)) {
+                    if (!event.isAutoRepeat)
+                        preferredAction.trigger();
+                    event.accepted = true;
+                } else if (content.runtime.shellMatchesHint("MediaContent.preferReset", event.key, event.modifiers)) {
+                    if (!event.isAutoRepeat)
+                        resetPreferredAction.trigger();
+                    event.accepted = true;
+                } else if (content.runtime.shellMatchesHint("MediaContent.rateDown", event.key, event.modifiers)) {
+                    if (!event.isAutoRepeat && content.media.rateAvailable)
+                        slowerAction.trigger();
+                    event.accepted = true;
+                } else if (content.runtime.shellMatchesHint("MediaContent.rateUp", event.key, event.modifiers)) {
+                    if (!event.isAutoRepeat && content.media.rateAvailable)
+                        fasterAction.trigger();
                     event.accepted = true;
                 } else if (event.key === content.runtime.shellKeyCode("media", "P")) {
                     if (!event.isAutoRepeat)

@@ -1,14 +1,75 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import QtCore
 import Quickshell
 import Quickshell.Io
+import "WeatherFormatting.js" as Formatting
 
 QtObject {
     id: weather
 
     required property RuntimeConfig runtime
 
-    readonly property string preferredLocation: Quickshell.env("DESKTOP_SHELL_WEATHER_LOCATION") || runtime.weatherLocation
+    property Settings preferences: Settings {
+        id: saved
+        location: "file://" + (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/desktop-shell/preferences.ini"
+        category: "Weather"
+        property bool locationOverridden: false
+        property string selectedLocation: ""
+        property string unitsOverride: ""
+    }
+    readonly property string declaredLocation: Quickshell.env("DESKTOP_SHELL_WEATHER_LOCATION") || runtime.weatherLocation
+    readonly property string preferredLocation: saved.locationOverridden ? saved.selectedLocation : declaredLocation
+    readonly property bool locationOverridden: saved.locationOverridden
+    readonly property string units: ["metric", "imperial"].includes(saved.unitsOverride) ? saved.unitsOverride : runtime.weatherUnits
+    property string requestLocation: ""
+    property bool initialized: false
+    Component.onCompleted: initialized = true
+    onPreferredLocationChanged: {
+        if (!initialized)
+            return;
+        latitude = NaN;
+        longitude = NaN;
+        available = false;
+        forecast = [];
+        city = "";
+        if (!loading)
+            refresh();
+    }
+
+    function setLocation(value: string): void {
+        const next = value.trim();
+        if (next.length > 128)
+            return;
+        saved.selectedLocation = next;
+        saved.locationOverridden = true;
+        saved.sync();
+    }
+
+    function resetLocation(): void {
+        saved.locationOverridden = false;
+        saved.sync();
+    }
+
+    function toggleUnits(): void {
+        saved.unitsOverride = units === "metric" ? "imperial" : "metric";
+        saved.sync();
+    }
+
+    function resetUnits(): void {
+        saved.unitsOverride = "";
+        saved.sync();
+    }
+
+    function finishObsoleteRequest(): bool {
+        if (requestLocation === preferredLocation)
+            return false;
+        loading = false;
+        latitude = NaN;
+        longitude = NaN;
+        Qt.callLater(() => weather.refresh());
+        return true;
+    }
     property string city: ""
     property string status: "Locating…"
     property bool loading: false
@@ -78,7 +139,11 @@ QtObject {
     }
 
     function temperatureText(value: real): string {
-        return Math.round(value) + "°";
+        return Formatting.temperature(value, units);
+    }
+
+    function windText(value: real): string {
+        return Formatting.wind(value, units);
     }
 
     function timeText(value: string): string {
@@ -89,6 +154,7 @@ QtObject {
         if (loading)
             return;
         loading = true;
+        requestLocation = preferredLocation;
         status = available ? "Refreshing…" : "Locating…";
         if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
             fetchForecast();
@@ -98,10 +164,10 @@ QtObject {
     }
 
     function lookupLocation(): void {
-        const preference = preferredLocation.trim();
+        const preference = requestLocation.trim();
         if (preference.length > 0) {
-            const coords = preference.split(",").map(part => Number(part.trim()));
-            if (coords.length === 2 && coords.every(Number.isFinite) && Math.abs(coords[0]) <= 90 && Math.abs(coords[1]) <= 180) {
+            const coords = Formatting.coordinates(preference);
+            if (coords) {
                 city = "Selected location";
                 latitude = coords[0];
                 longitude = coords[1];
@@ -128,10 +194,12 @@ QtObject {
     property Process locationRequest: Process {
         stdout: StdioCollector {
             onStreamFinished: {
+                if (weather.finishObsoleteRequest())
+                    return;
                 try {
                     const data = JSON.parse(text);
-                    const place = weather.preferredLocation.trim() ? data.results?.[0] : data;
-                    if (!place || (!weather.preferredLocation.trim() && place.success !== true))
+                    const place = weather.requestLocation.trim() ? data.results?.[0] : data;
+                    if (!place || (!weather.requestLocation.trim() && place.success !== true))
                         throw new Error("No matching location");
                     weather.latitude = Number(place.latitude);
                     weather.longitude = Number(place.longitude);
@@ -148,6 +216,8 @@ QtObject {
     property Process forecastRequest: Process {
         stdout: StdioCollector {
             onStreamFinished: {
+                if (weather.finishObsoleteRequest())
+                    return;
                 try {
                     const data = JSON.parse(text);
                     if (!data.current || !data.daily || data.daily.time.length !== 7)

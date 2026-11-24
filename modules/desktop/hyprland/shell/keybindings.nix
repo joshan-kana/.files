@@ -398,6 +398,10 @@
           "MediaContent.longer" = "+";
           "MediaContent.lyrics" = "Y";
           "MediaContent.player" = "P";
+          "MediaContent.prefer" = "F";
+          "MediaContent.preferReset" = "SHIFT+F";
+          "MediaContent.rateDown" = "A";
+          "MediaContent.rateUp" = "D";
           "MediaContent.repeat" = "R";
           "MediaContent.shorter" = "-";
           "MediaContent.shuffle" = "S";
@@ -484,6 +488,10 @@
           "WeatherContent.calendar" = "C";
           "WeatherContent.days" = "NAV_ALL";
           "WeatherContent.refresh" = "R";
+          "WeatherContent.location" = "F";
+          "WeatherContent.applyLocation" = "ENTER";
+          "WeatherContent.units" = "U";
+          "WeatherContent.reset" = "D";
         };
       };
     in

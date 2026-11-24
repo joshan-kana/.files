@@ -92,6 +92,7 @@ QtObject {
     readonly property bool notificationHistoryEnabled: root.configData.notifications.historyEnabled
     readonly property var notificationQuietHours: root.configData.notifications.quietHours
     readonly property var powerPolicy: root.configData.powerPolicy
+    readonly property string weatherUnits: root.configData.weather.units
     readonly property string weatherLocation: root.configData.weather.location
 
     function shortcut(id) {
@@ -279,6 +280,7 @@ QtObject {
                 property real vhsDropouts: 0.0
                 property string mediaVisualizerMode: "bars"
                 property bool mediaLyricsVisible: false
+                property string mediaPreferredPlayer: ""
                 property int mediaSeekSeconds: 10
             }
 
@@ -306,6 +308,7 @@ QtObject {
 
             property JsonObject weather: JsonObject {
                 property string location: ""
+                property string units: "metric"
             }
 
             property JsonObject tools: JsonObject {
