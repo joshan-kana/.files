@@ -488,6 +488,14 @@
             ./modules/options
             stylix.${nativeModules}.stylix
             home-manager.${nativeModules}.home-manager
+            ({ config, ... }: {
+              # Stylix automatically imports its home module only while enabled.
+              # Keep the native option schema available to disabled scope definitions.
+              home-manager.sharedModules = lib.mkIf (!config.stylix.enable) (
+                [ config.stylix.homeManagerIntegration.module ]
+                ++ lib.optional config.home-manager.useGlobalPkgs { stylix.overlays.enable = false; }
+              );
+            })
             ./overlays
             (semantic.rootModule (
               lib.setFunctionArgs (args: (host args) // { _file = toString hostFile; }) (lib.functionArgs host)
@@ -763,6 +771,55 @@
           ) self.nixosConfigurations) pkgs.emptyFile;
           docs = self.packages.${system}.docs;
           repo-quality = treefmt.config.build.check self;
+          system-update =
+            pkgs.runCommand "system-update-tests"
+              {
+                nativeBuildInputs = with pkgs; [
+                  bash
+                  coreutils
+                  git
+                  jq
+                ];
+              }
+              ''
+                export HOME="$TMPDIR/home"
+                mkdir -p "$HOME"
+                bash ${./tests/system-update.sh} ${./scripts/system-update.sh}
+                touch "$out"
+              '';
+          schema-update =
+            pkgs.runCommand "schema-update-tests"
+              {
+                nativeBuildInputs = with pkgs; [
+                  bash
+                  coreutils
+                  git
+                  jq
+                ];
+              }
+              ''
+                export HOME="$TMPDIR/home"
+                mkdir -p "$HOME"
+                bash ${./tests/update-schemas.sh} ${./scripts/update-schemas.sh}
+                touch "$out"
+              '';
+          container-lock-update =
+            pkgs.runCommand "container-lock-update-tests"
+              {
+                nativeBuildInputs = with pkgs; [
+                  bash
+                  coreutils
+                  diffutils
+                  git
+                  jq
+                ];
+              }
+              ''
+                export HOME="$TMPDIR/home"
+                mkdir -p "$HOME"
+                bash ${./tests/update-container-lock.sh} ${./scripts/update-container-lock.sh}
+                touch "$out"
+              '';
           desktop-regressions =
             pkgs.runCommand "desktop-regression-tests"
               {

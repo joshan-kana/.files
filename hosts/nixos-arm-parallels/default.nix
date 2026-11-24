@@ -10,11 +10,22 @@
 lib.recursiveUpdate (import ../../profiles/workstation.nix { inherit moduleRegistry; }) {
   hardware = import ./hardware.nix;
 
-  system = extendScope moduleRegistry.system {
-    parallels = _: {
-      systemd.user.services.prlcc.serviceConfig = {
-        Restart = "on-failure";
-        RestartSec = "2s";
+  system =
+    extendScope
+      (editScope moduleRegistry.system {
+        privilegeSshAgent = _: {
+          systemd.tmpfiles.rules = [
+            "f+ /etc/elevation-authorized-key 0444 root root - ssh-ed25519\\x20AAAAC3NzaC1lZDI1NTE5AAAAIGRtvQBAj3/3cJYqS4KosghtI5fsh9poh3q+LIfFL8KR\\x20joshan@nixos-arm-parallels-sudo\\n"
+          ];
+        };
+      })
+      {
+        parallels = _: {
+          systemd.user.services.prlcc.serviceConfig = {
+            Restart = "on-failure";
+            RestartSec = "2s";
+          };
+        };
       };
 
   networking = editScope moduleRegistry.networking {
