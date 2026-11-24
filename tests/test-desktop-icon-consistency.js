@@ -194,7 +194,7 @@ test("Controls header destination glyphs use their detail semantic colours witho
   }
   assert.match(
     action,
-    /property color iconColor: active \? activeColor : theme.textStrong/,
+    /property color iconColor: prominentAction \? theme.onColor\(activeColor\) : active \? activeColor : theme.textStrong/,
   );
   assert.equal(
     [...action.matchAll(/text: root.icon\s+color: root.iconColor/g)].length,
@@ -202,7 +202,7 @@ test("Controls header destination glyphs use their detail semantic colours witho
   );
   assert.match(
     action,
-    /text: root.title[\s\S]*?color: root.active \? root.activeColor :/,
+    /text: root.title[\s\S]*?color: root.prominentAction \? root.theme.onColor\(root.activeColor\) : root.active \? root.activeColor :/,
   );
   assert.match(action, /selected: root.active/);
 });

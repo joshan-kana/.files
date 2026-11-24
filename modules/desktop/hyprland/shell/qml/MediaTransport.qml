@@ -132,7 +132,8 @@ Item {
                 required property var modelData
                 required property int index
                 width: Math.max(implicitWidth, root.minimal ? (modelData.action === "play" ? 58 : 48) : (modelData.action === "play" ? 86 : 70))
-                height: Math.max(46, implicitHeight)
+                height: Math.max(!root.compact && !root.minimal && modelData.action === "play" ? 58 : 46, implicitHeight)
+                anchors.verticalCenter: parent.verticalCenter
                 runtime: root.runtime
                 theme: root.theme
                 motion: root.motion
@@ -144,6 +145,8 @@ Item {
                 icon: modelData.action === "play" && root.media.playing ? "󰏤" : modelData.glyph
                 title: root.label(modelData.action)
                 shortcut: root.hint(modelData.action)
+                prominentAction: modelData.action === "play" && !root.compact && !root.minimal && enabled
+                activeColor: root.theme.roleColor("media")
                 active: modelData.action === "play" && root.media.playing
                 enabled: root.canActivate(modelData.action)
                 onVisualPressedChanged: {

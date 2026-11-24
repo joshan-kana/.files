@@ -415,7 +415,7 @@ Item {
                 required property int index
 
                 width: ListView.view.width
-                height: Math.max(92, panel.theme.fontSize(84))
+                height: Math.max(deviceRow.modelData.connected ? 106 : 76, panel.theme.fontSize(deviceRow.modelData.connected ? 100 : 72))
                 theme: panel.theme
                 motion: panel.motion
                 selected: index === panel.selectedIndex
@@ -450,8 +450,17 @@ Item {
                     }
                     spacing: panel.theme.spacing3
 
+                    Text {
+                        width: panel.theme.fontSize(deviceRow.modelData.connected ? 42 : 30)
+                        anchors.verticalCenter: parent.verticalCenter
+                        horizontalAlignment: Text.AlignHCenter
+                        text: deviceRow.modelData.connected ? "󰂱" : deviceRow.modelData.pairing ? "󰂯" : "󰂲"
+                        color: panel.theme.readableRoleColor(deviceRow.modelData.connected ? "positive" : "connectivity")
+                        font.family: "Symbols Nerd Font"
+                        font.pixelSize: width
+                    }
                     Column {
-                        width: parent.width - 126
+                        width: Math.max(1, parent.width - panel.theme.fontSize(deviceRow.modelData.connected ? 42 : 30) - deviceTail.width - parent.spacing * 2)
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: panel.theme.spacing1
 
@@ -460,7 +469,7 @@ Item {
                             text: panel.displayName(deviceRow.modelData)
                             color: panel.theme.textStrong
                             font.family: panel.runtime.fontSans
-                            font.pixelSize: panel.theme.fontSize(13)
+                            font.pixelSize: deviceRow.modelData.connected ? panel.theme.fontDetailTitle : panel.theme.fontAction
                             font.weight: deviceRow.modelData.connected ? Font.DemiBold : Font.Normal
                         }
 
@@ -504,11 +513,13 @@ Item {
                     }
 
                     Column {
-                        width: 114
+                        id: deviceTail
+                        width: Math.max(panel.theme.fontSize(80), deviceHint.implicitWidth)
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: panel.theme.spacing1
 
                         KeyHint {
+                            id: deviceHint
                             anchors.right: parent.right
                             runtime: panel.runtime
                             theme: panel.theme
@@ -517,11 +528,20 @@ Item {
                             label: deviceRow.modelData.pairing ? "Cancel" : !deviceRow.modelData.paired ? "Pair" : deviceRow.modelData.connected ? "Drop" : "Link"
                         }
 
+                        LevelTrack {
+                            visible: deviceRow.modelData.batteryAvailable
+                            width: parent.width
+                            height: panel.theme.compactTrack
+                            theme: panel.theme
+                            motion: panel.motion
+                            fraction: deviceRow.modelData.battery
+                            accentColor: deviceRow.modelData.battery <= 0.20 ? panel.theme.warning : panel.theme.positive
+                        }
                         Text {
                             width: parent.width
                             visible: deviceRow.modelData.batteryAvailable
                             horizontalAlignment: Text.AlignRight
-                            text: "BAT " + Math.round(deviceRow.modelData.battery * 100) + "%"
+                            text: Math.round(deviceRow.modelData.battery * 100) + "%"
                             color: deviceRow.modelData.battery <= 0.20 ? panel.theme.warning : panel.theme.textMuted
                             font.family: panel.runtime.fontMono
                             font.pixelSize: panel.theme.fontUtility

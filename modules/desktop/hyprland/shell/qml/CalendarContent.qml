@@ -223,12 +223,12 @@ FocusScope {
                 spacing: calendar.theme.spacing1
 
                 Text {
-                    text: Qt.formatDate(clock.date, "dddd · d MMMM yyyy").toUpperCase()
+                    text: Qt.formatDate(clock.date, "dddd · d MMMM yyyy")
                     color: calendar.theme.readableRoleColor("calendar")
                     font.family: calendar.runtime.fontSans
                     font.pixelSize: calendar.theme.fontPanelEyebrow
                     font.weight: Font.DemiBold
-                    font.letterSpacing: 0.7
+                    font.letterSpacing: 0
                 }
                 Text {
                     text: clock.date.getHours() < 12 ? "Good morning." : clock.date.getHours() < 17 ? "Good afternoon." : "Good evening."
@@ -406,10 +406,6 @@ FocusScope {
                     {
                         shortcut: calendar.runtime.shellHint("CalendarContent.events"),
                         label: "Events"
-                    },
-                    {
-                        shortcut: calendar.runtime.shellHint("CalendarContent.calendars"),
-                        label: "Calendars"
                     }
                 ]
             }

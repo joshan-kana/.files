@@ -461,7 +461,7 @@ FocusScope {
                     iconHint: true
                     activeColor: content.theme.roleColor("media")
                     icon: "󰒝"
-                    title: content.media.shuffled ? "SHUFFLE ON" : "SHUFFLE OFF"
+                    title: content.media.shuffled ? "Shuffle on" : "Shuffle off"
                     shortcut: content.runtime.shellHint("MediaContent.shuffle")
                     active: content.media.shuffled
                     enabled: content.media.shuffleAvailable
@@ -480,7 +480,7 @@ FocusScope {
                     iconHint: true
                     activeColor: content.theme.roleColor("media")
                     icon: content.media.repeatState === 1 ? "󰑘" : "󰑖"
-                    title: "REPEAT " + content.media.repeatLabel
+                    title: "Repeat " + content.media.repeatLabel
                     shortcut: content.runtime.shellHint("MediaContent.repeat")
                     active: content.media.repeatState !== 0
                     enabled: content.media.repeatAvailable
@@ -506,7 +506,7 @@ FocusScope {
                     horizontalCompact: true
                     activeColor: content.theme.roleColor("media")
                     icon: "󰎄"
-                    title: content.media.available ? "PLAYER " + (content.media.selectedPlayerIndex + 1) + "/" + content.media.playerCount : "NO PLAYER"
+                    title: content.media.available ? "Player " + (content.media.selectedPlayerIndex + 1) + "/" + content.media.playerCount : "No player"
                     shortcut: content.runtime.shellHint("MediaContent.player")
                     active: content.media.playerCount > 1
                     enabled: content.media.playerCount > 1
@@ -600,7 +600,11 @@ FocusScope {
                     motion: content.motion
                     compact: true
                     horizontalCompact: true
-                    title: "Default player"
+                    title: "Restore default player"
+                    icon: "󰑐"
+                    iconOnly: true
+                    inlineIconHint: true
+                    quietAction: true
                     shortcut: content.runtime.shellHint("MediaContent.preferReset")
                     onActivated: content.media.resetPreferredPlayer()
                 }

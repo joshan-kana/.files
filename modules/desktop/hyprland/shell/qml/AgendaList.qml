@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "ClockFormatting.js" as ClockFormatting
 
 Column {
     id: panel
@@ -50,7 +51,7 @@ Column {
 
             Text {
                 anchors.verticalCenter: parent.verticalCenter
-                text: "AGENDA · NEXT 7 DAYS"
+                text: "Agenda · next 7 days"
                 color: panel.theme.readableRoleColor("calendar")
                 font.family: panel.runtime.fontSans
                 font.pixelSize: panel.theme.fontPanelEyebrow
@@ -63,19 +64,21 @@ Column {
             Text {
                 id: count
                 anchors.verticalCenter: parent.verticalCenter
-                text: panel.agenda.loading ? "SYNCING" : panel.agenda.configured ? panel.agenda.events.length + " EVENTS" : "SET UP"
+                text: panel.agenda.loading ? "Syncing" : panel.agenda.configured ? panel.agenda.events.length + " events" : "Set up"
                 color: panel.theme.textMuted
                 font.family: panel.runtime.fontSans
                 font.pixelSize: panel.theme.fontSize(10)
             }
             ShellAction {
                 id: calendarButton
-                width: panel.agenda.calendars.length > 0 ? 32 : 0
-                height: 30
+                width: panel.agenda.calendars.length > 0 ? implicitWidth : 0
+                height: implicitHeight
                 visible: width > 0
                 iconOnly: true
                 icon: "󰃀"
-                title: "Choose calendars (C)"
+                title: "Choose calendars"
+                shortcut: panel.runtime.shellHint("CalendarContent.calendars")
+                inlineIconHint: true
                 runtime: panel.runtime
                 theme: panel.theme
                 motion: panel.motion
@@ -124,7 +127,7 @@ Column {
                             spacing: panel.theme.spacing2
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: (eventRow.modelData.dateKind ? eventRow.modelData.dateKind + " " : "") + (eventRow.modelData.date === panel.startDate ? "TODAY" : eventRow.modelData.date.slice(5)) + (eventRow.modelData.time ? " · " + eventRow.modelData.time : "")
+                                text: (eventRow.modelData.dateKind ? eventRow.modelData.dateKind + " " : "") + (eventRow.modelData.date === Qt.formatDate(new Date(), "yyyy-MM-dd") ? "Today" : eventRow.modelData.date.slice(5)) + (eventRow.modelData.time ? " · " + ClockFormatting.displayTime(eventRow.modelData.time) : "")
                                 color: panel.theme.readableRoleColor("calendar")
                                 font.family: panel.runtime.fontSans
                                 font.pixelSize: panel.theme.fontSize(10)

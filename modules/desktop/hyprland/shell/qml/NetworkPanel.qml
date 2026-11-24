@@ -755,7 +755,7 @@ Item {
                 required property int index
 
                 width: ListView.view.width
-                height: Math.max(88, panel.theme.fontSize(80))
+                height: Math.max(networkRow.modelData.connected ? 106 : 68, panel.theme.fontSize(networkRow.modelData.connected ? 100 : 64))
                 theme: panel.theme
                 motion: panel.motion
                 selected: index === panel.selectedIndex
@@ -783,8 +783,17 @@ Item {
                     }
                     spacing: panel.theme.spacing3
 
+                    Text {
+                        width: panel.theme.fontSize(networkRow.modelData.connected ? 42 : 30)
+                        anchors.verticalCenter: parent.verticalCenter
+                        horizontalAlignment: Text.AlignHCenter
+                        text: networkRow.modelData.signalStrength >= 0.75 ? "󰤨" : networkRow.modelData.signalStrength >= 0.50 ? "󰤥" : networkRow.modelData.signalStrength >= 0.25 ? "󰤢" : "󰤟"
+                        color: panel.theme.readableRoleColor("connectivity")
+                        font.family: "Symbols Nerd Font"
+                        font.pixelSize: width
+                    }
                     Column {
-                        width: parent.width - 112
+                        width: Math.max(1, parent.width - panel.theme.fontSize(networkRow.modelData.connected ? 42 : 30) - networkTail.width - parent.spacing * 2)
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: 2
 
@@ -797,7 +806,7 @@ Item {
                                 text: networkRow.modelData.name
                                 color: panel.theme.textStrong
                                 font.family: panel.runtime.fontSans
-                                font.pixelSize: panel.theme.fontSize(13)
+                                font.pixelSize: networkRow.modelData.connected ? panel.theme.fontDetailTitle : panel.theme.fontAction
                                 font.weight: networkRow.modelData.connected ? Font.DemiBold : Font.Normal
                             }
 
@@ -822,7 +831,8 @@ Item {
                     }
 
                     Item {
-                        width: 100
+                        id: networkTail
+                        width: Math.max(panel.theme.fontSize(80), networkActionHint.implicitWidth, networkStateLabel.implicitWidth)
                         height: Math.max(networkActionHint.implicitHeight, networkStateLabel.implicitHeight)
                         anchors.verticalCenter: parent.verticalCenter
 

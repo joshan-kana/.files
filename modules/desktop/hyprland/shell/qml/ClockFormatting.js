@@ -12,3 +12,8 @@ function minutesLabel(minutes) {
 function wallClock(date) {
   return minutesLabel(date.getHours() * 60 + date.getMinutes());
 }
+
+function displayTime(value) {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value);
+  return match ? minutesLabel(Number(match[1]) * 60 + Number(match[2])) : value;
+}

@@ -664,18 +664,27 @@ Item {
                         spacing: panel.theme.spacing3
 
                         Text {
-                            width: 64
+                            width: panel.theme.fontSize(32)
                             anchors.verticalCenter: parent.verticalCenter
-                            text: item.modelData ? (panel.actionMode ? "ACTION" : item.modelData.pinned ? "PINNED" : item.modelData.kind || "") : ""
+                            horizontalAlignment: Text.AlignHCenter
+                            text: item.modelData ? (panel.actionMode ? "󰍉" : item.modelData.kind === "TEXT" ? "󰈙" : item.modelData.kind === "IMAGE" ? "󰋩" : "󰈔") : ""
                             color: panel.theme.readableRoleColor(item.modelData && item.modelData.kind === "TEXT" ? "clipboard" : "capture")
-                            font.family: panel.runtime.fontSans
-                            font.pixelSize: panel.theme.fontSize(9)
-                            font.weight: Font.DemiBold
-                            font.letterSpacing: 0.8
+                            font.family: "Symbols Nerd Font"
+                            font.pixelSize: panel.theme.iconLarge
+                        }
+                        Text {
+                            id: pinnedMark
+                            visible: !!item.modelData && !panel.actionMode && item.modelData.pinned
+                            width: visible ? implicitWidth : 0
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "󰐃"
+                            color: panel.theme.readableRoleColor("clipboard")
+                            font.family: "Symbols Nerd Font"
+                            font.pixelSize: panel.theme.iconSmall
                         }
 
                         MarqueeText {
-                            width: Math.max(1, parent.width - 64 - parent.spacing - moreAction.implicitWidth)
+                            width: Math.max(1, parent.width - panel.theme.fontSize(32) - pinnedMark.width - parent.spacing * 2 - moreAction.implicitWidth)
                             anchors.verticalCenter: parent.verticalCenter
                             text: item.modelData ? (panel.actionMode ? item.modelData.name || "" : item.modelData.preview || "") : ""
                             color: panel.theme.text

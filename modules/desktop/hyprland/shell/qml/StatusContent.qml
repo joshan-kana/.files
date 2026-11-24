@@ -79,7 +79,7 @@ Item {
     }
 
     implicitWidth: Math.max(340, theme.controlsDetailWidth - theme.spacing4 * 2)
-    implicitHeight: heading.implicitHeight + stateGrid.implicitHeight + theme.spacing4 * 3
+    implicitHeight: heading.implicitHeight + stateGrid.implicitHeight + theme.spacing4 * 3 + theme.spacing3 * 2
 
     Column {
         anchors {
@@ -99,7 +99,7 @@ Item {
                 font.pixelSize: content.theme.fontSize(23)
             }
             Column {
-                width: Math.max(1, heading.width - content.theme.fontSize(23) - 88 - heading.spacing * 3)
+                width: Math.max(1, heading.width - content.theme.fontSize(23) - copyAction.width - refreshAction.width - heading.spacing * 3)
                 spacing: content.theme.spacing1
                 Text {
                     width: parent.width
@@ -120,6 +120,7 @@ Item {
                 }
             }
             ShellAction {
+                id: copyAction
                 width: Math.max(44, implicitWidth)
                 height: Math.max(40, implicitHeight)
                 anchors.verticalCenter: parent.verticalCenter
@@ -136,6 +137,7 @@ Item {
                 onActivated: content.copyStatus()
             }
             ShellAction {
+                id: refreshAction
                 width: Math.max(44, implicitWidth)
                 height: Math.max(40, implicitHeight)
                 anchors.verticalCenter: parent.verticalCenter
@@ -152,61 +154,70 @@ Item {
             }
         }
 
-        Grid {
-            id: stateGrid
+        ShellSurface {
             width: parent.width
-            columns: width > 430 ? 2 : 1
-            columnSpacing: content.theme.spacing2
-            rowSpacing: content.theme.spacing2
-            readonly property real tileWidth: (width - (columns - 1) * columnSpacing) / columns
-            Repeater {
-                model: content.statusEntries
-                delegate: ShellSurface {
-                    id: statusTile
-                    required property var modelData
-                    width: stateGrid.tileWidth
-                    height: content.theme.fontSize(53)
-                    theme: content.theme
-                    motion: content.motion
-                    surfaceLayer: ShellSurface.Group
-                    cornerRadius: content.theme.radiusSmall
-                    fillColor: content.theme.expressiveSurface
-                    borderWidth: content.theme.borderThin
-                    borderColor: content.theme.subtleBorder
-                    Accessible.role: Accessible.StaticText
-                    Accessible.name: statusTile.modelData.label + ": " + statusTile.modelData.value
-                    Row {
-                        anchors.centerIn: parent
-                        width: parent.width - content.theme.spacing3 * 2
-                        spacing: content.theme.spacing2
-                        Text {
-                            text: statusTile.modelData.glyph
-                            width: content.theme.fontSize(23)
-                            font.family: "Symbols Nerd Font"
-                            font.pixelSize: content.theme.fontSize(19)
-                            color: content.theme.roleColor("connectivity")
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                        Column {
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: parent.width - content.theme.fontSize(23) - parent.spacing
-                            spacing: content.theme.spacing1
+            height: stateGrid.implicitHeight + content.theme.spacing3 * 2
+            theme: content.theme
+            motion: content.motion
+            surfaceLayer: ShellSurface.Group
+            cornerRadius: content.theme.radiusMedium
+            Grid {
+                id: stateGrid
+                width: parent.width - content.theme.spacing3 * 2
+                anchors.centerIn: parent
+                columns: width > 430 ? 2 : 1
+                columnSpacing: content.theme.spacing2
+                rowSpacing: content.theme.spacing2
+                readonly property real tileWidth: (width - (columns - 1) * columnSpacing) / columns
+                Repeater {
+                    model: content.statusEntries
+                    delegate: ShellSurface {
+                        id: statusTile
+                        required property var modelData
+                        width: stateGrid.tileWidth
+                        height: Math.max(content.theme.fontSize(48), statusText.implicitHeight + content.theme.spacing2 * 2)
+                        theme: content.theme
+                        motion: content.motion
+                        surfaceLayer: ShellSurface.Group
+                        cornerRadius: content.theme.radiusSmall
+                        fillColor: "transparent"
+                        borderWidth: 0
+                        Accessible.role: Accessible.StaticText
+                        Accessible.name: statusTile.modelData.label + ": " + statusTile.modelData.value
+                        Row {
+                            anchors.centerIn: parent
+                            width: parent.width - content.theme.spacing3 * 2
+                            spacing: content.theme.spacing2
                             Text {
-                                width: parent.width
-                                text: statusTile.modelData.label
-                                color: content.theme.textMuted
-                                font.family: content.runtime.fontSans
-                                font.pixelSize: content.theme.fontSize(10)
-                                elide: Text.ElideRight
+                                text: statusTile.modelData.glyph
+                                width: content.theme.fontSize(23)
+                                font.family: "Symbols Nerd Font"
+                                font.pixelSize: content.theme.fontSize(19)
+                                color: content.theme.readableRoleColor(["Unavailable", "Stale"].includes(statusTile.modelData.value) ? "warning" : statusTile.modelData.value === "Recording" ? "critical" : statusTile.modelData.label === "Brightness" ? "daylight" : statusTile.modelData.label === "Output" || statusTile.modelData.label === "Microphone" ? "audio" : "connectivity")
+                                anchors.verticalCenter: parent.verticalCenter
                             }
-                            Text {
-                                width: parent.width
-                                text: statusTile.modelData.value
-                                color: content.theme.textStrong
-                                font.family: content.runtime.fontSans
-                                font.pixelSize: content.theme.fontSize(12)
-                                font.weight: Font.DemiBold
-                                elide: Text.ElideRight
+                            Column {
+                                id: statusText
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: parent.width - content.theme.fontSize(23) - parent.spacing
+                                spacing: content.theme.spacing1
+                                Text {
+                                    width: parent.width
+                                    text: statusTile.modelData.label
+                                    color: content.theme.textMuted
+                                    font.family: content.runtime.fontSans
+                                    font.pixelSize: content.theme.fontSupporting
+                                    wrapMode: Text.WordWrap
+                                }
+                                Text {
+                                    width: parent.width
+                                    text: statusTile.modelData.value
+                                    color: content.theme.textStrong
+                                    font.family: content.runtime.fontSans
+                                    font.pixelSize: content.theme.fontAction
+                                    font.weight: Font.DemiBold
+                                    wrapMode: Text.WordWrap
+                                }
                             }
                         }
                     }

@@ -27,10 +27,10 @@ test("Now Playing keeps shuffle and repeat visible but disabled without a player
   const full = qml("MediaContent.qml");
   for (const [title, availability] of [
     [
-      'title: content.media.shuffled ? "SHUFFLE ON" : "SHUFFLE OFF"',
+      'title: content.media.shuffled ? "Shuffle on" : "Shuffle off"',
       "shuffleAvailable",
     ],
-    ['title: "REPEAT " + content.media.repeatLabel', "repeatAvailable"],
+    ['title: "Repeat " + content.media.repeatLabel', "repeatAvailable"],
   ]) {
     const start = full.indexOf(title);
     assert.notEqual(start, -1, `missing action ${title}`);
@@ -49,7 +49,7 @@ test("compact shuffle and repeat buttons match the shared transport height", () 
   const card = qml("ControlsMediaCard.qml");
   const transport = qml("MediaTransport.qml");
   const match = transport.match(
-    /delegate: ShellAction \{[\s\S]*?height:\s*Math.max\((\d+), implicitHeight\)/,
+    /delegate: ShellAction \{[\s\S]*?height:\s*Math.max\(!root.compact && !root.minimal && modelData.action === "play" \? 58 : (\d+), implicitHeight\)/,
   );
   assert.ok(match, "media transport buttons should declare a height");
   const transportHeight = Number(match[1]);

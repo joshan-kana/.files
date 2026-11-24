@@ -142,6 +142,12 @@ QtObject {
         return (light + 0.05) / (dark + 0.05) >= 4.5 ? chosen : textStrong;
     }
 
+    function onColor(backgroundColor: color): color {
+        const first = (Math.max(luminance(background), luminance(backgroundColor)) + 0.05) / (Math.min(luminance(background), luminance(backgroundColor)) + 0.05);
+        const second = (Math.max(luminance(textStrong), luminance(backgroundColor)) + 0.05) / (Math.min(luminance(textStrong), luminance(backgroundColor)) + 0.05);
+        return first >= second ? background : textStrong;
+    }
+
     function blend(base: color, overlay: color, amount: real): color {
         const mix = Math.max(0, Math.min(1, amount));
         return Qt.rgba(base.r + (overlay.r - base.r) * mix, base.g + (overlay.g - base.g) * mix, base.b + (overlay.b - base.b) * mix, 1);

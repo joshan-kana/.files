@@ -16,7 +16,8 @@ Item {
     property string shortcut: ""
     property bool active: false
     property color activeColor: theme.accent
-    property color iconColor: active ? activeColor : theme.textStrong
+    property bool prominentAction: false
+    property color iconColor: prominentAction ? theme.onColor(activeColor) : active ? activeColor : theme.textStrong
     property bool compact: false
     property bool horizontalCompact: false
     property bool headerEntry: false
@@ -109,8 +110,8 @@ Item {
             motion: root.motion
             surfaceLayer: ShellSurface.Control
             selected: root.active
-            fillColor: root.quietAction || root.switchControl ? "transparent" : root.active ? root.theme.blend(root.theme.controlBase, root.activeColor, root.theme.dark ? 0.20 : 0.12) : root.theme.expressiveSurfaceStrong
-            cornerRadius: root.motion.enabled && interaction.visualPressed ? Math.min(root.height / 2, root.theme.radiusSmall) : root.active ? root.theme.radiusLarge : root.compact ? theme.radiusSmall : theme.radiusMedium
+            fillColor: root.prominentAction ? root.activeColor : root.quietAction || root.switchControl ? "transparent" : root.active ? root.theme.blend(root.theme.controlBase, root.activeColor, root.theme.dark ? 0.20 : 0.12) : root.theme.expressiveSurfaceStrong
+            cornerRadius: root.motion.enabled && interaction.visualPressed ? Math.min(root.height / 2, root.theme.radiusSmall) : root.active || root.prominentAction ? root.theme.radiusLarge : root.compact ? theme.radiusSmall : theme.radiusMedium
             Behavior on cornerRadius {
                 Anim {
                     motion: root.motion
@@ -144,7 +145,7 @@ Item {
                 runtime: root.runtime
                 theme: root.theme
                 text: root.title
-                color: root.active ? root.activeColor : theme.textStrong
+                color: root.prominentAction ? root.theme.onColor(root.activeColor) : root.active ? root.activeColor : theme.textStrong
                 font.pixelSize: root.compact ? theme.fontCompactAction : theme.fontAction
                 font.weight: Font.DemiBold
             }
@@ -206,7 +207,7 @@ Item {
                 wrapMode: Text.WordWrap
                 runtime: root.runtime
                 theme: root.theme
-                color: root.active ? root.activeColor : root.theme.textStrong
+                color: root.prominentAction ? root.theme.onColor(root.activeColor) : root.active ? root.activeColor : root.theme.textStrong
                 font.pixelSize: root.compact ? root.theme.fontCompactAction : root.theme.fontAction
                 font.weight: Font.DemiBold
             }

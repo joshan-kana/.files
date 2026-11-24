@@ -555,7 +555,7 @@ Item {
         ShellSurface {
             id: listPane
             visible: !library.ocrVisible || panes.width >= 620
-            width: previewPane.visible ? Math.max(290, parent.width * 0.52) : parent.width
+            width: previewPane.visible ? Math.max(230, parent.width * 0.36) : parent.width
             height: parent.height
             theme: library.theme
             motion: library.motion
@@ -584,7 +584,7 @@ Item {
                     required property int index
                     readonly property var entry: library.entries[index] || null
                     width: ListView.view.width
-                    height: 61
+                    height: Math.max(72, library.theme.fontSize(66))
                     theme: library.theme
                     motion: library.motion
                     surfaceLayer: ShellSurface.Control
@@ -600,26 +600,55 @@ Item {
                         cornerRadius: library.theme.radiusMedium
                         onActivated: library.choose(recordRow.index)
                     }
-                    Column {
-                        anchors {
-                            fill: parent
-                            margins: library.theme.spacing2
+                    Row {
+                        anchors.fill: parent
+                        anchors.margins: library.theme.spacing2
+                        spacing: library.theme.spacing2
+                        ShellSurface {
+                            width: library.theme.fontSize(72)
+                            height: parent.height
+                            theme: library.theme
+                            motion: library.motion
+                            cornerRadius: library.theme.radiusSmall
+                            surfaceLayer: ShellSurface.Group
+                            clip: true
+                            Text {
+                                anchors.centerIn: parent
+                                text: recordRow.entry && recordRow.entry.isImage ? "󰋩" : "󰕧"
+                                color: library.theme.readableRoleColor(recordRow.entry && recordRow.entry.isImage ? "screenshot" : "capture")
+                                font.family: "Symbols Nerd Font"
+                                font.pixelSize: library.theme.iconLarge
+                            }
+                            Image {
+                                anchors.fill: parent
+                                visible: status === Image.Ready
+                                source: recordRow.entry && recordRow.entry.isImage && library.destinations.screenshots ? "file://" + library.destinations.screenshots + "/" + recordRow.entry.name : ""
+                                asynchronous: true
+                                sourceSize.width: 160
+                                sourceSize.height: 96
+                                fillMode: Image.PreserveAspectCrop
+                            }
                         }
-                        spacing: library.theme.spacing1
-                        MarqueeText {
-                            width: parent.width
-                            text: recordRow.entry ? recordRow.entry.name.replace(/^(Recording|Screenshot)-/, "") : ""
-                            textFormat: Text.PlainText
-                            color: library.theme.textStrong
-                            font.family: library.runtime.fontSans
-                            font.pixelSize: library.theme.fontSize(11)
-                            font.weight: Font.DemiBold
-                        }
-                        Text {
-                            text: library.formatBytes(recordRow.entry ? recordRow.entry.size : 0) + (recordRow.entry && recordRow.entry.isImage ? " · IMAGE" : " · VIDEO")
-                            color: library.theme.textMuted
-                            font.family: library.runtime.fontMono
-                            font.pixelSize: library.theme.fontSize(9)
+                        Column {
+                            width: Math.max(1, parent.width - library.theme.fontSize(72) - parent.spacing)
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: library.theme.spacing1
+                            MarqueeText {
+                                width: parent.width
+                                text: recordRow.entry ? recordRow.entry.name.replace(/^(Recording|Screenshot)-/, "") : ""
+                                color: library.theme.textStrong
+                                font.family: library.runtime.fontSans
+                                font.pixelSize: library.theme.fontAction
+                                font.weight: Font.DemiBold
+                            }
+                            Text {
+                                width: parent.width
+                                text: library.formatBytes(recordRow.entry ? recordRow.entry.size : 0) + (recordRow.entry && recordRow.entry.isImage ? " · Image" : " · Video")
+                                color: library.theme.textMuted
+                                font.family: library.runtime.fontMono
+                                font.pixelSize: library.theme.fontSupporting
+                                wrapMode: Text.WordWrap
+                            }
                         }
                     }
                 }
@@ -627,7 +656,7 @@ Item {
             Text {
                 anchors.centerIn: parent
                 visible: !library.listProcess.running && library.entries.length === 0
-                text: "NO SAVED CAPTURES"
+                text: "No saved captures"
                 color: library.theme.textMuted
                 font.family: library.runtime.fontSans
                 font.pixelSize: library.theme.fontSize(11)
@@ -653,7 +682,7 @@ Item {
                 spacing: library.theme.spacing3
                 ShellSurface {
                     width: parent.width
-                    height: library.ocrVisible ? 162 : 180
+                    height: library.ocrVisible ? 162 : Math.max(180, previewPane.height * 0.55)
                     theme: library.theme
                     motion: library.motion
                     surfaceLayer: ShellSurface.Control
@@ -811,72 +840,81 @@ Item {
                         }
                     }
                 }
-                Grid {
+                Flow {
                     visible: !library.ocrVisible
                     width: parent.width
-                    columns: 2
                     spacing: library.theme.spacing2
                     ShellAction {
-                        width: (previewPane.width - library.theme.spacing3 * 2 - library.theme.spacing2) / 2
-                        height: 34
+                        width: Math.min(parent.width, implicitWidth)
+                        height: implicitHeight
                         runtime: library.runtime
                         theme: library.theme
                         motion: library.motion
                         compact: true
                         horizontalCompact: true
+                        icon: "󰏌"
+                        iconOnly: true
+                        inlineIconHint: true
                         title: "Open"
                         shortcut: library.runtime.shellHint("RecordingLibrary.open")
                         enabled: !!library.selectedEntry && !library.isBusy
                         onActivated: library.openSelected()
                     }
                     ShellAction {
-                        width: (previewPane.width - library.theme.spacing3 * 2 - library.theme.spacing2) / 2
-                        height: 34
+                        width: Math.min(parent.width, implicitWidth)
+                        height: implicitHeight
                         runtime: library.runtime
                         theme: library.theme
                         motion: library.motion
                         compact: true
                         horizontalCompact: true
+                        icon: "󰏫"
                         title: library.selectedEntry && library.selectedEntry.isImage ? "Markup" : "Trim"
                         shortcut: library.runtime.shellHint("RecordingLibrary.edit")
                         enabled: !!library.selectedEntry && !library.isBusy
                         onActivated: library.editSelected()
                     }
                     ShellAction {
-                        width: (previewPane.width - library.theme.spacing3 * 2 - library.theme.spacing2) / 2
-                        height: 34
+                        width: Math.min(parent.width, implicitWidth)
+                        height: implicitHeight
                         runtime: library.runtime
                         theme: library.theme
                         motion: library.motion
                         compact: true
                         horizontalCompact: true
+                        icon: "󰆏"
+                        iconOnly: true
+                        inlineIconHint: true
                         title: "Copy"
                         shortcut: library.runtime.shellHint("RecordingLibrary.copy")
                         enabled: !!library.selectedEntry && library.selectedEntry.isImage && !library.isBusy
                         onActivated: library.copySelected()
                     }
                     ShellAction {
-                        width: (previewPane.width - library.theme.spacing3 * 2 - library.theme.spacing2) / 2
-                        height: 34
+                        width: Math.min(parent.width, implicitWidth)
+                        height: implicitHeight
                         runtime: library.runtime
                         theme: library.theme
                         motion: library.motion
                         compact: true
                         horizontalCompact: true
+                        icon: "󰆴"
                         title: library.selectedEntry && library.deletePending === library.selectedEntry.name ? "Confirm" : "Trash"
                         shortcut: library.runtime.shellHint("RecordingLibrary.delete")
                         enabled: !!library.selectedEntry && !library.isBusy
+                        activeColor: library.theme.critical
                         active: !!library.selectedEntry && library.deletePending === library.selectedEntry.name
                         onActivated: library.requestDelete()
                     }
                     ShellAction {
-                        width: (previewPane.width - library.theme.spacing3 * 2 - library.theme.spacing2) / 2
-                        height: 34
+                        width: Math.min(parent.width, implicitWidth)
+                        height: implicitHeight
                         runtime: library.runtime
                         theme: library.theme
                         motion: library.motion
                         compact: true
                         horizontalCompact: true
+                        icon: "󰊄"
                         title: library.selectedEntry && library.selectedEntry.isImage ? "Select text" : "Frame text"
                         shortcut: library.runtime.shellHint("RecordingLibrary.ocr")
                         enabled: !!library.selectedEntry && !library.isBusy
@@ -935,7 +973,7 @@ Item {
                 delegate: ShellAction {
                     required property var modelData
                     width: (destinationButtons.width - 2 * destinationButtons.spacing) * (modelData.kind ? 0.4 : 0.2)
-                    height: 38
+                    height: implicitHeight
                     runtime: library.runtime
                     theme: library.theme
                     motion: library.motion
