@@ -96,11 +96,11 @@ PanelWindow {
     readonly property SystemContent systemContent: expansionState.currentName === "system" ? loadedContent as SystemContent : null
     readonly property NotificationContent activityContent: expansionState.currentName === "activity" ? loadedContent as NotificationContent : null
     readonly property CalendarContent calendarContent: expansionState.currentName === "calendar" ? loadedContent as CalendarContent : null
-    readonly property bool themeOperationVisible: !!systemContent && systemContent.themeOperationRunning && expansionState.hasCurrent
-    readonly property bool wallpaperOperationVisible: !!systemContent && systemContent.wallpaperOperationRunning && expansionState.hasCurrent
-    readonly property bool captureEditorRequestVisible: !!systemContent && systemContent.captureEditorRequestRunning && expansionState.hasCurrent
-    readonly property bool maintenanceOperationVisible: !!systemContent && systemContent.maintenanceOperationRunning && expansionState.hasCurrent
-    readonly property bool loadingOperationVisible: themeOperationVisible || wallpaperOperationVisible || captureEditorRequestVisible || maintenanceOperationVisible
+    // All prewarmed views use the same foreground-operation contract.
+    // An operation can finish after navigating away from its original view.
+    readonly property var operationOwner: [contentLoaderA.item, contentLoaderB.item, contentLoaderC.item, contentLoaderD.item, contentLoaderE.item].find(owner => owner && owner.foregroundBusy === true) || null
+    readonly property bool loadingOperationVisible: expansionState.hasCurrent && !!operationOwner
+    readonly property color loadingOperationColor: theme.roleColor(operationOwner?.foregroundRole || "")
     readonly property MediaContent mediaContent: expansionState.currentName === "media" ? loadedContent as MediaContent : null
     property bool otherHelpOpen: false
     readonly property bool helpVisible: systemContent ? systemContent.helpOpen : (mediaContent ? mediaContent.helpOpen : otherHelpOpen)
@@ -1196,7 +1196,7 @@ PanelWindow {
         surface: shellSurface
         active: !host.frameVisible && host.loadingOperationVisible
         motionEnabled: host.motion.enabled
-        highlightColor: host.wallpaperOperationVisible ? host.theme.roleColor("wallpaper") : host.captureEditorRequestVisible ? host.theme.roleColor("screenshot") : host.systemContent && host.systemContent.maintenanceOperationRole.length > 0 ? host.theme.roleColor(host.systemContent.maintenanceOperationRole) : host.theme.accent
+        highlightColor: host.loadingOperationColor
         lineWidth: 3
     }
 }

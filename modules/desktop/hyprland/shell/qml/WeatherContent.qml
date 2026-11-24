@@ -9,6 +9,8 @@ FocusScope {
     required property Theme theme
     required property Motion motion
     required property WeatherState weather
+    readonly property bool foregroundBusy: weather.loading && weather.foregroundLoading
+    readonly property string foregroundRole: "weather"
     property bool engaged: false
     property int selectedDay: 0
     property bool locationEditing: false
@@ -70,7 +72,7 @@ FocusScope {
                 event.accepted = true;
             } else if (panel.runtime.shellMatchesHint("WeatherContent.refresh", event.key, event.modifiers)) {
                 if (!event.isAutoRepeat)
-                    panel.weather.refresh();
+                    panel.weather.refresh(true);
                 event.accepted = true;
             } else if (event.key === panel.runtime.shellKeyCode("weather", "C") || event.key === panel.runtime.shellKeyCode("weather", "Backspace")) {
                 panel.calendarRequested();
@@ -130,7 +132,7 @@ FocusScope {
                 shortcut: panel.runtime.shellHint("WeatherContent.refresh")
                 title: "Refresh forecast"
                 enabled: !panel.weather.loading
-                onActivated: panel.weather.refresh()
+                onActivated: panel.weather.refresh(true)
             }
         }
 

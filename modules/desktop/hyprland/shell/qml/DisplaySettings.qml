@@ -22,6 +22,7 @@ Column {
     readonly property bool previewActive: deadline > 0
     property string error: ""
     property string activeCommand: ""
+    readonly property bool foregroundBusy: busy && activeCommand !== "status"
     readonly property bool busy: worker.running
     readonly property bool editable: !!output?.editable && !busy && !previewActive
     readonly property var modes: output ? [...new Set([output.currentMode, ...(output.availableModes || [])].filter(value => !!value))] : []

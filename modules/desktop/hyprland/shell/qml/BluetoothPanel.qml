@@ -63,6 +63,8 @@ Item {
     property string statusText: ""
     property bool statusError: false
 
+    readonly property string foregroundRole: "connectivity"
+    readonly property bool foregroundBusy: devices.some(device => device.pairing)
     readonly property var adapter: system.bluetoothAdapter
     readonly property var devices: system.bluetoothAdapterDevices || []
     readonly property bool adapterAvailable: system.bluetoothAvailable

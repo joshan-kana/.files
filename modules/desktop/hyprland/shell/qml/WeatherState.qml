@@ -72,6 +72,9 @@ QtObject {
     }
     property string city: ""
     property string status: "Locating…"
+    property bool foregroundLoading: false
+    onLoadingChanged: if (!loading)
+        foregroundLoading = false
     property bool loading: false
     property bool available: false
     property real latitude: NaN
@@ -150,7 +153,9 @@ QtObject {
         return value ? Qt.formatTime(new Date(value), "h:mm AP") : "--:--";
     }
 
-    function refresh(): void {
+    function refresh(foreground = false): void {
+        if (foreground)
+            foregroundLoading = true;
         if (loading)
             return;
         loading = true;

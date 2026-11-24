@@ -39,6 +39,8 @@ FocusScope {
     readonly property int selectedStreamIndex: selectedTarget?.kind === "stream" ? streams.findIndex(node => node.id === selectedTarget.node.id) : -1
     readonly property var selectedTarget: targets[Math.max(0, Math.min(selectedIndex, targets.length - 1))] || null
 
+    readonly property string foregroundRole: "audio"
+    readonly property bool foregroundBusy: routeProcess.running || pendingRoute !== "" || effectsState.awaitingConfirmation || effectsState.requestedPreset !== null
     property bool presetOpen: false
     property int presetIndex: 0
     function togglePresetPicker(): void {

@@ -36,6 +36,9 @@ Item {
     property double nextDue: 0
     property string policyPhase: ""
     property string scheduleCandidate: ""
+    readonly property string foregroundRole: "wallpaper"
+    property string activePolicyCommand: ""
+    readonly property bool foregroundBusy: busy || (policyBusy && activePolicyCommand !== "status")
     readonly property bool policyBusy: policyProcess.running
     property bool refreshPolicyPending: false
 
@@ -83,6 +86,7 @@ Item {
         if (!runtime.wallpaperPolicy || policyBusy)
             return;
         policyError = "";
+        activePolicyCommand = action;
         policyProcess.exec([runtime.wallpaperPolicy, action, ...args]);
     }
     function refreshPolicy(): void {

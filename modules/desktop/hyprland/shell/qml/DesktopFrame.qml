@@ -35,6 +35,7 @@ Variants {
     property var resizeScreen: null
     property var inspection: null
     property var inspectionScreen: null
+    property color busyColor: theme.accent
     property bool busy: false
     property var busyScreen: null
     readonly property real thickness: theme.frameThickness
@@ -199,7 +200,7 @@ Variants {
                 anchors.fill: parent
                 active: output.exposed && output.busyHere && !frame.motion.enabled
                 contourPath: output.geometry.inner
-                highlightColor: frame.theme.accent
+                highlightColor: frame.busyColor
                 lineWidth: 2
             }
 
@@ -214,12 +215,15 @@ Variants {
                 antialiasing: true
                 onPaint: {
                     if (bounds)
-                        OutlineTrace.paint(getContext("2d"), output.geometry.points, output.geometry.length, frame.progress, 0.10, frame.theme.accent, 2, width, height, bounds.x, bounds.y, bounds);
+                        OutlineTrace.paint(getContext("2d"), output.geometry.points, output.geometry.length, frame.progress, 0.10, frame.busyColor, 2, width, height, bounds.x, bounds.y, bounds);
                 }
                 onBoundsChanged: requestPaint()
                 Connections {
                     target: frame
                     function onProgressChanged() {
+                        busyTrace.requestPaint();
+                    }
+                    function onBusyColorChanged() {
                         busyTrace.requestPaint();
                     }
                     function onBusyChanged() {

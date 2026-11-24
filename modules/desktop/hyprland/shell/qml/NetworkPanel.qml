@@ -46,6 +46,8 @@ Item {
     property var profileOriginal: ({})
     property var profileDraft: ({})
     property bool profileReady: false
+    readonly property string foregroundRole: "connectivity"
+    readonly property bool foregroundBusy: profileAction.running || editApply.running || editQuery.running || (detailView && detailPending) || (open && networks.some(network => network.stateChanging))
     readonly property bool profileBusy: editQuery.running || editApply.running
     readonly property bool profileEditable: savedView && savedSelected && ["802-11-wireless", "802-3-ethernet"].includes(savedSelected.kind) && detailUuid === savedSelected.uuid
 

@@ -8,43 +8,70 @@ const source = (name) =>
     "utf8",
   );
 
-test("shared Controls loading tracks slow explicit actions, not passive polling", () => {
+test("busy views participate in the shared outline by default, with explicit passive-read exclusions", () => {
   const details = source("DeferredDetail.qml");
   const controls = source("SystemContent.qml");
   assert.match(
     details,
-    /profileActionRunning: !!\(panel && panel\.profileAction && panel\.profileAction\.running\)/,
-  );
-  assert.match(
-    details,
-    /captureTrashRunning: !!\(panel && panel\.actionProcess && panel\.actionProcess\.running\)/,
+    /panel\.foregroundBusy !== undefined \? !!panel\.foregroundBusy : !!\(panel\.busy \|\| panel\.operationRunning\)/,
   );
   assert.match(
     controls,
-    /maintenanceOperationRunning: resetRunning \|\| \(networkPanel\.open && networkPanel\.profileActionRunning\) \|\| \(recordingsPanel\.open && recordingsPanel\.captureTrashRunning\)/,
+    /Array\.from\(viewStack\.children\)\.find\(source => source\.foregroundBusy === true\)/,
   );
   assert.match(
     controls,
-    /maintenanceOperationRole: recordingsPanel\.open && recordingsPanel\.captureTrashRunning \? "capture" : networkPanel\.open && networkPanel\.profileActionRunning \? "connectivity" : ""/,
+    /foregroundBusy: resetRunning \|\| nightLight\.busy \|\| audioDeck\.foregroundBusy \|\| !!foregroundSource/,
   );
-  assert.doesNotMatch(
-    controls,
-    /maintenanceOperationRunning:.*(weather|agenda|scannerEnabled|profilesQuery|listProcess)/,
+  assert.match(
+    source("DisplaySettings.qml"),
+    /foregroundBusy: busy && activeCommand !== "status"/,
+  );
+  assert.match(
+    source("WallpaperPanel.qml"),
+    /foregroundBusy: busy \|\| \(policyBusy && activePolicyCommand !== "status"\)/,
+  );
+  assert.match(
+    source("RecordingLibrary.qml"),
+    /foregroundBusy: editorRequestRunning \|\| actionProcess\.running \|\| ocrProcess\.running \|\| \(locationProcess\.running && locationCommand !== "status"\)/,
+  );
+  assert.match(
+    source("AudioMixerContent.qml"),
+    /foregroundBusy: .*effectsState\.awaitingConfirmation \|\| effectsState\.requestedPreset !== null/,
+  );
+  assert.match(
+    source("NetworkPanel.qml"),
+    /foregroundBusy: profileAction\.running \|\| editApply\.running/,
+  );
+  assert.match(
+    source("WeatherContent.qml"),
+    /foregroundBusy: weather\.loading && weather\.foregroundLoading/,
   );
 });
 
-test("connected frame and floating Controls share one busy-state source", () => {
+test("frame and floating hub share one busy-state source and semantic colour", () => {
   const host = source("ShellExpansionHost.qml");
   const shell = source("shell.qml");
+  const frame = source("DesktopFrame.qml");
   assert.match(
     host,
-    /loadingOperationVisible: themeOperationVisible \|\| wallpaperOperationVisible \|\| captureEditorRequestVisible \|\| maintenanceOperationVisible/,
+    /loadingOperationVisible: expansionState\.hasCurrent && !!operationOwner/,
+  );
+  assert.match(
+    host,
+    /\.find\(owner => owner && owner\.foregroundBusy === true\)/,
   );
   assert.match(
     host,
     /active: !host\.frameVisible && host\.loadingOperationVisible/,
   );
-  assert.match(host, /maintenanceOperationRole/);
+  assert.match(host, /highlightColor: host\.loadingOperationColor/);
   assert.match(shell, /busy: !!expansionHost\.loadingOperationVisible/);
+  assert.match(shell, /busyColor: expansionHost\.loadingOperationColor/);
   assert.match(shell, /busyScreen: qmlExpansionState\.screen/);
+  assert.match(frame, /highlightColor: frame\.busyColor/);
+  assert.match(
+    frame,
+    /active: output\.exposed && output\.busyHere && !frame\.motion\.enabled/,
+  );
 });

@@ -78,6 +78,7 @@ Item {
     property bool selectionTouched: false
     property string statusText: ""
     property bool statusError: false
+    readonly property string foregroundRole: "theme"
     property bool operationRunning: false
     property string operationPhase: "idle"
     property string operationTarget: ""

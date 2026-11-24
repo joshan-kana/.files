@@ -159,14 +159,12 @@ FocusScope {
     readonly property bool detailSearchFocused: (themePanel.open && themePanel.panel && themePanel.panel.searching) || (wallpaperPanel.open && wallpaperPanel.panel && wallpaperPanel.panel.searching)
     readonly property bool bluetoothOpen: bluetoothPanel.open
     readonly property bool themeOpen: themePanel.open
-    readonly property bool themeOperationRunning: themePanel.open && themePanel.operationRunning
     readonly property bool wallpaperOpen: wallpaperPanel.open
-    readonly property bool wallpaperOperationRunning: wallpaperPanel.open && wallpaperPanel.busy
-    readonly property bool captureEditorRequestRunning: recordingsPanel.open && recordingsPanel.editorRequestRunning
-    // Only foreground actions with an observable lifetime use the shared busy
-    // contour. Passive scans, polling and gallery incubation stay local.
-    readonly property bool maintenanceOperationRunning: resetRunning || (networkPanel.open && networkPanel.profileActionRunning) || (recordingsPanel.open && recordingsPanel.captureTrashRunning)
-    readonly property string maintenanceOperationRole: recordingsPanel.open && recordingsPanel.captureTrashRunning ? "capture" : networkPanel.open && networkPanel.profileActionRunning ? "connectivity" : ""
+    // Each view owns its operation state. Discover busy detail owners through
+    // the shared view stack, rather than maintaining a list of operations.
+    readonly property var foregroundSource: Array.from(viewStack.children).find(source => source.foregroundBusy === true) || null
+    readonly property bool foregroundBusy: resetRunning || nightLight.busy || audioDeck.foregroundBusy || !!foregroundSource
+    readonly property string foregroundRole: foregroundSource?.foregroundRole || (nightLight.busy ? "display" : audioDeck.foregroundBusy ? "audio" : "")
     readonly property bool sessionOpen: sessionPanel.open
     readonly property bool sessionConfirmationPending: sessionPanel.open && sessionPanel.armedAction.length > 0
     readonly property bool resourcesOpen: resourcesPanel.open
@@ -877,6 +875,7 @@ FocusScope {
     }
 
     Item {
+        id: viewStack
         anchors.fill: parent
 
         Column {

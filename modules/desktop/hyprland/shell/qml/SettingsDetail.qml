@@ -94,6 +94,8 @@ Item {
         batteryAvailable: system.batteryAvailable,
         batteryLevelIcon: system.batteryLevelIcon
     })
+    readonly property string foregroundRole: "display"
+    readonly property bool foregroundBusy: kind === "displays" && displayDetails.foregroundBusy
     readonly property bool masterAvailable: kind !== "nightLight" || nightLight.supported && !nightLight.busy
     readonly property var parameters: {
         if (kind === "bar")

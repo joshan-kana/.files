@@ -361,6 +361,7 @@ ShellRoot {
         inspection: statusPeek.frameBounds
         inspectionScreen: statusPeek.screen
         busy: !!expansionHost.loadingOperationVisible
+        busyColor: expansionHost.loadingOperationColor
         busyScreen: qmlExpansionState.screen
     }
 

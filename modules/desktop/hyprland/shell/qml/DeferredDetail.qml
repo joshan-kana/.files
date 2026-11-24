@@ -34,8 +34,10 @@ Loader {
     property var pendingMenuItem: null
     readonly property bool open: panel && panel.open !== undefined ? !!panel.open : pendingOpen
     readonly property bool operationRunning: !!(panel && panel.operationRunning)
-    readonly property bool busy: !!(panel && panel.busy)
-    readonly property bool editorRequestRunning: !!(panel && panel.editorRequestRunning)
+    // Busy panels participate automatically. A panel whose busy state also
+    // covers passive reads exposes foregroundBusy to narrow the scope.
+    readonly property bool foregroundBusy: !!panel && (panel.foregroundBusy !== undefined ? !!panel.foregroundBusy : !!(panel.busy || panel.operationRunning))
+    readonly property string foregroundRole: panel?.foregroundRole || ""
     readonly property bool statusError: !!(panel && panel.statusError)
     readonly property string armedAction: panel && typeof panel.armedAction === "string" ? panel.armedAction : ""
     readonly property string actionShortcutLegend: panel && typeof panel.actionShortcutLegend === "string" ? panel.actionShortcutLegend : ""
@@ -43,7 +45,6 @@ Loader {
     readonly property bool detailView: !!(panel && panel.detailView)
     readonly property bool savedView: !!(panel && panel.savedView)
     readonly property bool profileActionRunning: !!(panel && panel.profileAction && panel.profileAction.running)
-    readonly property bool captureTrashRunning: !!(panel && panel.actionProcess && panel.actionProcess.running)
     readonly property var pendingNetwork: panel ? panel.pendingNetwork : null
     readonly property string deletePending: panel && panel.deletePending ? panel.deletePending : ""
     readonly property int itemCount: panel && panel.itemCount ? panel.itemCount : 0

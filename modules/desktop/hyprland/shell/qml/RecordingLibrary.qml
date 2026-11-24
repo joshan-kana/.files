@@ -32,6 +32,9 @@ Item {
     property string deletePending: ""
     property string statusText: ""
     property bool statusError: false
+    readonly property string foregroundRole: editorRequestRunning ? "screenshot" : "capture"
+    property string locationCommand: ""
+    readonly property bool foregroundBusy: editorRequestRunning || actionProcess.running || ocrProcess.running || (locationProcess.running && locationCommand !== "status")
     property bool editorRequestRunning: false
     property var destinations: ({
             screenshots: "",
@@ -40,6 +43,7 @@ Item {
     function locationAction(action: string, kind: string): void {
         if (!runtime.captureLocations || locationProcess.running)
             return;
+        locationCommand = action;
         locationProcess.exec([runtime.captureLocations, action, ...(kind ? [kind] : [])]);
     }
     Process {
