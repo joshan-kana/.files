@@ -150,6 +150,8 @@ lsblk -o NAME,PATH,SIZE,FSTYPE,FSVER,LABEL,MODEL,SERIAL,TRAN,MOUNTPOINTS "$disk_
 echo
 echo "━━━ Existing filesystem signatures"
 for disk in "$disk_a" "$disk_b"; do
+  devices="$(lsblk -nrpo PATH "$disk")"
+  [ -n "$devices" ] || exit 1
   while IFS= read -r device; do
     signatures="$(wipefs -n "$device")"
     printf '%s\n' "$signatures"
@@ -159,13 +161,14 @@ for disk in "$disk_a" "$disk_b"; do
       echo "Refusing to overwrite a potentially recoverable pool member." >&2
       exit 1
     fi
-  done < <(lsblk -nrpo PATH "$disk")
+  done <<<"$devices"
 done
 
 echo
 echo "━━━ Mount checks"
 for disk in "$disk_a" "$disk_b"; do
-  if lsblk -nrpo MOUNTPOINTS "$disk" | grep -q '[^[:space:]]'; then
+  mounts="$(lsblk -nrpo MOUNTPOINTS "$disk")"
+  if [[ $mounts =~ [^[:space:]] ]]; then
     echo "ERROR: $disk or one of its partitions is mounted:" >&2
     lsblk -o NAME,PATH,FSTYPE,LABEL,MOUNTPOINTS "$disk" >&2
     exit 1
