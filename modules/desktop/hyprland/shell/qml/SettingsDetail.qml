@@ -70,7 +70,7 @@ Item {
             nightLight: "Colour temperature and warm-light schedule",
             alerts: "Delivery, quiet hours and notification history",
             stay: "Idle inhibition and timeout",
-            power: "Performance profiles and automatic AC / battery policy",
+            power: "Choose a system power profile",
             spectrum: "Shared visualizer response and wallpaper appearance",
             reactive: "Audio-driven tint and response",
             bar: "Desktop islands and bar layout",
