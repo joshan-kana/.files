@@ -350,7 +350,7 @@ in
             "fit"
             "crop"
           ];
-          default = "fit";
+          default = "crop";
           description = "Scale selected wallpaper images to fit within the display or crop them to fill it.";
         };
         wallpaperTargetOutput = lib.mkOption {
