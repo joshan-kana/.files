@@ -353,6 +353,8 @@ in
   }
   // lib.optionalAttrs isLinux {
     inherit (activeAssets) cursor;
+    # Install syntax schemes through Home Manager without rebuilding GTKSourceView.
+    targets.gtksourceview.enable = false;
   };
 
   fonts =
@@ -393,6 +395,7 @@ in
       '';
     }
     // lib.optionalAttrs isLinux {
+      stylix.targets.gtksourceview.enable = true;
       dconf.settings."org/gnome/desktop/interface".color-scheme = lib.mkForce (
         {
           light = "prefer-light";
