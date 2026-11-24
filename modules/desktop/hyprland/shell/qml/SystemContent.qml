@@ -45,7 +45,6 @@ FocusScope {
     property real dashboardWidthBudget: theme.controlsDetailWidth
     property real detailWidthLimit: theme.controlsDetailWidth
     readonly property real detailLayoutWidth: Math.max(1, Math.min(detailWidthLimit, theme.controlsDetailWidth))
-    readonly property bool detailTransitioning: detailsVisible ? content.opacity > 0.01 : content.opacity < 0.99
     readonly property int dashboardTileHeight: 72
     // Connectivity keeps its three readback lines readable at larger
     // text scales without shortening icons or truncating the last row.

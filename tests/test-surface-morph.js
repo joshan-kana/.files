@@ -152,7 +152,24 @@ test("tab changes retain a complete measurement and never shrink the outgoing co
     [...qml.matchAll(/x: \(contentViewport.width - width\) \/ 2/g)].length,
     5,
   );
-  assert.match(qml, /clip: !host.pageCrossfading/);
+  const viewport = qml.slice(
+    qml.indexOf("id: contentViewport"),
+    qml.indexOf("id: contentLoaderA"),
+  );
+  assert.match(
+    viewport,
+    /x: shellSurface\.x - contentFrame\.x \+ host\.theme\.spacing4/,
+  );
+  assert.match(
+    viewport,
+    /width: Math\.max\(0, shellSurface\.width - host\.theme\.spacing4 \* 2\)/,
+  );
+  assert.match(viewport, /top: tabs\.bottom\s+bottom: hubFooter\.top/);
+  assert.match(viewport, /clip: true/);
+  assert.doesNotMatch(
+    viewport,
+    /clip: !|left: parent\.left|right: parent\.right/,
+  );
   const controls = fs.readFileSync(
     path.join(
       __dirname,

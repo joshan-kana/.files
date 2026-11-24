@@ -1015,10 +1015,7 @@ test("detail transitions preserve source and destination layout during the cross
   assert.match(detail, /visible: exposed \|\| opacity > 0\.01/);
   assert.match(detail, /enabled: exposed/);
   assert.doesNotMatch(detail, /transform: Translate/);
-  assert.match(
-    host,
-    /clip: !host\.pageCrossfading && \(!host\.systemContent \|\| !host\.systemContent\.detailTransitioning\)/,
-  );
+  assert.match(host, /id: contentViewport[\s\S]*?clip: true/);
 });
 
 test("capability headers describe their controls instead of repeating master state", () => {

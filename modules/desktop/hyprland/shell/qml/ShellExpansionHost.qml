@@ -96,7 +96,6 @@ PanelWindow {
     // Prewarmed Controls retains the same width constraints while hidden.
     readonly property SystemContent controlsContent: contentLoaderB.item as SystemContent
     readonly property SystemContent systemContent: expansionState.currentName === "system" ? loadedContent as SystemContent : null
-    readonly property bool pageCrossfading: [contentLoaderA, contentLoaderB, contentLoaderC, contentLoaderD, contentLoaderE].some(loader => loader !== activeLoader && loader.opacity > 0.01)
     readonly property NotificationContent activityContent: expansionState.currentName === "activity" ? loadedContent as NotificationContent : null
     readonly property CalendarContent calendarContent: expansionState.currentName === "calendar" ? loadedContent as CalendarContent : null
     // The operation owner survives navigation; the contour belongs only
@@ -983,20 +982,19 @@ PanelWindow {
                 id: contentViewport
                 opacity: shellSurface.contentReveal * (host.theme.shellGlassEnabled ? 1 - scopedHelp.opacity * 0.56 : 1)
                 enabled: !host.otherHelpOpen
+                // The viewport follows the painted contour, not the page's
+                // destination layout. Its children keep their own fixed widths
+                // and are centred behind this moving, always-on clip.
+                x: shellSurface.x - contentFrame.x + host.theme.spacing4
+                width: Math.max(0, shellSurface.width - host.theme.spacing4 * 2)
                 anchors {
                     top: tabs.bottom
-                    left: parent.left
-                    right: parent.right
                     bottom: hubFooter.top
                     topMargin: host.theme.spacing3
-                    leftMargin: host.theme.spacing4
-                    rightMargin: host.theme.spacing4
                     // Every view clears the shared navigation footer by the same amount.
                     bottomMargin: host.theme.spacing3 + host.theme.spacing4
                 }
-                // During any page or detail crossfade the outgoing layout
-                // retains its width; the outer clip owns the moving contour.
-                clip: !host.pageCrossfading && (!host.systemContent || !host.systemContent.detailTransitioning)
+                clip: true
                 // Blur the viewport's own composited output. An offscreen copy
                 // drawn elsewhere changes the relative geometry of scaled and
                 // scrolling children, and can expose the hub's corner contour.
