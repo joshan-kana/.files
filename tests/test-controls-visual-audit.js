@@ -97,7 +97,10 @@ test("Visual Modes and Quick Actions have distinct full-width balanced sections"
     actionCount,
     (actions.match(/height: root.dashboardTileHeight/g) || []).length,
   );
-  assert.doesNotMatch(visual, /OpacitySetting \{|AdjustableSetting \{|ShellSlider \{/);
+  assert.doesNotMatch(
+    visual,
+    /OpacitySetting \{|AdjustableSetting \{|ShellSlider \{/,
+  );
   assert.ok((visual.match(/QuickSettingChip \{/g) || []).length >= 8);
   assert.match(read("SettingsDetail.qml"), /key: "blurSize"/);
   assert.match(controls, /id: visualModesGroup/);
@@ -114,7 +117,10 @@ test("Visual Modes and Quick Actions have distinct full-width balanced sections"
     /title: root.resetRunning \? "Restoring…" : "Restore defaults"/,
   );
   assert.doesNotMatch(visual, /Restore defaults/);
-  assert.doesNotMatch(controls, /id: sliderSelectionHint|id: sliderNavigationHint/);
+  assert.doesNotMatch(
+    controls,
+    /id: sliderSelectionHint|id: sliderNavigationHint/,
+  );
   assert.match(controls, /SystemContent\.brightnessFocus/);
   assert.match(visual, /active: root.barVisible/);
   assert.match(visual, /active: root.motion.enabled/);
@@ -130,11 +136,26 @@ test("Night Light keeps instant toggling in its compact tile and parameter editi
   const tile = read("QuickSettingChip.qml");
   const detail = read("SettingsDetail.qml");
   const state = read("NightLightState.qml");
-  assert.match(controls, /title: root\.nightLight\.supported \? "Night " \+ root\.nightLight\.temperature/);
-  assert.match(controls, /shortcut: root\.runtime\.shellHint\("SystemContent\.nightLight"\)/);
-  assert.match(controls, /detailShortcut: root\.runtime\.shellHint\("SystemContent\.nightLightDetails"\)/);
-  assert.match(controls, /onDetailsRequested: root\.openSetting\("nightLight"\)/);
-  assert.match(tile, /TileQuickAction \{[\s\S]*?onActivated: chip\.activated\(\)/);
+  assert.match(
+    controls,
+    /title: root\.nightLight\.supported \? "Night " \+ root\.nightLight\.temperature/,
+  );
+  assert.match(
+    controls,
+    /shortcut: root\.runtime\.shellHint\("SystemContent\.nightLight"\)/,
+  );
+  assert.match(
+    controls,
+    /detailShortcut: root\.runtime\.shellHint\("SystemContent\.nightLightDetails"\)/,
+  );
+  assert.match(
+    controls,
+    /onDetailsRequested: root\.openSetting\("nightLight"\)/,
+  );
+  assert.match(
+    tile,
+    /TileQuickAction \{[\s\S]*?onActivated: chip\.activated\(\)/,
+  );
   assert.doesNotMatch(controls, /AdjustableSetting \{/);
   assert.match(detail, /key: "temperature"/);
   assert.match(detail, /ShellSlider \{/);
@@ -189,7 +210,10 @@ test("slider keyboard workflow respects direct actions, detail Escape and global
     /hints: root\.selectedSlider\.length === 0 \? \[\s*\{\s*shortcut: root\.runtime\.shellHint\("SystemContent.audioSelect"\)/,
   );
   assert.match(read("ShellSection.qml"), /trailing: true/);
-  assert.match(detail, /function handleKey\(key: int, modifiers: int, autoRepeat: bool\): bool/);
+  assert.match(
+    detail,
+    /function handleKey\(key: int, modifiers: int, autoRepeat: bool\): bool/,
+  );
   assert.match(detail, /shellNavigates\("controls", "right", key\)/);
   assert.match(detail, /shellNavigates\("controls", "down", key\)/);
   assert.match(slider, /signal valueRequested\(real value\)/);
@@ -477,7 +501,10 @@ test("Compact Media shares a live spectrum, controls and full Now Playing naviga
   const transport = read("MediaTransport.qml");
   assert.match(controls, /onFullRequested: root.mediaRequested\(\)/);
   assert.match(controls, /spectrum: root.spectrum/);
-  assert.match(card, /implicitHeight: Math.max\(media.available \? 178 : 152, controlsHeight \+ contentTopInset/);
+  assert.match(
+    card,
+    /implicitHeight: Math.max\(media.available \? 178 : 152, controlsHeight \+ contentTopInset/,
+  );
   assert.match(
     card,
     /text: card.media.available \? card.media.title : "No active player"/,
@@ -609,7 +636,10 @@ test("main panel and compact Media use measured geometry with bounded empty stat
       "implicitWidth: sessionPanel.open ? sessionPanel.implicitWidth : detailsVisible ? theme.controlsDetailWidth : dashboardWidthBudget",
     ],
     [controls, "active: root.engaged && !root.detailsVisible"],
-    [media, "implicitHeight: Math.max(media.available ? 178 : 152, controlsHeight + contentTopInset"],
+    [
+      media,
+      "implicitHeight: Math.max(media.available ? 178 : 152, controlsHeight + contentTopInset",
+    ],
     [host, "height: Math.min(host.viewportHeight, host.targetHeight)"],
     [host, "(fraction - 0.68) / 0.30"],
   ])
@@ -628,7 +658,10 @@ test("Controls sizes naturally without inflating tiles or forcing scroll hints",
   );
   assert.match(controls, /spacing: root.theme.spacing3/);
   assert.match(controls, /dashboardTileHeight: 72/);
-  assert.match(controls, /dashboardBrightnessHeight: Math.max\(90, theme.fontSize\(66\) \+ theme.spacing3 \* 2\)/);
+  assert.match(
+    controls,
+    /dashboardBrightnessHeight: Math.max\(90, theme.fontSize\(66\) \+ theme.spacing3 \* 2\)/,
+  );
   assert.doesNotMatch(controls, /dashboardConnectivityHeight/);
   assert.match(
     controls,
@@ -760,7 +793,10 @@ test("all visual and action tile heights remain fixed when categories rebalance"
 test("compact Media anchors artwork and player information above footer controls", () => {
   const card = read("ControlsMediaCard.qml");
   assert.match(card, /height: card.heroSize/);
-  assert.match(card, /implicitHeight: Math.max\(media.available \? 178 : 152, controlsHeight \+ contentTopInset/);
+  assert.match(
+    card,
+    /implicitHeight: Math.max\(media.available \? 178 : 152, controlsHeight \+ contentTopInset/,
+  );
   assert.match(card, /onActivated: card.fullRequested\(\)/);
   assert.doesNotMatch(card, /id: fullPlayer/);
 });
@@ -818,20 +854,35 @@ test("brightness direct focus, scoped detail parameters and clean Visual Modes h
   const controls = read("SystemContent.qml");
   const detail = read("SettingsDetail.qml");
   const chip = read("QuickSettingChip.qml");
-  const keymap = fs.readFileSync(path.join(__dirname, "../modules/desktop/hyprland/shell/keybindings.nix"), "utf8");
+  const keymap = fs.readFileSync(
+    path.join(__dirname, "../modules/desktop/hyprland/shell/keybindings.nix"),
+    "utf8",
+  );
   assert.match(keymap, /"SystemContent\.brightnessFocus" = "SHIFT\+B"/);
-  assert.match(controls, /shellMatchesHint\("SystemContent\.brightnessFocus", event\.key, event\.modifiers\)/);
+  assert.match(
+    controls,
+    /shellMatchesHint\("SystemContent\.brightnessFocus", event\.key, event\.modifiers\)/,
+  );
   assert.match(controls, /root\.selectSlider\("brightness"\)/);
   assert.match(controls, /root\.adjustSlider\(-1\)/);
   assert.match(controls, /root\.adjustSlider\(1\)/);
-  assert.doesNotMatch(controls, /id: sliderSelectionHint|id: sliderNavigationHint/);
-  assert.match(detail, /function handleKey\(key: int, modifiers: int, autoRepeat: bool\): bool/);
+  assert.doesNotMatch(
+    controls,
+    /id: sliderSelectionHint|id: sliderNavigationHint/,
+  );
+  assert.match(
+    detail,
+    /function handleKey\(key: int, modifiers: int, autoRepeat: bool\): bool/,
+  );
   assert.match(detail, /shellNavigates\("controls", "left", key\)/);
   assert.match(detail, /shellNavigates\("controls", "right", key\)/);
   assert.match(chip, /TileQuickAction \{/);
   assert.doesNotMatch(controls, /OpacitySetting \{|AdjustableSetting \{/);
   assert.doesNotMatch(
-    controls.slice(controls.indexOf('title: "Media"'),controls.indexOf("ControlsMediaCard {")),
+    controls.slice(
+      controls.indexOf('title: "Media"'),
+      controls.indexOf("ControlsMediaCard {"),
+    ),
     /hints: \[/,
   );
 });
@@ -841,7 +892,10 @@ test("Visual Modes primary and secondary hints follow shared opposite-corner mot
   assert.match(shared, /property real cornerInset: theme\.spacing2/);
   assert.match(shared, /property bool primary: false/);
   assert.match(shared, /left: primary \? parent\.left : undefined/);
-  assert.match(read("TileCornerAction.qml"), /anchors \{[\s\S]*?right: parent\.right/);
+  assert.match(
+    read("TileCornerAction.qml"),
+    /anchors \{[\s\S]*?right: parent\.right/,
+  );
   assert.match(
     shared,
     /property real animatedInset: circular \? circleInset : cornerInset/,
@@ -930,10 +984,10 @@ test("compact detail cards still expose their primary open action using the shar
       `${component} must dispatch its displayed action`,
     );
   }
-  assert.match(read("TileKeyHint.qml"), /right: primary \? undefined : parent\.right/);
-  assert.match(read("TileKeyHint.qml"), /top: parent\.top/);
   assert.match(
-    read("ControlsMediaCard.qml"),
-    /width: parent.width/,
+    read("TileKeyHint.qml"),
+    /right: primary \? undefined : parent\.right/,
   );
+  assert.match(read("TileKeyHint.qml"), /top: parent\.top/);
+  assert.match(read("ControlsMediaCard.qml"), /width: parent.width/);
 });
