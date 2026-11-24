@@ -92,7 +92,7 @@ PanelWindow {
     // Weather. No destination evicts another or constructs on the keypress.
     property int activeSlot: -1
     readonly property Loader activeLoader: activeSlot === 0 ? contentLoaderA : activeSlot === 1 ? contentLoaderB : activeSlot === 2 ? contentLoaderC : activeSlot === 3 ? contentLoaderD : activeSlot === 4 ? contentLoaderE : null
-    readonly property Item loadedContent: activeLoader ? activeLoader.item as Item : null
+    readonly property var loadedContent: activeLoader ? activeLoader.item : null
     // Prewarmed Controls retains the same width constraints while hidden.
     readonly property SystemContent controlsContent: contentLoaderB.item as SystemContent
     readonly property SystemContent systemContent: expansionState.currentName === "system" ? loadedContent as SystemContent : null
