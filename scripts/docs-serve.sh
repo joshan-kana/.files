@@ -34,8 +34,10 @@ watchexec \
   --watch "$repo/docs/default.nix" \
   --watch "$repo/modules" \
   --watch "$repo/hosts" \
+  --watch "$repo/profiles" \
   --watch "$repo/lib" \
   --watch "$repo/overlays" \
+  --watch "$repo/patches" \
   --watch "$repo/flake.nix" \
   --watch "$repo/flake.lock" \
   --postpone \
