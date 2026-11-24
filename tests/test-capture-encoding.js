@@ -22,8 +22,11 @@ function fixture(t) {
     DESKTOP_SHELL_RECORDING_DIR: path.join(home, "Videos", "Screencasts"),
     PATH: bin + ":" + process.env.PATH,
   };
+  const bash = spawnSync("bash", ["-c", "command -v bash"], {
+    encoding: "utf8",
+  }).stdout.trim();
   function stub(name, body) {
-    fs.writeFileSync(path.join(bin, name), "#!/usr/bin/env bash\n" + body, {
+    fs.writeFileSync(path.join(bin, name), `#!${bash}\n${body}`, {
       mode: 0o700,
     });
   }
