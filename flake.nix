@@ -729,6 +729,39 @@
           server-app-standards = builtins.seq serverAppStandardsTest pkgs.emptyFile;
           semantic-system-portability = builtins.seq semanticPortabilityTest pkgs.emptyFile;
           semantic-options = builtins.seq semanticOptionsTest pkgs.emptyFile;
+          option-host-discovery =
+            pkgs.runCommand "option-host-discovery-tests"
+              {
+                nativeBuildInputs = with pkgs; [
+                  bash
+                  coreutils
+                  git
+                  jq
+                  gawk
+                  gnugrep
+                  gnused
+                ];
+              }
+              ''
+                export HOME="$TMPDIR/home"
+                mkdir -p "$HOME" scripts tests
+                cp ${./scripts/nix-options-fzf.sh} scripts/nix-options-fzf.sh
+                cp ${./tests/nix-options-fzf.sh} tests/nix-options-fzf.sh
+                chmod +x scripts/nix-options-fzf.sh
+                patchShebangs scripts
+                git init -q
+                bash tests/nix-options-fzf.sh --host-cache-only
+                touch "$out"
+              '';
+          infrastructure-sentinel =
+            pkgs.runCommand "infrastructure-sentinel-tests"
+              {
+                nativeBuildInputs = [ pkgs.python3 ];
+              }
+              ''
+                python3 -B ${./.github/scripts}/test_infrastructure_sentinel.py
+                touch "$out"
+              '';
         }
         // lib.optionalAttrs pkgs.stdenv.hostPlatform.isDarwin {
           darwin-eval = builtins.deepSeq (builtins.mapAttrs (

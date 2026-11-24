@@ -59,8 +59,8 @@ assert_eq() {
   export NIX_BIN="$fixture/nix"
   export NF_HOST_CALLS="$fixture/calls"
   export NIX_OPTIONS_FZF_DEFAULT_HOST_FILE="$fixture/default-host"
-  cat >"$NIX_BIN" <<'EOF'
-#!/usr/bin/env bash
+  printf '#!%s\n' "$(command -v bash)" >"$NIX_BIN"
+  cat >>"$NIX_BIN" <<'EOF'
 set -euo pipefail
 case "$*" in
 *--expr*)
