@@ -47,16 +47,17 @@ else
   mapfile -t configs < <(jq -r 'keys[]' <<<"$state")
 fi
 
+work_dir=$(mktemp -d)
+trap 'rm -rf "$work_dir"; rm -f "${lock_tmp:-}"' EXIT
+
 for config in "${configs[@]}"; do
   lock_file=$(jq -r --arg config "$config" '.[$config].lockFile' <<<"$state")
   [[ -f $lock_file ]] || {
     echo "error: container lock not found for $config: $lock_file" >&2
     exit 1
   }
+  jq -eS 'if type == "object" then . else error("Container lock must be an object") end' "$lock_file" >"$work_dir/$config.current.json"
 done
-
-work_dir=$(mktemp -d)
-trap 'rm -rf "$work_dir"; rm -f "${lock_tmp:-}"' EXIT
 
 resolve_source() {
   local index=$1 source=$2 manifest digest metadata
@@ -120,7 +121,7 @@ errors=$(jq -r --argjson resolved "$resolved" '
 
 for config in "${configs[@]}"; do
   lock_file=$(jq -r --arg config "$config" '.[$config].lockFile' <<<"$state")
-  current_lock=$(jq -S . "$lock_file")
+  current_lock=$(cat "$work_dir/$config.current.json")
   updates=$(jq -c --arg config "$config" --argjson resolved "$resolved" '
     [.[] | select(.config == $config) | {
       key: .name,
