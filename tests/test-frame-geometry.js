@@ -1016,10 +1016,7 @@ test("reduced-motion loading softly pulses the full contour without moving geome
     outline,
     /OutlinePulse\s*\{[\s\S]*?active: outline\.active && !outline\.motionEnabled/,
   );
-  assert.match(
-    outline,
-    /contourPath: outline\.contourPath/,
-  );
+  assert.match(outline, /contourPath: outline\.contourPath/);
   assert.match(pulse, /property real intensity: 0\.22/);
   assert.match(pulse, /SequentialAnimation on intensity/);
   assert.match(pulse, /running: pulse\.active/);
