@@ -8,6 +8,7 @@ import "NotificationPolicy.js" as Policy
 import "NotificationPreferenceMigration.js" as PreferenceMigration
 import "ToastQueue.js" as ToastQueue
 import "NotificationSemantics.js" as NotificationSemantics
+import "DailySchedule.js" as Schedule
 
 QtObject {
     id: root
@@ -19,7 +20,43 @@ QtObject {
     property int popupRevision: 0
     readonly property int maxToasts: 3
     readonly property bool popupVisible: popups.count > 0 && !locked
-    readonly property bool silent: settings.preferenceSource === "default" ? runtime.notificationSilent : settings.silent
+    readonly property bool manualSilent: settings.preferenceSource === "default" ? runtime.notificationSilent : settings.silent
+    readonly property var quietDefaults: runtime.notificationQuietHours
+    readonly property var quietOverrides: {
+        try {
+            const value = JSON.parse(settings.quietOverridesJson);
+            return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+        } catch (_) {
+            return {};
+        }
+    }
+    readonly property bool quietEnabled: quietOverrides.enabled ?? quietDefaults.enabled
+    readonly property int quietStart: quietOverrides.startMinute ?? quietDefaults.startMinute
+    readonly property int quietEnd: quietOverrides.endMinute ?? quietDefaults.endMinute
+    readonly property int quietDays: quietOverrides.days ?? quietDefaults.days
+    property double clockMs: Date.now()
+    property double temporarySilentUntil: 0
+    property double quietPauseUntil: 0
+    readonly property bool quietActive: quietEnabled && Schedule.activeAt(new Date(clockMs), quietStart, quietEnd, quietDays)
+    readonly property bool temporarilySilent: temporarySilentUntil > clockMs
+    readonly property bool silent: manualSilent || temporarilySilent || (quietActive && quietPauseUntil <= clockMs)
+    readonly property string suppressionLabel: presentation ? "Presentation mode" :
+        temporarilySilent ? Math.max(1, Math.ceil((temporarySilentUntil - clockMs) / 60000)) + " min remaining" :
+        manualSilent ? "Silenced until enabled" :
+        quietActive && quietPauseUntil <= clockMs ? "Scheduled quiet hours" : "Ordinary alerts enabled"
+    property Timer quietClock: Timer {
+        interval: 15000
+        repeat: true
+        running: root.quietEnabled || root.temporarySilentUntil > 0 || root.quietPauseUntil > 0
+        triggeredOnStart: true
+        onTriggered: {
+            root.clockMs = Date.now();
+            if (root.temporarySilentUntil <= root.clockMs)
+                root.temporarySilentUntil = 0;
+            if (root.quietPauseUntil <= root.clockMs)
+                root.quietPauseUntil = 0;
+        }
+    }
     readonly property bool presentation: settings.presentationSource === "default" ? runtime.notificationPresentation : settings.presentation
     readonly property bool historyEnabled: settings.historySource === "default" ? runtime.notificationHistoryEnabled : settings.historyEnabled
     property bool outputFullscreen: false
@@ -73,6 +110,7 @@ QtObject {
         property string historySource: ""
         property string appsJson: "{}"
         property string preferenceSource: ""
+        property string quietOverridesJson: "{}"
     }
 
     property FileView historyFile: FileView {
@@ -112,9 +150,49 @@ QtObject {
     }
 
     function toggleSilent(): void {
-        settings.silent = !silent;
+        clockMs = Date.now();
+        const wasSilent = silent;
+        const wasManual = manualSilent;
+        temporarySilentUntil = 0;
+        if (wasSilent && quietActive)
+            quietPauseUntil = Schedule.nextTransition(new Date(clockMs), quietStart, quietEnd, quietDays);
+        else
+            quietPauseUntil = 0;
+        if (wasSilent && !wasManual)
+            return;
+        settings.silent = !wasSilent;
         settings.preferenceSource = "user";
         settings.setValue("preferenceSource", "user");
+        settings.sync();
+    }
+
+    function silenceFor(minutes: int): void {
+        if (![15, 30, 60].includes(minutes))
+            return;
+        clockMs = Date.now();
+        temporarySilentUntil = clockMs + minutes * 60000;
+    }
+
+    function setQuietPreference(key: string, value: var): void {
+        if (key === "enabled") {
+            if (typeof value !== "boolean") return;
+        } else if (key === "startMinute" || key === "endMinute") {
+            if (!Number.isInteger(value) || value < 0 || value > 1439) return;
+        } else if (key === "days") {
+            if (!Number.isInteger(value) || value < 0 || value > 127) return;
+        } else {
+            return;
+        }
+        clockMs = Date.now();
+        quietPauseUntil = 0;
+        settings.quietOverridesJson = JSON.stringify(Object.assign({}, quietOverrides, { [key]: value }));
+        settings.sync();
+    }
+
+    function resetQuietHours(): void {
+        settings.quietOverridesJson = "{}";
+        quietPauseUntil = 0;
+        clockMs = Date.now();
         settings.sync();
     }
 
@@ -194,6 +272,8 @@ QtObject {
         settings.presentationSource = "default";
         settings.historySource = "default";
         settings.appsJson = "{}";
+        temporarySilentUntil = 0;
+        resetQuietHours();
         settings.setValue("preferenceSource", "default");
         settings.setValue("presentationSource", "default");
         settings.setValue("historySource", "default");

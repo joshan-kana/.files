@@ -88,6 +88,7 @@ QtObject {
     readonly property bool notificationSilent: root.configData.notifications.silent
     readonly property bool notificationPresentation: root.configData.notifications.presentation
     readonly property bool notificationHistoryEnabled: root.configData.notifications.historyEnabled
+    readonly property var notificationQuietHours: root.configData.notifications.quietHours
     readonly property string weatherLocation: root.configData.weather.location
 
     function shortcut(id) {
@@ -286,6 +287,12 @@ QtObject {
                 property bool silent: false
                 property bool presentation: false
                 property bool historyEnabled: true
+                property JsonObject quietHours: JsonObject {
+                    property bool enabled: false
+                    property int startMinute: 1320
+                    property int endMinute: 420
+                    property int days: 127
+                }
             }
 
             property JsonObject weather: JsonObject {

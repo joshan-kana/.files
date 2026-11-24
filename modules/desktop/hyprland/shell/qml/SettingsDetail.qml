@@ -29,6 +29,17 @@ Item {
     property string kind: ""
     property bool open: false
     property int selectedIndex: 0
+    property double clockMs: Date.now()
+    Timer {
+        interval: 1000
+        running: panel.open && panel.kind === "stay" && panel.system.idleInhibited && panel.system.idleInhibitDeadline > 0
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: panel.clockMs = Date.now()
+    }
+    readonly property string idleStatus: !system.idleInhibited ? "Idle allowed"
+        : system.idleInhibitDeadline <= 0 ? "Inhibited until disabled"
+        : Math.max(0, Math.ceil((system.idleInhibitDeadline - clockMs) / 60000)) + " min remaining"
     visible: open
     implicitWidth: theme.controlsDetailWidth
     implicitHeight: content.implicitHeight
@@ -37,7 +48,7 @@ Item {
     readonly property bool hasBlur: ["windows", "glass"].includes(kind)
     readonly property bool reactiveTuning: kind === "reactive"
     readonly property bool spectrumTuning: kind === "spectrum"
-    readonly property bool hasReset: hasBlur || spectrumTuning
+    readonly property bool hasReset: hasBlur || spectrumTuning || kind === "alerts"
     readonly property string titleText: ({
             windows: "Window transparency",
             glass: "Frosted glass",
@@ -181,6 +192,11 @@ Item {
                     suffix: "%"
                 }
             ];
+        if (kind === "alerts")
+            return [
+                { key: "quietStart", title: "Quiet hours start", description: "Local time", minimum: 0, maximum: 1425, step: 15, suffix: "time" },
+                { key: "quietEnd", title: "Quiet hours end", description: "Local time", minimum: 0, maximum: 1425, step: 15, suffix: "time" }
+            ];
         if (kind === "nightLight")
             return [
                 {
@@ -205,6 +221,10 @@ Item {
             return Math.round(appearance.glassOpacity * 100);
         if (key === "blurSize")
             return appearance.blurSize;
+        if (key === "quietStart")
+            return notifications.quietStart;
+        if (key === "quietEnd")
+            return notifications.quietEnd;
         if (key === "temperature")
             return nightLight.temperature;
         return 0;
@@ -219,12 +239,17 @@ Item {
             appearance.setGlassOpacity(value / 100);
         else if (key === "blurSize")
             appearance.setBlurSize(value);
+        else if (key === "quietStart" || key === "quietEnd")
+            notifications.setQuietPreference(key === "quietStart" ? "startMinute" : "endMinute", Math.max(0, Math.min(1439, Math.round(value))));
         else if (key === "temperature" && nightLight.supported)
             nightLight.setTemperature(value);
     }
 
     function valueLabel(entry: var): string {
-        return currentValue(entry.key) + entry.suffix;
+        const value = currentValue(entry.key);
+        if (entry.suffix === "time")
+            return String(Math.floor(value / 60)).padStart(2, "0") + ":" + String(value % 60).padStart(2, "0");
+        return value + entry.suffix;
     }
 
     function toggleMaster(): void {
@@ -264,6 +289,10 @@ Item {
     }
 
     function resetAppearance(): void {
+        if (kind === "alerts") {
+            notifications.resetQuietHours();
+            return;
+        }
         if (reactiveTuning) {
             appearance.resetReactiveTuning();
             return;
@@ -289,6 +318,16 @@ Item {
     }
 
     function activateNumber(number: int): bool {
+        if (kind === "alerts") {
+            if (number >= 1 && number <= 3) {
+                notifications.silenceFor([15, 30, 60][number - 1]);
+                return true;
+            }
+            if (number >= 4 && number <= 6) {
+                notifications.setQuietPreference("days", [127, 62, 65][number - 4]);
+                return true;
+            }
+        }
         if (reactiveTuning) {
             if (number >= 1 && number <= 3) {
                 appearance.applyReactivePreset(["Subtle", "Default", "Energetic"][number - 1]);
@@ -325,8 +364,8 @@ Item {
 
     function handleKey(key: int, modifiers: int, autoRepeat: bool): bool {
         if (autoRepeat) {
-            const repeatedAction = ["SettingsDetail.toggle", "SettingsDetail.blur", "SettingsDetail.reset", "SettingsDetail.presentation", "SettingsDetail.history"].some(name => runtime.shellMatchesHint(name, key, modifiers));
-            const choice = reactiveTuning ? runtime.shellNumberIndex("controls", key, 7) : kind === "power" || kind === "stay" ? runtime.shellNumberIndex("controls", key, 5) : -1;
+            const repeatedAction = ["SettingsDetail.toggle", "SettingsDetail.blur", "SettingsDetail.reset", "SettingsDetail.presentation", "SettingsDetail.history", "SettingsDetail.quietHours"].some(name => runtime.shellMatchesHint(name, key, modifiers));
+            const choice = reactiveTuning ? runtime.shellNumberIndex("controls", key, 7) : kind === "alerts" ? runtime.shellNumberIndex("controls", key, 6) : kind === "power" || kind === "stay" ? runtime.shellNumberIndex("controls", key, 5) : -1;
             if (repeatedAction || choice >= 0)
                 return true;
         }
@@ -344,6 +383,10 @@ Item {
             return true;
         }
         if (kind === "alerts") {
+            if (runtime.shellMatchesHint("SettingsDetail.quietHours", key, modifiers)) {
+                notifications.setQuietPreference("enabled", !notifications.quietEnabled);
+                return true;
+            }
             if (runtime.shellMatchesHint("SettingsDetail.presentation", key, modifiers)) {
                 notifications.togglePresentation();
                 return true;
@@ -353,8 +396,8 @@ Item {
                 return true;
             }
         }
-        if ((kind === "power" || kind === "stay" || reactiveTuning) && modifiers === Qt.NoModifier) {
-            const numberIndex = runtime.shellNumberIndex("controls", key, reactiveTuning ? 7 : 5);
+        if ((kind === "power" || kind === "stay" || kind === "alerts" || reactiveTuning) && modifiers === Qt.NoModifier) {
+            const numberIndex = runtime.shellNumberIndex("controls", key, reactiveTuning ? 7 : kind === "alerts" ? 6 : 5);
             if (numberIndex >= 0)
                 return activateNumber(numberIndex + 1);
         }
@@ -718,7 +761,7 @@ Item {
             ShellText {
                 runtime: panel.runtime
                 theme: panel.theme
-                text: "Keep the session awake for:"
+                text: panel.idleStatus + " · Choose or replace the current duration:"
                 color: panel.theme.textMuted
                 font.pixelSize: panel.theme.fontSize(10)
             }
@@ -746,6 +789,82 @@ Item {
             visible: panel.kind === "alerts"
             width: parent.width
             spacing: panel.theme.spacing2
+            ShellText {
+                runtime: panel.runtime
+                theme: panel.theme
+                text: panel.notifications.suppressionLabel
+                color: panel.theme.textMuted
+            }
+            Row {
+                width: parent.width
+                height: 40
+                spacing: panel.theme.spacing2
+                Repeater {
+                    model: [15, 30, 60]
+                    delegate: ShellAction {
+                        required property int index
+                        required property int modelData
+                        width: (panel.width - panel.theme.spacing2 * 2) / 3
+                        height: 40
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        motion: panel.motion
+                        title: modelData + " min"
+                        shortcut: panel.runtime.shellNumberHint("controls", index)
+                        compact: true
+                        horizontalCompact: true
+                        onActivated: panel.notifications.silenceFor(modelData)
+                    }
+                }
+            }
+            ShellAction {
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                compact: true
+                horizontalCompact: true
+                width: parent.width
+                height: 40
+                title: "Quiet hours"
+                active: panel.notifications.quietEnabled
+                shortcut: panel.runtime.shellHint("SettingsDetail.quietHours")
+                onActivated: panel.notifications.setQuietPreference("enabled", !panel.notifications.quietEnabled)
+            }
+            Row {
+                width: parent.width
+                height: 40
+                spacing: panel.theme.spacing2
+                Repeater {
+                    model: [{title: "Every day", days: 127}, {title: "Weekdays", days: 62}, {title: "Weekends", days: 65}]
+                    delegate: ShellAction {
+                        required property int index
+                        required property var modelData
+                        width: (panel.width - panel.theme.spacing2 * 2) / 3
+                        height: 40
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        motion: panel.motion
+                        title: modelData.title
+                        shortcut: panel.runtime.shellNumberHint("controls", index + 3)
+                        compact: true
+                        horizontalCompact: true
+                        active: panel.notifications.quietDays === modelData.days
+                        onActivated: panel.notifications.setQuietPreference("days", modelData.days)
+                    }
+                }
+            }
+            ShellAction {
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                compact: true
+                horizontalCompact: true
+                width: parent.width
+                height: 40
+                title: "Restore quiet-hour defaults"
+                shortcut: panel.runtime.shellHint("SettingsDetail.reset")
+                onActivated: panel.notifications.resetQuietHours()
+            }
             ShellAction {
                 runtime: panel.runtime
                 theme: panel.theme

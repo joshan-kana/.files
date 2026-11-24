@@ -8,38 +8,41 @@ import Quickshell.Services.UPower
 QtObject {
     id: system
 
-    // Only valid for the current shell session; do not persist an accidental stay-awake.
-    // An inhibitor belongs to the active session. Timed requests expire
-    // automatically and never become persistent Nix/user preferences.
+    // Session-only inhibition, with a wall-clock deadline so elapsed time
+    // during suspension does not extend a timed request.
     property bool idleInhibited: false
     property int idleInhibitMinutes: 0
+    property double idleInhibitDeadline: 0
     property Timer idleInhibitExpiry: Timer {
-        id: expiry
-        repeat: false
+        interval: 10000
+        repeat: true
+        running: system.idleInhibited && system.idleInhibitDeadline > 0
         onTriggered: {
-            system.idleInhibited = false;
-            system.idleInhibitMinutes = 0;
+            if (Date.now() >= system.idleInhibitDeadline)
+                system.cancelIdleInhibition();
+        }
+    }
+    onIdleInhibitedChanged: {
+        if (!idleInhibited) {
+            idleInhibitMinutes = 0;
+            idleInhibitDeadline = 0;
         }
     }
     function setIdleInhibitMinutes(minutes: int): void {
         if (minutes < 0 || minutes > 120)
             return;
-        idleInhibitExpiry.stop();
         idleInhibitMinutes = minutes;
+        idleInhibitDeadline = minutes > 0 ? Date.now() + minutes * 60000 : 0;
         idleInhibited = true;
-        if (minutes > 0) {
-            idleInhibitExpiry.interval = minutes * 60000;
-            idleInhibitExpiry.start();
-        }
+    }
+    function cancelIdleInhibition(): void {
+        idleInhibited = false;
     }
     function toggleIdleInhibited(): void {
-        if (idleInhibited) {
-            idleInhibitExpiry.stop();
-            idleInhibitMinutes = 0;
-            idleInhibited = false;
-        } else {
+        if (idleInhibited)
+            cancelIdleInhibition();
+        else
             setIdleInhibitMinutes(0);
-        }
     }
 
     readonly property var audioSink: Pipewire.defaultAudioSink

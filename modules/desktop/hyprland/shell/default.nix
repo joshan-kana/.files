@@ -516,6 +516,29 @@ in
     description = "Default quiet notifications mode.";
   };
 
+  scopeOptions.notificationQuietHours = {
+    enabled = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Enable scheduled quiet hours for ordinary notification popups.";
+    };
+    startMinute = lib.mkOption {
+      type = lib.types.ints.between 0 1439;
+      default = 1320;
+      description = "Local minute of day when quiet hours start.";
+    };
+    endMinute = lib.mkOption {
+      type = lib.types.ints.between 0 1439;
+      default = 420;
+      description = "Local minute of day when quiet hours end.";
+    };
+    days = lib.mkOption {
+      type = lib.types.ints.between 0 127;
+      default = 127;
+      description = "Quiet-hour start-day mask, Sunday in bit zero.";
+    };
+  };
+
   scopeOptions.notificationsPresentation = lib.mkOption {
     type = lib.types.bool;
     default = false;
@@ -784,6 +807,7 @@ in
           silent = scopeConfig.notificationsSilent;
           presentation = scopeConfig.notificationsPresentation;
           historyEnabled = scopeConfig.notificationsHistoryEnabled;
+          quietHours = scopeConfig.notificationQuietHours;
         };
         weather.location = scopeConfig.weatherLocation;
         keybindings = cheatsheetBindings;
