@@ -452,7 +452,7 @@ FocusScope {
                 ShellAction {
                     id: shuffleAction
                     width: Math.max(58, implicitWidth)
-                    height: 46
+                    height: Math.max(46, implicitHeight)
                     runtime: content.runtime
                     theme: content.theme
                     motion: content.motion
@@ -471,7 +471,7 @@ FocusScope {
                 ShellAction {
                     id: repeatAction
                     width: Math.max(58, implicitWidth)
-                    height: 46
+                    height: Math.max(46, implicitHeight)
                     runtime: content.runtime
                     theme: content.theme
                     motion: content.motion
@@ -498,7 +498,7 @@ FocusScope {
                 ShellAction {
                     id: playerAction
                     width: implicitWidth
-                    height: 46
+                    height: Math.max(46, implicitHeight)
                     runtime: content.runtime
                     theme: content.theme
                     motion: content.motion
@@ -524,13 +524,14 @@ FocusScope {
                 topMargin: content.theme.spacing2
             }
             spacing: content.theme.spacing2
-            Row {
+            Flow {
+                width: Math.min(parent.width, children.reduce((total, item) => total + item.implicitWidth, 0) + Math.max(0, children.length - 1) * spacing)
                 anchors.horizontalCenter: parent.horizontalCenter
                 spacing: content.theme.spacing2
 
                 ShellAction {
                     width: implicitWidth
-                    height: 42
+                    height: Math.max(42, implicitHeight)
                     runtime: content.runtime
                     theme: content.theme
                     motion: content.motion
@@ -544,7 +545,7 @@ FocusScope {
 
                 ShellAction {
                     width: implicitWidth
-                    height: 42
+                    height: Math.max(42, implicitHeight)
                     runtime: content.runtime
                     theme: content.theme
                     motion: content.motion
@@ -571,13 +572,14 @@ FocusScope {
                     onIncreased: content.media.adjustSeekStep(1)
                 }
             }
-            Row {
+            Flow {
+                width: Math.min(parent.width, children.reduce((total, item) => total + item.implicitWidth, 0) + Math.max(0, children.length - 1) * spacing)
                 anchors.horizontalCenter: parent.horizontalCenter
                 spacing: content.theme.spacing2
                 ShellAction {
                     id: preferredAction
                     width: implicitWidth
-                    height: 40
+                    height: Math.max(40, implicitHeight)
                     runtime: content.runtime
                     theme: content.theme
                     motion: content.motion
@@ -592,7 +594,7 @@ FocusScope {
                 ShellAction {
                     id: resetPreferredAction
                     width: implicitWidth
-                    height: 40
+                    height: Math.max(40, implicitHeight)
                     runtime: content.runtime
                     theme: content.theme
                     motion: content.motion
@@ -624,6 +626,8 @@ FocusScope {
                 readback: content.media.rate.toFixed(2) + "×"
                 decreaseShortcut: content.runtime.shellHint("MediaContent.rateDown")
                 increaseShortcut: content.runtime.shellHint("MediaContent.rateUp")
+                canDecrease: content.media.rateAvailable && content.media.rate > content.media.player.minRate
+                canIncrease: content.media.rateAvailable && content.media.rate < content.media.player.maxRate
                 onDecreased: content.media.adjustRate(-0.25)
                 onIncreased: content.media.adjustRate(0.25)
             }

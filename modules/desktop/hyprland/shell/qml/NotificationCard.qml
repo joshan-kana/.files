@@ -226,7 +226,7 @@ SquircleSurface {
 
                 ShellAction {
                     visible: !!card.notification && card.notification.hasInlineReply
-                    width: visible ? 56 : 0
+                    width: visible ? Math.max(56, implicitWidth) : 0
                     height: Math.max(36, implicitHeight)
                     runtime: card.runtime
                     theme: card.theme

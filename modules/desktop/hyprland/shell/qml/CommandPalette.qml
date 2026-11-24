@@ -1592,7 +1592,7 @@ Item {
                     required property int index
 
                     width: ListView.view.width
-                    height: 57
+                    height: Math.max(57, moreAction.implicitHeight + theme.spacing2)
 
                     Row {
                         anchors {
@@ -1788,7 +1788,8 @@ Item {
                         },
                         {
                             shortcut: palette.runtime.shellHint("CommandPalette.actionMenu"),
-                            label: "Actions"
+                            label: "Actions",
+                            visible: results.currentIndex < 0 || !!palette.parameterTarget
                         },
                         {
                             shortcut: palette.runtime.shellHint("CommandPalette.closeAll"),
@@ -1805,7 +1806,8 @@ Item {
                         },
                         {
                             shortcut: palette.runtime.shellHint("CommandPalette.resultActions"),
-                            label: "Actions"
+                            label: "Actions",
+                            visible: results.currentIndex < 0 || !!palette.parameterTarget
                         },
                         {
                             shortcut: palette.runtime.shellHint("CommandPalette.resultBack"),

@@ -13,7 +13,7 @@ test("compact media actions disappear with no player without hiding paused media
   const card = qml("ControlsMediaCard.qml");
   assert.match(
     card,
-    /Row \{\s*width: implicitWidth\s*height: visible \? 46 : 0\s*visible: card.media.available\s*anchors.horizontalCenter: parent.horizontalCenter/,
+    /Row \{\s*id: transportRow\s*width: implicitWidth\s*height: visible \? implicitHeight : 0\s*visible: card.media.available\s*anchors.horizontalCenter: parent.horizontalCenter/,
   );
   assert.match(
     card,
@@ -49,7 +49,7 @@ test("compact shuffle and repeat buttons match the shared transport height", () 
   const card = qml("ControlsMediaCard.qml");
   const transport = qml("MediaTransport.qml");
   const match = transport.match(
-    /delegate: ShellAction \{[\s\S]*?height:\s*(\d+)/,
+    /delegate: ShellAction \{[\s\S]*?height:\s*Math.max\((\d+), implicitHeight\)/,
   );
   assert.ok(match, "media transport buttons should declare a height");
   const transportHeight = Number(match[1]);
@@ -57,7 +57,9 @@ test("compact shuffle and repeat buttons match the shared transport height", () 
     const start = card.indexOf(`id: ${id}`);
     assert.notEqual(start, -1, `missing ${id}`);
     const action = card.slice(start);
-    const height = action.match(/\bheight:\s*(\d+)/);
+    const height = action.match(
+      /\bheight:\s*Math.max\((\d+), implicitHeight\)/,
+    );
     assert.ok(height, `missing height for ${id}`);
     assert.equal(
       Number(height[1]),

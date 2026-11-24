@@ -524,7 +524,7 @@ test("Compact Media shares a live spectrum, controls and full Now Playing naviga
   assert.match(card, /id: compactTransport[\s\S]*?minimal: true/);
   assert.match(
     card,
-    /Row \{\s+width: implicitWidth[\s\S]*?anchors.horizontalCenter: parent.horizontalCenter/,
+    /Row \{\s+id: transportRow\s+width: implicitWidth[\s\S]*?anchors.horizontalCenter: parent.horizontalCenter/,
   );
   assert.doesNotMatch(card, /parent.width - shuffleButton.width/);
   assert.match(card, /SpectrumBars \{/);
@@ -858,7 +858,7 @@ test("Controls Media groups shuffle, transport, and repeat in one centered row",
   const transport = read("MediaTransport.qml");
   assert.match(
     card,
-    /Row \{\s+width: implicitWidth[\s\S]*?anchors.horizontalCenter: parent.horizontalCenter/,
+    /Row \{\s+id: transportRow\s+width: implicitWidth[\s\S]*?anchors.horizontalCenter: parent.horizontalCenter/,
   );
   assert.match(
     card,

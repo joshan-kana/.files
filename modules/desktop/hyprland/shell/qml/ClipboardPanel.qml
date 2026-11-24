@@ -629,7 +629,7 @@ Item {
                     required property int index
 
                     width: ListView.view.width
-                    height: 62
+                    height: Math.max(62, moreAction.implicitHeight + panel.theme.spacing2)
                     exponent: panel.theme.squircleExponent
                     cornerRadius: panel.theme.radiusMedium
                     fillColor: index === list.currentIndex ? panel.theme.focusFill : panel.theme.background
@@ -675,7 +675,7 @@ Item {
                         }
 
                         MarqueeText {
-                            width: parent.width - 64 - parent.spacing - 36
+                            width: Math.max(1, parent.width - 64 - parent.spacing - moreAction.implicitWidth)
                             anchors.verticalCenter: parent.verticalCenter
                             text: item.modelData ? (panel.actionMode ? item.modelData.name || "" : item.modelData.preview || "") : ""
                             color: panel.theme.text
@@ -685,11 +685,12 @@ Item {
                     }
 
                     ShellAction {
+                        id: moreAction
                         anchors.right: parent.right
                         anchors.rightMargin: panel.theme.spacing2
                         anchors.verticalCenter: parent.verticalCenter
-                        width: 32
-                        height: 32
+                        width: implicitWidth
+                        height: implicitHeight
                         visible: !panel.actionMode && item.index === panel.selectedIndex
                         runtime: panel.runtime
                         theme: panel.theme
@@ -697,7 +698,9 @@ Item {
                         compact: true
                         iconOnly: true
                         icon: "󰍉"
-                        title: "More actions (" + panel.runtime.shellHint("ClipboardPanel.actionMenu") + ")"
+                        title: "More actions"
+                        inlineIconHint: true
+                        shortcut: panel.runtime.shellHint("ClipboardPanel.actionMenu")
                         onActivated: {
                             panel.selectedIndex = item.index;
                             panel.openActions();
@@ -892,7 +895,8 @@ Item {
                     },
                     {
                         shortcut: panel.runtime.shellHint("ClipboardPanel.actionMenu"),
-                        label: panel.actionMode ? "Clipboard" : "Actions"
+                        label: panel.actionMode ? "Clipboard" : "Actions",
+                        visible: panel.actionMode || panel.selectedIndex < 0 || panel.filteredEntries.length === 0
                     },
                     {
                         shortcut: panel.runtime.shellHint("ClipboardPanel.close"),

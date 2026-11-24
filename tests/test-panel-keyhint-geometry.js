@@ -92,7 +92,7 @@ test("media and audio cards reserve measured top-left keycap safe space", () => 
   assert.match(media, /topMargin: card\.contentTopInset/);
   assert.match(
     media,
-    /controlsHeight: heroSize \+ \(media\.available \? theme\.spacing2 \* 2 \+ 24 \+ 46 : 0\)/,
+    /controlsHeight: heroSize \+ \(media\.available \? theme\.spacing2 \* 2 \+ Math\.max\(24, progressSlider\.implicitHeight\) \+ transportRow\.implicitHeight : 0\)/,
   );
   assert.doesNotMatch(media, /implicitHeight: .*content\.implicitHeight/);
   assert.match(media, /width: parent\.width\s+height: card\.heroSize/);

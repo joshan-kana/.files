@@ -771,7 +771,7 @@ Item {
         }
         spacing: panel.theme.spacing2
 
-        Row {
+        Flow {
             id: galleryButtons
             width: parent.width
             spacing: panel.theme.spacing2
@@ -800,8 +800,8 @@ Item {
                 ]
                 delegate: ShellAction {
                     required property var modelData
-                    width: (galleryButtons.width - 3 * galleryButtons.spacing) / 4
-                    height: 42
+                    width: Math.min(galleryButtons.width, Math.max(implicitWidth, Math.floor((galleryButtons.width - 3 * galleryButtons.spacing) / 4)))
+                    height: Math.max(42, implicitHeight)
                     runtime: panel.runtime
                     theme: panel.theme
                     motion: panel.motion

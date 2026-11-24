@@ -131,8 +131,8 @@ Item {
                 id: transportButton
                 required property var modelData
                 required property int index
-                width: root.minimal ? (modelData.action === "play" ? 58 : 48) : (modelData.action === "play" ? 86 : 70)
-                height: 46
+                width: Math.max(implicitWidth, root.minimal ? (modelData.action === "play" ? 58 : 48) : (modelData.action === "play" ? 86 : 70))
+                height: Math.max(46, implicitHeight)
                 runtime: root.runtime
                 theme: root.theme
                 motion: root.motion

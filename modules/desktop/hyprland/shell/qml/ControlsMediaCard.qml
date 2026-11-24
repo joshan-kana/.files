@@ -42,7 +42,7 @@ Item {
     // Use theme geometry, not the child Column's implicitHeight: the hub
     // measures our own implicitHeight to choose the expansion size.
     readonly property real contentTopInset: Math.max(theme.spacing3, theme.spacing2 * 2 + theme.keycapHeight)
-    readonly property real controlsHeight: heroSize + (media.available ? theme.spacing2 * 2 + 24 + 46 : 0)
+    readonly property real controlsHeight: heroSize + (media.available ? theme.spacing2 * 2 + Math.max(24, progressSlider.implicitHeight) + transportRow.implicitHeight : 0)
     implicitHeight: Math.max(media.available ? 178 : 152, controlsHeight + contentTopInset + theme.spacing3)
     StateLayer {
         id: cardHit
@@ -172,7 +172,7 @@ Item {
             ShellSlider {
                 id: progressSlider
                 width: parent.width
-                height: card.media.available ? 24 : 0
+                height: card.media.available ? Math.max(24, implicitHeight) : 0
                 visible: card.media.available
                 theme: card.theme
                 motion: card.motion
@@ -186,8 +186,9 @@ Item {
             }
 
             Row {
+                id: transportRow
                 width: implicitWidth
-                height: visible ? 46 : 0
+                height: visible ? implicitHeight : 0
                 visible: card.media.available
                 anchors.horizontalCenter: parent.horizontalCenter
                 spacing: card.theme.spacing2
@@ -195,7 +196,7 @@ Item {
                 ShellAction {
                     id: shuffleButton
                     width: Math.max(44, implicitWidth)
-                    height: 46
+                    height: Math.max(46, implicitHeight)
                     anchors.verticalCenter: parent.verticalCenter
                     runtime: card.runtime
                     theme: card.theme
@@ -228,7 +229,7 @@ Item {
                 ShellAction {
                     id: repeatButton
                     width: Math.max(44, implicitWidth)
-                    height: 46
+                    height: Math.max(46, implicitHeight)
                     anchors.verticalCenter: parent.verticalCenter
                     runtime: card.runtime
                     theme: card.theme

@@ -936,7 +936,8 @@ Item {
             }
         }
 
-        Row {
+        Flow {
+            id: galleryButtons
             width: parent.width
             spacing: panel.theme.spacing2
             Repeater {
@@ -944,8 +945,8 @@ Item {
                 delegate: ShellAction {
                     id: galleryAction
                     required property var modelData
-                    width: (panel.width - 3 * panel.theme.spacing2) / 4
-                    height: 40
+                    width: Math.min(galleryButtons.width, Math.max(implicitWidth, Math.floor((galleryButtons.width - 3 * galleryButtons.spacing) / 4)))
+                    height: Math.max(40, implicitHeight)
                     runtime: panel.runtime
                     theme: panel.theme
                     motion: panel.motion
