@@ -3,7 +3,7 @@ _: {
     (
       final: prev:
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isLinux {
-        # Temporary until nixpkgs carries MCP Python SDK v2.
+        # Package MCP Python SDK v2 with its required dependency versions.
         chatgpt-shell-mcp-python =
           final.callPackage
             (

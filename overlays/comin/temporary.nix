@@ -3,5 +3,8 @@
 _final: prev: {
   comin = prev.comin.overrideAttrs (old: {
     patches = (old.patches or [ ]) ++ [ ../../patches/comin/darwin-activation.patch ];
+    passthru = (old.passthru or { }) // {
+      autoUpdate = false;
+    };
   });
 }

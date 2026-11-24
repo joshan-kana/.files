@@ -19,7 +19,7 @@ _: {
               autoUpdate = false;
             };
             patches = (old.patches or [ ]) ++ [
-              ../../patches/python-mater-bridge/skip-invalid-paa-certificates.patch
+              ../../patches/python-matter-server/skip-invalid-paa-certificates.patch
             ];
           });
       }
