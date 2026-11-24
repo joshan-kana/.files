@@ -141,6 +141,16 @@
           overlays = overlaysFor system;
         };
 
+      neovimGrammarRuntimeFor =
+        pkgs:
+        let
+          grammarPackage = pkgs.vimPlugins.nvim-treesitter.withAllGrammars;
+        in
+        pkgs.buildEnv {
+          name = "neovim-grammar-runtime";
+          paths = [ grammarPackage ] ++ grammarPackage.passthru.dependencies;
+        };
+
       repoToolExcludedDirs = [
         ".direnv/"
         "patches/"
@@ -613,15 +623,10 @@
         let
           pkgs = pkgsFor system;
           treefmt = treefmtFor system;
-          neovimGrammarPackage = pkgs.vimPlugins.nvim-treesitter.withAllGrammars;
-          neovimGrammarRuntime = pkgs.buildEnv {
-            name = "neovim-grammar-runtime";
-            paths = [ neovimGrammarPackage ] ++ neovimGrammarPackage.passthru.dependencies;
-          };
           neovimRuntime = [
             pkgs.vimPlugins.otter-nvim
             pkgs.vimPlugins.nvim-lspconfig
-            neovimGrammarRuntime
+            (neovimGrammarRuntimeFor pkgs)
           ];
           preCommit = preCommitFor system;
           docsCommands = docsCommandsFor system;
@@ -771,20 +776,14 @@
                 touch "$out"
               '';
           neovim-statement =
-            let
-              grammarPackage = pkgs.vimPlugins.nvim-treesitter.withAllGrammars;
-              grammarRuntime = pkgs.buildEnv {
-                name = "neovim-statement-grammars";
-                paths = [ grammarPackage ] ++ grammarPackage.passthru.dependencies;
-              };
-            in
-            pkgs.runCommand "neovim-statement-check" { nativeBuildInputs = [ pkgs.neovim ]; } ''
-              export HOME="$TMPDIR"
-              export EDITOR_GRAMMARS="${grammarRuntime}"
-              export EDITOR_STATEMENT_MODULE="${./modules/cli/neovim/statement.lua}"
-              nvim --headless -l ${./modules/cli/neovim/statement-spec.lua}
-              touch "$out"
-            '';
+            pkgs.runCommand "neovim-statement-check" { nativeBuildInputs = [ pkgs.neovim ]; }
+              ''
+                export HOME="$TMPDIR"
+                export EDITOR_GRAMMARS="${neovimGrammarRuntimeFor pkgs}"
+                export EDITOR_STATEMENT_MODULE="${./modules/cli/neovim/statement.lua}"
+                nvim --headless -l ${./tests/neovim-statement.lua}
+                touch "$out"
+              '';
           git-attributes =
             assert lib.assertMsg (
               builtins.readFile ./.gitattributes == gitAttributesText
