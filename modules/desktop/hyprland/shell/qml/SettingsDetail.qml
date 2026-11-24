@@ -46,7 +46,7 @@ Item {
     readonly property bool hasBlur: ["windows", "glass"].includes(kind)
     readonly property bool reactiveTuning: kind === "reactive"
     readonly property bool spectrumTuning: kind === "spectrum"
-    readonly property bool hasReset: hasBlur || spectrumTuning || kind === "alerts"
+    readonly property bool hasReset: hasBlur || spectrumTuning || kind === "alerts" || kind === "nightLight"
     readonly property string titleText: ({
             windows: "Window transparency",
             glass: "Frosted glass",
@@ -211,18 +211,15 @@ Item {
                     suffix: "time"
                 }
             ];
-        if (kind === "nightLight")
-            return [
-                {
-                    key: "temperature",
-                    title: "Colour temperature",
-                    description: "Warmer at lower Kelvin values",
-                    minimum: 2500,
-                    maximum: 6500,
-                    step: 100,
-                    suffix: " K"
-                }
-            ];
+        if (kind === "nightLight") {
+            const items = [{ key: "temperature", title: "Colour temperature", description: "Warmer at lower Kelvin values", minimum: 2500, maximum: 6500, step: 100, suffix: " K" }];
+            if (nightLight.mode === "custom")
+                items.push({ key: "nightStart", title: "Schedule start", description: "Local time", minimum: 0, maximum: 1425, step: 15, suffix: "time" },
+                    { key: "nightEnd", title: "Schedule end", description: "Local time", minimum: 0, maximum: 1425, step: 15, suffix: "time" });
+            if (nightLight.mode === "custom" || nightLight.mode === "solar")
+                items.push({ key: "nightTransition", title: "Transition duration", description: "Gradual colour change", minimum: 0, maximum: 60, step: 5, suffix: " min" });
+            return items;
+        }
         return [];
     }
 
@@ -239,6 +236,12 @@ Item {
             return notifications.quietStart;
         if (key === "quietEnd")
             return notifications.quietEnd;
+        if (key === "nightStart")
+            return nightLight.startMinute;
+        if (key === "nightEnd")
+            return nightLight.endMinute;
+        if (key === "nightTransition")
+            return nightLight.transitionMinutes;
         if (key === "temperature")
             return nightLight.temperature;
         return 0;
@@ -255,6 +258,8 @@ Item {
             appearance.setBlurSize(value);
         else if (key === "quietStart" || key === "quietEnd")
             notifications.setQuietPreference(key === "quietStart" ? "startMinute" : "endMinute", Math.max(0, Math.min(1439, Math.round(value))));
+        else if (key === "nightStart" || key === "nightEnd" || key === "nightTransition")
+            nightLight.setScheduleField(key === "nightStart" ? "start" : key === "nightEnd" ? "end" : "transition", value);
         else if (key === "temperature" && nightLight.supported)
             nightLight.setTemperature(value);
     }
@@ -303,6 +308,10 @@ Item {
     }
 
     function resetAppearance(): void {
+        if (kind === "nightLight") {
+            nightLight.change("reset", "");
+            return;
+        }
         if (kind === "alerts") {
             notifications.resetQuietHours();
             return;
@@ -332,6 +341,22 @@ Item {
     }
 
     function activateNumber(number: int): bool {
+        if (kind === "nightLight") {
+            if (number >= 1 && number <= 4) {
+                const mode = ["off", "manual", "custom", "solar"][number - 1];
+                if (mode !== "solar" || nightLight.solarAvailable)
+                    nightLight.setMode(mode);
+                return true;
+            }
+            if (number >= 5 && number <= 7 && nightLight.mode === "custom") {
+                nightLight.change("days", String([127, 62, 65][number - 5]));
+                return true;
+            }
+            if ((number === 8 || number === 9) && nightLight.mode !== "off") {
+                nightLight.change("pause", number === 8 ? "30" : "60");
+                return true;
+            }
+        }
         if (kind === "alerts") {
             if (number >= 1 && number <= 3) {
                 notifications.silenceFor([15, 30, 60][number - 1]);
@@ -369,6 +394,8 @@ Item {
         return false;
     }
 
+    onParametersChanged: selectedIndex = Math.max(0, Math.min(selectedIndex, parameters.length - 1))
+
     function selectParameter(index: int): void {
         if (parameters.length === 0)
             return;
@@ -378,8 +405,8 @@ Item {
 
     function handleKey(key: int, modifiers: int, autoRepeat: bool): bool {
         if (autoRepeat) {
-            const repeatedAction = ["SettingsDetail.toggle", "SettingsDetail.blur", "SettingsDetail.reset", "SettingsDetail.presentation", "SettingsDetail.history", "SettingsDetail.quietHours"].some(name => runtime.shellMatchesHint(name, key, modifiers));
-            const choice = reactiveTuning ? runtime.shellNumberIndex("controls", key, 7) : kind === "alerts" ? runtime.shellNumberIndex("controls", key, 6) : kind === "power" || kind === "stay" ? runtime.shellNumberIndex("controls", key, 5) : -1;
+            const repeatedAction = ["SettingsDetail.toggle", "SettingsDetail.blur", "SettingsDetail.reset", "SettingsDetail.presentation", "SettingsDetail.history", "SettingsDetail.quietHours", "SettingsDetail.nightResume", "SettingsDetail.nightPauseUntil"].some(name => runtime.shellMatchesHint(name, key, modifiers));
+            const choice = kind === "nightLight" ? runtime.shellNumberIndex("controls", key, 9) : reactiveTuning ? runtime.shellNumberIndex("controls", key, 7) : kind === "alerts" ? runtime.shellNumberIndex("controls", key, 6) : kind === "power" || kind === "stay" ? runtime.shellNumberIndex("controls", key, 5) : -1;
             if (repeatedAction || choice >= 0)
                 return true;
         }
@@ -396,6 +423,16 @@ Item {
             resetAppearance();
             return true;
         }
+        if (kind === "nightLight" && runtime.shellMatchesHint("SettingsDetail.nightResume", key, modifiers)) {
+            if (nightLight.temporaryOverride.length > 0)
+                nightLight.change("resume", "");
+            return true;
+        }
+        if (kind === "nightLight" && runtime.shellMatchesHint("SettingsDetail.nightPauseUntil", key, modifiers)) {
+            if (nightLight.mode === "custom" || nightLight.mode === "solar")
+                nightLight.change("pause", "0");
+            return true;
+        }
         if (kind === "alerts") {
             if (runtime.shellMatchesHint("SettingsDetail.quietHours", key, modifiers)) {
                 notifications.setQuietPreference("enabled", !notifications.quietEnabled);
@@ -410,8 +447,8 @@ Item {
                 return true;
             }
         }
-        if ((kind === "power" || kind === "stay" || kind === "alerts" || reactiveTuning) && modifiers === Qt.NoModifier) {
-            const numberIndex = runtime.shellNumberIndex("controls", key, reactiveTuning ? 7 : kind === "alerts" ? 6 : 5);
+        if ((kind === "power" || kind === "stay" || kind === "alerts" || kind === "nightLight" || reactiveTuning) && modifiers === Qt.NoModifier) {
+            const numberIndex = runtime.shellNumberIndex("controls", key, kind === "nightLight" ? 9 : reactiveTuning ? 7 : kind === "alerts" ? 6 : 5);
             if (numberIndex >= 0)
                 return activateNumber(numberIndex + 1);
         }
@@ -720,7 +757,7 @@ Item {
                             from: parameterCard.modelData.minimum
                             to: parameterCard.modelData.maximum
                             value: panel.currentValue(parameterCard.modelData.key)
-                            enabled: parameterCard.modelData.key !== "temperature" || panel.nightLight.supported
+                            enabled: panel.kind !== "nightLight" || panel.nightLight.supported
                             Accessible.role: Accessible.Slider
                             Accessible.name: parameterCard.modelData.title + " " + panel.valueLabel(parameterCard.modelData)
                             onInteractionStarted: panel.selectParameter(parameterCard.index)
@@ -731,15 +768,140 @@ Item {
             }
         }
 
-        ShellText {
+        Column {
             visible: panel.kind === "nightLight"
-            runtime: panel.runtime
-            theme: panel.theme
-            text: "Manual control · temperature persists through the existing Night Light service"
-            color: panel.theme.textMuted
-            font.pixelSize: panel.theme.fontSize(10)
-            wrapMode: Text.WordWrap
             width: parent.width
+            spacing: panel.theme.spacing2
+            ShellText {
+                width: parent.width
+                runtime: panel.runtime
+                theme: panel.theme
+                text: panel.nightLight.statusLabel
+                color: panel.theme.textMuted
+                wrapMode: Text.WordWrap
+            }
+            Row {
+                width: parent.width
+                height: 40
+                spacing: panel.theme.spacing2
+                Repeater {
+                    model: [{id: "off", title: "Off"}, {id: "manual", title: "Manual"}, {id: "custom", title: "Schedule"}, {id: "solar", title: "Sunset"}]
+                    delegate: ShellAction {
+                        required property int index
+                        required property var modelData
+                        width: (panel.width - panel.theme.spacing2 * 3) / 4
+                        height: 40
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        motion: panel.motion
+                        compact: true
+                        horizontalCompact: true
+                        title: modelData.title
+                        shortcut: panel.runtime.shellNumberHint("controls", index)
+                        active: panel.nightLight.mode === modelData.id
+                        enabled: panel.masterAvailable && (modelData.id !== "solar" || panel.nightLight.solarAvailable)
+                        onActivated: panel.nightLight.setMode(modelData.id)
+                    }
+                }
+            }
+            ShellText {
+                visible: !panel.nightLight.solarAvailable
+                width: parent.width
+                runtime: panel.runtime
+                theme: panel.theme
+                text: "Sunset mode requires explicit Night Light latitude and longitude in Nix."
+                color: panel.theme.textMuted
+                font.pixelSize: panel.theme.fontSize(10)
+                wrapMode: Text.WordWrap
+            }
+            Row {
+                visible: panel.nightLight.mode === "custom"
+                width: parent.width
+                height: visible ? 40 : 0
+                spacing: panel.theme.spacing2
+                Repeater {
+                    model: [{title: "Every day", days: 127}, {title: "Weekdays", days: 62}, {title: "Weekends", days: 65}]
+                    delegate: ShellAction {
+                        required property int index
+                        required property var modelData
+                        width: (panel.width - panel.theme.spacing2 * 2) / 3
+                        height: 40
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        motion: panel.motion
+                        compact: true
+                        horizontalCompact: true
+                        title: modelData.title
+                        active: panel.nightLight.days === modelData.days
+                        shortcut: panel.runtime.shellNumberHint("controls", index + 4)
+                        enabled: panel.masterAvailable
+                        onActivated: panel.nightLight.change("days", String(modelData.days))
+                    }
+                }
+            }
+            Row {
+                width: parent.width
+                height: 40
+                spacing: panel.theme.spacing2
+                Repeater {
+                    model: [30, 60]
+                    delegate: ShellAction {
+                        required property int index
+                        required property int modelData
+                        width: (panel.width - panel.theme.spacing2 * 2) / 3
+                        height: 40
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        motion: panel.motion
+                        title: "Pause " + modelData + " min"
+                        shortcut: panel.runtime.shellNumberHint("controls", index + 7)
+                        compact: true
+                        horizontalCompact: true
+                        enabled: panel.masterAvailable && panel.nightLight.mode !== "off"
+                        onActivated: panel.nightLight.change("pause", String(modelData))
+                    }
+                }
+                ShellAction {
+                    width: (panel.width - panel.theme.spacing2 * 2) / 3
+                    height: 40
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    motion: panel.motion
+                    title: "Resume"
+                    shortcut: panel.runtime.shellHint("SettingsDetail.nightResume")
+                    compact: true
+                    horizontalCompact: true
+                    enabled: panel.masterAvailable && panel.nightLight.temporaryOverride.length > 0
+                    onActivated: panel.nightLight.change("resume", "")
+                }
+            }
+            ShellAction {
+                visible: panel.nightLight.mode === "custom" || panel.nightLight.mode === "solar"
+                width: parent.width
+                height: visible ? 40 : 0
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                title: "Pause until next transition"
+                shortcut: panel.runtime.shellHint("SettingsDetail.nightPauseUntil")
+                compact: true
+                horizontalCompact: true
+                enabled: panel.masterAvailable
+                onActivated: panel.nightLight.change("pause", "0")
+            }
+            ShellAction {
+                width: parent.width
+                height: 40
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                title: "Restore Night Light defaults"
+                shortcut: panel.runtime.shellHint("SettingsDetail.reset")
+                compact: true
+                horizontalCompact: true
+                enabled: panel.masterAvailable
+                onActivated: panel.nightLight.change("reset", "")
+            }
         }
 
         Column {

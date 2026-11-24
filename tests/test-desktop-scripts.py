@@ -1,6 +1,11 @@
 """Executable regression tests for the desktop's isolated service adapters."""
 
 import os
+import datetime as dt
+import importlib.util
+import json
+import sys
+from unittest import mock
 import shutil
 import subprocess
 import tempfile
@@ -68,6 +73,59 @@ class DesktopScriptTests(unittest.TestCase):
         )
         source.chmod(0o700)
         return source
+
+    def test_night_light_schedule_and_migration(self):
+        """Night Light inherits defaults, honours overnight days and temporary overrides."""
+        spec = importlib.util.spec_from_file_location("night_light", SCRIPTS / "night-light.py")
+        night = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(night)
+        config = dict(night.DEFAULTS, mode="custom", days=2, temperature=4300, transitionMinutes=15)
+        monday = dt.datetime(2026, 11, 23, 19, 0, tzinfo=dt.timezone.utc)
+        self.assertEqual(night.effective(monday, config, {})[0], 6500)
+        self.assertEqual(night.effective(monday + dt.timedelta(minutes=15), config, {})[0], 4300)
+        tuesday = monday + dt.timedelta(hours=10)
+        self.assertEqual(night.effective(tuesday, config, {})[0], 4300)
+        self.assertEqual(night.effective(tuesday + dt.timedelta(hours=2), config, {})[0], 6500)
+        self.assertEqual(night.effective(monday + dt.timedelta(days=1, minutes=30), config, {})[0], 6500)
+        pause = {"override": "off", "until": tuesday.timestamp() + 60}
+        self.assertEqual(night.effective(tuesday, config, pause)[0], 6500)
+        self.assertEqual(night.effective(tuesday + dt.timedelta(seconds=61), config, pause)[0], 4300)
+        self.assertFalse(night.solar_available(config))
+        self.assertTrue(night.solar_available(dict(config, latitude=-31.95, longitude=115.86)))
+        state = self.state / "night-light"
+        state.write_text("off 4300\n")
+        with mock.patch.object(night, "STATE", state):
+            self.assertEqual(night.read_overrides(monday), {"mode": "off", "temperature": 4300})
+            state.write_text(json.dumps({"mode": "custom", "temperature": 9999, "days": 62}))
+            self.assertEqual(night.read_overrides(monday), {"mode": "custom", "days": 62})
+
+    def test_night_light_service_controls(self):
+        """Check real adapter transitions through an isolated mock systemd/Hyprland."""
+        self.executable("systemctl", """
+case "$*" in
+  *"is-active desktop-shell-night-light.service") test -f "$XDG_RUNTIME_DIR/light-running";;
+  *"start desktop-shell-night-light.service") touch "$XDG_RUNTIME_DIR/light-running";;
+  *"stop desktop-shell-night-light.service") rm -f "$XDG_RUNTIME_DIR/light-running";;
+  *) exit 0;;
+esac
+""")
+        self.executable("hyprctl", 'printf "%s\\n" "$*" > "$XDG_RUNTIME_DIR/light-command"; echo ok')
+        def run(*args):
+            result = subprocess.run([sys.executable, str(SCRIPTS / "night-light.py"), *args], env=self.env,
+                                    text=True, capture_output=True, check=True, timeout=8)
+            return result.stdout
+        run("mode", "manual")
+        self.assertTrue(json.loads(run("state"))["active"])
+        run("set", "4100")
+        self.assertEqual(json.loads(run("state"))["effectiveTemperature"], 4100)
+        self.assertEqual((self.runtime / "light-command").read_text().strip(), "hyprsunset temperature 4100")
+        run("pause", "30")
+        self.assertFalse(json.loads(run("state"))["active"])
+        run("toggle")
+        self.assertTrue(json.loads(run("state"))["active"])
+        run("reset")
+        self.assertFalse(json.loads(run("state"))["active"])
+        self.assertEqual(json.loads(run("state"))["temperature"], 4500)
 
     def test_video_wallpaper_keeps_diagnostics_without_terminal_progress(self):
         """Both video launch paths retain diagnostics without terminal status output."""

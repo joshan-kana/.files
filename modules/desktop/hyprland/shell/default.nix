@@ -557,6 +557,55 @@ in
     description = "Default notification history retention preference.";
   };
 
+  scopeOptions.nightLight = lib.mkOption {
+    type = lib.types.submodule {
+      options = {
+        mode = lib.mkOption {
+          type = lib.types.enum [ "off" "manual" "custom" "solar" ];
+          default = "off";
+          description = "Default Night Light operating mode.";
+        };
+        temperature = lib.mkOption {
+          type = lib.types.ints.between 2500 6500;
+          default = 4500;
+          description = "Target colour temperature in Kelvin.";
+        };
+        startMinute = lib.mkOption {
+          type = lib.types.ints.between 0 1439;
+          default = 1140;
+          description = "Local start minute for custom Night Light.";
+        };
+        endMinute = lib.mkOption {
+          type = lib.types.ints.between 0 1439;
+          default = 420;
+          description = "Local end minute for custom Night Light.";
+        };
+        days = lib.mkOption {
+          type = lib.types.ints.between 0 127;
+          default = 127;
+          description = "Custom schedule start-day mask, Sunday in bit zero.";
+        };
+        transitionMinutes = lib.mkOption {
+          type = lib.types.ints.between 0 60;
+          default = 15;
+          description = "Duration of gradual colour-temperature transitions.";
+        };
+        latitude = lib.mkOption {
+          type = lib.types.nullOr (lib.types.numbers.between (-90.0) 90.0);
+          default = null;
+          description = "Explicit solar latitude; null disables solar mode.";
+        };
+        longitude = lib.mkOption {
+          type = lib.types.nullOr (lib.types.numbers.between (-180.0) 180.0);
+          default = null;
+          description = "Explicit solar longitude; null disables solar mode.";
+        };
+      };
+    };
+    default = { };
+    description = "Night Light baseline, with individual runtime user overrides.";
+  };
+
   scopeOptions.weatherLocation = lib.mkOption {
     type = lib.types.str;
     default = "";
@@ -915,11 +964,15 @@ in
       nightLightControl = pkgs.writeShellApplication {
         name = "desktop-shell-night-light";
         runtimeInputs = [
-          pkgs.coreutils
           pkgs.systemd
           pkgs.hyprsunset
+          osConfig.programs.hyprland.package
+          (pkgs.python3.withPackages (ps: [ ps.astral ]))
         ];
-        text = builtins.readFile ../../../../scripts/desktop-shell/night-light.sh;
+        text = ''
+          export DESKTOP_NIGHT_LIGHT_DEFAULTS=${lib.escapeShellArg (builtins.toJSON scopeConfig.nightLight)}
+          exec python3 ${../../../../scripts/desktop-shell/night-light.py} "$@"
+        '';
       };
 
       colourPicker = pkgs.writeShellApplication {
@@ -1104,6 +1157,18 @@ in
         Install.WantedBy = [ "timers.target" ];
       };
 
+      systemd.user.timers.desktop-shell-night-light-apply = {
+        Unit = {
+          Description = "Re-evaluate Night Light schedules and overrides";
+          PartOf = [ sessionTarget ];
+        };
+        Timer = {
+          OnCalendar = "*-*-* *:*:00";
+          AccuracySec = "1s";
+          Unit = "desktop-shell-night-light-apply.service";
+        };
+      };
+
       systemd.user.services = {
         desktop-shell-palette-index = {
           Unit = {
@@ -1171,7 +1236,7 @@ in
 
         desktop-shell-night-light = {
           Unit = {
-            Description = "Manual Hyprland colour temperature";
+            Description = "Hyprland colour temperature";
             After = [ sessionTarget ];
             PartOf = [ sessionTarget ];
             # Rapid manual temperature changes must never permanently lock
@@ -1190,7 +1255,7 @@ in
 
         desktop-shell-night-light-apply = {
           Unit = {
-            Description = "Restore manual Night Light state at session start";
+            Description = "Apply Night Light policy and scheduled colour temperature";
             After = [ sessionTarget ];
           };
           Service = {
