@@ -22,13 +22,55 @@ Item {
     property string selectionMode: "image"
     property var encodingOverrides: parseEncoding(qmlCapturePreferences.encodingOverrides)
     readonly property var encodingPresets: selectionMode === "record" ? [
-        {name: "Quality", values: {videoFormat: "mp4", codec: "libx264", frameRate: 60, videoQuality: 18}},
-        {name: "Compact", values: {videoFormat: "mkv", codec: "libx265", frameRate: 30, videoQuality: 28}},
-        {name: "Fast", values: {videoFormat: "mp4", codec: "libx264", frameRate: 30, videoQuality: 23}}
+        {
+            name: "Quality",
+            values: {
+                videoFormat: "mp4",
+                codec: "libx264",
+                frameRate: 60,
+                videoQuality: 18
+            }
+        },
+        {
+            name: "Compact",
+            values: {
+                videoFormat: "mkv",
+                codec: "libx265",
+                frameRate: 30,
+                videoQuality: 28
+            }
+        },
+        {
+            name: "Fast",
+            values: {
+                videoFormat: "mp4",
+                codec: "libx264",
+                frameRate: 30,
+                videoQuality: 23
+            }
+        }
     ] : [
-        {name: "Quality", values: {imageFormat: "png", jpegQuality: 95}},
-        {name: "Compact", values: {imageFormat: "jpg", jpegQuality: 75}},
-        {name: "Balanced", values: {imageFormat: "jpg", jpegQuality: 95}}
+        {
+            name: "Quality",
+            values: {
+                imageFormat: "png",
+                jpegQuality: 95
+            }
+        },
+        {
+            name: "Compact",
+            values: {
+                imageFormat: "jpg",
+                jpegQuality: 75
+            }
+        },
+        {
+            name: "Balanced",
+            values: {
+                imageFormat: "jpg",
+                jpegQuality: 95
+            }
+        }
     ]
     readonly property int presetIndex: encodingPresets.findIndex(preset => Object.keys(preset.values).every(key => encoding(key) === preset.values[key]))
     readonly property string audioMode: String(encoding("audio"))
@@ -90,7 +132,12 @@ Item {
             }
         ];
         return fields.concat([
-            {key: "preset", action: "ScreenshotPicker.preset", title: presetIndex >= 0 ? encodingPresets[presetIndex].name.toUpperCase() : "PRESET", values: []},
+            {
+                key: "preset",
+                action: "ScreenshotPicker.preset",
+                title: presetIndex >= 0 ? encodingPresets[presetIndex].name.toUpperCase() : "PRESET",
+                values: []
+            },
             {
                 key: "",
                 action: "ScreenshotPicker.resetEncoding",

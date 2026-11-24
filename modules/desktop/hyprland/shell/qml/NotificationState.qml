@@ -231,7 +231,9 @@ QtObject {
 
     function resetApplicationPreferences(notification): void {
         let all = {};
-        try { all = JSON.parse(settings.appsJson || "{}"); } catch (_) {}
+        try {
+            all = JSON.parse(settings.appsJson || "{}");
+        } catch (_) {}
         const key = NotificationSemantics.groupKey(notification);
         delete all[key];
         settings.appsJson = JSON.stringify(all);

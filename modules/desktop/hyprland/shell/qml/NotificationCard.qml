@@ -390,7 +390,6 @@ SquircleSurface {
                 width: Math.min(parent.width, Math.max(142, implicitWidth))
                 onActivated: card.notificationState.resetApplicationPreferences(card.notification)
             }
-
         }
 
         Row {

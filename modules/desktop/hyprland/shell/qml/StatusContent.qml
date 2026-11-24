@@ -16,47 +16,47 @@ Item {
     signal refreshRequested
 
     readonly property var statusEntries: [
-                    {
-                        label: "Caps Lock",
-                        glyph: FeedbackSemantics.symbol("keyboard", false, 0, content.keyboard.stale ? "unknown" : content.keyboard.capsState),
-                        value: content.keyboard.stale ? "Stale" : content.keyboard.description(content.keyboard.capsState)
-                    },
-                    {
-                        label: "Num Lock",
-                        glyph: FeedbackSemantics.symbol("keyboard", false, 0, content.keyboard.stale ? "unknown" : content.keyboard.numState),
-                        value: content.keyboard.stale ? "Stale" : content.keyboard.description(content.keyboard.numState)
-                    },
-                    {
-                        label: "Keyboard layout",
-                        glyph: "󰌌",
-                        value: content.keyboard.stale ? "Stale" : content.keyboard.layoutName
-                    },
-                    {
-                        label: "Microphone",
-                        glyph: content.system.microphoneAvailable ? FeedbackSemantics.symbol("microphone", content.system.microphoneMuted, content.system.microphoneVolumePercent, "") : "󰀨",
-                        value: content.system.microphoneAvailable ? content.system.microphoneMuted ? "Muted" : content.system.microphoneVolumePercent + "%" : "Unavailable"
-                    },
-                    {
-                        label: "Output",
-                        glyph: content.system.audioAvailable ? FeedbackSemantics.symbol("volume", content.system.muted, content.system.volumePercent, "") : "󰀨",
-                        value: content.system.audioAvailable ? content.system.muted ? "Muted" : content.system.volumePercent + "%" : "Unavailable"
-                    },
-                    {
-                        label: "Brightness",
-                        glyph: "󰃟",
-                        value: content.brightness.supported ? content.brightness.percent + "%" : "Unavailable"
-                    },
-                    {
-                        label: "Interaction",
-                        glyph: "󰍉",
-                        value: content.modeName
-                    },
-                    {
-                        label: "Shell recording",
-                        glyph: FeedbackSemantics.symbol("recording", false, 0, ""),
-                        value: content.recording.capturing ? "Recording" : content.recording.finalising ? "Finalising" : "Inactive"
-                    }
-                ]
+        {
+            label: "Caps Lock",
+            glyph: FeedbackSemantics.symbol("keyboard", false, 0, content.keyboard.stale ? "unknown" : content.keyboard.capsState),
+            value: content.keyboard.stale ? "Stale" : content.keyboard.description(content.keyboard.capsState)
+        },
+        {
+            label: "Num Lock",
+            glyph: FeedbackSemantics.symbol("keyboard", false, 0, content.keyboard.stale ? "unknown" : content.keyboard.numState),
+            value: content.keyboard.stale ? "Stale" : content.keyboard.description(content.keyboard.numState)
+        },
+        {
+            label: "Keyboard layout",
+            glyph: "󰌌",
+            value: content.keyboard.stale ? "Stale" : content.keyboard.layoutName
+        },
+        {
+            label: "Microphone",
+            glyph: content.system.microphoneAvailable ? FeedbackSemantics.symbol("microphone", content.system.microphoneMuted, content.system.microphoneVolumePercent, "") : "󰀨",
+            value: content.system.microphoneAvailable ? content.system.microphoneMuted ? "Muted" : content.system.microphoneVolumePercent + "%" : "Unavailable"
+        },
+        {
+            label: "Output",
+            glyph: content.system.audioAvailable ? FeedbackSemantics.symbol("volume", content.system.muted, content.system.volumePercent, "") : "󰀨",
+            value: content.system.audioAvailable ? content.system.muted ? "Muted" : content.system.volumePercent + "%" : "Unavailable"
+        },
+        {
+            label: "Brightness",
+            glyph: "󰃟",
+            value: content.brightness.supported ? content.brightness.percent + "%" : "Unavailable"
+        },
+        {
+            label: "Interaction",
+            glyph: "󰍉",
+            value: content.modeName
+        },
+        {
+            label: "Shell recording",
+            glyph: FeedbackSemantics.symbol("recording", false, 0, ""),
+            value: content.recording.capturing ? "Recording" : content.recording.finalising ? "Finalising" : "Inactive"
+        }
+    ]
     property bool copied: false
     function copyStatus(): void {
         if (!runtime.copyText)
@@ -71,7 +71,11 @@ Item {
             copyFeedback.restart();
         }
     }
-    Timer { id: copyFeedback; interval: 1800; onTriggered: content.copied = false }
+    Timer {
+        id: copyFeedback
+        interval: 1800
+        onTriggered: content.copied = false
+    }
 
     implicitWidth: Math.max(340, theme.controlsDetailWidth - theme.spacing4 * 2)
     implicitHeight: heading.implicitHeight + stateGrid.implicitHeight + theme.spacing4 * 3

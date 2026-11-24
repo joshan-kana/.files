@@ -657,15 +657,37 @@ in
   };
 
   scopeOptions.notificationApplications = lib.mkOption {
-    type = lib.types.attrsOf (lib.types.submodule {
-      options = {
-        popups = lib.mkOption { type = lib.types.bool; default = true; description = "Allow application popups."; };
-        history = lib.mkOption { type = lib.types.bool; default = true; description = "Retain application notification history."; };
-        silent = lib.mkOption { type = lib.types.bool; default = false; description = "Suppress application popups."; };
-        criticalOnly = lib.mkOption { type = lib.types.bool; default = false; description = "Show only critical popups."; };
-        privatePreview = lib.mkOption { type = lib.types.bool; default = false; description = "Conceal notification content in popups."; };
-      };
-    });
+    type = lib.types.attrsOf (
+      lib.types.submodule {
+        options = {
+          popups = lib.mkOption {
+            type = lib.types.bool;
+            default = true;
+            description = "Allow application popups.";
+          };
+          history = lib.mkOption {
+            type = lib.types.bool;
+            default = true;
+            description = "Retain application notification history.";
+          };
+          silent = lib.mkOption {
+            type = lib.types.bool;
+            default = false;
+            description = "Suppress application popups.";
+          };
+          criticalOnly = lib.mkOption {
+            type = lib.types.bool;
+            default = false;
+            description = "Show only critical popups.";
+          };
+          privatePreview = lib.mkOption {
+            type = lib.types.bool;
+            default = false;
+            description = "Conceal notification content in popups.";
+          };
+        };
+      }
+    );
     default = { };
     description = "Application notification defaults keyed by desktop:<desktop-entry> or name:<application-name>, in lowercase.";
   };

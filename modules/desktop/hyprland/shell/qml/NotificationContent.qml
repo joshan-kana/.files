@@ -629,7 +629,14 @@ FocusScope {
             focus: center.engaged
 
             Keys.onPressed: event => {
-                const appActions = {"NotificationCard.popup": "popups", "NotificationCard.history": "history", "NotificationCard.silent": "silent", "NotificationCard.criticalOnly": "criticalOnly", "NotificationCard.privatePreview": "privatePreview", "NotificationCard.defaults": "defaults"};
+                const appActions = {
+                    "NotificationCard.popup": "popups",
+                    "NotificationCard.history": "history",
+                    "NotificationCard.silent": "silent",
+                    "NotificationCard.criticalOnly": "criticalOnly",
+                    "NotificationCard.privatePreview": "privatePreview",
+                    "NotificationCard.defaults": "defaults"
+                };
                 const appAction = Object.keys(appActions).find(action => center.runtime.shellMatchesHint(action, event.key, event.modifiers));
                 if (appAction) {
                     const notification = center.selectedNotification();

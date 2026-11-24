@@ -391,7 +391,12 @@ Item {
             return;
         const key = parameters[selectedIndex].key;
         if (kind === "nightLight") {
-            nightLight.change("reset-field", ({temperature: "temperature", nightStart: "startMinute", nightEnd: "endMinute", nightTransition: "transitionMinutes"})[key]);
+            nightLight.change("reset-field", ({
+                    temperature: "temperature",
+                    nightStart: "startMinute",
+                    nightEnd: "endMinute",
+                    nightTransition: "transitionMinutes"
+                })[key]);
         } else if (kind === "alerts") {
             notifications.resetQuietField(key === "quietStart" ? "startMinute" : "endMinute");
         } else if (key === "motionDuration") {
