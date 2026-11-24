@@ -814,14 +814,15 @@ PanelWindow {
 
         // Geometry-gated reveal is only for the first opening. Once revealed,
         // the page crossfade owns opacity independently of destination size.
-        readonly property real contentReveal: {
+        readonly property real openingReveal: {
             const widthGoal = Math.max(1, Math.min(host.viewportWidth, host.contentWidth));
             const heightGoal = Math.max(1, Math.min(host.viewportHeight, host.contentHeight));
             const fraction = Math.min(width / widthGoal, height / heightGoal);
-            return host.chromeOpacity * (host.contentRevealed ? 1 : Math.max(0, Math.min(1, (fraction - 0.68) / 0.30)));
+            return host.chromeOpacity * Math.max(0, Math.min(1, (fraction - 0.68) / 0.30));
         }
-        onContentRevealChanged: {
-            if (host.expansionState.hasCurrent && host.measuredContentSize.width > 0 && contentReveal >= 0.99)
+        readonly property real contentReveal: host.contentRevealed ? host.chromeOpacity : openingReveal
+        onOpeningRevealChanged: {
+            if (host.expansionState.hasCurrent && host.measuredContentSize.width > 0 && openingReveal >= 0.99)
                 host.contentRevealed = true;
         }
     }

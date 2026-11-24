@@ -136,10 +136,10 @@ test("tab changes retain a complete measurement and never shrink the outgoing co
     qml,
     /target: host.controlsContent\s+property: "detailWidthLimit"/,
   );
-  assert.match(qml, /host.contentRevealed \? 1 : Math.max/);
+  assert.match(qml, /contentReveal: host.contentRevealed \? host.chromeOpacity : openingReveal/);
   assert.match(
     qml,
-    /onContentRevealChanged:[\s\S]*?host.contentRevealed = true/,
+    /onOpeningRevealChanged:[\s\S]*?host.contentRevealed = true/,
   );
   assert.doesNotMatch(
     qml,
