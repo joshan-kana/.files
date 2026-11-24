@@ -54,7 +54,10 @@ test("signal meter is based on measured peaks rather than gain", () => {
   const meter = qml("AudioPeakMeter.qml");
   assert.match(meter, /PwNodePeakMonitor/);
   assert.match(meter, /monitor.peaks\[index\]/);
-  assert.match(meter, /channelRow.displayedAmplitude > index \/ count/);
+  assert.match(
+    meter,
+    /width: parent.width \* \(meter.muted \? 0 : channelRow.displayedAmplitude\)/,
+  );
   assert.doesNotMatch(meter, /audio.volume/);
 });
 test("forecast range and schedule use data rather than normalized synthetic samples", () => {
