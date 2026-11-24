@@ -59,6 +59,11 @@ lib.recursiveUpdate (import ../../profiles/minimal.nix { inherit lib moduleRegis
   };
 
   serverApps = editScope moduleRegistry.serverApps {
+    servarr.transmission = { config, ... }: {
+      systemd.services.transmission.unitConfig.ConditionPathIsMountPoint =
+        config.services.transmission.settings.incomplete-dir;
+    };
+
     jellyfin =
       {
         config,
@@ -198,15 +203,15 @@ lib.recursiveUpdate (import ../../profiles/minimal.nix { inherit lib moduleRegis
               lib.concatStringsSep ";" ([ server.lan.dns.serviceIp ] ++ server.lan.dns.fallbackServers)
             };";
 
-            adguard = {
+            adguard = rec {
               user = "adguardhome";
-              group = "appdata-editors";
+              group = server.storage.appData.group.name;
               ip = server.lan.dns.serviceIp;
               port = 53;
               dataDir = "${server.storage.appData.root}/adguard";
-              workDir = "${server.storage.appData.root}/adguard/work";
-              confDir = "${server.storage.appData.root}/adguard/conf";
-              configFile = "${server.storage.appData.root}/adguard/conf/AdGuardHome.yaml";
+              workDir = "${dataDir}/work";
+              confDir = "${dataDir}/conf";
+              configFile = "${confDir}/AdGuardHome.yaml";
             };
 
             technitium = {
@@ -274,7 +279,7 @@ lib.recursiveUpdate (import ../../profiles/minimal.nix { inherit lib moduleRegis
               settings = {
                 http.address = "${adguard.ip}:3000";
                 dns = {
-                  # DNS only on the dedicated service IP and localhost, not 192.168.1.3.
+                  # DNS only on the dedicated service IP and localhost.
                   bind_hosts = [
                     adguard.ip
                     "127.0.0.1"
@@ -290,7 +295,7 @@ lib.recursiveUpdate (import ../../profiles/minimal.nix { inherit lib moduleRegis
             };
 
             # Technitium owns DNS/DHCP backend state. AdGuard remains the
-            # client-facing filtering resolver on 192.168.1.2.
+            # client-facing filtering resolver on the dedicated service IP.
             services.technitium-dns-server = {
               enable = true;
               openFirewall = false;
@@ -324,7 +329,7 @@ lib.recursiveUpdate (import ../../profiles/minimal.nix { inherit lib moduleRegis
                   User = adguard.user;
                   Group = adguard.group;
 
-                  StateDirectory = lib.mkForce "apps/adguard/conf";
+                  StateDirectory = lib.mkForce (lib.removePrefix "/var/lib/" adguard.confDir);
                   StateDirectoryMode = "2750";
                   UMask = lib.mkForce "0007";
 
@@ -349,7 +354,7 @@ lib.recursiveUpdate (import ../../profiles/minimal.nix { inherit lib moduleRegis
                   DynamicUser = lib.mkForce false;
                   User = technitium.user;
                   Group = technitium.group;
-                  StateDirectory = lib.mkForce "apps/technitium";
+                  StateDirectory = lib.mkForce (lib.removePrefix "/var/lib/" technitium.stateDir);
                   StateDirectoryMode = "2750";
                   WorkingDirectory = lib.mkForce technitium.stateDir;
                   UMask = lib.mkForce "0007";
@@ -545,7 +550,6 @@ lib.recursiveUpdate (import ../../profiles/minimal.nix { inherit lib moduleRegis
       inherit (config.dotfiles.backups) retention;
       inherit (config.dotfiles.users) primary;
       inherit (server) storage;
-      backupRcloneConfig = "/var/lib/backup-credentials/rclone.conf";
       snapshotInterval = "*:0/${toString storage.snapshots.intervalMinutes}";
       resticUnlock = ''
         #!${pkgs.runtimeShell}
@@ -586,13 +590,10 @@ lib.recursiveUpdate (import ../../profiles/minimal.nix { inherit lib moduleRegis
 
       services.userborn.enable = true;
 
-      fileSystems."/srv/vault/media/downloads/incomplete" = {
+      config.fileSystems."${storage.dataRoot.path}/media/downloads/incomplete" = {
         device = "${storage.dataRoot.poolName}/downloads-incomplete";
         fsType = "zfs";
       };
-
-      systemd.services.transmission.unitConfig.ConditionPathIsMountPoint =
-        "${storage.dataRoot.path}/media/downloads/incomplete";
 
       services.zfs = {
         autoScrub = {
@@ -646,7 +647,7 @@ lib.recursiveUpdate (import ../../profiles/minimal.nix { inherit lib moduleRegis
           repository = "rclone:dropbox:Archives/Backups/nixos-server";
           backupPrepareCommand = resticUnlock;
           passwordFile = "${server.secretsDir}/restic-password";
-          rcloneConfigFile = backupRcloneConfig;
+          rcloneConfigFile = config.dotfiles.backups.secrets.rcloneConfigFile;
           paths = [ storage.appData.root ];
           exclude = [
             "${storage.appData.root}/.snapshots"

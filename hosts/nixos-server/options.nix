@@ -1,4 +1,4 @@
-{ lib, ... }:
+{ config, lib, ... }:
 
 let
   inherit (lib) mkOption types;
@@ -104,7 +104,7 @@ in
         fallbackServers = mkOption {
           type = types.listOf types.str;
           default = [
-            "192.168.1.1"
+            config.dotfiles.server.lan.gateway
             "1.1.1.1"
           ];
           description = "Fallback DNS servers for the NixOS host when the local DNS service is unavailable.";
