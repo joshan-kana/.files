@@ -753,6 +753,23 @@
                 bash ${./tests/update-schemas.sh} ${./scripts/update-schemas.sh}
                 touch "$out"
               '';
+          container-lock-update =
+            pkgs.runCommand "container-lock-update-tests"
+              {
+                nativeBuildInputs = with pkgs; [
+                  bash
+                  coreutils
+                  diffutils
+                  git
+                  jq
+                ];
+              }
+              ''
+                export HOME="$TMPDIR/home"
+                mkdir -p "$HOME"
+                bash ${./tests/update-container-lock.sh} ${./scripts/update-container-lock.sh}
+                touch "$out"
+              '';
           git-attributes =
             assert lib.assertMsg (
               builtins.readFile ./.gitattributes == gitAttributesText
