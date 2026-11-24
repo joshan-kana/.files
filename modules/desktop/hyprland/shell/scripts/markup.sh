@@ -8,7 +8,7 @@ fi
 [ -f "$1" ] && [ -r "$1" ] || exit 2
 case "$(file --brief --mime-type -- "$1")" in image/*) ;; *) exit 2 ;; esac
 umask 077
-dest="${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots"
+dest="$(desktop-shell-capture-locations get screenshots)" || exit 1
 mkdir -p -- "$dest"
 output="$dest/Screenshot-$(date +%Y%m%d-%H%M%S)-$$.png"
 exec satty --filename "$1" --output-filename "$output" \

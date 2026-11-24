@@ -83,10 +83,37 @@ class DesktopScriptTests(unittest.TestCase):
                         "nightStart": {"min": 0, "max": 1439},
                     }
                 ),
+                "DESKTOP_CAPTURE_DEFAULTS": json.dumps(
+                    {
+                        "videoFormat": "mp4",
+                        "codec": "libx264",
+                        "frameRate": 0,
+                        "videoQuality": 23,
+                        "audio": "none",
+                        "imageFormat": "png",
+                        "jpegQuality": 95,
+                        "cursor": False,
+                    }
+                ),
+                "DESKTOP_CAPTURE_CONSTRAINTS": json.dumps(
+                    {
+                        key: {"values": values}
+                        for key, values in {
+                            "videoFormat": ["mp4", "mkv"],
+                            "codec": ["libx264", "libx265"],
+                            "frameRate": [0, 30, 60, 120],
+                            "videoQuality": [18, 23, 28],
+                            "audio": ["none", "system", "microphone"],
+                            "imageFormat": ["png", "jpg"],
+                            "jpegQuality": [75, 85, 95],
+                        }.items()
+                    }
+                ),
                 "DESKTOP_SHELL_SCREENSHOT_DIR": "",
                 "DESKTOP_SHELL_RECORDING_DIR": "",
             }
         )
+        self.executable("desktop-shell-capture-locations", f'exec "{sys.executable}" "{SCRIPTS / "capture-locations.py"}" "$@"')
 
     def executable(self, name, text):
         """Write a mock command to the test-only binary search path."""
@@ -97,6 +124,10 @@ class DesktopScriptTests(unittest.TestCase):
 
     def run_script(self, source, *arguments):
         """Execute a standalone script without touching the real user service."""
+        if source.name in ("record-region.sh", "recording-toggle.sh", "frozen-capture.sh"):
+            wrapper = self.home / source.name
+            wrapper.write_text((SCRIPTS / "capture-encoding.sh").read_text() + source.read_text())
+            source = wrapper
         return subprocess.run(
             ["bash", str(source), *arguments],
             env=self.env,
@@ -359,6 +390,31 @@ exit 1
         result = self.run_script(SCRIPTS / "recording-toggle.sh", "start", "Virtual-1", "0,0 1200x800", "none")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual((self.runtime / "desktop-shell-recording.state").read_text().splitlines()[0], "recording")
+
+    def test_direct_capture_inherits_changed_encoding_and_destination(self):
+        """The direct recorder uses evaluated options rather than a private baseline."""
+        defaults = json.loads(self.env["DESKTOP_CAPTURE_DEFAULTS"])
+        defaults.update(videoFormat="mkv", codec="libx265", frameRate=45, videoQuality=18)
+        constraints = json.loads(self.env["DESKTOP_CAPTURE_CONSTRAINTS"])
+        constraints["frameRate"]["values"].append(45)
+        self.env["DESKTOP_CAPTURE_DEFAULTS"] = json.dumps(defaults)
+        self.env["DESKTOP_CAPTURE_CONSTRAINTS"] = json.dumps(constraints)
+        self.env["DESKTOP_SHELL_RECORDING_DIR"] = str(self.home / "declared")
+        destination = self.home / "selected"
+        destination.mkdir()
+        locations = self.state / "desktop-shell/capture-locations.json"
+        locations.parent.mkdir(parents=True)
+        locations.write_text(json.dumps({"recordings": str(destination)}))
+        self.executable("slurp", 'printf "0,0 640x480\\n"')
+        self.executable("wf-recorder", 'printf "%s\\n" "$@" > "$XDG_RUNTIME_DIR/args"')
+        result = self.run_script(SCRIPTS / "record-region.sh")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        args = (self.runtime / "args").read_text().splitlines()
+        self.assertIn("libx265", args)
+        self.assertIn("45", args)
+        self.assertIn("crf=18", args)
+        self.assertEqual(Path(args[-1]).parent, destination)
+        self.assertEqual(Path(args[-1]).suffix, ".mkv")
 
     def test_recording_start_failure_preserves_retry_contract(self):
         """A failed start returns nonzero instead of a false successful action."""

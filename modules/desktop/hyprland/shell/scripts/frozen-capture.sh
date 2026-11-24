@@ -1,9 +1,5 @@
 #!/usr/bin/env bash
-# All capture producers and readers resolve the same effective directories.
-screenshot_dir="${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots"
-if command -v desktop-shell-capture-locations >/dev/null 2>&1; then
-  screenshot_dir="$(desktop-shell-capture-locations get screenshots)" || exit 1
-fi
+screenshot_dir="$(desktop-shell-capture-locations get screenshots)" || exit 1
 mode="${1:-}"
 private_dir="${XDG_RUNTIME_DIR:?}"
 ensure_snapshot() {
@@ -13,7 +9,11 @@ case "$mode" in
 snapshot)
   { [ "$#" -eq 2 ] || [ "$#" -eq 3 ]; } && [ -n "$2" ] || exit 2
   args=()
-  case "${3:-no-cursor}" in cursor) args+=(-c) ;; no-cursor) ;; *) exit 2 ;; esac
+  cursor="${3:-}"
+  if [ -z "$cursor" ]; then
+    case "$(capture_default cursor)" in true) cursor=cursor ;; false) cursor=no-cursor ;; *) exit 2 ;; esac
+  fi
+  case "$cursor" in cursor) args+=(-c) ;; no-cursor) ;; *) exit 2 ;; esac
   umask 077
   snapshot="$(mktemp "$private_dir/desktop-shell-capture-XXXXXXXX.png")"
   if grim "${args[@]}" -o "$2" "$snapshot"; then printf '%s\n' "$snapshot"; else
@@ -27,10 +27,14 @@ clear)
   ;;
 copy | save | annotate)
   { [ "$#" -eq 6 ] || [ "$#" -eq 8 ]; } && ensure_snapshot "$2" || exit 2
-  format="${7:-png}"
-  quality="${8:-95}"
-  case "$format" in png | jpg) ;; *) exit 2 ;; esac
-  case "$quality" in 75 | 85 | 95) ;; *) exit 2 ;; esac
+  if [ "$#" -eq 8 ]; then
+    format="$7"
+    quality="$8"
+  else
+    format="$(capture_default imageFormat)" || exit 2
+    quality="$(capture_default jpegQuality)" || exit 2
+  fi
+  capture_validate imageFormat "$format" jpegQuality "$quality" || exit 2
   # The markup pipeline and clipboard require lossless source pixels.
   if [ "$mode" != save ]; then format=png; fi
   for number in "$3" "$4" "$5" "$6"; do [[ $number =~ ^[0-9]+$ ]] || exit 2; done

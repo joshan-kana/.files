@@ -21,6 +21,29 @@ function fixture(t) {
     XDG_PICTURES_DIR: path.join(home, "Pictures"),
     DESKTOP_SHELL_RECORDING_DIR: path.join(home, "Videos", "Screencasts"),
     PATH: bin + ":" + process.env.PATH,
+    DESKTOP_CAPTURE_DEFAULTS: JSON.stringify({
+      videoFormat: "mp4",
+      codec: "libx264",
+      frameRate: 0,
+      videoQuality: 23,
+      audio: "none",
+      imageFormat: "png",
+      jpegQuality: 95,
+      cursor: false,
+    }),
+    DESKTOP_CAPTURE_CONSTRAINTS: JSON.stringify(
+      Object.fromEntries(
+        Object.entries({
+          videoFormat: ["mp4", "mkv"],
+          codec: ["libx264", "libx265"],
+          frameRate: [0, 30, 60, 120],
+          videoQuality: [18, 23, 28],
+          audio: ["none", "system", "microphone"],
+          imageFormat: ["png", "jpg"],
+          jpegQuality: [75, 85, 95],
+        }).map(([key, values]) => [key, { values }]),
+      ),
+    ),
   };
   const bash = spawnSync("bash", ["-c", "command -v bash"], {
     encoding: "utf8",
@@ -30,8 +53,18 @@ function fixture(t) {
       mode: 0o700,
     });
   }
+  stub(
+    "desktop-shell-capture-locations",
+    'case "$2" in screenshots) printf "%s/Screenshots\n" "$XDG_PICTURES_DIR";; recordings) printf "%s\n" "$DESKTOP_SHELL_RECORDING_DIR";; *) exit 2;; esac',
+  );
   function run(name, ...args) {
-    return spawnSync("bash", [path.join(root, name + ".sh"), ...args], {
+    const wrapper = path.join(home, name + ".sh");
+    fs.writeFileSync(
+      wrapper,
+      fs.readFileSync(path.join(root, "capture-encoding.sh"), "utf8") +
+        fs.readFileSync(path.join(root, name + ".sh"), "utf8"),
+    );
+    return spawnSync("bash", [wrapper, ...args], {
       env,
       encoding: "utf8",
       timeout: 10000,

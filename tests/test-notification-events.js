@@ -130,6 +130,13 @@ test("OCR notification action rejects unrelated files and preserves the capture 
   const qs = path.join(bin, "quickshell");
   fs.writeFileSync(qs, "#!/bin/sh\nprintf '%s\\n' \"$@\"\n");
   fs.chmodSync(qs, 0o755);
+  const locations = path.join(bin, "desktop-shell-capture-locations");
+  fs.writeFileSync(
+    locations,
+    '#!/bin/sh\ncase "$2" in screenshots) printf "%s/Screenshots\\n" "$XDG_PICTURES_DIR";; recordings) printf "%s/Videos\\n" "$HOME";; *) exit 2;; esac\n',
+    { mode: 0o755 },
+  );
+
   const pictures = path.join(folder, "Pictures");
   const image = "Screenshot-20261121-123456-42.png";
   const images = path.join(pictures, "Screenshots");

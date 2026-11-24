@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
-# All capture producers and readers resolve the same effective directories.
-screenshot_dir="${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots"
-recording_dir="${DESKTOP_SHELL_RECORDING_DIR:-$HOME/Videos/Screencasts}"
-if command -v desktop-shell-capture-locations >/dev/null 2>&1; then
-  screenshot_dir="$(desktop-shell-capture-locations get screenshots)" || exit 1
-  recording_dir="$(desktop-shell-capture-locations get recordings)" || exit 1
-fi
+screenshot_dir="$(desktop-shell-capture-locations get screenshots)" || exit 1
+recording_dir="$(desktop-shell-capture-locations get recordings)" || exit 1
 action="${1:-}"
 recordings="$recording_dir"
 preview_dir="${XDG_RUNTIME_DIR:?}/desktop-shell-recordings-preview"

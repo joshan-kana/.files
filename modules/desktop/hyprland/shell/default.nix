@@ -1514,21 +1514,29 @@ in
         '';
       };
 
+      captureEncodingEnvironment = ''
+        export DESKTOP_CAPTURE_DEFAULTS=${lib.escapeShellArg (builtins.toJSON scopeConfig.captureEncoding)}
+        export DESKTOP_CAPTURE_CONSTRAINTS=${lib.escapeShellArg (builtins.toJSON constraints.captureEncoding)}
+        ${builtins.readFile ./scripts/capture-encoding.sh}
+      '';
+
       recordRegion = pkgs.writeShellApplication {
         name = "desktop-shell-record-region";
         runtimeInputs = [
+          pkgs.jq
           captureLocations
           pkgs.coreutils
           pkgs.slurp
           pkgs.wf-recorder
           pkgs.pulseaudio
         ];
-        text = builtins.readFile ./scripts/record-region.sh;
+        text = captureEncodingEnvironment + builtins.readFile ./scripts/record-region.sh;
       };
 
       imageMarkup = pkgs.writeShellApplication {
         name = "desktop-shell-markup";
         runtimeInputs = [
+          captureLocations
           pkgs.coreutils
           pkgs.file
           pkgs.kdePackages.kdialog
@@ -1541,6 +1549,7 @@ in
       frozenCapture = pkgs.writeShellApplication {
         name = "desktop-shell-frozen-capture";
         runtimeInputs = [
+          pkgs.jq
           captureLocations
           captureNotify
           pkgs.grim
@@ -1550,16 +1559,17 @@ in
           pkgs.systemd
           pkgs.satty
         ];
-        text = builtins.readFile ./scripts/frozen-capture.sh;
+        text = captureEncodingEnvironment + builtins.readFile ./scripts/frozen-capture.sh;
       };
 
       recordingToggle = pkgs.writeShellApplication {
         name = "desktop-shell-recording-toggle";
         runtimeInputs = [
+          pkgs.jq
           pkgs.systemd
           pkgs.coreutils
         ];
-        text = builtins.readFile ./scripts/recording-toggle.sh;
+        text = captureEncodingEnvironment + builtins.readFile ./scripts/recording-toggle.sh;
       };
 
       notificationOpen = pkgs.writeShellApplication {

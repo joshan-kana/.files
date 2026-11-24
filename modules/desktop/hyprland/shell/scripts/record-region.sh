@@ -1,15 +1,11 @@
 #!/usr/bin/env bash
-# All capture producers and readers resolve the same effective directories.
-recording_dir="${DESKTOP_SHELL_RECORDING_DIR:-$HOME/Videos/Screencasts}"
-if command -v desktop-shell-capture-locations >/dev/null 2>&1; then
-  recording_dir="$(desktop-shell-capture-locations get recordings)" || exit 1
-fi
+recording_dir="$(desktop-shell-capture-locations get recordings)" || exit 1
 umask 077
 settings="${XDG_RUNTIME_DIR:?}/desktop-shell-recording.conf"
-format=mp4
-codec=libx264
-fps=0
-quality=23
+format="$(capture_default videoFormat)" || exit 2
+codec="$(capture_default codec)" || exit 2
+fps="$(capture_default frameRate)" || exit 2
+quality="$(capture_default videoQuality)" || exit 2
 if [ -f "$settings" ]; then
   mapfile -t configuration <"$settings"
   [ "${#configuration[@]}" -eq 3 ] || [ "${#configuration[@]}" -eq 7 ] || exit 2
@@ -25,19 +21,15 @@ if [ -f "$settings" ]; then
   rm -f -- "$settings"
   [[ $output =~ ^[a-zA-Z0-9_.-]+$ ]] || exit 2
   [[ $geometry =~ ^-?[0-9]+,-?[0-9]+\ [0-9]+x[0-9]+$ ]] || exit 2
-  case "$audio" in none | system | microphone) ;; *) exit 2 ;; esac
   args=(--output "$output")
 else
   # Explicit live-select alternative for callers outside the hub.
   geometry="$(slurp -d)" || exit 0
-  audio=none
+  audio="$(capture_default audio)" || exit 2
   args=()
 fi
 [ -n "$geometry" ] || exit 0
-case "$format" in mp4 | mkv) ;; *) exit 2 ;; esac
-case "$codec" in libx264 | libx265) ;; *) exit 2 ;; esac
-case "$fps" in 0 | 30 | 60 | 120) ;; *) exit 2 ;; esac
-case "$quality" in 18 | 23 | 28) ;; *) exit 2 ;; esac
+capture_validate videoFormat "$format" codec "$codec" frameRate "$fps" videoQuality "$quality" audio "$audio" || exit 2
 args+=(--codec "$codec" --codec-param "crf=$quality")
 if [ "$fps" -ne 0 ]; then args+=(--framerate "$fps"); fi
 directory="$recording_dir"
