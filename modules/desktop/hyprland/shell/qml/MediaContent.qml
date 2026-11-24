@@ -59,7 +59,7 @@ FocusScope {
             key: content.runtime.shellHint("MediaContent.legend.esc"),
             action: content.returnToControls ? "Back to Controls" : "Close now playing"
         }
-    ].concat(quickReactive.helpBindings)
+    ]
 
     signal helpScrollRequested(int steps)
     signal closeRequested
@@ -101,7 +101,7 @@ FocusScope {
     function navigateBack(): void {
         if (helpOpen)
             helpOpen = false;
-        else if (!quickReactive.cancelEditing())
+        else
             closeRequested();
     }
 
@@ -671,19 +671,6 @@ FocusScope {
                     onActivated: content.media.adjustRate(0.25)
                 }
             }
-            ReactiveQuickControls {
-                id: quickReactive
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: Math.min(parent.width, 850)
-                runtime: content.runtime
-                theme: content.theme
-                motion: content.motion
-                appearance: content.appearance
-                engaged: content.engaged && !content.helpOpen
-                scope: "media"
-                parameterKeys: ["musicReactiveIntensity", "musicReactiveSensitivity"]
-                onKeyboardRequested: keyboardFocus.forceActiveFocus()
-            }
         }
 
         FocusScope {
@@ -702,11 +689,6 @@ FocusScope {
             Keys.onPressed: event => {
                 content.motion.noteKeyDown(event.key);
                 const helpKey = event.key === content.runtime.shellKeyCode("media", "Question") || (event.key === content.runtime.shellKeyCode("media", "Slash") && (content.runtime.shellModifier("media", "Shift", event.modifiers)));
-
-                if (quickReactive.handleKey(event.key, event.modifiers, event.isAutoRepeat)) {
-                    event.accepted = true;
-                    return;
-                }
 
                 if (content.helpOpen) {
                     if (helpKey || event.key === content.runtime.shellKeyCode("media", "Escape") || event.key === content.runtime.shellKeyCode("media", "Backspace")) {

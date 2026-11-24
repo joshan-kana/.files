@@ -239,30 +239,19 @@ test("Weather date follows the live system clock across midnight", () => {
   assert.doesNotMatch(weather, /Qt\.formatDate\(new Date\(\)/);
 });
 
-test("contextual reactive editors share the full editor's canonical preference descriptors and actions", () => {
-  const quick = qml("ReactiveQuickControls.qml");
-  assert.match(quick, /appearance\.reactiveParameters\.find/);
+test("reactive tint tuning belongs to its dedicated capability", () => {
   assert.match(
     qml("SettingsDetail.qml"),
     /return appearance\.reactiveParameters/,
   );
-  for (const file of [
+  for (const name of [
     "SettingsDetail.qml",
-    "AudioMixerContent.qml",
     "MediaContent.qml",
+    "AudioMixerContent.qml",
     "WallpaperPanel.qml",
-  ]) {
-    const src = qml(file);
-    assert.match(src, /ReactiveQuickControls \{/);
-    assert.match(src, /quickReactive\.handleKey/);
-  }
-  for (const action of [
-    "toggleMusicReactive",
-    "applyReactivePreset",
-    "cycleReactiveTarget",
-    "setReactiveParameter",
   ])
-    assert.ok(quick.includes("appearance." + action + "("), action);
-  assert.match(quick, /parameterSlider\.beginKeyboardAdjustment\(\)/);
-  assert.match(quick, /if \(!autoRepeat\)/);
+    assert.doesNotMatch(
+      qml(name),
+      /ReactiveQuickControls|quickReactive|musicReactiveTarget/,
+    );
 });

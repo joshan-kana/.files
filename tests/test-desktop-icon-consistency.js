@@ -167,17 +167,13 @@ test("capability headers and tiles share dynamic state and canonical static icon
   );
 });
 
-test("capability and contextual enable/disable actions share recognizable state glyphs", () => {
+test("capability enable/disable actions share recognizable state glyphs", () => {
   assert.notEqual(context.toggleGlyph(true), context.toggleGlyph(false));
   assert.equal(context.toggleGlyph(true).codePointAt(0), 0xf0521);
   assert.equal(context.toggleGlyph(false).codePointAt(0), 0xf0522);
   assert.match(
     qml("SettingsDetail.qml"),
     /icon: DesktopIcons\.toggleGlyph\(panel\.masterState\)/,
-  );
-  assert.match(
-    qml("ReactiveQuickControls.qml"),
-    /icon: DesktopIcons\.toggleGlyph\(controls\.appearance\.musicReactiveEnabled\)/,
   );
 });
 

@@ -47,8 +47,6 @@ Item {
     readonly property bool hasMaster: ["windows", "glass", "nightLight", "alerts", "stay", "spectrum", "reactive", "bar", "frame", "motion"].includes(kind)
     readonly property bool hasBlur: ["windows", "glass"].includes(kind)
     readonly property bool reactiveTuning: kind === "reactive"
-    readonly property bool contextualReactive: ["bar", "frame", "glass", "spectrum"].includes(kind)
-    readonly property var reactiveHelp: contextualReactive ? quickReactive.helpBindings : []
     readonly property bool spectrumTuning: kind === "spectrum"
     readonly property bool hasReset: hasBlur || spectrumTuning || kind === "alerts" || kind === "nightLight" || kind === "power" || ["bar", "frame", "motion"].includes(kind)
     readonly property string titleText: ({
@@ -521,16 +519,14 @@ Item {
     }
 
     function cancelNested(): bool {
-        return quickReactive.cancelEditing() || (kind === "displays" && displayDetails.cancelNested());
+        return kind === "displays" && displayDetails.cancelNested();
     }
 
     function handleKey(key: int, modifiers: int, autoRepeat: bool): bool {
-        if (quickReactive.handleKey(key, modifiers, autoRepeat))
-            return true;
         if (kind === "displays")
             return displayDetails.handleKey(key, modifiers, autoRepeat);
         if (autoRepeat) {
-            const repeatedAction = ["SettingsDetail.toggle", "SettingsDetail.blur", "SettingsDetail.reset", "SettingsDetail.resetParameter", "SettingsDetail.reactiveTarget", "SettingsDetail.presentation", "SettingsDetail.history", "SettingsDetail.quietHours", "SettingsDetail.nightResume", "SettingsDetail.nightPauseUntil", "SettingsDetail.powerAutomatic"].some(name => runtime.shellMatchesHint(name, key, modifiers));
+            const repeatedAction = ["SettingsDetail.toggle", "SettingsDetail.blur", "SettingsDetail.reset", "SettingsDetail.resetParameter", "SettingsDetail.presentation", "SettingsDetail.history", "SettingsDetail.quietHours", "SettingsDetail.nightResume", "SettingsDetail.nightPauseUntil", "SettingsDetail.powerAutomatic"].some(name => runtime.shellMatchesHint(name, key, modifiers));
             const choice = (kind === "nightLight" || kind === "power") ? runtime.shellChoiceIndex(key, modifiers, 9) : reactiveTuning ? runtime.shellChoiceIndex(key, modifiers, 7) : kind === "alerts" ? runtime.shellChoiceIndex(key, modifiers, 6) : kind === "power" || kind === "stay" ? runtime.shellChoiceIndex(key, modifiers, 5) : -1;
             if (repeatedAction || choice >= 0)
                 return true;
@@ -550,10 +546,6 @@ Item {
         }
         if (runtime.shellMatchesHint("SettingsDetail.reset", key, modifiers) && hasReset) {
             resetAppearance();
-            return true;
-        }
-        if (reactiveTuning && runtime.shellMatchesHint("SettingsDetail.reactiveTarget", key, modifiers)) {
-            appearance.cycleReactiveTarget();
             return true;
         }
         if (kind === "power" && runtime.shellMatchesHint("SettingsDetail.powerAutomatic", key, modifiers)) {
@@ -715,19 +707,6 @@ Item {
             onActivated: panel.resetAppearance()
         }
 
-        ReactiveQuickControls {
-            id: quickReactive
-            visible: panel.contextualReactive
-            width: parent.width
-            runtime: panel.runtime
-            theme: panel.theme
-            motion: panel.motion
-            appearance: panel.appearance
-            engaged: panel.open && visible
-            parameterKeys: panel.kind === "spectrum" ? ["musicReactiveSensitivity", "musicReactiveIntensity"] : ["musicReactiveIntensity"]
-            onKeyboardRequested: panel.keyboardRequested()
-        }
-
         Row {
             visible: panel.hasBlur
             width: parent.width
@@ -842,24 +821,6 @@ Item {
                         onActivated: panel.appearance.setReactiveEmphasis(modelData)
                     }
                 }
-            }
-
-            ShellAction {
-                visible: panel.reactiveTuning
-                width: parent.width
-                height: visible ? 42 : 0
-                runtime: panel.runtime
-                theme: panel.theme
-                motion: panel.motion
-                compact: true
-                horizontalCompact: true
-                title: "Tint target · " + ({
-                        all: "Frame and shell",
-                        frame: "Frame only",
-                        shell: "Detached shell surfaces"
-                    })[panel.appearance.musicReactiveTarget]
-                shortcut: panel.runtime.shellHint("SettingsDetail.reactiveTarget")
-                onActivated: panel.appearance.cycleReactiveTarget()
             }
 
             ShellAction {

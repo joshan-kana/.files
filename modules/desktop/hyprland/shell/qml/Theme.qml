@@ -48,7 +48,6 @@ QtObject {
     property real musicReactiveEnergy: 0
     property real musicReactiveBeat: 0
     property real musicReactiveIntensity: 1.0
-    property string musicReactiveTarget: "all"
     // Share the spectrum's red/blue/cyan ramp with the shell, without
     // creating per-frame colour arrays or a second audio signal pipeline.
     // Music changes tint strength; the palette stays anchored to bass/treble.
@@ -57,7 +56,7 @@ QtObject {
         return musicReactiveWash > 0 ? blend(base, spectrumColor(position), musicReactiveWash) : base;
     }
     function reactiveFrameColor(position: real): color {
-        const tinted = musicReactiveTarget === "shell" ? background : reactiveColor(background, position);
+        const tinted = reactiveColor(background, position);
         return Qt.rgba(tinted.r, tinted.g, tinted.b, shellGlassEnabled ? glassOpacity : 1);
     }
 

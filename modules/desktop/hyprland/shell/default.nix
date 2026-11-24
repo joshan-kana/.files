@@ -398,15 +398,6 @@ in
           default = "balanced";
           description = "Frequency region emphasized by the reactive visual response.";
         };
-        musicReactiveTarget = lib.mkOption {
-          type = lib.types.enum [
-            "all"
-            "frame"
-            "shell"
-          ];
-          default = "all";
-          description = "Apply the shared audio-reactive tint to the frame, detached shell surfaces, or both.";
-        };
         wallpaperSpectrumBars = lib.mkOption {
           type = lib.types.ints.between 24 96;
           default = 64;

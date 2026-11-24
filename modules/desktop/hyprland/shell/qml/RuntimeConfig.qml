@@ -283,7 +283,6 @@ QtObject {
                 property real musicReactiveSmoothing: 0.0
                 property real musicReactiveIntensity: 1.0
                 property string musicReactiveEmphasis: "balanced"
-                property string musicReactiveTarget: "all"
                 property int wallpaperSpectrumBars: 64
                 property real wallpaperSpectrumOpacity: 0.8
                 property int barIslandHeight: 50

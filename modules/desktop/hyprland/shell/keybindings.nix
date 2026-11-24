@@ -109,10 +109,6 @@
     "SystemContent.barDetails" = "SHIFT+J";
     "SystemContent.frameDetails" = "SHIFT+K";
     "SystemContent.motionDetails" = "SHIFT+X";
-    "ReactiveQuickControls.toggle" = "SHIFT+T";
-    "ReactiveQuickControls.preset" = "SHIFT+P";
-    "ReactiveQuickControls.target" = "SHIFT+G";
-    "ReactiveQuickControls.parameter" = "SHIFT+I";
 
   };
 
@@ -265,7 +261,6 @@
           "SettingsDetail.blur" = "B";
           "SettingsDetail.reset" = "R";
           "SettingsDetail.resetParameter" = "SHIFT+R";
-          "SettingsDetail.reactiveTarget" = "G";
           "SettingsDetail.adjust" = "NAV_HORIZONTAL";
           "SettingsDetail.presentation" = "P";
           "SettingsDetail.history" = "Y";
