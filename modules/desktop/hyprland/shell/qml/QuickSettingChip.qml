@@ -20,23 +20,12 @@ Item {
     signal activated
 
     implicitHeight: 78
-    Accessible.role: Accessible.Button
-    Accessible.name: detailShortcut.length > 0 ? "Open " + title + " details" : title
-
-    // Scale inward at rest and fill the allocated bounds on hover.
-    // The hub viewport clips content outside its edge during panel morphs.
+    Accessible.role: Accessible.Grouping
+    Accessible.name: title
 
     ShellSurface {
         id: chipSurface
-        scale: !chip.motion.enabled ? 1 : press.visualPressed ? chip.motion.pressScaleSmall : press.pointerHovered ? 1 : 0.982
-        Behavior on scale {
-            enabled: chip.motion.enabled
-            SpringAnimation {
-                spring: chip.motion.pressSpring
-                damping: chip.motion.pressDamping
-                epsilon: chip.motion.pressEpsilon
-            }
-        }
+        scale: press.defaultEffectScale
         anchors.fill: parent
         theme: chip.theme
         motion: chip.motion
@@ -46,7 +35,7 @@ Item {
         luminousColor: chip.activeColor
         outlined: chip.active
         borderColor: chip.active ? chip.activeColor : "transparent"
-        hovered: press.pointerHovered
+        hovered: press.pointerHovered || press.manualHover
         fillColor: chip.active ? chip.theme.blend(chip.theme.controlBase, chip.activeColor, chip.theme.dark ? 0.12 : 0.08) : chip.theme.expressiveSurfaceStrong
 
         Behavior on cornerRadius {
@@ -95,8 +84,9 @@ Item {
         }
         // Primary action: always in the top-left, even when focused or active.
         TileKeyHint {
+            id: primaryHint
             primary: true
-            visible: chip.shortcut.length > 0 && chip.detailShortcut.length === 0
+            visible: chip.shortcut.length > 0
             shortcut: chip.shortcut
             compact: true
             runtime: chip.runtime
@@ -105,15 +95,30 @@ Item {
             emphasized: chip.active
             emphasisColor: chip.activeColor
         }
+        TileKeyHint {
+            visible: chip.detailShortcut.length > 0
+            shortcut: chip.detailShortcut
+            compact: true
+            runtime: chip.runtime
+            motion: chip.motion
+            theme: chip.theme
+            emphasisColor: chip.activeColor
+        }
     }
 
     StateLayer {
         id: press
+        growOnHover: true
         effectScaleX: chipSurface.scale
         effectScaleY: chipSurface.scale
         theme: chip.theme
         motion: chip.motion
         selected: chip.active
+        manualPress: quickAction.visible && quickAction.visualPressed
+        manualHover: quickAction.visible && quickAction.pointerHovered
+        Accessible.role: Accessible.Button
+        Accessible.name: chip.detailShortcut.length > 0 ? chip.detailName + " · " + chip.title : chip.title
+        Accessible.onPressAction: chip.detailShortcut.length > 0 ? chip.detailsRequested() : chip.activated()
         stateColor: chip.theme.textStrong
         hoverOpacity: 0.05
         pressOpacity: 0.11
@@ -122,6 +127,8 @@ Item {
     }
 
     TileQuickAction {
+        id: quickAction
+        hint: primaryHint
         runtime: chip.runtime
         theme: chip.theme
         motion: chip.motion
@@ -130,15 +137,5 @@ Item {
         selected: chip.active
         emphasisColor: chip.activeColor
         onActivated: chip.activated()
-    }
-
-    TileCornerAction {
-        runtime: chip.runtime
-        theme: chip.theme
-        motion: chip.motion
-        shortcut: chip.detailShortcut
-        actionName: chip.detailName
-        emphasisColor: chip.activeColor
-        onActivated: chip.detailsRequested()
     }
 }

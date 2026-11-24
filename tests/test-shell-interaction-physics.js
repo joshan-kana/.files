@@ -66,9 +66,7 @@ test("shared motion tokens drive compact, normal and split-button deformation", 
 
   for (const [name, scale] of [
     ["ShellAction.qml", "pressScaleNormal"],
-    ["QuickSettingChip.qml", "pressScaleSmall"],
     ["TileCornerAction.qml", "pressScaleSmall"],
-    ["TileQuickAction.qml", "pressScaleSmall"],
   ]) {
     const src = qml(name);
     assert.match(src, /interaction\.visualPressed|press\.visualPressed/);
@@ -94,7 +92,10 @@ test("selected state, hit target size and shortcut ownership remain independent 
     const src = qml(name);
     assert.match(src, /Math\.max\(36, hint\.implicitWidth/);
     assert.match(src, /Math\.max\(36, hint\.implicitHeight/);
-    assert.match(src, /shortcut: action\.shortcut/);
+    assert.match(
+      src,
+      /(?:shortcut: action\.shortcut|required property Item hint)/,
+    );
   }
 });
 
@@ -106,7 +107,10 @@ test("visual transforms do not resize pointer or keyboard targets", () => {
     /Item \{\s*id: visualBody\s*anchors.fill: parent\s*transform: Scale/,
   );
   assert.match(action, /effectScaleX: root.bodyScaleX/);
-  assert.match(state, /Item \{\s*anchors.fill: parent\s*transform: Scale/);
+  assert.match(
+    state,
+    /Item \{\s*parent: root.feedbackParent \|\| root\s*visible: root.visible\s*anchors.fill: parent\s*transform: Scale/,
+  );
   assert.match(
     state,
     /function resetPressFeedback\(\): void \{[\s\S]*?rippleOpacity = 0/,
@@ -128,7 +132,26 @@ test("lightweight state layers share the default press spring and preserve fixed
     state,
     /defaultEffectScale: motion.enabled && showHover && visualPressed/,
   );
-  assert.match(state, /effectScaleX: defaultEffectScale/);
-  assert.match(state, /effectScaleY: defaultEffectScale/);
+  assert.match(state, /effectScaleX: feedbackParent \? 1 : defaultEffectScale/);
+  assert.match(state, /effectScaleY: feedbackParent \? 1 : defaultEffectScale/);
   assert.match(state, /Behavior on defaultEffectScale/);
+});
+
+test("whole tile visuals share one press geometry and fixed action owners", () => {
+  for (const [name, hit] of [
+    ["QuickSettingChip.qml", "press"],
+    ["ConnectivityTile.qml", "interaction"],
+    ["ControlsMediaCard.qml", "cardHit"],
+    ["AudioMixerContent.qml", "mixerHit"],
+    ["WeatherSummary.qml", "forecastHit"],
+  ]) {
+    const src = qml(name);
+    assert.ok(src.includes(hit + ".defaultEffectScale"), name);
+    if (["QuickSettingChip.qml", "ConnectivityTile.qml"].includes(name)) {
+      assert.doesNotMatch(src, /TileCornerAction \{/);
+      assert.match(src, /manualPress: quickAction/);
+    } else {
+      assert.match(src, /feedbackParent: visualBody/);
+    }
+  }
 });

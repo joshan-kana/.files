@@ -14,9 +14,11 @@ MouseArea {
     property bool manualPress: false
     property bool heldPress: false
     property bool keyboardHeld: false
-    property real defaultEffectScale: motion.enabled && showHover && visualPressed ? motion.pressScaleNormal : 1
-    property real effectScaleX: defaultEffectScale
-    property real effectScaleY: defaultEffectScale
+    property bool growOnHover: false
+    property real defaultEffectScale: motion.enabled && showHover && visualPressed ? motion.pressScaleNormal : motion.enabled && showHover && growOnHover && !pointerHovered && !manualHover ? motion.hoverRestScale : 1
+    property Item feedbackParent: null
+    property real effectScaleX: feedbackParent ? 1 : defaultEffectScale
+    property real effectScaleY: feedbackParent ? 1 : defaultEffectScale
     Behavior on defaultEffectScale {
         enabled: root.motion.enabled
         SpringAnimation {
@@ -202,6 +204,8 @@ MouseArea {
     // this interaction-only overlay as one shaped path using the same shared
     // squircle contour; ordinary surfaces keep the native fast fill.
     Item {
+        parent: root.feedbackParent || root
+        visible: root.visible
         anchors.fill: parent
         transform: Scale {
             origin.x: root.width / 2

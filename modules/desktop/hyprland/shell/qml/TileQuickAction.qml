@@ -9,6 +9,9 @@ Item {
     required property Theme theme
     required property Motion motion
     required property string shortcut
+    required property Item hint
+    readonly property bool visualPressed: interaction.visualPressed
+    readonly property bool pointerHovered: interaction.pointerHovered
     property string actionName: "Toggle"
     property bool selected: false
     property bool available: true
@@ -28,8 +31,8 @@ Item {
 
     StateLayer {
         id: interaction
-        effectScaleX: hint.scale
-        effectScaleY: hint.scale
+        // The containing tile paints the shared feedback and both keycaps.
+        showHover: false
         theme: action.theme
         motion: action.motion
         cornerRadius: action.theme.radiusSmall
@@ -41,26 +44,5 @@ Item {
             action.activated()
         onActivated: if (action.available)
             action.activated()
-    }
-
-    KeyHint {
-        id: hint
-        scale: action.motion.enabled && interaction.visualPressed ? action.motion.pressScaleSmall : 1
-        Behavior on scale {
-            enabled: action.motion.enabled
-            SpringAnimation {
-                spring: action.motion.pressSpring
-                damping: action.motion.pressDamping
-                epsilon: action.motion.pressEpsilon
-            }
-        }
-        anchors.centerIn: parent
-        shortcut: action.shortcut
-        compact: true
-        runtime: action.runtime
-        theme: action.theme
-        available: action.available
-        emphasized: action.selected
-        emphasisColor: action.emphasisColor
     }
 }

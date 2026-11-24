@@ -66,7 +66,10 @@ test("connectivity retains a full icon box and moves it past the left keycap", (
     tile,
     /rightMargin: tile\.theme\.spacing4 \+ \(tile\.detailShortcut\.length/,
   );
-  assert.match(tile, /id: detailAction\s+runtime: tile\.runtime/);
+  assert.match(
+    tile,
+    /id: detailAction[\s\S]*?shortcut: tile\.detailShortcut[\s\S]*?runtime: tile\.runtime/,
+  );
   assert.match(
     controls,
     /dashboardBrightnessHeight: Math\.max\(90, theme\.fontSize\(66\) \+ theme\.spacing3 \* 2\)/,
@@ -109,7 +112,7 @@ test("media and audio cards reserve measured top-left keycap safe space", () => 
     mixer,
     /implicitHeight: body\.implicitHeight \+ \(compact \? compactTopInset \+ theme\.spacing3/,
   );
-  assert.match(mixer, /TileKeyHint \{\s+primary: true/);
+  assert.match(mixer, /TileKeyHint \{[\s\S]*?primary: true/);
   assert.match(
     controls,
     /height: Math\.max\(implicitHeight, mediaCard\.implicitHeight\)/,

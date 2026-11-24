@@ -276,7 +276,7 @@ test("VHS tuning exposes correct keyboard focus, pointer and navigation paths", 
   );
   assert.match(
     tile,
-    /TileCornerAction \{[\s\S]*?onActivated: chip\.detailsRequested\(\)/,
+    /StateLayer \{[\s\S]*?onActivated: chip\.detailShortcut\.length > 0 \? chip\.detailsRequested\(\)/,
   );
   assert.match(
     panel,

@@ -343,17 +343,10 @@ FocusScope {
         return true;
     }
 
-    ShellSurface {
-        anchors.fill: parent
-        visible: mixer.compact
-        theme: mixer.theme
-        motion: mixer.motion
-        surfaceLayer: ShellSurface.Group
-        cornerRadius: mixer.theme.radiusLarge
-        fillColor: mixer.theme.groupBase
-    }
-
     StateLayer {
+        id: mixerHit
+        growOnHover: true
+        feedbackParent: visualBody
         visible: mixer.compact
         enabled: mixer.compact && mixer.active
         theme: mixer.theme
@@ -364,463 +357,482 @@ FocusScope {
         cornerRadius: mixer.theme.radiusLarge
         Accessible.role: Accessible.Button
         Accessible.name: "Open audio mixer"
+        Accessible.onPressAction: mixer.expandRequested()
         onActivated: mixer.expandRequested()
     }
 
-    Column {
-        id: body
-        x: mixer.compact ? mixer.theme.spacing4 : mixer.theme.spacing2
-        y: mixer.compact ? mixer.compactTopInset : mixer.theme.spacing2
-        width: Math.max(1, parent.width - (mixer.compact ? mixer.theme.spacing4 : mixer.theme.spacing2) * 2)
-        spacing: mixer.theme.spacing3
-
-        Item {
-            width: parent.width
-            height: 66
-            visible: !mixer.compact
-
-            DetailHero {
-                width: parent.width
-                height: parent.height
-                runtime: mixer.runtime
-                theme: mixer.theme
-                motion: mixer.motion
-                glyph: DesktopIcons.glyphFor("audioMixer")
-                glyphColor: mixer.theme.roleColor("audio")
-                eyebrow: "Audio / " + mixer.streams.length + (mixer.streams.length === 1 ? " active channel" : " active channels")
-                title: "Audio mixer"
-                detail: "Output, input and every application channel"
-            }
-        }
-
-        Grid {
-            id: deviceGrid
-            width: parent.width
-            columns: width >= (mixer.compact ? 440 : 600) && mixer.theme.textScale < 1.5 ? 2 : 1
-            columnSpacing: mixer.compact ? mixer.theme.spacing5 : mixer.theme.spacing2
-            rowSpacing: mixer.theme.spacing2
-            readonly property real cellWidth: Math.max(1, (width - (columns - 1) * columnSpacing) / columns)
-
-            AudioDeviceControl {
-                id: outputDevice
-                width: deviceGrid.cellWidth
-                height: implicitHeight
-                microphone: false
-                compact: mixer.compact
-                active: mixer.active
-                selected: mixer.selectedIndex === 0
-                system: mixer.system
-                runtime: mixer.runtime
-                theme: mixer.theme
-                motion: mixer.motion
-                onChooserOpenChanged: {
-                    if (chooserOpen)
-                        inputDevice.chooserOpen = false;
-                }
-                onSelectedRequested: mixer.selectIndex(0)
-            }
-
-            AudioDeviceControl {
-                id: inputDevice
-                visible: true
-                width: deviceGrid.cellWidth
-                height: implicitHeight
-                microphone: true
-                compact: mixer.compact
-                active: mixer.active
-                selected: mixer.selectedIndex === mixer.microphoneIndex
-                system: mixer.system
-                runtime: mixer.runtime
-                theme: mixer.theme
-                motion: mixer.motion
-                onChooserOpenChanged: {
-                    if (chooserOpen)
-                        outputDevice.chooserOpen = false;
-                }
-                onSelectedRequested: mixer.selectIndex(mixer.microphoneIndex)
-            }
+    Item {
+        id: visualBody
+        anchors.fill: parent
+        scale: mixer.compact ? mixerHit.defaultEffectScale : 1
+        ShellSurface {
+            z: -1
+            anchors.fill: parent
+            visible: mixer.compact
+            theme: mixer.theme
+            motion: mixer.motion
+            surfaceLayer: ShellSurface.Group
+            cornerRadius: mixer.theme.radiusLarge
+            fillColor: mixer.theme.groupBase
         }
 
         Column {
-            id: postProcessing
-            visible: !mixer.compact && effectsState.supported
-            width: parent.width
-            spacing: mixer.theme.spacing2
+            id: body
+            z: 1
+            x: mixer.compact ? mixer.theme.spacing4 : mixer.theme.spacing2
+            y: mixer.compact ? mixer.compactTopInset : mixer.theme.spacing2
+            width: Math.max(1, parent.width - (mixer.compact ? mixer.theme.spacing4 : mixer.theme.spacing2) * 2)
+            spacing: mixer.theme.spacing3
 
-            Row {
+            Item {
                 width: parent.width
-                height: 20
-                spacing: mixer.theme.spacing2
+                height: 66
+                visible: !mixer.compact
 
-                ShellText {
-                    anchors.verticalCenter: parent.verticalCenter
+                DetailHero {
+                    width: parent.width
+                    height: parent.height
                     runtime: mixer.runtime
                     theme: mixer.theme
-                    text: "POST-PROCESSING"
-                    color: mixer.theme.readableRoleColor("audio")
-                    font.pixelSize: mixer.theme.fontSize(10)
-                    font.weight: Font.DemiBold
-                }
-
-                ShellText {
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: Math.max(1, parent.width - x - parent.spacing)
-                    runtime: mixer.runtime
-                    theme: mixer.theme
-                    text: effectsState.statusLabel
-                    color: effectsState.error.length > 0 ? mixer.theme.warning : mixer.theme.textMuted
-                    elide: Text.ElideRight
-                    font.pixelSize: mixer.theme.fontSize(10)
+                    motion: mixer.motion
+                    glyph: DesktopIcons.glyphFor("audioMixer")
+                    glyphColor: mixer.theme.roleColor("audio")
+                    eyebrow: "Audio / " + mixer.streams.length + (mixer.streams.length === 1 ? " active channel" : " active channels")
+                    title: "Audio mixer"
+                    detail: "Output, input and every application channel"
                 }
             }
 
             Grid {
+                id: deviceGrid
                 width: parent.width
-                columns: width >= 510 && mixer.theme.textScale < 1.5 ? 3 : 1
+                columns: width >= (mixer.compact ? 440 : 600) && mixer.theme.textScale < 1.5 ? 2 : 1
+                columnSpacing: mixer.compact ? mixer.theme.spacing5 : mixer.theme.spacing2
                 rowSpacing: mixer.theme.spacing2
-                columnSpacing: mixer.theme.spacing2
                 readonly property real cellWidth: Math.max(1, (width - (columns - 1) * columnSpacing) / columns)
 
-                ShellAction {
-                    width: parent.cellWidth
-                    height: 44
+                AudioDeviceControl {
+                    id: outputDevice
+                    width: deviceGrid.cellWidth
+                    height: implicitHeight
+                    microphone: false
+                    compact: mixer.compact
+                    active: mixer.active
+                    selected: mixer.selectedIndex === 0
+                    system: mixer.system
                     runtime: mixer.runtime
                     theme: mixer.theme
                     motion: mixer.motion
-                    compact: true
-                    horizontalCompact: true
-                    icon: effectsState.bypassed ? "󰖁" : "󰕾"
-                    title: effectsState.bypassed ? "Resume processing" : "Bypass effects"
-                    shortcut: mixer.runtime.shellHint("AudioMixerContent.effectsToggle")
-                    active: effectsState.known && effectsState.bypassed
-                    enabled: effectsState.known && !effectsState.busy
-                    onActivated: effectsState.toggleBypass()
-                }
-
-                ShellAction {
-                    width: parent.cellWidth
-                    height: 44
-                    runtime: mixer.runtime
-                    theme: mixer.theme
-                    motion: mixer.motion
-                    compact: true
-                    horizontalCompact: true
-                    icon: "󰍽"
-                    title: "Open EasyEffects"
-                    shortcut: mixer.runtime.shellHint("AudioMixerContent.effectsOpen")
-                    onActivated: effectsState.openEditor()
-                }
-
-                ShellAction {
-                    width: parent.cellWidth
-                    height: 44
-                    runtime: mixer.runtime
-                    theme: mixer.theme
-                    motion: mixer.motion
-                    compact: true
-                    horizontalCompact: true
-                    icon: "󰑐"
-                    title: "Refresh effects"
-                    shortcut: mixer.runtime.shellHint("AudioMixerContent.effectsRefresh")
-                    enabled: !effectsState.busy
-                    onActivated: effectsState.refresh()
-                }
-            }
-            ShellText {
-                width: parent.width
-                runtime: mixer.runtime
-                theme: mixer.theme
-                text: effectsState.presetStatus
-                color: effectsState.presetError ? mixer.theme.warning : mixer.theme.textMuted
-                elide: Text.ElideRight
-                font.pixelSize: mixer.theme.fontSize(10)
-            }
-            ShellAction {
-                width: parent.width
-                height: 36
-                runtime: mixer.runtime
-                theme: mixer.theme
-                motion: mixer.motion
-                compact: true
-                horizontalCompact: true
-                title: effectsState.presetsKnown && effectsState.presets.length === 0 ? "No local presets · Create one in EasyEffects" : "Choose effects preset"
-                shortcut: mixer.runtime.shellHint("AudioMixerContent.effectsPresets")
-                active: mixer.presetOpen
-                enabled: effectsState.presetsKnown && !effectsState.presetBusy && effectsState.presets.length > 0
-                onActivated: mixer.togglePresetPicker()
-            }
-            ListView {
-                width: parent.width
-                height: mixer.presetOpen ? Math.min(4, effectsState.presets.length) * 38 : 0
-                visible: mixer.presetOpen
-                clip: true
-                model: effectsState.presets
-                currentIndex: mixer.presetIndex
-                onCurrentIndexChanged: if (currentIndex >= 0)
-                    positionViewAtIndex(currentIndex, ListView.Contain)
-                delegate: ShellAction {
-                    required property int index
-                    required property var modelData
-                    width: ListView.view.width
-                    height: 36
-                    runtime: mixer.runtime
-                    theme: mixer.theme
-                    motion: mixer.motion
-                    compact: true
-                    horizontalCompact: true
-                    title: modelData.name + " · " + (modelData.input && modelData.output ? "Input + output" : modelData.input ? "Input" : "Output")
-                    shortcut: index === mixer.presetIndex ? "↵" : ""
-                    active: index === mixer.presetIndex
-                    onActivated: mixer.chooseEffectPreset(index)
-                }
-            }
-        }
-
-        Row {
-            width: parent.width
-            visible: !mixer.compact
-            height: visible ? 20 : 0
-            spacing: mixer.theme.spacing2
-            Text {
-                anchors.verticalCenter: parent.verticalCenter
-                width: Math.max(1, parent.width - channelCount.implicitWidth - parent.spacing)
-                text: mixer.compact ? "APPLICATION AUDIO" : "APPLICATION CHANNELS"
-                color: mixer.theme.readableRoleColor("audio")
-                font.family: mixer.runtime.fontSans
-                font.pixelSize: mixer.theme.fontSize(10)
-                font.weight: Font.DemiBold
-                font.letterSpacing: 0.9
-            }
-            Text {
-                id: channelCount
-                anchors.verticalCenter: parent.verticalCenter
-                text: mixer.system.audioApplicationStreams.length + " PLAY · " + mixer.system.audioCaptureStreams.length + " REC"
-                color: mixer.theme.textMuted
-                font.family: mixer.runtime.fontSans
-                font.pixelSize: mixer.theme.fontSize(9)
-            }
-        }
-
-        ListView {
-            id: list
-            width: parent.width
-            height: !mixer.compact && mixer.streams.length > 0 ? Math.min(330, mixer.streams.length * 102 + 36) : 0
-            visible: !mixer.compact && mixer.streams.length > 0
-            model: mixer.compact ? 0 : mixer.streams.length
-            orientation: ListView.Vertical
-            spacing: mixer.theme.spacing1
-            cacheBuffer: 90
-            clip: true
-            interactive: !mixer.compact && mixer.streams.length > 3
-            boundsBehavior: Flickable.StopAtBounds
-            currentIndex: mixer.selectedStreamIndex
-            onCurrentIndexChanged: {
-                if (currentIndex >= 0)
-                    positionViewAtIndex(currentIndex, ListView.Contain);
-            }
-
-            delegate: Item {
-                id: streamRow
-                required property int index
-                readonly property var stream: mixer.streams[index] || null
-                readonly property bool capture: index >= mixer.system.audioApplicationStreams.length
-                readonly property bool sectionStart: index === 0 || index === mixer.system.audioApplicationStreams.length
-                readonly property bool inViewport: y + height > list.contentY && y < list.contentY + list.height
-                width: list.width
-                height: (mixer.compact ? 72 : 102) + (sectionStart && !mixer.compact ? 18 : 0)
-
-                Text {
-                    visible: streamRow.sectionStart && !mixer.compact
-                    height: visible ? 18 : 0
-                    text: streamRow.capture ? "CAPTURE" : "PLAYBACK"
-                    color: mixer.theme.readableRoleColor("audio")
-                    font.family: mixer.runtime.fontSans
-                    font.pixelSize: mixer.theme.fontSize(9)
-                }
-
-                ShellSurface {
-                    anchors {
-                        left: parent.left
-                        right: parent.right
-                        top: parent.top
-                        topMargin: streamRow.sectionStart && !mixer.compact ? 18 : 0
+                    onChooserOpenChanged: {
+                        if (chooserOpen)
+                            inputDevice.chooserOpen = false;
                     }
-                    height: mixer.compact ? 72 : 102
+                    onSelectedRequested: mixer.selectIndex(0)
+                }
+
+                AudioDeviceControl {
+                    id: inputDevice
+                    visible: true
+                    width: deviceGrid.cellWidth
+                    height: implicitHeight
+                    microphone: true
+                    compact: mixer.compact
+                    active: mixer.active
+                    selected: mixer.selectedIndex === mixer.microphoneIndex
+                    system: mixer.system
+                    runtime: mixer.runtime
                     theme: mixer.theme
                     motion: mixer.motion
-                    surfaceLayer: ShellSurface.Control
-                    cornerRadius: mixer.theme.radiusMedium
-                    fillColor: mixer.selectedStreamIndex === streamRow.index ? mixer.theme.expressiveSurfaceStrong : mixer.theme.expressiveSurface
-                    borderColor: mixer.selectedStreamIndex === streamRow.index ? mixer.theme.roleColor("audio") : "transparent"
-                    borderWidth: mixer.selectedStreamIndex === streamRow.index ? mixer.theme.borderFocus : 0
+                    onChooserOpenChanged: {
+                        if (chooserOpen)
+                            outputDevice.chooserOpen = false;
+                    }
+                    onSelectedRequested: mixer.selectIndex(mixer.microphoneIndex)
+                }
+            }
 
-                    AudioStreamControl {
-                        id: streamControl
-                        Connections {
-                            target: mixer
-                            function onStreamAdjustmentRequested(index: int): void {
-                                if (index === streamRow.index)
-                                    streamControl.pulseAdjustment();
-                            }
-                        }
-                        anchors {
-                            fill: parent
-                            margins: mixer.theme.spacing2
-                        }
-                        compact: mixer.compact
-                        selected: mixer.selectedStreamIndex === streamRow.index
-                        stream: streamRow.stream
-                        capture: streamRow.capture
-                        system: mixer.system
+            Column {
+                id: postProcessing
+                visible: !mixer.compact && effectsState.supported
+                width: parent.width
+                spacing: mixer.theme.spacing2
+
+                Row {
+                    width: parent.width
+                    height: 20
+                    spacing: mixer.theme.spacing2
+
+                    ShellText {
+                        anchors.verticalCenter: parent.verticalCenter
+                        runtime: mixer.runtime
+                        theme: mixer.theme
+                        text: "POST-PROCESSING"
+                        color: mixer.theme.readableRoleColor("audio")
+                        font.pixelSize: mixer.theme.fontSize(10)
+                        font.weight: Font.DemiBold
+                    }
+
+                    ShellText {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: Math.max(1, parent.width - x - parent.spacing)
+                        runtime: mixer.runtime
+                        theme: mixer.theme
+                        text: effectsState.statusLabel
+                        color: effectsState.error.length > 0 ? mixer.theme.warning : mixer.theme.textMuted
+                        elide: Text.ElideRight
+                        font.pixelSize: mixer.theme.fontSize(10)
+                    }
+                }
+
+                Grid {
+                    width: parent.width
+                    columns: width >= 510 && mixer.theme.textScale < 1.5 ? 3 : 1
+                    rowSpacing: mixer.theme.spacing2
+                    columnSpacing: mixer.theme.spacing2
+                    readonly property real cellWidth: Math.max(1, (width - (columns - 1) * columnSpacing) / columns)
+
+                    ShellAction {
+                        width: parent.cellWidth
+                        height: 44
                         runtime: mixer.runtime
                         theme: mixer.theme
                         motion: mixer.motion
-                        monitoring: mixer.active && list.visible && streamRow.inViewport
-                        onSelectedRequested: mixer.selectStreamIndex(streamRow.index)
+                        compact: true
+                        horizontalCompact: true
+                        icon: effectsState.bypassed ? "󰖁" : "󰕾"
+                        title: effectsState.bypassed ? "Resume processing" : "Bypass effects"
+                        shortcut: mixer.runtime.shellHint("AudioMixerContent.effectsToggle")
+                        active: effectsState.known && effectsState.bypassed
+                        enabled: effectsState.known && !effectsState.busy
+                        onActivated: effectsState.toggleBypass()
+                    }
+
+                    ShellAction {
+                        width: parent.cellWidth
+                        height: 44
+                        runtime: mixer.runtime
+                        theme: mixer.theme
+                        motion: mixer.motion
+                        compact: true
+                        horizontalCompact: true
+                        icon: "󰍽"
+                        title: "Open EasyEffects"
+                        shortcut: mixer.runtime.shellHint("AudioMixerContent.effectsOpen")
+                        onActivated: effectsState.openEditor()
+                    }
+
+                    ShellAction {
+                        width: parent.cellWidth
+                        height: 44
+                        runtime: mixer.runtime
+                        theme: mixer.theme
+                        motion: mixer.motion
+                        compact: true
+                        horizontalCompact: true
+                        icon: "󰑐"
+                        title: "Refresh effects"
+                        shortcut: mixer.runtime.shellHint("AudioMixerContent.effectsRefresh")
+                        enabled: !effectsState.busy
+                        onActivated: effectsState.refresh()
                     }
                 }
-            }
-        }
-
-        ShellSurface {
-            width: parent.width
-            height: mixer.compact ? 46 : 120
-            visible: !mixer.compact && mixer.streams.length === 0
-            theme: mixer.theme
-            motion: mixer.motion
-            surfaceLayer: ShellSurface.Control
-            cornerRadius: mixer.theme.radiusMedium
-            Text {
-                anchors.centerIn: parent
-                text: mixer.compact ? "No application audio" : "No application channels · Start playback or capture"
-                color: mixer.theme.textMuted
-                font.family: mixer.runtime.fontSans
-                font.pixelSize: mixer.theme.fontSize(11)
-            }
-        }
-
-        Column {
-            visible: !mixer.compact && mixer.routeStream !== null
-            width: parent.width
-            spacing: mixer.theme.spacing1
-            ShellAction {
-                width: parent.width
-                height: 36
-                runtime: mixer.runtime
-                theme: mixer.theme
-                motion: mixer.motion
-                title: (mixer.routeCapture ? "Input: " : "Output: ") + (mixer.routedDevice?.description || mixer.routedDevice?.name || "Not connected")
-                shortcut: mixer.runtime.shellHint("AudioDeviceControl.chooser")
-                compact: true
-                horizontalCompact: true
-                enabled: mixer.routeDevices.length > 0 && mixer.runtime.pwMetadata !== "" && mixer.pendingRoute === ""
-                active: mixer.routeOpen
-                onActivated: mixer.toggleSelectedDeviceChooser()
-            }
-            ListView {
-                width: parent.width
-                height: mixer.routeOpen ? Math.min(4, mixer.routeDevices.length) * 38 : 0
-                visible: mixer.routeOpen
-                clip: true
-                model: mixer.routeDevices
-                currentIndex: mixer.routeIndex
-                onCurrentIndexChanged: if (currentIndex >= 0)
-                    positionViewAtIndex(currentIndex, ListView.Contain)
-                delegate: ShellAction {
-                    required property int index
-                    required property var modelData
-                    width: ListView.view.width
+                ShellText {
+                    width: parent.width
+                    runtime: mixer.runtime
+                    theme: mixer.theme
+                    text: effectsState.presetStatus
+                    color: effectsState.presetError ? mixer.theme.warning : mixer.theme.textMuted
+                    elide: Text.ElideRight
+                    font.pixelSize: mixer.theme.fontSize(10)
+                }
+                ShellAction {
+                    width: parent.width
                     height: 36
                     runtime: mixer.runtime
                     theme: mixer.theme
                     motion: mixer.motion
                     compact: true
                     horizontalCompact: true
-                    title: (modelData === mixer.routedDevice ? "✓ " : "") + (modelData.description || modelData.name)
-                    shortcut: index === mixer.routeIndex ? "↵" : ""
-                    active: index === mixer.routeIndex
-                    onActivated: mixer.selectRoute(index)
+                    title: effectsState.presetsKnown && effectsState.presets.length === 0 ? "No local presets · Create one in EasyEffects" : "Choose effects preset"
+                    shortcut: mixer.runtime.shellHint("AudioMixerContent.effectsPresets")
+                    active: mixer.presetOpen
+                    enabled: effectsState.presetsKnown && !effectsState.presetBusy && effectsState.presets.length > 0
+                    onActivated: mixer.togglePresetPicker()
+                }
+                ListView {
+                    width: parent.width
+                    height: mixer.presetOpen ? Math.min(4, effectsState.presets.length) * 38 : 0
+                    visible: mixer.presetOpen
+                    clip: true
+                    model: effectsState.presets
+                    currentIndex: mixer.presetIndex
+                    onCurrentIndexChanged: if (currentIndex >= 0)
+                        positionViewAtIndex(currentIndex, ListView.Contain)
+                    delegate: ShellAction {
+                        required property int index
+                        required property var modelData
+                        width: ListView.view.width
+                        height: 36
+                        runtime: mixer.runtime
+                        theme: mixer.theme
+                        motion: mixer.motion
+                        compact: true
+                        horizontalCompact: true
+                        title: modelData.name + " · " + (modelData.input && modelData.output ? "Input + output" : modelData.input ? "Input" : "Output")
+                        shortcut: index === mixer.presetIndex ? "↵" : ""
+                        active: index === mixer.presetIndex
+                        onActivated: mixer.chooseEffectPreset(index)
+                    }
                 }
             }
-            ShellText {
-                visible: mixer.routeError !== "" || mixer.pendingRoute !== ""
+
+            Row {
+                width: parent.width
+                visible: !mixer.compact
+                height: visible ? 20 : 0
+                spacing: mixer.theme.spacing2
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: Math.max(1, parent.width - channelCount.implicitWidth - parent.spacing)
+                    text: mixer.compact ? "APPLICATION AUDIO" : "APPLICATION CHANNELS"
+                    color: mixer.theme.readableRoleColor("audio")
+                    font.family: mixer.runtime.fontSans
+                    font.pixelSize: mixer.theme.fontSize(10)
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 0.9
+                }
+                Text {
+                    id: channelCount
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: mixer.system.audioApplicationStreams.length + " PLAY · " + mixer.system.audioCaptureStreams.length + " REC"
+                    color: mixer.theme.textMuted
+                    font.family: mixer.runtime.fontSans
+                    font.pixelSize: mixer.theme.fontSize(9)
+                }
+            }
+
+            ListView {
+                id: list
+                width: parent.width
+                height: !mixer.compact && mixer.streams.length > 0 ? Math.min(330, mixer.streams.length * 102 + 36) : 0
+                visible: !mixer.compact && mixer.streams.length > 0
+                model: mixer.compact ? 0 : mixer.streams.length
+                orientation: ListView.Vertical
+                spacing: mixer.theme.spacing1
+                cacheBuffer: 90
+                clip: true
+                interactive: !mixer.compact && mixer.streams.length > 3
+                boundsBehavior: Flickable.StopAtBounds
+                currentIndex: mixer.selectedStreamIndex
+                onCurrentIndexChanged: {
+                    if (currentIndex >= 0)
+                        positionViewAtIndex(currentIndex, ListView.Contain);
+                }
+
+                delegate: Item {
+                    id: streamRow
+                    required property int index
+                    readonly property var stream: mixer.streams[index] || null
+                    readonly property bool capture: index >= mixer.system.audioApplicationStreams.length
+                    readonly property bool sectionStart: index === 0 || index === mixer.system.audioApplicationStreams.length
+                    readonly property bool inViewport: y + height > list.contentY && y < list.contentY + list.height
+                    width: list.width
+                    height: (mixer.compact ? 72 : 102) + (sectionStart && !mixer.compact ? 18 : 0)
+
+                    Text {
+                        visible: streamRow.sectionStart && !mixer.compact
+                        height: visible ? 18 : 0
+                        text: streamRow.capture ? "CAPTURE" : "PLAYBACK"
+                        color: mixer.theme.readableRoleColor("audio")
+                        font.family: mixer.runtime.fontSans
+                        font.pixelSize: mixer.theme.fontSize(9)
+                    }
+
+                    ShellSurface {
+                        anchors {
+                            left: parent.left
+                            right: parent.right
+                            top: parent.top
+                            topMargin: streamRow.sectionStart && !mixer.compact ? 18 : 0
+                        }
+                        height: mixer.compact ? 72 : 102
+                        theme: mixer.theme
+                        motion: mixer.motion
+                        surfaceLayer: ShellSurface.Control
+                        cornerRadius: mixer.theme.radiusMedium
+                        fillColor: mixer.selectedStreamIndex === streamRow.index ? mixer.theme.expressiveSurfaceStrong : mixer.theme.expressiveSurface
+                        borderColor: mixer.selectedStreamIndex === streamRow.index ? mixer.theme.roleColor("audio") : "transparent"
+                        borderWidth: mixer.selectedStreamIndex === streamRow.index ? mixer.theme.borderFocus : 0
+
+                        AudioStreamControl {
+                            id: streamControl
+                            Connections {
+                                target: mixer
+                                function onStreamAdjustmentRequested(index: int): void {
+                                    if (index === streamRow.index)
+                                        streamControl.pulseAdjustment();
+                                }
+                            }
+                            anchors {
+                                fill: parent
+                                margins: mixer.theme.spacing2
+                            }
+                            compact: mixer.compact
+                            selected: mixer.selectedStreamIndex === streamRow.index
+                            stream: streamRow.stream
+                            capture: streamRow.capture
+                            system: mixer.system
+                            runtime: mixer.runtime
+                            theme: mixer.theme
+                            motion: mixer.motion
+                            monitoring: mixer.active && list.visible && streamRow.inViewport
+                            onSelectedRequested: mixer.selectStreamIndex(streamRow.index)
+                        }
+                    }
+                }
+            }
+
+            ShellSurface {
+                width: parent.width
+                height: mixer.compact ? 46 : 120
+                visible: !mixer.compact && mixer.streams.length === 0
+                theme: mixer.theme
+                motion: mixer.motion
+                surfaceLayer: ShellSurface.Control
+                cornerRadius: mixer.theme.radiusMedium
+                Text {
+                    anchors.centerIn: parent
+                    text: mixer.compact ? "No application audio" : "No application channels · Start playback or capture"
+                    color: mixer.theme.textMuted
+                    font.family: mixer.runtime.fontSans
+                    font.pixelSize: mixer.theme.fontSize(11)
+                }
+            }
+
+            Column {
+                visible: !mixer.compact && mixer.routeStream !== null
+                width: parent.width
+                spacing: mixer.theme.spacing1
+                ShellAction {
+                    width: parent.width
+                    height: 36
+                    runtime: mixer.runtime
+                    theme: mixer.theme
+                    motion: mixer.motion
+                    title: (mixer.routeCapture ? "Input: " : "Output: ") + (mixer.routedDevice?.description || mixer.routedDevice?.name || "Not connected")
+                    shortcut: mixer.runtime.shellHint("AudioDeviceControl.chooser")
+                    compact: true
+                    horizontalCompact: true
+                    enabled: mixer.routeDevices.length > 0 && mixer.runtime.pwMetadata !== "" && mixer.pendingRoute === ""
+                    active: mixer.routeOpen
+                    onActivated: mixer.toggleSelectedDeviceChooser()
+                }
+                ListView {
+                    width: parent.width
+                    height: mixer.routeOpen ? Math.min(4, mixer.routeDevices.length) * 38 : 0
+                    visible: mixer.routeOpen
+                    clip: true
+                    model: mixer.routeDevices
+                    currentIndex: mixer.routeIndex
+                    onCurrentIndexChanged: if (currentIndex >= 0)
+                        positionViewAtIndex(currentIndex, ListView.Contain)
+                    delegate: ShellAction {
+                        required property int index
+                        required property var modelData
+                        width: ListView.view.width
+                        height: 36
+                        runtime: mixer.runtime
+                        theme: mixer.theme
+                        motion: mixer.motion
+                        compact: true
+                        horizontalCompact: true
+                        title: (modelData === mixer.routedDevice ? "✓ " : "") + (modelData.description || modelData.name)
+                        shortcut: index === mixer.routeIndex ? "↵" : ""
+                        active: index === mixer.routeIndex
+                        onActivated: mixer.selectRoute(index)
+                    }
+                }
+                ShellText {
+                    visible: mixer.routeError !== "" || mixer.pendingRoute !== ""
+                    width: parent.width
+                    runtime: mixer.runtime
+                    theme: mixer.theme
+                    color: mixer.routeError !== "" ? mixer.theme.warning : mixer.theme.textMuted
+                    text: mixer.routeError || "Waiting for PipeWire routing"
+                    wrapMode: Text.WordWrap
+                }
+            }
+
+            Row {
+                visible: !mixer.compact && mixer.balanceAvailable
+                width: parent.width
+                height: 40
+                spacing: mixer.theme.spacing2
+                ShellText {
+                    width: 90
+                    anchors.verticalCenter: parent.verticalCenter
+                    runtime: mixer.runtime
+                    theme: mixer.theme
+                    text: Math.abs(mixer.balancePosition) < 0.01 ? "Balanced" : (mixer.balancePosition < 0 ? "Left " : "Right ") + Math.round(Math.abs(mixer.balancePosition) * 100) + "%"
+                }
+                ShellSlider {
+                    id: balanceSlider
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: Math.max(1, parent.width - 200 - balanceKeys.implicitWidth - parent.spacing * 3)
+                    theme: mixer.theme
+                    motion: mixer.motion
+                    value: (mixer.balancePosition + 1) / 2
+                    Accessible.name: "Stereo balance"
+                    onValueRequested: value => mixer.system.setBalance(mixer.balanceNode, value * 2 - 1)
+                }
+                KeyHint {
+                    id: balanceKeys
+                    anchors.verticalCenter: parent.verticalCenter
+                    runtime: mixer.runtime
+                    theme: mixer.theme
+                    shortcut: mixer.runtime.shellHint("AudioMixerContent.balanceLeft") + " / " + mixer.runtime.shellHint("AudioMixerContent.balanceRight")
+                }
+                ShellAction {
+                    width: 110
+                    height: 36
+                    runtime: mixer.runtime
+                    theme: mixer.theme
+                    motion: mixer.motion
+                    compact: true
+                    horizontalCompact: true
+                    title: "Centre"
+                    shortcut: mixer.runtime.shellHint("AudioMixerContent.balanceReset")
+                    onActivated: mixer.system.setBalance(mixer.balanceNode, 0)
+                }
+            }
+
+            KeyHintStrip {
+                id: mixerHints
+                visible: !mixer.compact
                 width: parent.width
                 runtime: mixer.runtime
                 theme: mixer.theme
-                color: mixer.routeError !== "" ? mixer.theme.warning : mixer.theme.textMuted
-                text: mixer.routeError || "Waiting for PipeWire routing"
-                wrapMode: Text.WordWrap
+                hints: [
+                    {
+                        shortcut: mixer.runtime.shellHint("AudioMixerContent.select"),
+                        label: "Select"
+                    },
+                    {
+                        shortcut: mixer.runtime.shellHint("AudioMixerContent.level"),
+                        label: "Level"
+                    }
+                ]
             }
         }
 
-        Row {
-            visible: !mixer.compact && mixer.balanceAvailable
-            width: parent.width
-            height: 40
-            spacing: mixer.theme.spacing2
-            ShellText {
-                width: 90
-                anchors.verticalCenter: parent.verticalCenter
-                runtime: mixer.runtime
-                theme: mixer.theme
-                text: Math.abs(mixer.balancePosition) < 0.01 ? "Balanced" : (mixer.balancePosition < 0 ? "Left " : "Right ") + Math.round(Math.abs(mixer.balancePosition) * 100) + "%"
-            }
-            ShellSlider {
-                id: balanceSlider
-                anchors.verticalCenter: parent.verticalCenter
-                width: Math.max(1, parent.width - 200 - balanceKeys.implicitWidth - parent.spacing * 3)
-                theme: mixer.theme
-                motion: mixer.motion
-                value: (mixer.balancePosition + 1) / 2
-                Accessible.name: "Stereo balance"
-                onValueRequested: value => mixer.system.setBalance(mixer.balanceNode, value * 2 - 1)
-            }
-            KeyHint {
-                id: balanceKeys
-                anchors.verticalCenter: parent.verticalCenter
-                runtime: mixer.runtime
-                theme: mixer.theme
-                shortcut: mixer.runtime.shellHint("AudioMixerContent.balanceLeft") + " / " + mixer.runtime.shellHint("AudioMixerContent.balanceRight")
-            }
-            ShellAction {
-                width: 110
-                height: 36
-                runtime: mixer.runtime
-                theme: mixer.theme
-                motion: mixer.motion
-                compact: true
-                horizontalCompact: true
-                title: "Centre"
-                shortcut: mixer.runtime.shellHint("AudioMixerContent.balanceReset")
-                onActivated: mixer.system.setBalance(mixer.balanceNode, 0)
-            }
-        }
-
-        KeyHintStrip {
-            id: mixerHints
-            visible: !mixer.compact
-            width: parent.width
+        TileKeyHint {
+            z: 1
+            primary: true
+            visible: mixer.compact && shortcut.length > 0
+            shortcut: mixer.runtime.shellHint("AudioMixerContent.open")
             runtime: mixer.runtime
             theme: mixer.theme
-            hints: [
-                {
-                    shortcut: mixer.runtime.shellHint("AudioMixerContent.select"),
-                    label: "Select"
-                },
-                {
-                    shortcut: mixer.runtime.shellHint("AudioMixerContent.level"),
-                    label: "Level"
-                }
-            ]
+            motion: mixer.motion
         }
-    }
-
-    TileKeyHint {
-        primary: true
-        visible: mixer.compact && shortcut.length > 0
-        shortcut: mixer.runtime.shellHint("AudioMixerContent.open")
-        runtime: mixer.runtime
-        theme: mixer.theme
-        motion: mixer.motion
     }
 }

@@ -31,24 +31,12 @@ Item {
     signal activated
 
     implicitHeight: 92
-    // Scale inward at rest and fill the allocated bounds on hover.
-    // The hub viewport clips content outside its edge during panel morphs.
-
-    Accessible.role: Accessible.Button
+    Accessible.role: Accessible.Grouping
     Accessible.name: title + ", " + detail + ", " + status
 
     ShellSurface {
         id: tileBody
-        scale: !tile.motion.enabled ? 1 : interaction.visualPressed ? tile.motion.pressScaleNormal : interaction.pointerHovered ? 1 : 0.988
-
-        Behavior on scale {
-            enabled: tile.motion.enabled
-            SpringAnimation {
-                spring: tile.motion.pressSpring
-                damping: tile.motion.pressDamping
-                epsilon: tile.motion.pressEpsilon
-            }
-        }
+        scale: interaction.defaultEffectScale
         anchors.fill: parent
         theme: tile.theme
         motion: tile.motion
@@ -56,7 +44,7 @@ Item {
         cornerRadius: tile.theme.radiusLarge
         luminous: tile.connected || tile.pending || tile.scanning || tile.failed
         luminousColor: tile.signalColor
-        hovered: interaction.pointerHovered
+        hovered: interaction.pointerHovered || interaction.manualHover
         fillColor: tile.failed ? tile.theme.blend(tile.theme.groupBase, tile.theme.critical, 0.16) : tile.pending || tile.scanning ? tile.theme.blend(tile.theme.groupBase, tile.theme.warning, 0.14) : tile.connected ? tile.theme.blend(tile.theme.groupBase, tile.signalColor, tile.theme.dark ? 0.095 : 0.065) : tile.unavailable ? tile.theme.groupBase : tile.theme.expressiveSurfaceStrong
 
         ShellSurface {
@@ -128,25 +116,40 @@ Item {
         TileKeyHint {
             id: shortcutHint
             primary: true
-            visible: false
+            visible: tile.shortcut.length > 0
             motion: tile.motion
             shortcut: tile.shortcut
             compact: true
             runtime: tile.runtime
             theme: tile.theme
             emphasized: tile.connected
-            available: tile.primaryAvailable
+            available: tile.primaryAvailable && !tile.pending
+        }
+        TileKeyHint {
+            id: detailAction
+            visible: tile.detailShortcut.length > 0
+            shortcut: tile.detailShortcut
+            compact: true
+            runtime: tile.runtime
+            motion: tile.motion
+            theme: tile.theme
+            emphasisColor: tile.signalColor
         }
     }
 
     StateLayer {
         id: interaction
+        growOnHover: true
         effectScaleX: tileBody.scale
         effectScaleY: tileBody.scale
         theme: tile.theme
         motion: tile.motion
         selected: tile.connected
         disabled: false
+        manualPress: quickAction.visualPressed
+        manualHover: quickAction.pointerHovered
+        Accessible.role: Accessible.Button
+        Accessible.onPressAction: tile.detailsRequested()
         stateColor: tile.signalColor
         cornerRadius: tile.theme.radiusLarge
         Accessible.name: "Open " + tile.title + " details"
@@ -154,6 +157,8 @@ Item {
     }
 
     TileQuickAction {
+        id: quickAction
+        hint: shortcutHint
         runtime: tile.runtime
         theme: tile.theme
         motion: tile.motion
@@ -163,16 +168,5 @@ Item {
         selected: tile.connected
         emphasisColor: tile.signalColor
         onActivated: tile.activated()
-    }
-
-    TileCornerAction {
-        id: detailAction
-        runtime: tile.runtime
-        theme: tile.theme
-        motion: tile.motion
-        shortcut: tile.detailShortcut
-        actionName: "Open " + tile.title + " details"
-        emphasisColor: tile.signalColor
-        onActivated: tile.detailsRequested()
     }
 }

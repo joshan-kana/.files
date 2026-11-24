@@ -57,10 +57,9 @@ test("hover and press motion on shared Controls tiles stays inside the clipped v
   assert.match(motion, /pressScaleNormal: 0\.965/);
   for (const name of ["QuickSettingChip.qml", "ConnectivityTile.qml"]) {
     const source = read(name);
-    assert.match(source, /interaction\.visualPressed|press\.visualPressed/);
-    assert.match(source, /pressScale(Small|Normal)/);
-    assert.match(source, /pointerHovered \? 1 : 0\.98[28]/);
-    assert.match(source, /!.*motion\.enabled \? 1|motion\.enabled \? 1/);
+    assert.match(source, /scale: (?:interaction|press)\.defaultEffectScale/);
+    assert.match(source, /manualPress: quickAction/);
+    assert.doesNotMatch(source, /TileCornerAction \{/);
   }
   for (const name of ["OpacitySetting.qml", "AdjustableSetting.qml"]) {
     const source = read(name);
@@ -917,7 +916,10 @@ test("Visual Modes primary and secondary hints follow shared opposite-corner mot
       hintStart > source.indexOf(tail),
       `${file}: keycap must not be nested in the content row`,
     );
-    assert.equal((source.match(/TileKeyHint \{/g) || []).length, 1);
+    assert.equal(
+      (source.match(/TileKeyHint \{/g) || []).length,
+      file === "QuickSettingChip.qml" ? 2 : 1,
+    );
     const hint = source.slice(hintStart);
     assert.match(hint, new RegExp(`motion: ${owner}\\.motion`));
     assert.match(hint, /compact: true/);

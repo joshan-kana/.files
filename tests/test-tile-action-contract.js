@@ -37,7 +37,19 @@ test("every common Controls tile keeps its primary corner when focused", () => {
     const src = qml(name);
     assert.match(src, /TileKeyHint \{[\s\S]*?primary: true/);
     assert.ok(src.includes("shortcut: " + action), name);
-    assert.match(src, /TileCornerAction \{[\s\S]*?onActivated:/);
+    if (["QuickSettingChip", "ConnectivityTile"].includes(name)) {
+      assert.doesNotMatch(src, /TileCornerAction \{/);
+      assert.match(
+        src,
+        /TileKeyHint \{[\s\S]*?shortcut: (?:chip|tile)\.detailShortcut/,
+      );
+      assert.match(
+        src,
+        /TileQuickAction \{[\s\S]*?hint: (?:primaryHint|shortcutHint)/,
+      );
+    } else {
+      assert.match(src, /TileCornerAction \{[\s\S]*?onActivated:/);
+    }
     assert.doesNotMatch(src, /shortcut: setting\.keyboardSelected \?/);
   }
 });
@@ -56,7 +68,7 @@ test("tile click, nested detail click and slider drag use distinct handlers", ()
   assert.match(qml("QuickSettingChip"), /onActivated: chip\.activated\(\)/);
   assert.match(
     qml("QuickSettingChip"),
-    /onActivated: chip\.detailsRequested\(\)/,
+    /onActivated: chip\.detailShortcut\.length > 0 \? chip\.detailsRequested\(\)/,
   );
   assert.match(qml("ConnectivityTile"), /onActivated: tile\.activated\(\)/);
   assert.match(
