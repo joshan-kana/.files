@@ -124,8 +124,6 @@
           modules = [
             ./overlays
             ({ lib, ... }: {
-              # Host-only options are checked by mkHost, not this package-only evaluation.
-              config._module.check = false;
               options.nixpkgs.overlays = lib.mkOption {
                 type = lib.types.listOf lib.types.unspecified;
                 default = [ ];
@@ -429,6 +427,7 @@
             ./modules/options
             stylix.${nativeModules}.stylix
             home-manager.${nativeModules}.home-manager
+            { home-manager.sharedModules = [ inputs.zen-browser.homeModules.beta ]; }
             ({ config, ... }: {
               # Stylix automatically imports its home module only while enabled.
               # Keep the native option schema available to disabled scope definitions.
@@ -438,10 +437,19 @@
               );
             })
             ./overlays
+            ./modules/system/comin-service.nix
             (semantic.rootModule (
               lib.setFunctionArgs (args: (host args) // { _file = toString hostFile; }) (lib.functionArgs host)
             ))
           ]
+          ++ lib.optionals isLinux [
+            ./modules/networking/roaming-dns.nix
+            ./modules/server-apps/servarr/configarr.nix
+            inputs.hermes-agent.nixosModules.default
+            inputs.nix-openclaw.nixosModules.openclaw-gateway
+          ]
+          ++ lib.optional (system == "x86_64-linux") inputs.spicetify-nix.nixosModules.spicetify
+          ++ lib.optional isDarwin ./modules/desktop/karabiner/service.nix
           ++ extraModules;
         };
 

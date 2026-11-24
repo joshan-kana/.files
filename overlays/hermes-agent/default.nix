@@ -1,14 +1,8 @@
 {
   inputs,
-  lib,
-  system,
   ...
 }:
 {
-  imports = lib.optionals (lib.systems.elaborate system).isLinux [
-    inputs.hermes-agent.nixosModules.default
-  ];
-
   nixpkgs.overlays = [
     (
       final: _prev:
