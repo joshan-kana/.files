@@ -2,6 +2,10 @@
 
 Prefer readable native NixOS, nix-darwin, and Home Manager definitions over custom wrappers that merely rename native options.
 
+## Source layout
+
+Keep nonempty semantic module bodies and Home Manager branches multiline. Separate distinct configuration groups with a blank line, without padding the beginning or end of an expression or the boundary before `in`. Compact literal data is appropriate when it remains readable. Leave generated source in its generator's format.
+
 ## Defaults and expressions
 
 - Rely on native defaults when their behavior is suitable; verify effective values before removing explicit assignments.
