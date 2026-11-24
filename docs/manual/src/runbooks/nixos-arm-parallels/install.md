@@ -22,13 +22,7 @@ Before modifying the virtual disk, confirm its device layout:
 lsblk -o NAME,PATH,SIZE,FSTYPE,LABEL,MOUNTPOINTS
 ```
 
-The current hardware configuration expects:
-
-- `/dev/sda1`: EFI system partition, VFAT, mounted at `/boot`;
-- `/dev/sda2`: Btrfs filesystem mounted at `/home`;
-- `/dev/sda3`: ext4 root filesystem mounted at `/`.
-
-Choose partition sizes appropriate for the VM, then format and mount those three partitions under `/mnt` before continuing.
+Use the evaluated `BOOT_DEVICE`, `HOME_DEVICE` and `ROOT_DEVICE` and their corresponding filesystem types from the target environment above. Choose appropriate partition sizes, confirm the devices match the VM's disk, then format and mount them at `/mnt/boot`, `/mnt/home` and `/mnt` respectively (mount the root first).
 
 {{#include ../_shared/restore-secrets-and-clone.inc}}
 
@@ -36,9 +30,9 @@ Compare a fresh hardware scan with the tracked Parallels hardware configuration 
 
 ```sh
 sudo nixos-generate-config --root /mnt --show-hardware-config \
-  > /tmp/nixos-arm-parallels-hardware.nix
-diff -u hosts/nixos-arm-parallels/hardware.nix \
-  /tmp/nixos-arm-parallels-hardware.nix || true
+  > "/tmp/$HOST_NAME-hardware.nix"
+diff -u "hosts/$HOST_NAME/hardware.nix" \
+  "/tmp/$HOST_NAME-hardware.nix" || true
 ```
 
 ## Install
@@ -46,7 +40,7 @@ diff -u hosts/nixos-arm-parallels/hardware.nix \
 ```sh
 sudo nixos-install \
   --option extra-experimental-features "nix-command flakes" \
-  --flake ".#nixos-arm-parallels"
+  --flake ".#$HOST_NAME"
 ```
 
 {{#include ../_shared/finalize-bare-install.inc}}

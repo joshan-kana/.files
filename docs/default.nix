@@ -13,19 +13,18 @@ let
   # 2. Render generated Markdown pages and runbook environment snippets.
   # 3. Overlay generated files onto the handwritten docs/manual source tree.
   # 4. Render the assembled Markdown tree with mdBook.
-  hostNames = builtins.attrNames configurations;
-  runbookHostNames = builtins.attrNames (configurations // darwinConfigurations);
-  serverHost = configurations.nixos-server;
-  serverConfig = serverHost.config;
+  allConfigurations = configurations // darwinConfigurations;
+  hostNames = builtins.attrNames allConfigurations;
+  nixosHostNames = builtins.attrNames configurations;
 
   # Nix option reference
   #
   # Merge host-specific dotfiles options, but use the shared scope option tree so
   # the reference describes the complete reusable interface rather than one
   # host's resolved scope state.
-  allScopeOptions = semanticScopeOptions.nixdOptions configurations;
+  allScopeOptions = semanticScopeOptions.nixdOptions allConfigurations;
   hostOptionTrees = map (
-    name: semanticScopeOptions.nixdHostOptions configurations configurations.${name}
+    name: semanticScopeOptions.nixdHostOptions allConfigurations allConfigurations.${name}
   ) hostNames;
   mergedHostOptions = lib.foldl' lib.recursiveUpdate { } hostOptionTrees;
   projectOptions = {
@@ -87,7 +86,7 @@ let
 
   hostScopeRows = lib.mapAttrs (
     _: host: flattenScopes [ ] host.config.dotfiles.resolvedScopes
-  ) configurations;
+  ) allConfigurations;
   allScopeNames = lib.unique (
     lib.concatMap (rows: map (row: lib.concatStringsSep "." row.path) rows) (
       builtins.attrValues hostScopeRows
@@ -180,13 +179,14 @@ let
 
   # Evaluated host facts
   #
-  # Keep page renderers independent from the full NixOS configuration shape.
+  # Keep page renderers independent from native platform configuration shapes.
   # This is the documentation-facing projection of each evaluated host.
   hostFacts = lib.mapAttrs (
     name: host:
     let
       inherit (host) config;
       primaryUser = config.dotfiles.users.primary;
+      inherit (host.pkgs.stdenv.hostPlatform) isLinux;
       firewall = config.networking.firewall;
       resticJobs = lib.mapAttrsToList (backupName: backup: {
         name = backupName;
@@ -228,10 +228,14 @@ let
       primaryUser = primaryUser.name;
       primaryHome = "${primaryUser.homeRoot}/${primaryUser.name}";
       repoPath = config.dotfiles.paths.repoPath;
+      inherit isLinux systemPackages homePackages;
+      serverApps = enabledServerApps config;
+      enabledScopes = enabledScopeNames name;
+      topLevelScopes = topLevelScopeNames name;
+    }
+    // lib.optionalAttrs isLinux {
       inherit
         filesystems
-        systemPackages
-        homePackages
         backupJobs
         maintenanceJobs
         firewallInterfaces
@@ -252,9 +256,6 @@ let
       };
       retention = config.dotfiles.backups.retention;
       containers = builtins.attrNames config.virtualisation.oci-containers.containers;
-      serverApps = enabledServerApps config;
-      enabledScopes = enabledScopeNames name;
-      topLevelScopes = topLevelScopeNames name;
       serverLan =
         if hasServerLan then
           let
@@ -286,16 +287,28 @@ let
         else
           null;
     }
-  ) configurations;
+    // lib.optionalAttrs (!isLinux) {
+      launchAgents = enabledLaunchAgentLabels config;
+      secretsBackup =
+        if lib.attrByPath [ "backups" "secrets" "enable" ] false config.dotfiles.resolvedScopes then
+          {
+            inherit (config.dotfiles.backups.secrets) repository;
+            path = config.dotfiles.secretsDir;
+          }
+        else
+          null;
+    }
+  ) allConfigurations;
 
-  # Server-only values used by recovery runbooks.
-  serverStorage = serverConfig.dotfiles.server.storage;
-  serverLan = serverConfig.dotfiles.server.lan;
-  immichMediaRoot = serverConfig.services.immich.mediaLocation;
-  paperlessDataRoot = serverConfig.services.paperless.dataDir;
-  paperlessMediaRoot = serverConfig.services.paperless.mediaDir;
-  paperlessConsumeRoot = serverConfig.services.paperless.consumptionDir;
-  paperlessBackupRoot = serverConfig.services.postgresqlBackup.location;
+  enabledLaunchAgentLabels =
+    config:
+    map (agent: agent.config.Label) (
+      builtins.attrValues (
+        lib.filterAttrs (
+          _: agent: agent.enable && agent.config ? Label
+        ) config.home-manager.users.${config.dotfiles.users.primary.name}.launchd.agents
+      )
+    );
 
   # Reusable Markdown fragments
   filesystemTable =
@@ -339,19 +352,36 @@ let
         ) facts.backupJobs}
       '';
 
+  darwinBackupMarkdown =
+    facts:
+    if facts.secretsBackup == null then
+      "_Secrets backup is disabled._"
+    else
+      ''
+        | Repository | Protected path |
+        | --- | --- |
+        | `${facts.secretsBackup.repository}` | `${facts.secretsBackup.path}` |
+
+        Managed launch agents are listed on the host's system page.
+      '';
+
   # Generated reference pages
   fleetMarkdown = ''
     # Fleet
 
-    | Host | Platform | Backup jobs | Server apps | System packages | Home packages |
+    | Host | Platform | NixOS Restic jobs | Server apps | System packages | Home packages |
     | --- | --- | ---: | ---: | ---: | ---: |
     ${lib.concatMapStringsSep "\n" (
       name:
       let
         facts = hostFacts.${name};
       in
-      "| `${name}` | `${facts.system}` | ${toString (builtins.length facts.backupJobs)} | ${toString (builtins.length facts.serverApps)} | ${toString (builtins.length facts.systemPackages)} | ${toString (builtins.length facts.homePackages)} |"
+      "| `${name}` | `${facts.system}` | ${
+        if facts.isLinux then toString (builtins.length facts.backupJobs) else "—"
+      } | ${toString (builtins.length facts.serverApps)} | ${toString (builtins.length facts.systemPackages)} | ${toString (builtins.length facts.homePackages)} |"
     ) hostNames}
+
+    Backup coverage on each platform is described in [Backups](../infrastructure/backups.md).
   '';
 
   semanticScopesMarkdown = ''
@@ -380,53 +410,61 @@ let
       | Primary home | `${facts.primaryHome}` |
       | Repository | `${facts.repoPath}` |
 
-      ## Filesystems
+      ${lib.optionalString facts.isLinux ''
+        ## Filesystems
 
-      ${filesystemTable facts}
+        ${filesystemTable facts}
 
-      ## Networking
-
-      | Setting | Evaluated value |
-      | --- | --- |
-      | NetworkManager | ${yesNo facts.networking.networkManager} |
-      | Global DHCP | ${yesNo facts.networking.useDHCP} |
-      | Nameservers | ${codeList facts.networking.nameservers} |
-      | Managed profiles | ${codeList facts.networking.profiles} |
-
-      ${lib.optionalString (facts.serverLan != null) ''
-        ### Managed LAN
+        ## Networking
 
         | Setting | Evaluated value |
         | --- | --- |
-        | Interface | `${facts.serverLan.interface}` |
-        | Subnet | `${facts.serverLan.subnet}` |
-        | Gateway | `${facts.serverLan.gateway}` |
-        | Host address | `${facts.serverLan.serverIp}` |
-        | DNS service address | `${facts.serverLan.dnsIp}` |
+        | NetworkManager | ${yesNo facts.networking.networkManager} |
+        | Global DHCP | ${yesNo facts.networking.useDHCP} |
+        | Nameservers | ${codeList facts.networking.nameservers} |
+        | Managed profiles | ${codeList facts.networking.profiles} |
+
+        ${lib.optionalString (facts.serverLan != null) ''
+          ### Managed LAN
+
+          | Setting | Evaluated value |
+          | --- | --- |
+          | Interface | `${facts.serverLan.interface}` |
+          | Subnet | `${facts.serverLan.subnet}` |
+          | Gateway | `${facts.serverLan.gateway}` |
+          | Host address | `${facts.serverLan.serverIp}` |
+          | DNS service address | `${facts.serverLan.dnsIp}` |
+        ''}
+
+        ## Firewall
+
+        | Setting | Evaluated value |
+        | --- | --- |
+        | Enabled | ${yesNo facts.firewall.enable} |
+        | Trusted interfaces | ${codeList facts.firewall.trustedInterfaces} |
+        | Global TCP | ${codeList facts.firewall.tcpPorts} |
+        | Global UDP | ${codeList facts.firewall.udpPorts} |
+        | Global TCP ranges | ${portRanges facts.firewall.tcpPortRanges} |
+        | Global UDP ranges | ${portRanges facts.firewall.udpPortRanges} |
+
+        ${firewallInterfaceTable facts}
+
+        ## Services
+
+        **Server applications**
+
+        ${bulletList facts.serverApps}
+
+        **OCI containers**
+
+        ${bulletList facts.containers}
       ''}
 
-      ## Firewall
+      ${lib.optionalString (!facts.isLinux) ''
+        ## Managed launch agents
 
-      | Setting | Evaluated value |
-      | --- | --- |
-      | Enabled | ${yesNo facts.firewall.enable} |
-      | Trusted interfaces | ${codeList facts.firewall.trustedInterfaces} |
-      | Global TCP | ${codeList facts.firewall.tcpPorts} |
-      | Global UDP | ${codeList facts.firewall.udpPorts} |
-      | Global TCP ranges | ${portRanges facts.firewall.tcpPortRanges} |
-      | Global UDP ranges | ${portRanges facts.firewall.udpPortRanges} |
-
-      ${firewallInterfaceTable facts}
-
-      ## Services
-
-      **Server applications**
-
-      ${bulletList facts.serverApps}
-
-      **OCI containers**
-
-      ${bulletList facts.containers}
+        ${bulletList facts.launchAgents}
+      ''}
 
       ## Packages
 
@@ -439,7 +477,7 @@ let
 
       ## Backups
 
-      ${backupTable facts}
+      ${if facts.isLinux then backupTable facts else darwinBackupMarkdown facts}
 
       ## Enabled scopes
 
@@ -492,6 +530,8 @@ let
   networkingMarkdown = ''
     # Networking
 
+    These tables describe the evaluated NixOS configuration.
+
     | Host | Hostname | NetworkManager | Global DHCP | Nameservers | Managed profiles |
     | --- | --- | ---: | ---: | --- | --- |
     ${lib.concatMapStringsSep "\n" (
@@ -500,7 +540,7 @@ let
         facts = hostFacts.${name};
       in
       "| `${name}` | `${facts.hostName}` | ${yesNo facts.networking.networkManager} | ${yesNo facts.networking.useDHCP} | ${cellList facts.networking.nameservers} | ${cellList facts.networking.profiles} |"
-    ) hostNames}
+    ) nixosHostNames}
 
     ${lib.concatMapStringsSep "\n" (
       name:
@@ -518,11 +558,13 @@ let
         | Host address | `${facts.serverLan.serverIp}` |
         | DNS service address | `${facts.serverLan.dnsIp}` |
       ''
-    ) hostNames}
+    ) nixosHostNames}
   '';
 
   firewallMarkdown = ''
     # Firewall
+
+    These tables describe the evaluated NixOS configuration.
 
     | Host | Enabled | Trusted interfaces | Global TCP | Global UDP | TCP ranges | UDP ranges |
     | --- | ---: | --- | --- | --- | --- | --- |
@@ -532,7 +574,7 @@ let
         facts = hostFacts.${name};
       in
       "| `${name}` | ${yesNo facts.firewall.enable} | ${cellList facts.firewall.trustedInterfaces} | ${codeList facts.firewall.tcpPorts} | ${codeList facts.firewall.udpPorts} | ${portRanges facts.firewall.tcpPortRanges} | ${portRanges facts.firewall.udpPortRanges} |"
-    ) hostNames}
+    ) nixosHostNames}
 
     ## Interface-specific rules
 
@@ -546,11 +588,13 @@ let
 
         ${firewallInterfaceTable facts}
       ''
-    ) hostNames}
+    ) nixosHostNames}
   '';
 
   infrastructureStorageMarkdown = ''
     # Storage
+
+    These tables describe the evaluated NixOS configuration.
 
     ## Filesystems
 
@@ -562,7 +606,7 @@ let
         map (
           fs: "| `${name}` | `${fs.mountPoint}` | `${fs.device}` | `${fs.fsType}` | ${cellList fs.options} |"
         ) hostFacts.${name}.filesystems
-      ) hostNames
+      ) nixosHostNames
     )}
 
     ${lib.concatMapStringsSep "\n" (
@@ -581,13 +625,13 @@ let
         | Snapshot interval | ${toString facts.managedStorage.snapshotIntervalMinutes} minutes |
         | Vault snapshot retention | ${toString facts.managedStorage.snapshotRetention.hourly} hourly / ${toString facts.managedStorage.snapshotRetention.daily} daily / ${toString facts.managedStorage.snapshotRetention.weekly} weekly / ${toString facts.managedStorage.snapshotRetention.monthly} monthly |
       ''
-    ) hostNames}
+    ) nixosHostNames}
   '';
 
   backupsMarkdown = ''
     # Backups
 
-    ## Coverage
+    ## NixOS coverage
 
     | Host | Jobs | Hourly | Daily | Weekly | Monthly |
     | --- | ---: | ---: | ---: | ---: | ---: |
@@ -600,9 +644,9 @@ let
         "| `${name}` | 0 | — | — | — | — |"
       else
         "| `${name}` | ${toString (builtins.length facts.backupJobs)} | ${toString facts.retention.hourly} | ${toString facts.retention.daily} | ${toString facts.retention.weekly} | ${toString facts.retention.monthly} |"
-    ) hostNames}
+    ) nixosHostNames}
 
-    ## Jobs
+    ## NixOS jobs
 
     | Host | Job | Repository | Schedule | Paths | Exclusions |
     | --- | --- | --- | --- | --- | --- |
@@ -618,9 +662,9 @@ let
           backup:
           "| `${name}` | `${backup.name}` | `${backup.repository}` | ${optionalCode backup.schedule} | ${cellList backup.paths} | ${cellList backup.exclude} |"
         ) jobs
-    ) hostNames}
+    ) nixosHostNames}
 
-    ## Maintenance
+    ## NixOS maintenance
 
     | Host | Job | Repository | Schedule | Prune | Check |
     | --- | --- | --- | --- | --- | --- |
@@ -636,7 +680,16 @@ let
           job:
           "| `${name}` | `${job.name}` | `${job.repository}` | ${optionalCode job.schedule} | ${cellList job.pruneOpts} | ${cellList job.checkOpts} |"
         ) jobs
-    ) hostNames}
+    ) nixosHostNames}
+    ${lib.optionalString (darwinConfigurations != { }) ''
+      ## Darwin secrets backup
+
+      ${lib.concatMapStringsSep "\n" (name: ''
+        ### `${name}`
+
+        ${darwinBackupMarkdown hostFacts.${name}}
+      '') (builtins.attrNames darwinConfigurations)}
+    ''}
   '';
 
   packagesMarkdown = ''
@@ -677,36 +730,35 @@ let
     ) hostNames}
   '';
 
-  # Runbook navigation
-  commonRunbookIndexMarkdown = ''
-    # Common runbooks
-
-    Procedures shared by multiple NixOS hosts.
-
-    - [NixOS installer SSH](nixos-installer-ssh.md)
-  '';
-
-  hostRunbookIndexMarkdown =
+  # Runbook titles come from the authored pages; installation comes first.
+  runbookPages =
     name:
     let
-      serverRecovery = lib.optionalString (name == "nixos-server") ''
-        - [Backup / application recovery](backup-recovery.md)
-        - [Vault / ZFS recovery](vault-zfs-recovery.md)
-      '';
+      directory = "${source}/docs/manual/src/runbooks/${name}";
+      files =
+        if builtins.pathExists directory then builtins.attrNames (builtins.readDir directory) else [ ];
+      pages = lib.filter (file: lib.hasSuffix ".md" file && file != "index.md") files;
     in
-    ''
-      # `${name}` runbooks
+    map (file: {
+      inherit file;
+      title =
+        if file == "install.md" then
+          "Installation guide"
+        else
+          lib.removePrefix "# " (
+            builtins.head (lib.splitString "\n" (builtins.readFile "${directory}/${file}"))
+          );
+    }) (lib.optional (builtins.elem "install.md" pages) "install.md" ++ lib.remove "install.md" pages);
 
-      Procedures for `${name}`.
+  runbookIndexMarkdown = name: ''
+    # ${if name == "common" then "Common runbooks" else "`${name}` runbooks"}
 
-      - [Installation guide](install.md)
-      ${serverRecovery}
-    '';
+    ${lib.concatMapStringsSep "\n" (page: "- [${page.title}](${page.file})") (runbookPages name)}
+  '';
 
   # mdBook navigation
   #
-  # Host entries come from nixosConfigurations, so adding a host automatically
-  # adds its system page and runbook section to the book.
+  # Host entries come from the configuration outputs and authored runbooks.
   summaryMarkdown = ''
     # Summary
 
@@ -716,17 +768,13 @@ let
 
     # Runbooks
 
-    - [Common](runbooks/common/index.md)
-      - [NixOS installer SSH](runbooks/common/nixos-installer-ssh.md)
     ${lib.concatMapStringsSep "\n" (
       name:
-      let
-        serverRecovery =
-          lib.optionalString (name == "nixos-server")
-            "\n  - [Backup / application recovery](runbooks/nixos-server/backup-recovery.md)\n  - [Vault / ZFS recovery](runbooks/nixos-server/vault-zfs-recovery.md)";
-      in
-      "- [`${name}`](runbooks/${name}/index.md)\n  - [Installation guide](runbooks/${name}/install.md)${serverRecovery}"
-    ) runbookHostNames}
+      "- [${if name == "common" then "Common" else "`${name}`"}](runbooks/${name}/index.md)"
+      + lib.concatMapStrings (page: "\n  - [${page.title}](runbooks/${name}/${page.file})") (
+        runbookPages name
+      )
+    ) ([ "common" ] ++ hostNames)}
 
     # Systems
 
@@ -752,10 +800,7 @@ let
       inherit (host) config;
       primary = config.dotfiles.users.primary;
       secretBackup = config.dotfiles.backups.secrets;
-      launchAgents = config.home-manager.users.${primary.name}.launchd.agents;
-      enabledAgentLabels = map (agent: agent.config.Label) (
-        builtins.attrValues (lib.filterAttrs (_: agent: agent.enable && agent.config ? Label) launchAgents)
-      );
+      enabledAgentLabels = enabledLaunchAgentLabels config;
     in
     ''
       export HOST_NAME=${lib.escapeShellArg name}
@@ -765,7 +810,13 @@ let
       export PRIMARY_USER=${lib.escapeShellArg primary.name}
       export PRIMARY_HOME=${lib.escapeShellArg "${primary.homeRoot}/${primary.name}"}
       export USER_SECRETS_DIR=${lib.escapeShellArg config.dotfiles.secretsDir}
-      export SECRETS_BACKUP_ENABLED=${lib.escapeShellArg (lib.boolToString config.dotfiles.resolvedScopes.backups.secrets.enable)}
+      export SECRETS_BACKUP_ENABLED=${
+        lib.escapeShellArg (
+          lib.boolToString (
+            lib.attrByPath [ "backups" "secrets" "enable" ] false config.dotfiles.resolvedScopes
+          )
+        )
+      }
       export SECRETS_REPOSITORY=${lib.escapeShellArg secretBackup.repository}
       export SECRETS_RCLONE_CONFIG=${lib.escapeShellArg secretBackup.rcloneConfigFile}
       export SECRETS_PASSWORD_FILE=${lib.escapeShellArg secretBackup.passwordFile}
@@ -774,31 +825,46 @@ let
       )
     '';
 
-  serverRunbookEnvironment = ''
-    ${hostRunbookEnvironment "nixos-server" serverHost}
-    export APP_DATA_ROOT=${lib.escapeShellArg serverStorage.appData.root}
-    export VAULT_ROOT=${lib.escapeShellArg serverStorage.dataRoot.path}
-    export VAULT_POOL=${lib.escapeShellArg serverStorage.dataRoot.poolName}
-    export VAULT_DATASET=${lib.escapeShellArg "${serverStorage.dataRoot.poolName}/data"}
-    export SERVER_SECRETS_DIR=${lib.escapeShellArg serverConfig.dotfiles.server.secretsDir}
-    export SERVER_IP=${lib.escapeShellArg serverLan.serverIp}
-    export IMMICH_MEDIA_ROOT=${lib.escapeShellArg immichMediaRoot}
-    export IMMICH_BACKUP_ROOT=${lib.escapeShellArg "${immichMediaRoot}/backups"}
-    export PAPERLESS_DATA_ROOT=${lib.escapeShellArg paperlessDataRoot}
-    export PAPERLESS_MEDIA_ROOT=${lib.escapeShellArg paperlessMediaRoot}
-    export PAPERLESS_CONSUME_ROOT=${lib.escapeShellArg paperlessConsumeRoot}
-    export PAPERLESS_BACKUP_ROOT=${lib.escapeShellArg paperlessBackupRoot}
-  '';
+  serverRunbookEnvironment =
+    config:
+    let
+      storage = config.dotfiles.server.storage;
+      immichMediaRoot = config.services.immich.mediaLocation;
+    in
+    ''
+      export APP_DATA_ROOT=${lib.escapeShellArg storage.appData.root}
+      export VAULT_ROOT=${lib.escapeShellArg storage.dataRoot.path}
+      export VAULT_POOL=${lib.escapeShellArg storage.dataRoot.poolName}
+      export VAULT_DATASET=${lib.escapeShellArg "${storage.dataRoot.poolName}/data"}
+      export SERVER_SECRETS_DIR=${lib.escapeShellArg config.dotfiles.server.secretsDir}
+      export SERVER_IP=${lib.escapeShellArg config.dotfiles.server.lan.serverIp}
+    ''
+    + lib.optionalString config.services.immich.enable ''
+      export IMMICH_MEDIA_ROOT=${lib.escapeShellArg immichMediaRoot}
+      export IMMICH_BACKUP_ROOT=${lib.escapeShellArg "${immichMediaRoot}/backups"}
+    ''
+    + lib.optionalString config.services.paperless.enable ''
+      export PAPERLESS_DATA_ROOT=${lib.escapeShellArg config.services.paperless.dataDir}
+      export PAPERLESS_MEDIA_ROOT=${lib.escapeShellArg config.services.paperless.mediaDir}
+      export PAPERLESS_CONSUME_ROOT=${lib.escapeShellArg config.services.paperless.consumptionDir}
+      export PAPERLESS_BACKUP_ROOT=${lib.escapeShellArg config.services.postgresqlBackup.location}
+    '';
 
   # Generated file assembly
   systemFiles = lib.mapAttrs' (
     name: _: lib.nameValuePair "systems/${name}.md" (systemMarkdown name)
-  ) configurations;
-  hostRunbookIndexFiles = lib.genAttrs' runbookHostNames (
-    name: lib.nameValuePair "runbooks/${name}/index.md" (hostRunbookIndexMarkdown name)
+  ) allConfigurations;
+  hostRunbookIndexFiles = lib.genAttrs' ([ "common" ] ++ hostNames) (
+    name: lib.nameValuePair "runbooks/${name}/index.md" (runbookIndexMarkdown name)
   );
   hostEnvironmentFiles = lib.mapAttrs' (
-    name: host: lib.nameValuePair "generated/hosts/${name}.sh" (hostRunbookEnvironment name host)
+    name: host:
+    lib.nameValuePair "generated/hosts/${name}.sh" (
+      hostRunbookEnvironment name host
+      + lib.optionalString (lib.hasAttrByPath [ "dotfiles" "server" "storage" ] host.config) (
+        serverRunbookEnvironment host.config
+      )
+    )
   ) configurations;
   darwinHostEnvironmentFiles = lib.mapAttrs' (
     name: host: lib.nameValuePair "generated/hosts/${name}.sh" (darwinRunbookEnvironment name host)
@@ -807,14 +873,12 @@ let
   generatedFiles = {
     "SUMMARY.md" = summaryMarkdown;
     "configuration/scopes.md" = semanticScopesMarkdown;
-    "generated/server-env.sh" = serverRunbookEnvironment;
     "infrastructure/backups.md" = backupsMarkdown;
     "infrastructure/firewall.md" = firewallMarkdown;
     "infrastructure/networking.md" = networkingMarkdown;
     "infrastructure/packages.md" = packagesMarkdown;
     "infrastructure/storage.md" = infrastructureStorageMarkdown;
     "overview/fleet.md" = fleetMarkdown;
-    "runbooks/common/index.md" = commonRunbookIndexMarkdown;
   }
   // systemFiles
   // hostRunbookIndexFiles
@@ -830,7 +894,7 @@ let
   # Every configured host must have one human-authored installation procedure.
   missingInstallRunbooks = lib.filter (
     name: !(builtins.pathExists "${source}/docs/manual/src/runbooks/${name}/install.md")
-  ) runbookHostNames;
+  ) hostNames;
 
   # Assemble the complete Markdown source tree.
   docsSource =

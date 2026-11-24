@@ -7,7 +7,7 @@ Current backup jobs, repositories, paths, schedules, exclusions, and retention a
 The shell snippets below use path variables generated from the evaluated `nixos-server` configuration:
 
 ```sh
-{{#include ../../generated/server-env.sh}}
+{{#include ../../generated/hosts/nixos-server.sh}}
 ```
 
 Run that block in the shell before using snippets that reference those variables.
@@ -134,7 +134,7 @@ A whole-tree undo is substantially more destructive because unrelated applicatio
 
 ```sh
 run0 snapper -c apps undochange <old>..<new> "$APP_DATA_ROOT"
-run0 nixos-rebuild switch --flake "$DOTFILES_REPO#nixos-server"
+run0 nixos-rebuild switch --flake "$DOTFILES_REPO#$HOST_NAME"
 ```
 
 ## PostgreSQL-backed applications

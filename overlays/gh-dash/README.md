@@ -11,8 +11,8 @@ Projects cache is disposable presentation data.
 Inspect the effective package before refreshing patches:
 
 ```sh
-nix eval --raw .#nixosConfigurations.nixos-server.pkgs.gh-dash.version
-nix derivation show .#nixosConfigurations.nixos-server.pkgs.gh-dash \
+nix eval --raw .#gh-dash.version
+nix derivation show .#gh-dash \
   | jq 'to_entries[0].value | {name, src: .env.src // null}'
 ```
 
@@ -114,5 +114,5 @@ git clone --branch <current-upstream-tag> --depth 1 https://github.com/dlvhdr/gh
   git apply --check /path/to/.files/patches/gh-dash/issue-relationships.patch && \
   git apply /path/to/.files/patches/gh-dash/issue-relationships.patch && \
   git diff --check)
-nix flake check --no-build --system aarch64-darwin
+nix flake check --no-build --all-systems
 ```
