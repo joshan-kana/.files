@@ -57,7 +57,7 @@ QtObject {
     }
 
     function powerProfileColor(profile: string): color {
-        return profile === "power-saver" ? warning : roleColor("power");
+        return profile === "power-saver" ? positive : profile === "performance" ? warning : roleColor("power");
     }
 
     // Base16 red at the bass end blends through primary blue to cyan treble.

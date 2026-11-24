@@ -482,7 +482,7 @@ Item {
                 inlineIconHint: iconOnly
                 quietAction: iconOnly
                 active: !!modelData.active
-                activeColor: panel.theme.roleColor("wallpaper")
+                activeColor: panel.theme.roleColor("display")
                 enabled: modelData.enabled
                 shortcut: panel.runtime.shellHint(modelData.action)
                 onActivated: panel.galleryAction(modelData.action)

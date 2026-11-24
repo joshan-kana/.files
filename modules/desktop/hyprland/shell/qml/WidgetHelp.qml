@@ -120,8 +120,8 @@ Item {
 
                         Item {
                             id: shortcutCell
-                            width: Math.min(helpBinding.width - 110, Math.max(180, shortcutHint.implicitWidth))
-                            height: 34
+                            width: Math.min(helpBinding.width * 0.48, Math.max(help.theme.fontSize(100), shortcutHint.implicitWidth))
+                            height: Math.max(help.theme.fontSize(34), description.implicitHeight, shortcutHint.implicitHeight)
 
                             KeyHint {
                                 id: shortcutHint
@@ -134,12 +134,13 @@ Item {
                         }
 
                         Text {
-                            width: parent.width - shortcutCell.width - parent.spacing
+                            id: description
+                            width: Math.max(1, parent.width - shortcutCell.width - parent.spacing)
                             anchors.verticalCenter: shortcutCell.verticalCenter
                             text: helpBinding.modelData.action
                             color: help.theme.text
                             font.family: help.runtime.fontSans
-                            font.pixelSize: help.theme.fontSize(12)
+                            font.pixelSize: help.theme.fontAction
                             wrapMode: Text.WordWrap
                         }
                     }

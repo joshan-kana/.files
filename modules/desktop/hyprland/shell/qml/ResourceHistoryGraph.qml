@@ -25,13 +25,13 @@ Item {
             right: parent.right
             top: parent.top
         }
-        height: 16
+        height: graph.theme.fontSize(20)
         Text {
             width: parent.width - current.width
             text: graph.label
             color: graph.theme.textMuted
             font.family: graph.runtime.fontSans
-            font.pixelSize: graph.theme.fontSize(10)
+            font.pixelSize: graph.theme.fontSupporting
             font.weight: Font.DemiBold
         }
         Text {
@@ -39,8 +39,29 @@ Item {
             text: graph.currentText
             color: graph.graphColor
             font.family: graph.runtime.fontMono
-            font.pixelSize: graph.theme.fontSize(10)
+            font.pixelSize: graph.theme.fontSupporting
             font.weight: Font.DemiBold
+        }
+    }
+
+    Row {
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        ShellText {
+            width: parent.width / 2
+            runtime: graph.runtime
+            theme: graph.theme
+            text: "Earlier"
+            textRole: ShellText.Utility
+        }
+        ShellText {
+            width: parent.width / 2
+            horizontalAlignment: Text.AlignRight
+            runtime: graph.runtime
+            theme: graph.theme
+            text: "Now"
+            textRole: ShellText.Utility
         }
     }
 
@@ -51,7 +72,8 @@ Item {
             right: parent.right
             top: parent.top
             bottom: parent.bottom
-            topMargin: 18
+            topMargin: graph.theme.fontSize(24)
+            bottomMargin: graph.theme.fontSize(14)
         }
         onWidthChanged: requestPaint()
         onHeightChanged: requestPaint()

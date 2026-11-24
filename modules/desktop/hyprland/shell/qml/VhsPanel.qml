@@ -243,22 +243,24 @@ Item {
 
         Row {
             width: parent.width
-            height: 40
-            spacing: panel.theme.spacing2
+            height: implicitHeight
+            spacing: panel.theme.spacing1
             Repeater {
                 model: ["Subtle", "Analog", "Degraded", "Default"]
                 delegate: ShellAction {
                     required property int index
                     required property string modelData
-                    width: (panel.width - panel.theme.spacing2 * 3) / 4
-                    height: 40
+                    width: (panel.width - panel.theme.spacing1 * 3) / 4
+                    height: Math.max(76, implicitHeight)
                     runtime: panel.runtime
                     theme: panel.theme
                     motion: panel.motion
                     title: modelData
+                    icon: ["󰨛", "󰕧", "󰓎", "󰑐"][index]
                     shortcut: panel.runtime.shellChoiceHint(index)
                     compact: true
-                    horizontalCompact: true
+                    connectedGroup: true
+                    activeColor: panel.theme.roleColor("reactive")
                     active: panel.appearance.vhsPreset === modelData
                     onActivated: panel.appearance.applyVhsPreset(modelData)
                 }
@@ -287,7 +289,7 @@ Item {
                     from: modelData.minimum
                     to: modelData.maximum
                     value: panel.parameterValue(modelData.key)
-                    accentColor: panel.theme.roleColor("display")
+                    accentColor: panel.theme.roleColor("reactive")
                     selectedParameter: panel.selectedIndex === index
                     adjustShortcut: panel.runtime.shellHint("VhsPanel.adjust")
                     resetShortcut: panel.runtime.shellHint("VhsPanel.reset")

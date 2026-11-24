@@ -142,16 +142,16 @@ PanelWindow {
                     text: FeedbackSemantics.symbol(qmlPopup.osd.kind, qmlPopup.osd.muted, qmlPopup.osd.value, qmlPopup.osd.keyboardState)
                     color: qmlPopup.accentColor
                     font.family: "Symbols Nerd Font"
-                    font.pixelSize: qmlPopup.theme.fontSize(18)
+                    font.pixelSize: qmlPopup.theme.iconRegular
                 }
 
                 Text {
                     text: qmlPopup.osd.label
                     color: qmlPopup.accentColor
                     font.family: qmlPopup.runtime.fontSans
-                    font.pixelSize: qmlPopup.theme.fontSize(11)
+                    font.pixelSize: qmlPopup.theme.fontAction
                     font.weight: Font.DemiBold
-                    font.letterSpacing: 1.4
+                    font.letterSpacing: 0
                 }
 
                 Item {
@@ -164,7 +164,7 @@ PanelWindow {
                     text: qmlPopup.osd.kind === "mode" ? "ACTIVE" : qmlPopup.keyboardMode ? FeedbackSemantics.stateLabel(qmlPopup.osd.keyboardState) : qmlPopup.osd.muted ? "MUTED" : qmlPopup.osd.value + "%"
                     color: qmlPopup.theme.textStrong
                     font.family: qmlPopup.runtime.fontSans
-                    font.pixelSize: qmlPopup.theme.fontReadback
+                    font.pixelSize: qmlPopup.theme.fontSize(19)
                     font.weight: Font.DemiBold
                 }
             }
@@ -192,7 +192,7 @@ PanelWindow {
                 height: qmlPopup.theme.prominentTrack
                 theme: qmlPopup.theme
                 motion: qmlPopup.motion
-                fraction: qmlPopup.osd.value / 100
+                fraction: qmlPopup.osd.muted ? 0 : qmlPopup.osd.value / 100
                 accentColor: qmlPopup.accentColor
             }
         }

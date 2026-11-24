@@ -361,7 +361,7 @@ Item {
                             height: panel.theme.fontSize(90)
                             runtime: panel.runtime
                             theme: panel.theme
-                            label: index === 0 ? "CPU" : index === 1 ? "MEMORY" : "NETWORK · RX+TX"
+                            label: index === 0 ? "CPU activity" : index === 1 ? "Memory usage" : "Network · receive + send"
                             values: index === 0 ? panel.resourceState.cpuHistory : index === 1 ? panel.resourceState.memoryHistory : panel.resourceState.networkHistory
                             maximum: index === 2 ? Math.max(131072, ...values) : 1
                             graphColor: index === 0 ? panel.theme.roleColor("resources") : index === 1 ? panel.theme.roleColor("connectivity") : panel.theme.roleColor("positive")

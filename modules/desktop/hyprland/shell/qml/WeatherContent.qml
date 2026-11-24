@@ -102,7 +102,7 @@ FocusScope {
                 spacing: panel.theme.spacing1
 
                 Text {
-                    text: "WEATHER / " + (panel.weather.city || "YOUR LOCATION").toUpperCase()
+                    text: "Weather · " + (panel.weather.city || "Your location")
                     color: panel.theme.readableRoleColor("weather")
                     font.family: panel.runtime.fontSans
                     font.pixelSize: panel.theme.fontPanelEyebrow
@@ -149,6 +149,7 @@ FocusScope {
                 motion: panel.motion
                 compact: true
                 horizontalCompact: true
+                icon: "󰍎"
                 title: panel.weather.preferredLocation || "Approximate location"
                 shortcut: panel.runtime.shellHint("WeatherContent.location")
                 active: panel.locationEditing
@@ -156,7 +157,7 @@ FocusScope {
             }
             ShellAction {
                 id: unitsButton
-                width: 105
+                width: implicitWidth
                 height: parent.height
                 runtime: panel.runtime
                 theme: panel.theme

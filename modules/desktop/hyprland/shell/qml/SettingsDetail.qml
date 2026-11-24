@@ -1166,14 +1166,82 @@ Item {
                 color: panel.theme.textMuted
                 wrapMode: Text.WordWrap
             }
-            ShellText {
+            ShellSurface {
+                id: batteryCard
                 visible: panel.powerProfile.batteryAvailable
                 width: parent.width
-                runtime: panel.runtime
+                height: visible ? batteryContent.implicitHeight + panel.theme.spacing4 * 2 : 0
                 theme: panel.theme
-                text: panel.powerProfile.batteryAvailable ? Math.round(panel.powerProfile.battery.percentage * 100) + "% · " + (panel.powerProfile.onBattery ? "Battery power · " + panel.powerProfile.duration(panel.powerProfile.battery.timeToEmpty) + " remaining" : "External power" + (panel.powerProfile.battery.timeToFull > 0 ? " · " + panel.powerProfile.duration(panel.powerProfile.battery.timeToFull) + " to full" : "")) + " · " + panel.powerProfile.battery.energy.toFixed(1) + " / " + panel.powerProfile.battery.energyCapacity.toFixed(1) + " Wh" : ""
-                wrapMode: Text.WordWrap
-                color: panel.theme.textMuted
+                motion: panel.motion
+                surfaceLayer: ShellSurface.Group
+                cornerRadius: panel.theme.radiusLarge
+                readonly property real charge: panel.powerProfile.batteryAvailable ? panel.powerProfile.battery.percentage : 0
+                readonly property color chargeColor: charge <= 0.2 ? panel.theme.warning : panel.theme.positive
+                fillColor: panel.theme.blend(panel.theme.groupBase, chargeColor, 0.09)
+                Column {
+                    id: batteryContent
+                    width: parent.width - panel.theme.spacing4 * 2
+                    anchors.centerIn: parent
+                    spacing: panel.theme.spacing2
+                    Row {
+                        width: parent.width
+                        spacing: panel.theme.spacing3
+                        Item {
+                            width: panel.theme.fontSize(112)
+                            height: panel.theme.fontSize(52)
+                            anchors.verticalCenter: parent.verticalCenter
+                            Rectangle {
+                                width: parent.width - panel.theme.spacing2
+                                height: parent.height
+                                radius: panel.theme.radiusSmall
+                                color: panel.theme.layer3
+                                border.color: batteryCard.chargeColor
+                                border.width: panel.theme.borderThin
+                                Rectangle {
+                                    x: panel.theme.spacing1
+                                    y: panel.theme.spacing1
+                                    width: Math.max(0, (parent.width - panel.theme.spacing1 * 2) * batteryCard.charge)
+                                    height: parent.height - panel.theme.spacing1 * 2
+                                    radius: Math.max(0, parent.radius - panel.theme.spacing1)
+                                    color: batteryCard.chargeColor
+                                }
+                            }
+                            Rectangle {
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: panel.theme.spacing1
+                                height: parent.height * 0.42
+                                radius: width / 2
+                                color: batteryCard.chargeColor
+                            }
+                        }
+                        Column {
+                            width: Math.max(1, parent.width - panel.theme.fontSize(112) - parent.spacing)
+                            anchors.verticalCenter: parent.verticalCenter
+                            ShellText {
+                                runtime: panel.runtime
+                                theme: panel.theme
+                                text: Math.round(batteryCard.charge * 100) + "%"
+                                textRole: ShellText.Display
+                                color: batteryCard.chargeColor
+                            }
+                            ShellText {
+                                width: parent.width
+                                runtime: panel.runtime
+                                theme: panel.theme
+                                text: panel.powerProfile.batteryAvailable ? panel.powerProfile.onBattery ? "Battery power · " + panel.powerProfile.duration(panel.powerProfile.battery.timeToEmpty) + " remaining" : "External power" + (panel.powerProfile.battery.timeToFull > 0 ? " · " + panel.powerProfile.duration(panel.powerProfile.battery.timeToFull) + " to full" : "") : ""
+                                textRole: ShellText.Supporting
+                                wrapMode: Text.WordWrap
+                            }
+                        }
+                    }
+                    ShellText {
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        text: panel.powerProfile.batteryAvailable ? panel.powerProfile.battery.energy.toFixed(1) + " / " + panel.powerProfile.battery.energyCapacity.toFixed(1) + " Wh" : ""
+                        textRole: ShellText.Supporting
+                    }
+                }
             }
             Repeater {
                 model: panel.powerProfile.physicalBatteries
@@ -1213,19 +1281,35 @@ Item {
                     }
                 }
             }
-            ShellAction {
+            Row {
                 width: parent.width
-                height: 40
-                runtime: panel.runtime
-                theme: panel.theme
-                motion: panel.motion
-                title: "Automatic AC / battery policy"
-                shortcut: panel.runtime.shellHint("SettingsDetail.powerAutomatic")
-                compact: true
-                horizontalCompact: true
-                active: panel.powerProfile.automatic
-                enabled: panel.powerProfile.available
-                onActivated: panel.powerProfile.toggleAutomatic()
+                spacing: panel.theme.spacing2
+                ShellText {
+                    width: Math.max(1, parent.width - automaticSwitch.width - parent.spacing)
+                    anchors.verticalCenter: parent.verticalCenter
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    text: "Automatic AC / battery policy"
+                    textRole: ShellText.Action
+                    wrapMode: Text.WordWrap
+                }
+                ShellAction {
+                    id: automaticSwitch
+                    width: implicitWidth
+                    height: implicitHeight
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    motion: panel.motion
+                    title: "Automatic AC / battery policy"
+                    shortcut: panel.runtime.shellHint("SettingsDetail.powerAutomatic")
+                    compact: true
+                    iconOnly: true
+                    switchControl: true
+                    active: panel.powerProfile.automatic
+                    activeColor: panel.theme.positive
+                    enabled: panel.powerProfile.available
+                    onActivated: panel.powerProfile.toggleAutomatic()
+                }
             }
             Repeater {
                 model: ["acProfile", "batteryProfile"]
@@ -1259,6 +1343,8 @@ Item {
                                 shortcut: panel.runtime.shellChoiceHint((sourceRow.index === 0 ? 3 : 6) + index)
                                 compact: true
                                 horizontalCompact: true
+                                connectedGroup: true
+                                activeColor: panel.theme.powerProfileColor(modelData)
                                 active: (sourceRow.modelData === "acProfile" ? panel.powerProfile.acProfile : panel.powerProfile.batteryProfile) === modelData
                                 onActivated: panel.powerProfile.setPolicyProfile(sourceRow.modelData, modelData)
                             }

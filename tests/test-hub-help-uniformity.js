@@ -77,7 +77,7 @@ test("help dims the entire hub while keeping shared header controls and its own 
   );
   assert.match(
     help,
-    /width: Math\.min\(helpBinding\.width - 110, Math\.max\(180, shortcutHint\.implicitWidth\)\)/,
+    /width: Math\.min\(helpBinding\.width \* 0\.48, Math\.max\(help\.theme\.fontSize\(100\), shortcutHint\.implicitWidth\)\)/,
   );
   assert.match(help, /id: shortcutHint\s+anchors\.left: parent\.left/);
   assert.match(
