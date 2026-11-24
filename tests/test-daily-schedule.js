@@ -52,7 +52,7 @@ test("notification suppression and VHS presets retain one authoritative owner", 
     /temporarySilentUntil = clockMs \+ minutes \* 60000/,
   );
   assert.match(notification, /Schedule.nextTransition/);
-  assert.match(notification, /quietOverridesJson = "\{\}"/);
+  assert.match(notification, /settings\.reset\("quiet"\)/);
   assert.match(preferences, /function applyVhsPreset\(name: string\): void/);
   assert.match(
     preferences,

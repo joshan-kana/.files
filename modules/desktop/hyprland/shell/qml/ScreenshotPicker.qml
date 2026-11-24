@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Io
-import QtCore
 import "DesktopIcons.js" as DesktopIcons
 
 Item {
@@ -21,7 +20,6 @@ Item {
     property string exportAction: "copy"
     property bool annotateAfterCapture: false
     property string selectionMode: "image"
-    property var encodingOverrides: parseEncoding(qmlCapturePreferences.encodingOverrides)
     readonly property var encodingPresets: selectionMode === "record" ? [
         {
             name: "Quality",
@@ -148,24 +146,15 @@ Item {
             }
         ]);
     }
-    function parseEncoding(raw: string): var {
-        try {
-            const value = JSON.parse(raw);
-            return value && typeof value === "object" && !Array.isArray(value) ? value : {};
-        } catch (_) {
-            return {};
-        }
-    }
     function encoding(key: string): var {
-        return Object.prototype.hasOwnProperty.call(encodingOverrides, key) ? encodingOverrides[key] : runtime.captureEncoding[key];
+        const value = qmlCapturePreferences.value(key);
+        const rule = runtime.constraints.captureEncoding[key];
+        return rule && !rule.values.includes(value) ? runtime.captureEncoding[key] : value;
     }
     function setEncoding(key: string, value: var): void {
         if (countingDown || exporting)
             return;
-        const next = Object.assign({}, encodingOverrides);
-        next[key] = value;
-        qmlCapturePreferences.encodingOverrides = JSON.stringify(next);
-        qmlCapturePreferences.sync();
+        qmlCapturePreferences.set(key, value);
     }
     function cycleEncoding(field: var): void {
         if (countingDown || exporting || (selectionMode !== "record" && (copying || annotateAfterCapture) && ["imageFormat", "jpegQuality"].includes(field.key)))
@@ -174,8 +163,7 @@ Item {
             if (selectionMode !== "record" && (copying || annotateAfterCapture))
                 return;
             const preset = encodingPresets[(presetIndex + 1) % encodingPresets.length];
-            qmlCapturePreferences.encodingOverrides = JSON.stringify(Object.assign({}, encodingOverrides, preset.values));
-            qmlCapturePreferences.sync();
+            qmlCapturePreferences.setMany(preset.values);
         } else if (field.key === "") {
             resetToDeclared();
         } else {
@@ -201,17 +189,16 @@ Item {
     readonly property string audioLabel: audioMode === "system" ? "SYSTEM AUDIO" : audioMode === "microphone" ? "MICROPHONE" : "NO AUDIO"
     property string snapshotPath: ""
     property string statusText: ""
-    readonly property bool freezeEnabled: qmlCapturePreferences.preferenceSource === "default" ? runtime.captureFreezeEnabled : qmlCapturePreferences.freezeEnabled
+    readonly property bool freezeEnabled: qmlCapturePreferences.value("freezeEnabled")
     property bool frozenForCapture: true
     property bool modeSnapshotPending: false
     property bool liveExportPending: false
-    property Settings capturePreferences: Settings {
+    property PreferenceStore capturePreferences: PreferenceStore {
         id: qmlCapturePreferences
-        location: "file://" + (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/desktop-shell/preferences.ini"
         category: "Capture"
-        property bool freezeEnabled: picker.runtime.captureFreezeEnabled
-        property string preferenceSource: ""
-        property string encodingOverrides: "{}"
+        defaults: Object.assign({
+            freezeEnabled: picker.runtime.captureFreezeEnabled
+        }, picker.runtime.captureEncoding)
     }
     property real startX: 0
     property real startY: 0
@@ -286,31 +273,21 @@ Item {
     }
 
     Component.onCompleted: {
-        if (qmlCapturePreferences.preferenceSource !== "")
-            return;
-        // Preserve explicitly stored values from older settings files.
-        qmlCapturePreferences.preferenceSource = qmlCapturePreferences.value("freezeEnabled", null) === null ? "default" : "user";
-        qmlCapturePreferences.setValue("preferenceSource", qmlCapturePreferences.preferenceSource);
-        qmlCapturePreferences.sync();
+        const old = qmlCapturePreferences.objectFromJson(qmlCapturePreferences.legacy("encodingOverrides", "") || "{}");
+        old.freezeEnabled = qmlCapturePreferences.legacyMarked("freezeEnabled", "preferenceSource");
+        qmlCapturePreferences.initialize(old);
     }
 
     function resetToDeclared(): void {
-        qmlCapturePreferences.encodingOverrides = "{}";
-        qmlCapturePreferences.preferenceSource = "default";
-        qmlCapturePreferences.setValue("preferenceSource", "default");
-        qmlCapturePreferences.sync();
+        qmlCapturePreferences.resetAll();
     }
 
     function toggleFreeze(): void {
         if (selectionMode === "record" || exporting)
             return;
-        qmlCapturePreferences.freezeEnabled = !freezeEnabled;
-        qmlCapturePreferences.setValue("freezeEnabled", qmlCapturePreferences.freezeEnabled);
-        qmlCapturePreferences.preferenceSource = "user";
-        qmlCapturePreferences.setValue("preferenceSource", "user");
-        qmlCapturePreferences.sync();
+        qmlCapturePreferences.set("freezeEnabled", !freezeEnabled);
         initialiseSelection = false;
-        if (!qmlCapturePreferences.freezeEnabled) {
+        if (!freezeEnabled) {
             modeSnapshotDelay.stop();
             modeRevealDelay.stop();
             modeSnapshotPending = false;

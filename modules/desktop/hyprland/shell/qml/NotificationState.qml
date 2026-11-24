@@ -20,16 +20,9 @@ QtObject {
     property int popupRevision: 0
     readonly property int maxToasts: 3
     readonly property bool popupVisible: popups.count > 0 && !locked
-    readonly property bool manualSilent: settings.preferenceSource === "default" ? runtime.notificationSilent : settings.silent
+    readonly property bool manualSilent: settings.value("silent")
     readonly property var quietDefaults: runtime.notificationQuietHours
-    readonly property var quietOverrides: {
-        try {
-            const value = JSON.parse(settings.quietOverridesJson);
-            return value && typeof value === "object" && !Array.isArray(value) ? value : {};
-        } catch (_) {
-            return {};
-        }
-    }
+    readonly property var quietOverrides: settings.value("quiet")
     readonly property bool quietEnabled: quietOverrides.enabled ?? quietDefaults.enabled
     readonly property int quietStart: quietOverrides.startMinute ?? quietDefaults.startMinute
     readonly property int quietEnd: quietOverrides.endMinute ?? quietDefaults.endMinute
@@ -54,8 +47,8 @@ QtObject {
                 root.quietPauseUntil = 0;
         }
     }
-    readonly property bool presentation: settings.presentationSource === "default" ? runtime.notificationPresentation : settings.presentation
-    readonly property bool historyEnabled: settings.historySource === "default" ? runtime.notificationHistoryEnabled : settings.historyEnabled
+    readonly property bool presentation: settings.value("presentation")
+    readonly property bool historyEnabled: settings.value("historyEnabled")
     property bool outputFullscreen: false
     property string preferredOutput: ""
     property var outputCapacities: ({})
@@ -95,19 +88,16 @@ QtObject {
         category: "Notifications"
     }
 
-    property Settings preferences: Settings {
+    property PreferenceStore preferences: PreferenceStore {
         id: settings
-        location: "file://" + (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/desktop-shell/preferences.ini"
         category: "Notifications"
-        property bool legacyMigrated: false
-        property bool silent: root.runtime.notificationSilent
-        property bool presentation: root.runtime.notificationPresentation
-        property bool historyEnabled: root.runtime.notificationHistoryEnabled
-        property string presentationSource: ""
-        property string historySource: ""
-        property string appsJson: "{}"
-        property string preferenceSource: ""
-        property string quietOverridesJson: "{}"
+        defaults: ({
+                silent: root.runtime.notificationSilent,
+                presentation: root.runtime.notificationPresentation,
+                historyEnabled: root.runtime.notificationHistoryEnabled,
+                quiet: {},
+                applications: {}
+            })
     }
 
     property FileView historyFile: FileView {
@@ -157,10 +147,7 @@ QtObject {
             quietPauseUntil = 0;
         if (wasSilent && !wasManual)
             return;
-        settings.silent = !wasSilent;
-        settings.preferenceSource = "user";
-        settings.setValue("preferenceSource", "user");
-        settings.sync();
+        settings.set("silent", !wasSilent);
     }
 
     function silenceFor(minutes: int): void {
@@ -185,75 +172,56 @@ QtObject {
         }
         clockMs = Date.now();
         quietPauseUntil = 0;
-        settings.quietOverridesJson = JSON.stringify(Object.assign({}, quietOverrides, {
+        settings.set("quiet", Object.assign({}, quietOverrides, {
             [key]: value
         }));
-        settings.sync();
     }
 
     function resetQuietField(key: string): void {
         const next = Object.assign({}, quietOverrides);
         delete next[key];
-        settings.quietOverridesJson = JSON.stringify(next);
+        settings.set("quiet", next);
         quietPauseUntil = 0;
         clockMs = Date.now();
-        settings.sync();
     }
 
     function resetQuietHours(): void {
-        settings.quietOverridesJson = "{}";
+        settings.reset("quiet");
         quietPauseUntil = 0;
         clockMs = Date.now();
-        settings.sync();
     }
 
     function togglePresentation(): void {
-        settings.presentation = !presentation;
-        settings.presentationSource = "user";
-        settings.sync();
+        settings.set("presentation", !presentation);
     }
 
     function toggleHistory(): void {
-        settings.historyEnabled = !historyEnabled;
-        settings.historySource = "user";
-        settings.sync();
+        settings.set("historyEnabled", !historyEnabled);
     }
 
     function applicationPreferences(notification): var {
         const key = NotificationSemantics.groupKey(notification);
-        try {
-            const all = JSON.parse(settings.appsJson || "{}");
-            return Object.assign({}, runtime.notificationApplications[key] || {}, all[key] || {});
-        } catch (_) {
-            return runtime.notificationApplications[key] || {};
-        }
+        const all = settings.value("applications");
+        return Object.assign({}, runtime.notificationApplications[key] || {}, all[key] || {});
     }
 
     function resetApplicationPreferences(notification): void {
-        let all = {};
-        try {
-            all = JSON.parse(settings.appsJson || "{}");
-        } catch (_) {}
+        const all = Object.assign({}, settings.value("applications"));
         const key = NotificationSemantics.groupKey(notification);
         delete all[key];
-        settings.appsJson = JSON.stringify(all);
-        settings.sync();
+        settings.set("applications", all);
         hideApplicationPopups(key);
     }
 
     function setApplicationPreference(notification, field: string, value: bool): void {
         if (!["popups", "history", "silent", "criticalOnly", "privatePreview"].includes(field))
             return;
-        let all = {};
-        try {
-            all = JSON.parse(settings.appsJson || "{}");
-        } catch (_) {}
+        const all = Object.assign({}, settings.value("applications"));
         const key = NotificationSemantics.groupKey(notification);
         const updated = Object.assign({}, all[key] || {});
         updated[field] = value;
         all[key] = updated;
-        settings.appsJson = JSON.stringify(all);
-        settings.sync();
+        settings.set("applications", all);
         if ((field === "popups" || field === "silent") && (field === "popups" ? !value : value))
             hideApplicationPopups(key);
         if ((field === "criticalOnly" || field === "privatePreview") && value)
@@ -264,21 +232,11 @@ QtObject {
     }
 
     Component.onCompleted: {
-        PreferenceMigration.migrate(settings, previousSettings);
+        settings.initialize(PreferenceMigration.legacyOverrides(settings, previousSettings));
         journal = historyEnabled ? Journal.restore(archiveFile.text()) : [];
         nextRecord = journal.length;
         if (!historyEnabled)
             scheduleSave();
-        if (settings.preferenceSource === "") {
-            // Preserve explicitly stored values from older settings files.
-            settings.preferenceSource = settings.value("silent", null) === null ? "default" : "user";
-            settings.setValue("preferenceSource", settings.preferenceSource);
-        }
-        if (settings.presentationSource === "")
-            settings.presentationSource = settings.value("presentation", null) === null ? "default" : "user";
-        if (settings.historySource === "")
-            settings.historySource = settings.value("historyEnabled", null) === null ? "default" : "user";
-        settings.sync();
     }
 
     // A normal systemd/Quickshell restart should not lose the final 300 ms
@@ -293,22 +251,15 @@ QtObject {
     }
 
     function resetDeliveryPreferences(): void {
-        settings.preferenceSource = "default";
-        settings.presentationSource = "default";
-        settings.historySource = "default";
         temporarySilentUntil = 0;
-        resetQuietHours();
-        settings.setValue("preferenceSource", "default");
-        settings.setValue("presentationSource", "default");
-        settings.setValue("historySource", "default");
-        settings.sync();
+        quietPauseUntil = 0;
+        clockMs = Date.now();
+        settings.resetMany(["silent", "presentation", "historyEnabled", "quiet"]);
     }
 
     function resetToDeclared(): void {
         resetDeliveryPreferences();
-        settings.appsJson = "{}";
-        settings.setValue("appsJson", "{}");
-        settings.sync();
+        settings.reset("applications");
     }
 
     function scheduleSave(): void {

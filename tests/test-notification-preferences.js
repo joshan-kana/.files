@@ -4,131 +4,61 @@ import path from "node:path";
 import test from "node:test";
 import vm from "node:vm";
 
-const pathToState = path.join(
+const dir = path.join(
   import.meta.dirname,
-  "../modules/desktop/hyprland/shell/qml/NotificationState.qml",
+  "../modules/desktop/hyprland/shell/qml",
 );
-const source = fs.readFileSync(pathToState, "utf8");
+const source = fs.readFileSync(path.join(dir, "NotificationState.qml"), "utf8");
+const ctx = vm.createContext({});
+vm.runInContext(
+  fs.readFileSync(path.join(dir, "NotificationPreferenceMigration.js"), "utf8"),
+  ctx,
+);
 
-test("notification settings join the canonical categorized desktop preference store", () => {
+test("notifications share sparse preference storage and do not write the old INI", () => {
+  assert.match(source, /property PreferenceStore preferences: PreferenceStore/);
   assert.match(
     source,
-    /property Settings preferences: Settings \{\s*id: settings\s*location:[^\n]*XDG_CONFIG_HOME[^\n]*preferences\.ini[^\n]*\s*category: "Notifications"/,
-  );
-  assert.match(
-    source,
-    /property Settings previousPreferences: Settings \{[\s\S]*notifications\.ini/,
+    /settings.initialize\(PreferenceMigration.legacyOverrides\(settings, previousSettings\)\)/,
   );
   assert.doesNotMatch(
     source,
     /previousSettings\.(setValue|sync|reset|clear)\(/,
   );
-});
-
-test("legacy preferences override newly materialized defaults exactly once", () => {
+  const delivery = source
+    .split("function resetDeliveryPreferences")[1]
+    .split("function scheduleSave")[0];
   assert.match(
-    source,
-    /PreferenceMigration\.migrate\(settings, previousSettings\)/,
+    delivery,
+    /settings.resetMany\(\["silent", "presentation", "historyEnabled", "quiet"\]\)/,
   );
-  const helper = fs.readFileSync(
-    path.join(path.dirname(pathToState), "NotificationPreferenceMigration.js"),
-    "utf8",
-  );
-  assert.match(helper, /if \(current\.legacyMigrated\)\s*return/);
-  assert.match(helper, /"appsJson"/);
-  assert.match(helper, /previous\.value\(name, null\)/);
-  assert.match(helper, /if \(value !== null\)/);
-  assert.match(helper, /current\.legacyMigrated = true/);
+  assert.match(delivery, /settings.reset\("applications"\)/);
+  assert.doesNotMatch(delivery, /clearAll|journal =|archiveFile/);
 });
 
-test("restore-declared resets all notification overrides but retains Activity records", () => {
-  const body =
-    source.match(
-      /function resetToDeclared\(\): void \{([\s\S]*?)\n {4}\}/,
-    )?.[1] ?? "";
-  const delivery =
-    source.match(
-      /function resetDeliveryPreferences\(\): void \{([\s\S]*?)\n {4}\}/,
-    )?.[1] ?? "";
-  assert.match(body, /resetDeliveryPreferences\(\)/);
-  assert.doesNotMatch(delivery, /appsJson|clearAll|journal =|archiveFile/);
-  for (const key of [
-    "preferenceSource",
-    "presentationSource",
-    "historySource",
-    "appsJson",
-  ])
-    assert.ok(
-      (body + delivery).includes(`settings.setValue("${key}"`),
-      `missing reset: ${key}`,
-    );
-  assert.doesNotMatch(body, /clearAll|journal =|archiveFile/);
-});
-
-test("migration preserves legacy selections, then newer user changes remain authoritative", () => {
-  const helper = fs.readFileSync(
-    path.join(path.dirname(pathToState), "NotificationPreferenceMigration.js"),
-    "utf8",
-  );
-  const ctx = vm.createContext({});
-  vm.runInContext(helper, ctx);
-  const legacy = {
+test("notification migration preserves explicit false and application rules, ignores inherited defaults", () => {
+  const current = {
     silent: true,
-    appsJson: '{"firefox":{"popups":false}}',
-    presentationSource: "user",
+    historyEnabled: false,
+    historySource: "default",
+    quietOverridesJson: '{"enabled":false}',
   };
-  const current = { silent: false, historyEnabled: true };
-  const written = [];
-  const wrap = (obj, isLegacy = false) => ({
-    value(key, fallback) {
-      return Object.hasOwn(obj, key) ? obj[key] : fallback;
-    },
-    setValue(key, value) {
-      if (isLegacy) throw Error("legacy store must be read-only");
-      obj[key] = value;
-      written.push(key);
-    },
-    sync() {
-      if (isLegacy) throw Error("legacy sync is forbidden");
-    },
-    get legacyMigrated() {
-      return obj.legacyMigrated;
-    },
-    set legacyMigrated(value) {
-      if (isLegacy) throw Error("read-only");
-      obj.legacyMigrated = value;
-    },
-    get silent() {
-      return obj.silent;
-    },
-    set silent(value) {
-      obj.silent = value;
-    },
-    get appsJson() {
-      return obj.appsJson;
-    },
-    set appsJson(value) {
-      obj.appsJson = value;
-    },
-    get presentationSource() {
-      return obj.presentationSource;
-    },
-    set presentationSource(value) {
-      obj.presentationSource = value;
-    },
-  });
-  const target = wrap(current);
-  ctx.migrate(target, wrap(legacy, true));
-  assert.equal(
-    target.silent,
-    true,
-    "legacy user override wins over Qt's initialized default",
-  );
-  assert.equal(target.appsJson, legacy.appsJson);
-  assert.equal(target.presentationSource, "user");
-  const firstWrites = written.length;
-  target.silent = false;
-  ctx.migrate(target, wrap(legacy, true));
-  assert.equal(target.silent, false, "new preference wins after migration");
-  assert.equal(written.length, firstWrites, "repeat migration must be inert");
+  const original = {
+    silent: false,
+    appsJson: '{"firefox":{"popups":false}}',
+    preferenceSource: "user",
+  };
+  const store = {
+    legacy: (key) => current[key],
+    coerceLegacy: (value) => value,
+    objectFromJson: JSON.parse,
+  };
+  const previous = { value: (key, fallback) => original[key] ?? fallback };
+  const result = ctx.legacyOverrides(store, previous);
+  assert.equal(result.silent, false);
+  assert.equal(result.historyEnabled, undefined);
+  assert.equal(result.quiet.enabled, false);
+  assert.equal(result.applications.firefox.popups, false);
+  current.legacyMigrated = true;
+  assert.equal(ctx.legacyOverrides(store, previous).silent, true);
 });

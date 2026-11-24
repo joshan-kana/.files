@@ -21,7 +21,7 @@ test("weather formatting and coordinate validation do not alter provider measure
   assert.equal(f.coordinates("91, 115"), null);
   assert.match(
     source("WeatherState.qml"),
-    /saved.locationOverridden \? saved.selectedLocation : declaredLocation/,
+    /preferredLocation: saved\.value\("location"\)/,
   );
   assert.match(source("WeatherState.qml"), /weather.finishObsoleteRequest\(\)/);
 });

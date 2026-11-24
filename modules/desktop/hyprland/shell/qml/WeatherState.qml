@@ -1,7 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import "ClockFormatting.js" as ClockFormatting
-import QtCore
 import Quickshell
 import Quickshell.Io
 import "WeatherFormatting.js" as Formatting
@@ -11,21 +10,28 @@ QtObject {
 
     required property RuntimeConfig runtime
 
-    property Settings preferences: Settings {
+    property PreferenceStore preferences: PreferenceStore {
         id: saved
-        location: "file://" + (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/desktop-shell/preferences.ini"
         category: "Weather"
-        property bool locationOverridden: false
-        property string selectedLocation: ""
-        property string unitsOverride: ""
+        defaults: ({
+                location: weather.declaredLocation,
+                units: weather.runtime.weatherUnits
+            })
     }
     readonly property string declaredLocation: Quickshell.env("DESKTOP_SHELL_WEATHER_LOCATION") || runtime.weatherLocation
-    readonly property string preferredLocation: saved.locationOverridden ? saved.selectedLocation : declaredLocation
-    readonly property bool locationOverridden: saved.locationOverridden
-    readonly property string units: ["metric", "imperial"].includes(saved.unitsOverride) ? saved.unitsOverride : runtime.weatherUnits
+    readonly property string preferredLocation: saved.value("location")
+    readonly property bool locationOverridden: saved.has("location")
+    readonly property string units: ["metric", "imperial"].includes(saved.value("units")) ? saved.value("units") : runtime.weatherUnits
     property string requestLocation: ""
     property bool initialized: false
-    Component.onCompleted: initialized = true
+    Component.onCompleted: {
+        const oldUnits = saved.legacy("unitsOverride", "");
+        saved.initialize({
+            location: saved.legacy("locationOverridden", false) ? saved.legacy("selectedLocation", "") : undefined,
+            units: oldUnits ? oldUnits : undefined
+        });
+        initialized = true;
+    }
     onPreferredLocationChanged: {
         if (!initialized)
             return;
@@ -42,24 +48,19 @@ QtObject {
         const next = value.trim();
         if (next.length > 128)
             return;
-        saved.selectedLocation = next;
-        saved.locationOverridden = true;
-        saved.sync();
+        saved.set("location", next);
     }
 
     function resetLocation(): void {
-        saved.locationOverridden = false;
-        saved.sync();
+        saved.reset("location");
     }
 
     function toggleUnits(): void {
-        saved.unitsOverride = units === "metric" ? "imperial" : "metric";
-        saved.sync();
+        saved.set("units", units === "metric" ? "imperial" : "metric");
     }
 
     function resetUnits(): void {
-        saved.unitsOverride = "";
-        saved.sync();
+        saved.reset("units");
     }
 
     function finishObsoleteRequest(): bool {

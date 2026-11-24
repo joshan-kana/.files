@@ -11,15 +11,7 @@ test("window and glass opacity persist independently from 20% to 100%", () => {
     ["windowOpacity", "0.82"],
     ["glassOpacity", "0.70"],
   ]) {
-    assert.match(
-      prefs,
-      new RegExp(
-        "property real " +
-          setting +
-          ": appearance\\.runtime\\.appearanceDefaults\\." +
-          setting,
-      ),
-    );
+    assert.match(prefs, /defaults: appearance\.runtime\.appearanceDefaults/);
     assert.ok(
       prefs.includes(
         setting +
@@ -54,7 +46,7 @@ test("window and glass opacity persist independently from 20% to 100%", () => {
           defaultValue.replace(".", "\\."),
       ),
     );
-  assert.match(prefs, /saved\.sync\(\)/);
+  assert.match(prefs, /saved\.set\(key, value\)/);
   assert.match(
     prefs,
     /const opacity = \(windowTransparencyEnabled \? windowOpacity : 1\)\.toFixed\(2\)/,

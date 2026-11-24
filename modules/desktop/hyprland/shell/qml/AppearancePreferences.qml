@@ -1,7 +1,6 @@
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
-import QtCore
 
 // One persistent owner for user-selected visual modes. These are preferences,
 // not session activity; the running view reads them rather than holding copies.
@@ -9,51 +8,12 @@ QtObject {
     id: appearance
     required property RuntimeConfig runtime
 
-    property Settings settings: Settings {
+    property PreferenceStore settings: PreferenceStore {
         id: saved
-        location: "file://" + (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/desktop-shell/preferences.ini"
         category: "Appearance"
-        property bool wallpaperSpectrumEnabled: appearance.runtime.appearanceDefaults.wallpaperSpectrumEnabled
-        property string wallpaperResizeMode: appearance.runtime.appearanceDefaults.wallpaperResizeMode
-        property string wallpaperTargetOutput: appearance.runtime.appearanceDefaults.wallpaperTargetOutput
-        property bool musicReactiveEnabled: appearance.runtime.appearanceDefaults.musicReactiveEnabled
-        property real musicReactiveSensitivity: appearance.runtime.appearanceDefaults.musicReactiveSensitivity
-        property real musicReactiveAttack: appearance.runtime.appearanceDefaults.musicReactiveAttack
-        property real musicReactiveRelease: appearance.runtime.appearanceDefaults.musicReactiveRelease
-        property real musicReactiveSmoothing: appearance.runtime.appearanceDefaults.musicReactiveSmoothing
-        property real musicReactiveIntensity: appearance.runtime.appearanceDefaults.musicReactiveIntensity
-        property string musicReactiveEmphasis: appearance.runtime.appearanceDefaults.musicReactiveEmphasis
-        property real spectrumSensitivity: appearance.runtime.appearanceDefaults.spectrumSensitivity
-        property real spectrumAttack: appearance.runtime.appearanceDefaults.spectrumAttack
-        property real spectrumRelease: appearance.runtime.appearanceDefaults.spectrumRelease
-        property int wallpaperSpectrumBars: appearance.runtime.appearanceDefaults.wallpaperSpectrumBars
-        property real wallpaperSpectrumOpacity: appearance.runtime.appearanceDefaults.wallpaperSpectrumOpacity
-        property int barIslandHeight: appearance.runtime.appearanceDefaults.barIslandHeight
-        property int frameThickness: appearance.runtime.appearanceDefaults.frameThickness
-        property bool barVisible: appearance.runtime.appearanceDefaults.barVisible
-        property bool frameVisible: appearance.runtime.appearanceDefaults.frameVisible
-        property bool windowTransparencyEnabled: appearance.runtime.appearanceDefaults.windowTransparencyEnabled
-        property bool shellGlassEnabled: appearance.runtime.appearanceDefaults.shellGlassEnabled
-        property real windowOpacity: appearance.runtime.appearanceDefaults.windowOpacity
-        property real glassOpacity: appearance.runtime.appearanceDefaults.glassOpacity
-        property bool blurEnabled: appearance.runtime.appearanceDefaults.blurEnabled
-        property int blurSize: appearance.runtime.appearanceDefaults.blurSize
-        property bool vhsEnabled: appearance.runtime.appearanceDefaults.vhsEnabled
-        property real vhsIntensity: appearance.runtime.appearanceDefaults.vhsIntensity
-        property real vhsTracking: appearance.runtime.appearanceDefaults.vhsTracking
-        property real vhsChroma: appearance.runtime.appearanceDefaults.vhsChroma
-        property real vhsNoise: appearance.runtime.appearanceDefaults.vhsNoise
-        property real vhsScanlines: appearance.runtime.appearanceDefaults.vhsScanlines
-        property real vhsSpeed: appearance.runtime.appearanceDefaults.vhsSpeed
-        property real vhsDropouts: appearance.runtime.appearanceDefaults.vhsDropouts
-        property string mediaVisualizerMode: appearance.runtime.appearanceDefaults.mediaVisualizerMode
-        property bool mediaLyricsVisible: appearance.runtime.appearanceDefaults.mediaLyricsVisible
-        property string mediaPreferredPlayer: appearance.runtime.appearanceDefaults.mediaPreferredPlayer
-        property int mediaSeekSeconds: appearance.runtime.appearanceDefaults.mediaSeekSeconds
-        property string userOverrides: ""
+        defaults: appearance.runtime.appearanceDefaults
     }
 
-    readonly property var overrideKeys: parseOverrideKeys(saved.userOverrides)
     readonly property bool wallpaperSpectrumEnabled: effective("wallpaperSpectrumEnabled")
     readonly property string wallpaperResizeMode: runtime.constraints.appearance.wallpaperResizeMode.values.includes(effective("wallpaperResizeMode")) ? effective("wallpaperResizeMode") : runtime.appearanceDefaults.wallpaperResizeMode
     readonly property string wallpaperTargetOutput: effective("wallpaperTargetOutput")
@@ -140,7 +100,6 @@ QtObject {
         const bounds = ["barIslandHeight", "frameThickness"].includes(key);
         if (bounds && Number.isFinite(value)) {
             storeOverride(key, Math.round(runtime.bounded("appearance", key, value)));
-            saved.sync();
         }
     }
     readonly property bool barVisible: effective("barVisible")
@@ -175,7 +134,7 @@ QtObject {
     readonly property real vhsSpeed: runtime.bounded("appearance", "vhsSpeed", effective("vhsSpeed"))
     readonly property real vhsDropouts: runtime.bounded("appearance", "vhsDropouts", effective("vhsDropouts"))
     function hasOverride(key: string): bool {
-        return overrideKeys.includes(key);
+        return saved.has(key);
     }
     readonly property string mediaVisualizerMode: runtime.constraints.appearance.mediaVisualizerMode.values.includes(effective("mediaVisualizerMode")) ? effective("mediaVisualizerMode") : runtime.appearanceDefaults.mediaVisualizerMode
     readonly property bool mediaLyricsVisible: effective("mediaLyricsVisible")
@@ -185,33 +144,18 @@ QtObject {
 
     function setMediaPreferredPlayer(identity: string): void {
         storeOverride("mediaPreferredPlayer", identity);
-        saved.sync();
     }
 
     function resetMediaPreferredPlayer(): void {
         clearOverride("mediaPreferredPlayer");
     }
 
-    function parseOverrideKeys(value: string): var {
-        try {
-            const parsed = JSON.parse(value);
-            return Array.isArray(parsed) ? parsed.filter(key => typeof key === "string") : [];
-        } catch (_) {
-            return [];
-        }
-    }
-
     function effective(key: string): var {
-        return overrideKeys.includes(key) ? saved[key] : runtime.appearanceDefaults[key];
+        return saved.value(key);
     }
 
     function storeOverride(key: string, value: var): void {
-        saved[key] = value;
-        saved.setValue(key, value);
-        if (!overrideKeys.includes(key)) {
-            saved.userOverrides = JSON.stringify([...overrideKeys, key]);
-            saved.setValue("userOverrides", saved.userOverrides);
-        }
+        saved.set(key, value);
     }
 
     // Preloaded panels retain their Wayland layers while closed, but an
@@ -235,25 +179,31 @@ QtObject {
     onOsdGlassExposedChanged: applyGlassRule("desktop-shell-shell-glass-osd", "^desktop-shell-osd$", osdGlassExposed)
     onResizeGlassExposedChanged: applyGlassRule("desktop-shell-shell-glass-resize", "^desktop-shell-resize-controls$", resizeGlassExposed)
 
-    // The override list is the source of preference precedence. Existing INI
-    // values are retained during migration; reset clears only their authority.
     Component.onCompleted: {
+        const old = {};
+        const marker = saved.legacy("userOverrides", "");
+        let keys = Object.keys(runtime.appearanceDefaults);
+        if (marker) {
+            try {
+                const parsed = JSON.parse(marker);
+                keys = Array.isArray(parsed) ? parsed : [];
+            } catch (_) {
+                keys = [];
+            }
+        }
+        for (const key of keys) {
+            if (Object.prototype.hasOwnProperty.call(runtime.appearanceDefaults, key))
+                old[key] = saved.legacy(key, runtime.appearanceDefaults[key]);
+        }
+        saved.initialize(old);
         applyVhs();
-        if (saved.userOverrides !== "")
-            return;
-        const legacy = Object.keys(runtime.appearanceDefaults).filter(key => key !== "objectName" && saved.value(key, null) !== null);
-        saved.userOverrides = JSON.stringify(legacy);
-        saved.setValue("userOverrides", saved.userOverrides);
-        saved.sync();
         applyWindowTransparency();
         applyShellGlass();
         applyBlurSize();
     }
 
     function resetToDeclared(): void {
-        saved.userOverrides = "[]";
-        saved.setValue("userOverrides", "[]");
-        saved.sync();
+        saved.resetAll();
         windowOpacityApply.stop();
         blurSizeApply.stop();
         vhsApply.stop();
@@ -266,27 +216,19 @@ QtObject {
     function setWallpaperTargetOutput(output: string): void {
         if (output.length === 0 || wallpaperTargetOutput === output)
             return;
-        saved.wallpaperTargetOutput = output;
         storeOverride("wallpaperTargetOutput", output);
-        saved.sync();
     }
 
     function toggleWallpaperResizeMode(): void {
-        saved.wallpaperResizeMode = wallpaperResizeMode === "fit" ? "crop" : "fit";
-        storeOverride("wallpaperResizeMode", saved.wallpaperResizeMode);
-        saved.sync();
+        storeOverride("wallpaperResizeMode", wallpaperResizeMode === "fit" ? "crop" : "fit");
     }
 
     function toggleWallpaperSpectrum(): void {
-        saved.wallpaperSpectrumEnabled = !wallpaperSpectrumEnabled;
-        storeOverride("wallpaperSpectrumEnabled", saved.wallpaperSpectrumEnabled);
-        saved.sync();
+        storeOverride("wallpaperSpectrumEnabled", !wallpaperSpectrumEnabled);
     }
 
     function toggleMusicReactive(): void {
-        saved.musicReactiveEnabled = !musicReactiveEnabled;
-        storeOverride("musicReactiveEnabled", saved.musicReactiveEnabled);
-        saved.sync();
+        storeOverride("musicReactiveEnabled", !musicReactiveEnabled);
     }
 
     function setVisualParameter(key: string, value: real): void {
@@ -296,19 +238,16 @@ QtObject {
         if (next === effective(key))
             return;
         storeOverride(key, next);
-        saved.sync();
     }
 
     function setReactiveEmphasis(value: string): void {
         if (!runtime.constraints.appearance.musicReactiveEmphasis.values.includes(value) || musicReactiveEmphasis === value)
             return;
         storeOverride("musicReactiveEmphasis", value);
-        saved.sync();
     }
 
     function setSpectrumBars(value: int): void {
         storeOverride("wallpaperSpectrumBars", runtime.bounded("appearance", "wallpaperSpectrumBars", value));
-        saved.sync();
     }
 
     function resetReactiveTuning(): void {
@@ -324,9 +263,7 @@ QtObject {
         const values = reactivePresets[name];
         if (!values)
             return;
-        for (let i = 0; i < musicReactiveParameterKeys.length; ++i)
-            storeOverride(musicReactiveParameterKeys[i], values[i]);
-        saved.sync();
+        saved.setMany(Object.fromEntries(musicReactiveParameterKeys.map((key, index) => [key, values[index]])));
     }
 
     function resetSpectrumTuning(): void {
@@ -338,15 +275,11 @@ QtObject {
     }
 
     function toggleFrame(): void {
-        saved.frameVisible = !frameVisible;
-        storeOverride("frameVisible", saved.frameVisible);
-        saved.sync();
+        storeOverride("frameVisible", !frameVisible);
     }
 
     function toggleBar(): void {
-        saved.barVisible = !barVisible;
-        storeOverride("barVisible", saved.barVisible);
-        saved.sync();
+        storeOverride("barVisible", !barVisible);
     }
 
     // The runtime's tool path arrives from a Nix-generated JSON file. On
@@ -413,10 +346,9 @@ QtObject {
             const values = vhsPresets[name];
             if (!values)
                 return;
-            for (let index = 0; index < vhsParameterKeys.length; ++index)
-                storeOverride(vhsParameterKeys[index], values[index]);
+            saved.setMany(Object.fromEntries(vhsParameterKeys.map((key, index) => [key, values[index]])));
         }
-        saved.sync();
+
         vhsApply.restart();
     }
 
@@ -433,9 +365,8 @@ QtObject {
     }
 
     function toggleVhs(): void {
-        saved.vhsEnabled = !vhsEnabled;
-        storeOverride("vhsEnabled", saved.vhsEnabled);
-        saved.sync();
+        storeOverride("vhsEnabled", !vhsEnabled);
+
         vhsApply.stop();
         applyVhs();
     }
@@ -448,7 +379,7 @@ QtObject {
             return;
         storeOverride(key, next);
         storeOverride("vhsEnabled", true);
-        saved.sync();
+
         vhsApply.restart();
     }
 
@@ -456,11 +387,9 @@ QtObject {
         const next = Math.round(runtime.bounded("appearance", "vhsIntensity", value) * 100) / 100;
         if (next === vhsIntensity && vhsEnabled)
             return;
-        saved.vhsIntensity = next;
-        saved.vhsEnabled = true;
         storeOverride("vhsIntensity", next);
         storeOverride("vhsEnabled", true);
-        saved.sync();
+
         // Reload after the slider settles to avoid shader recompilation every pointer event.
         vhsApply.restart();
     }
@@ -472,18 +401,13 @@ QtObject {
     }
 
     function clearOverride(key: string): void {
-        if (!overrideKeys.includes(key))
-            return;
-        const remaining = overrideKeys.filter(value => value !== key);
-        saved.userOverrides = JSON.stringify(remaining);
-        saved.setValue("userOverrides", saved.userOverrides);
-        saved.sync();
+        saved.reset(key);
     }
 
     function toggleBlur(): void {
         const next = !blurEnabled;
         storeOverride("blurEnabled", next);
-        saved.sync();
+
         applyBlurSize();
     }
 
@@ -491,9 +415,8 @@ QtObject {
         const next = Math.round(Math.max(5, Math.min(25, value)));
         if (next === blurSize)
             return;
-        saved.blurSize = next;
         storeOverride("blurSize", next);
-        saved.sync();
+
         blurSizeApply.restart();
     }
 
@@ -508,11 +431,9 @@ QtObject {
         const next = Math.round(runtime.bounded("appearance", "windowOpacity", value) * 100) / 100;
         if (next === windowOpacity && windowTransparencyEnabled)
             return;
-        saved.windowOpacity = next;
-        saved.windowTransparencyEnabled = true;
         storeOverride("windowOpacity", next);
         storeOverride("windowTransparencyEnabled", true);
-        saved.sync();
+
         windowOpacityApply.restart();
     }
 
@@ -521,11 +442,9 @@ QtObject {
         if (next === glassOpacity && shellGlassEnabled)
             return;
         const wasEnabled = shellGlassEnabled;
-        saved.glassOpacity = next;
-        saved.shellGlassEnabled = true;
         storeOverride("glassOpacity", next);
         storeOverride("shellGlassEnabled", true);
-        saved.sync();
+
         // Alpha is a live QML theme binding. Only a newly enabled glass mode
         // needs Hyprland blur rules; dragging never spawns seven processes.
         if (!wasEnabled)
@@ -533,9 +452,8 @@ QtObject {
     }
 
     function toggleWindowTransparency(): void {
-        saved.windowTransparencyEnabled = !windowTransparencyEnabled;
-        storeOverride("windowTransparencyEnabled", saved.windowTransparencyEnabled);
-        saved.sync();
+        storeOverride("windowTransparencyEnabled", !windowTransparencyEnabled);
+
         applyWindowTransparency();
     }
 
@@ -561,9 +479,8 @@ QtObject {
     }
 
     function toggleShellGlass(): void {
-        saved.shellGlassEnabled = !shellGlassEnabled;
-        storeOverride("shellGlassEnabled", saved.shellGlassEnabled);
-        saved.sync();
+        storeOverride("shellGlassEnabled", !shellGlassEnabled);
+
         applyShellGlass();
     }
 
@@ -572,20 +489,14 @@ QtObject {
         const index = Math.max(0, Math.min(seekIntervals.length - 1, current + direction));
         if (index === current)
             return;
-        saved.mediaSeekSeconds = seekIntervals[index];
-        storeOverride("mediaSeekSeconds", saved.mediaSeekSeconds);
-        saved.sync();
+        storeOverride("mediaSeekSeconds", seekIntervals[index]);
     }
 
     function toggleMediaVisualizer(): void {
-        saved.mediaVisualizerMode = mediaVisualizerMode === "bars" ? "curve" : "bars";
-        storeOverride("mediaVisualizerMode", saved.mediaVisualizerMode);
-        saved.sync();
+        storeOverride("mediaVisualizerMode", mediaVisualizerMode === "bars" ? "curve" : "bars");
     }
 
     function toggleMediaLyrics(): void {
-        saved.mediaLyricsVisible = !mediaLyricsVisible;
-        storeOverride("mediaLyricsVisible", saved.mediaLyricsVisible);
-        saved.sync();
+        storeOverride("mediaLyricsVisible", !mediaLyricsVisible);
     }
 }

@@ -180,21 +180,22 @@ test("User-owned snippets remain higher precedence than Nix defaults", () => {
 });
 
 test("Preference reset returns control to Nix instead of freezing the old default", () => {
-  const appearance = read("qml/AppearancePreferences.qml");
+  const store = read("qml/PreferenceStore.qml");
   assert.match(
-    appearance,
-    /overrideKeys\.includes\(key\) \? saved\[key\] : runtime\.appearanceDefaults\[key\]/,
+    store,
+    /return has\(key\) \? overrides\[key\] : defaults\[key\]/,
   );
-  assert.match(appearance, /saved\.userOverrides = "\[\]"/);
+  assert.match(store, /delete next\[key\]/);
   for (const component of [
+    "AppearancePreferences",
     "Motion",
     "SessionPanel",
     "ScreenshotPicker",
     "NotificationState",
+    "ResourceState",
+    "WeatherState",
   ]) {
-    const source = read("qml/" + component + ".qml");
-    assert.match(source, /preferenceSource = "default"/);
-    assert.match(source, /preferenceSource = "user"/);
+    assert.match(read("qml/" + component + ".qml"), /PreferenceStore \{/);
   }
 });
 
@@ -300,15 +301,15 @@ test("QML consumes evaluated runtime values without its own default adapter", ()
   const fixture = Object.fromEntries(groups.map((key) => [key, {}]));
   fixture.keybindings = [];
   const qt = { exit: () => assert.fail("Valid configuration must load") };
-  const appearance = read("qml/AppearancePreferences.qml");
-  const effectiveBody = appearance
-    .split("function effective(key: string): var {")[1]
+  const store = read("qml/PreferenceStore.qml");
+  const effectiveBody = store
+    .split("function value(key: string): var {")[1]
     .split("\n    }")[0];
   const effective = new Function(
     "key",
-    "overrideKeys",
-    "saved",
-    "runtime",
+    "has",
+    "overrides",
+    "defaults",
     effectiveBody,
   );
   for (const mode of ["fit", "crop"]) {
@@ -319,26 +320,25 @@ test("QML consumes evaluated runtime values without its own default adapter", ()
     };
     const config = parseConfig(JSON.stringify(fixture), qt, console);
     assert.deepEqual(config, fixture);
-    const runtime = { appearanceDefaults: config.appearance };
     const other = mode === "fit" ? "crop" : "fit";
-    assert.equal(effective("wallpaperResizeMode", [], {}, runtime), mode);
+    const overrides = { wallpaperResizeMode: other };
     assert.equal(
       effective(
         "wallpaperResizeMode",
-        ["wallpaperResizeMode"],
-        { wallpaperResizeMode: other },
-        runtime,
+        () => false,
+        overrides,
+        config.appearance,
       ),
-      other,
+      mode,
     );
     assert.equal(
       effective(
         "wallpaperResizeMode",
-        [],
-        { wallpaperResizeMode: other },
-        runtime,
+        () => true,
+        overrides,
+        config.appearance,
       ),
-      mode,
+      other,
     );
   }
   let exitCode = 0;

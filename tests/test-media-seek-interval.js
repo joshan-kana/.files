@@ -11,10 +11,7 @@ const read = (file) =>
 
 test("seek interval has one validated persistent preference and a declarative default", () => {
   const appearance = read("AppearancePreferences.qml");
-  assert.match(
-    appearance,
-    /property int mediaSeekSeconds: appearance\.runtime\.appearanceDefaults\.mediaSeekSeconds/,
-  );
+  assert.match(appearance, /defaults: appearance\.runtime\.appearanceDefaults/);
   assert.match(
     appearance,
     /readonly property var seekIntervals: runtime\.constraints\.appearance\.mediaSeekSeconds\.values/,
@@ -25,9 +22,9 @@ test("seek interval has one validated persistent preference and a declarative de
   );
   assert.match(
     appearance,
-    /storeOverride\("mediaSeekSeconds", saved\.mediaSeekSeconds\)/,
+    /storeOverride\("mediaSeekSeconds", seekIntervals\[index\]\)/,
   );
-  assert.match(appearance, /saved\.sync\(\)/);
+  assert.match(appearance, /saved\.set\(key, value\)/);
   const steps = [5, 10, 15, 30, 60];
   for (const i of steps.keys()) {
     assert.equal(steps[Math.max(0, i - 1)], steps[i - 1] || 5);

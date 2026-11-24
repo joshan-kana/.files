@@ -1,6 +1,5 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import QtCore
 import Quickshell
 import Quickshell.Io
 
@@ -40,30 +39,32 @@ QtObject {
     property real cpuPressure: -1
     property real memoryPressure: -1
     property real ioPressure: -1
-    property Settings preferences: Settings {
+    property PreferenceStore preferences: PreferenceStore {
         id: saved
-        location: "file://" + (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/desktop-shell/preferences.ini"
         category: "Resources"
-        property int intervalOverride: 0
-        property int historyOverride: 0
+        defaults: root.runtime.resourceSampling
     }
-    readonly property int intervalSeconds: runtime.constraints.resourceSampling.intervalSeconds.values.includes(saved.intervalOverride) ? saved.intervalOverride : runtime.resourceSampling.intervalSeconds
-    readonly property int historyLength: runtime.constraints.resourceSampling.historyLength.values.includes(saved.historyOverride) ? saved.historyOverride : runtime.resourceSampling.historyLength
+    Component.onCompleted: {
+        const interval = saved.legacy("intervalOverride", 0);
+        const history = saved.legacy("historyOverride", 0);
+        saved.initialize({
+            intervalSeconds: interval > 0 ? interval : undefined,
+            historyLength: history > 0 ? history : undefined
+        });
+    }
+    readonly property int intervalSeconds: runtime.constraints.resourceSampling.intervalSeconds.values.includes(saved.value("intervalSeconds")) ? saved.value("intervalSeconds") : runtime.resourceSampling.intervalSeconds
+    readonly property int historyLength: runtime.constraints.resourceSampling.historyLength.values.includes(saved.value("historyLength")) ? saved.value("historyLength") : runtime.resourceSampling.historyLength
     readonly property int historySeconds: historyLength * intervalSeconds
     function cycleInterval(): void {
         const choices = runtime.constraints.resourceSampling.intervalSeconds.values;
-        saved.intervalOverride = choices[(choices.indexOf(intervalSeconds) + 1) % choices.length];
-        saved.sync();
+        saved.set("intervalSeconds", choices[(choices.indexOf(intervalSeconds) + 1) % choices.length]);
     }
     function cycleHistory(): void {
         const choices = runtime.constraints.resourceSampling.historyLength.values;
-        saved.historyOverride = choices[(choices.indexOf(historyLength) + 1) % choices.length];
-        saved.sync();
+        saved.set("historyLength", choices[(choices.indexOf(historyLength) + 1) % choices.length]);
     }
     function resetSampling(): void {
-        saved.intervalOverride = 0;
-        saved.historyOverride = 0;
-        saved.sync();
+        saved.resetAll();
     }
     onIntervalSecondsChanged: {
         previousCpuStats = null;

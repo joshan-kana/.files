@@ -17,10 +17,7 @@ const read = (name) =>
 
 test("wallpaper apply target uses the shared persisted appearance owner", () => {
   const appearance = read("AppearancePreferences.qml");
-  assert.match(
-    appearance,
-    /property string wallpaperTargetOutput: appearance\.runtime\.appearanceDefaults\.wallpaperTargetOutput/,
-  );
+  assert.match(appearance, /defaults: appearance\.runtime\.appearanceDefaults/);
   assert.match(
     appearance,
     /readonly property string wallpaperTargetOutput: effective\("wallpaperTargetOutput"\)/,
@@ -38,7 +35,7 @@ test("wallpaper apply target uses the shared persisted appearance owner", () => 
     /function setWallpaperTargetOutput\(output: string\): void/,
   );
   assert.match(appearance, /storeOverride\("wallpaperTargetOutput", output\)/);
-  assert.match(appearance, /saved\.sync\(\)/);
+  assert.match(appearance, /saved\.set\(key, value\)/);
 });
 
 test("reopening gallery retains specific monitor and all-display selections", () => {

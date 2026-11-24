@@ -1,6 +1,5 @@
 import QtQuick
 import Quickshell
-import QtCore
 
 QtObject {
     id: root
@@ -8,24 +7,21 @@ QtObject {
 
     // A user-selected motion preference survives shell reload, logout and
     // reboot independently of the Nix-generated runtime defaults.
-    property Settings preferences: Settings {
+    property PreferenceStore preferences: PreferenceStore {
         id: qmlPreferences
-        location: "file://" + (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/desktop-shell/preferences.ini"
         category: "Motion"
-        property bool animationsEnabled: root.runtime.animationsEnabled
-        property string preferenceSource: ""
-        property real durationOverride: 0
+        defaults: ({
+                animationsEnabled: root.runtime.animationsEnabled,
+                durationMultiplier: root.runtime.motionDurationMultiplier
+            })
     }
-    readonly property bool enabled: qmlPreferences.preferenceSource === "default" ? runtime.animationsEnabled : qmlPreferences.animationsEnabled
-
-    readonly property real durationMultiplier: qmlPreferences.durationOverride > 0 ? runtime.bounded("motion", "durationMultiplier", qmlPreferences.durationOverride) : runtime.motionDurationMultiplier
+    readonly property bool enabled: qmlPreferences.value("animationsEnabled")
+    readonly property real durationMultiplier: runtime.bounded("motion", "durationMultiplier", qmlPreferences.value("durationMultiplier"))
     function setDurationMultiplier(value: real): void {
-        qmlPreferences.durationOverride = runtime.bounded("motion", "durationMultiplier", value);
-        qmlPreferences.sync();
+        qmlPreferences.set("durationMultiplier", runtime.bounded("motion", "durationMultiplier", value));
     }
     function resetDurationMultiplier(): void {
-        qmlPreferences.durationOverride = 0;
-        qmlPreferences.sync();
+        qmlPreferences.reset("durationMultiplier");
     }
     readonly property int fast: enabled ? 100 : 0
     readonly property int normal: enabled ? 160 : 0
@@ -112,31 +108,23 @@ QtObject {
     }
 
     Component.onCompleted: {
-        if (qmlPreferences.preferenceSource === "") {
-            // Preserve explicitly stored values from older settings files.
-            qmlPreferences.preferenceSource = qmlPreferences.value("animationsEnabled", null) === null ? "default" : "user";
-            qmlPreferences.setValue("preferenceSource", qmlPreferences.preferenceSource);
-            qmlPreferences.sync();
-        }
+        const duration = qmlPreferences.legacy("durationOverride", 0);
+        qmlPreferences.initialize({
+            animationsEnabled: qmlPreferences.legacyMarked("animationsEnabled", "preferenceSource"),
+            durationMultiplier: duration > 0 ? duration : undefined
+        });
         syncCompositorMotion();
         syncWallpaperMotion();
     }
 
     function resetToDeclared(): void {
-        resetDurationMultiplier();
-        qmlPreferences.preferenceSource = "default";
-        qmlPreferences.setValue("preferenceSource", "default");
-        qmlPreferences.sync();
+        qmlPreferences.resetAll();
         syncCompositorMotion();
         syncWallpaperMotion();
     }
 
     function toggle(): void {
-        qmlPreferences.animationsEnabled = !enabled;
-        qmlPreferences.setValue("animationsEnabled", qmlPreferences.animationsEnabled);
-        qmlPreferences.preferenceSource = "user";
-        qmlPreferences.setValue("preferenceSource", "user");
-        qmlPreferences.sync();
+        qmlPreferences.set("animationsEnabled", !enabled);
         syncCompositorMotion();
         syncWallpaperMotion();
     }

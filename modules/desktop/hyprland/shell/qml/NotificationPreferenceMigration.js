@@ -1,29 +1,24 @@
-// Import values from the old notification-only INI once. The shared desktop
-// preference category owns every subsequent write; old state remains untouched
-// as rollback material, never as an active competing settings store.
-const names = [
-  "silent",
-  "presentation",
-  "historyEnabled",
-  "preferenceSource",
-  "presentationSource",
-  "historySource",
-  "appsJson",
-];
-
-function migrate(current, previous) {
-  if (current.legacyMigrated) return;
-  for (const name of names) {
-    const value = previous.value(name, null);
-    // QtCore.Settings persists declared defaults as the QML object loads.
-    // Before the migration marker exists, those newly materialized values
-    // are *not* user overrides. The original store is authoritative once.
-    if (value !== null) {
-      current[name] = value;
-      current.setValue(name, value);
-    }
+// Read the original notification INI only if it was never imported into
+// the shared preference file. The sparse store owns all subsequent writes.
+function legacyOverrides(store, previous) {
+  const imported = store.legacy("legacyMigrated", false);
+  const read = (key, fallback) => {
+    const old = imported ? null : previous.value(key, null);
+    return old === null || old === undefined
+      ? store.legacy(key, fallback)
+      : store.coerceLegacy(old, fallback);
+  };
+  const result = {};
+  for (const [key, marker] of [
+    ["silent", "preferenceSource"],
+    ["presentation", "presentationSource"],
+    ["historyEnabled", "historySource"],
+  ]) {
+    if (read(marker, "") !== "default") result[key] = read(key, false);
   }
-  current.legacyMigrated = true;
-  current.setValue("legacyMigrated", true);
-  current.sync();
+  result.quiet = store.objectFromJson(
+    store.legacy("quietOverridesJson", "") || "{}",
+  );
+  result.applications = store.objectFromJson(read("appsJson", "") || "{}");
+  return result;
 }

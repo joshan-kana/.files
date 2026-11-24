@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import "DesktopIcons.js" as DesktopIcons
 import Quickshell
-import QtCore
 
 Item {
     id: panel
@@ -23,36 +22,25 @@ Item {
     property string statusText: ""
     property bool statusError: false
 
-    Settings {
+    PreferenceStore {
         id: preferences
-        location: "file://" + (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/desktop-shell/preferences.ini"
         category: "Session"
-        property bool restoreWindowsOnExit: panel.runtime.restoreWindowsOnExit
-        property string preferenceSource: ""
+        defaults: ({
+                restoreWindowsOnExit: panel.runtime.restoreWindowsOnExit
+            })
     }
-    readonly property bool restoreWindowsOnExit: preferences.preferenceSource === "default" ? runtime.restoreWindowsOnExit : preferences.restoreWindowsOnExit
+    readonly property bool restoreWindowsOnExit: preferences.value("restoreWindowsOnExit")
 
-    Component.onCompleted: {
-        if (preferences.preferenceSource !== "")
-            return;
-        // Preserve explicitly stored values from older settings files.
-        preferences.preferenceSource = preferences.value("restoreWindowsOnExit", null) === null ? "default" : "user";
-        preferences.setValue("preferenceSource", preferences.preferenceSource);
-        preferences.sync();
-    }
+    Component.onCompleted: preferences.initialize({
+        restoreWindowsOnExit: preferences.legacyMarked("restoreWindowsOnExit", "preferenceSource")
+    })
 
     function resetToDeclared(): void {
-        preferences.preferenceSource = "default";
-        preferences.setValue("preferenceSource", "default");
-        preferences.sync();
+        preferences.resetAll();
     }
 
     function toggleRestore(): void {
-        preferences.restoreWindowsOnExit = !restoreWindowsOnExit;
-        preferences.setValue("restoreWindowsOnExit", preferences.restoreWindowsOnExit);
-        preferences.preferenceSource = "user";
-        preferences.setValue("preferenceSource", "user");
-        preferences.sync();
+        preferences.set("restoreWindowsOnExit", !restoreWindowsOnExit);
         statusText = restoreWindowsOnExit ? "WINDOW RESTORATION ENABLED" : "FRESH SESSION ENABLED";
         statusError = false;
     }
