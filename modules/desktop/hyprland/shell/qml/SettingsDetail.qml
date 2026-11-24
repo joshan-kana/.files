@@ -71,7 +71,7 @@ Item {
             stay: "Idle inhibition and timeout",
             power: "Performance profiles and automatic AC / battery policy",
             spectrum: "Shared visualizer response and wallpaper appearance",
-            reactive: "Audio-driven tint, response and targets",
+            reactive: "Audio-driven tint and response",
             bar: "Desktop islands and bar layout",
             frame: "Connected desktop contour and thickness",
             motion: "Transition timing and reduced motion",
