@@ -14,7 +14,13 @@ function balance(volumes, indices) {
 }
 
 function balancedVolumes(volumes, indices, position) {
-  if (!indices || !volumes || volumes.length !== 2 || !Number.isFinite(position)) return null;
+  if (
+    !indices ||
+    !volumes ||
+    volumes.length !== 2 ||
+    !Number.isFinite(position)
+  )
+    return null;
   const peak = Math.max(...volumes);
   const value = Math.max(-1, Math.min(1, position));
   const result = [...volumes];
@@ -28,7 +34,13 @@ function linkedDevice(groups, stream, capture) {
   for (const group of groups) {
     const endpoint = capture ? group.source : group.target;
     const other = capture ? group.target : group.source;
-    if (other && other.id === stream.id && endpoint && !endpoint.isStream && endpoint.audio)
+    if (
+      other &&
+      other.id === stream.id &&
+      endpoint &&
+      !endpoint.isStream &&
+      endpoint.audio
+    )
       return endpoint;
   }
   return null;

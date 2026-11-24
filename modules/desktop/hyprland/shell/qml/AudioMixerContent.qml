@@ -67,7 +67,9 @@ FocusScope {
 
     Process {
         id: routeProcess
-        stderr: StdioCollector { id: routeStderr }
+        stderr: StdioCollector {
+            id: routeStderr
+        }
         onExited: (code, status) => {
             if (code !== 0) {
                 mixer.pendingRoute = "";
@@ -633,7 +635,8 @@ FocusScope {
                 clip: true
                 model: mixer.routeDevices
                 currentIndex: mixer.routeIndex
-                onCurrentIndexChanged: if (currentIndex >= 0) positionViewAtIndex(currentIndex, ListView.Contain)
+                onCurrentIndexChanged: if (currentIndex >= 0)
+                    positionViewAtIndex(currentIndex, ListView.Contain)
                 delegate: ShellAction {
                     required property int index
                     required property var modelData
