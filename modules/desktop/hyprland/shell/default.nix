@@ -342,7 +342,7 @@ in
       options = {
         wallpaperSpectrumEnabled = lib.mkOption {
           type = lib.types.bool;
-          default = false;
+          default = true;
           description = "Enable the audio spectrum visualizer over the wallpaper.";
         };
         wallpaperResizeMode = lib.mkOption {
