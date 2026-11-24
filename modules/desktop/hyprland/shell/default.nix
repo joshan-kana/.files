@@ -649,7 +649,10 @@ in
   };
 
   scopeOptions.weatherUnits = lib.mkOption {
-    type = lib.types.enum [ "metric" "imperial" ];
+    type = lib.types.enum [
+      "metric"
+      "imperial"
+    ];
     default = "metric";
     description = "Default units for the shared weather forecast.";
   };

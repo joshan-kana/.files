@@ -25,7 +25,6 @@ FocusScope {
         keys.forceActiveFocus();
     }
 
-
     signal closeRequested
     signal calendarRequested
 

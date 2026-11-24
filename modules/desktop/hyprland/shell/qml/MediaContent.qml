@@ -520,70 +520,70 @@ FocusScope {
                 anchors.horizontalCenter: parent.horizontalCenter
                 spacing: content.theme.spacing2
 
-            ShellAction {
-                width: 114
-                height: 42
-                runtime: content.runtime
-                theme: content.theme
-                motion: content.motion
-                compact: true
-                horizontalCompact: true
-                title: content.visualizerMode.toUpperCase()
-                shortcut: content.runtime.shellHint("MediaContent.visualizer")
-                active: true
-                onActivated: content.toggleVisualizer()
-            }
+                ShellAction {
+                    width: 114
+                    height: 42
+                    runtime: content.runtime
+                    theme: content.theme
+                    motion: content.motion
+                    compact: true
+                    horizontalCompact: true
+                    title: content.visualizerMode.toUpperCase()
+                    shortcut: content.runtime.shellHint("MediaContent.visualizer")
+                    active: true
+                    onActivated: content.toggleVisualizer()
+                }
 
-            ShellAction {
-                width: 116
-                height: 42
-                runtime: content.runtime
-                theme: content.theme
-                motion: content.motion
-                compact: true
-                horizontalCompact: true
-                title: "LYRICS"
-                shortcut: content.runtime.shellHint("MediaContent.lyrics")
-                active: content.lyricsVisible
-                onActivated: content.toggleLyrics()
-            }
+                ShellAction {
+                    width: 116
+                    height: 42
+                    runtime: content.runtime
+                    theme: content.theme
+                    motion: content.motion
+                    compact: true
+                    horizontalCompact: true
+                    title: "LYRICS"
+                    shortcut: content.runtime.shellHint("MediaContent.lyrics")
+                    active: content.lyricsVisible
+                    onActivated: content.toggleLyrics()
+                }
 
-            ShellAction {
-                width: 116
-                height: 42
-                runtime: content.runtime
-                theme: content.theme
-                motion: content.motion
-                compact: true
-                horizontalCompact: true
-                title: "Shorter"
-                shortcut: content.runtime.shellHint("MediaContent.shorter")
-                enabled: content.media.seekSeconds > 5
-                onActivated: content.media.adjustSeekStep(-1)
-            }
+                ShellAction {
+                    width: 116
+                    height: 42
+                    runtime: content.runtime
+                    theme: content.theme
+                    motion: content.motion
+                    compact: true
+                    horizontalCompact: true
+                    title: "Shorter"
+                    shortcut: content.runtime.shellHint("MediaContent.shorter")
+                    enabled: content.media.seekSeconds > 5
+                    onActivated: content.media.adjustSeekStep(-1)
+                }
 
-            Text {
-                anchors.verticalCenter: parent.verticalCenter
-                text: "Seek " + content.media.seekSeconds + "s"
-                color: content.theme.textStrong
-                font.family: content.runtime.fontSans
-                font.pixelSize: content.theme.fontSize(12)
-                font.weight: Font.DemiBold
-            }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "Seek " + content.media.seekSeconds + "s"
+                    color: content.theme.textStrong
+                    font.family: content.runtime.fontSans
+                    font.pixelSize: content.theme.fontSize(12)
+                    font.weight: Font.DemiBold
+                }
 
-            ShellAction {
-                width: 116
-                height: 42
-                runtime: content.runtime
-                theme: content.theme
-                motion: content.motion
-                compact: true
-                horizontalCompact: true
-                title: "Longer"
-                shortcut: content.runtime.shellHint("MediaContent.longer")
-                enabled: content.media.seekSeconds < 60
-                onActivated: content.media.adjustSeekStep(1)
-            }
+                ShellAction {
+                    width: 116
+                    height: 42
+                    runtime: content.runtime
+                    theme: content.theme
+                    motion: content.motion
+                    compact: true
+                    horizontalCompact: true
+                    title: "Longer"
+                    shortcut: content.runtime.shellHint("MediaContent.longer")
+                    enabled: content.media.seekSeconds < 60
+                    onActivated: content.media.adjustSeekStep(1)
+                }
             }
             Row {
                 anchors.horizontalCenter: parent.horizontalCenter
