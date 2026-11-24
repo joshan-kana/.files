@@ -708,7 +708,7 @@
           semanticPortabilityTest = import ./tests/semantic-system-portability.nix { inherit inputs; };
           semanticOptionsTest = import ./tests/semantic-options.nix {
             inherit inputs;
-            configurations = self.nixosConfigurations;
+            configurations = self.nixosConfigurations // self.darwinConfigurations;
           };
           serverAppStandardsTest = import ./tests/server-app-standards.nix {
             inherit inputs;

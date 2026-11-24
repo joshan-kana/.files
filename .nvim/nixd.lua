@@ -81,8 +81,7 @@ function M.setup(root)
 			.. flake
 			.. "; name = "
 			.. vim.json.encode(host)
-			.. "; configurations = if builtins.hasAttr name f.nixosConfigurations then "
-			.. "f.nixosConfigurations else f.darwinConfigurations; "
+			.. "; configurations = f.nixosConfigurations // f.darwinConfigurations; "
 			.. "host = builtins.getAttr name configurations; in "
 		-- nixd merges user-provided options with its built-in NixOS set. Suppress
 		-- the unrelated default before selecting the evaluated host schema.
