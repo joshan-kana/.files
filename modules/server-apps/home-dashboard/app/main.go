@@ -35,7 +35,7 @@ var assets embed.FS
 
 var pages = []string{"overview", "home", "media", "apps"}
 var credentialPages = map[string]string{"homeassistant": "home", "sonarr": "media", "radarr": "media"}
-var upstreams = map[string]string{"homeassistant": "http://127.0.0.1:8123", "sonarr": "http://127.0.0.1:8989", "radarr": "http://127.0.0.1:7878"}
+var upstreams = map[string]string{}
 var hexColorPattern = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
 
 var entityPattern = regexp.MustCompile(`^(light|switch|fan|input_boolean|climate|cover|scene|sensor|binary_sensor|button|number|select|media_player)\.[a-z0-9_]+$`)
@@ -338,16 +338,9 @@ func nonNilVisits(visits map[string]int) map[string]int {
 	}
 	return visits
 }
-func deployedApp(id string) bool {
-	configured, exists := os.LookupEnv("DASHBOARD_ENABLED_APPS")
-	if !exists {
-		return true
-	}
-	return slices.Contains(strings.Split(configured, ","), id)
-}
 func visibleApp(u *User, id string) bool {
 	for _, app := range catalog {
-		if app.ID == id && deployedApp(id) && (allowed(u, "apps") || allowed(u, app.Page)) {
+		if app.ID == id && (allowed(u, "apps") || allowed(u, app.Page)) {
 			return true
 		}
 	}
@@ -462,7 +455,7 @@ func (s *Server) handler() http.Handler {
 		}
 		entries := []map[string]string{}
 		for _, a := range catalog {
-			if deployedApp(a.ID) && (allowed(u, "apps") || allowed(u, a.Page)) {
+			if allowed(u, "apps") || allowed(u, a.Page) {
 				entries = append(entries, map[string]string{"id": a.ID, "name": a.Name, "category": a.Category, "url": a.URL, "page": a.Page})
 			}
 		}
@@ -1031,28 +1024,40 @@ func (s *Server) request(u *User, service, verb, path string, body []byte) ([]by
 type catalogItem struct{ ID, Name, Category, Page, URL string }
 
 var catalog = []catalogItem{
-	{"ha", "Home Assistant", "Smart home", "home", "http://ha.home:8123"},
-	{"jellyfin", "Jellyfin", "Media", "media", "http://nixos-server.home:8096"},
-	{"sonarr", "Sonarr", "Media", "media", "http://nixos-server.home:8989"},
-	{"radarr", "Radarr", "Media", "media", "http://nixos-server.home:7878"},
-	{"prowlarr", "Prowlarr", "Media", "media", "http://nixos-server.home:9696"},
-	{"bazarr", "Bazarr", "Media", "media", "http://nixos-server.home:6767"},
-	{"transmission", "Transmission", "Media", "media", "http://nixos-server.home:9091"},
-	{"seerr", "Seerr", "Media", "media", "http://nixos-server.home:5055"},
-	{"streamystats", "Streamystats", "Media", "media", "http://nixos-server.home:3013"},
-	{"immich", "Immich", "Photos", "apps", "http://nixos-server.home:2283"},
-	{"paperless", "Paperless", "Documents", "apps", "http://nixos-server.home:28981"},
-	{"n8n", "n8n", "Automation", "apps", "http://n8n.home:5678"},
-	{"openwebui", "Open WebUI", "AI", "apps", "http://nixos-server.home:8081"},
-	{"computer", "Computer", "AI", "apps", "http://nixos-server.home:8000"},
-	{"openclaw", "OpenClaw", "AI", "apps", "https://nixos-server.home:18789"},
-	{"gitea", "Gitea", "Development", "apps", "http://nixos-server.home:3000"},
-	{"gerrit", "Gerrit", "Development", "apps", "http://nixos-server.home:8787"},
-	{"onedev", "OneDev", "Development", "apps", "http://nixos-server.home:6610"},
-	{"agentmail", "Agent Mail", "Development", "apps", "http://nixos-server.home:8765/mail/"},
-	{"adguard", "AdGuard Home", "Networking", "apps", "http://dns.home:3000"},
-	{"technitium", "Technitium DNS", "Networking", "apps", "http://nixos-server.home:5380"},
-	{"ntfy", "ntfy", "Automation", "apps", "http://nixos-server.home:2586"},
+	{"ha", "Home Assistant", "Smart home", "home", ""},
+	{"jellyfin", "Jellyfin", "Media", "media", ""},
+	{"sonarr", "Sonarr", "Media", "media", ""},
+	{"radarr", "Radarr", "Media", "media", ""},
+	{"prowlarr", "Prowlarr", "Media", "media", ""},
+	{"bazarr", "Bazarr", "Media", "media", ""},
+	{"transmission", "Transmission", "Media", "media", ""},
+	{"seerr", "Seerr", "Media", "media", ""},
+	{"streamystats", "Streamystats", "Media", "media", ""},
+	{"immich", "Immich", "Photos", "apps", ""},
+	{"paperless", "Paperless", "Documents", "apps", ""},
+	{"n8n", "n8n", "Automation", "apps", ""},
+	{"openwebui", "Open WebUI", "AI", "apps", ""},
+	{"computer", "Computer", "AI", "apps", ""},
+	{"openclaw", "OpenClaw", "AI", "apps", ""},
+	{"gitea", "Gitea", "Development", "apps", ""},
+	{"gerrit", "Gerrit", "Development", "apps", ""},
+	{"onedev", "OneDev", "Development", "apps", ""},
+	{"agentmail", "Agent Mail", "Development", "apps", ""},
+	{"adguard", "AdGuard Home", "Networking", "apps", ""},
+	{"technitium", "Technitium DNS", "Networking", "apps", ""},
+	{"ntfy", "ntfy", "Automation", "apps", ""},
+}
+
+// configuredCatalog keeps the UI metadata and ordering independent of deployment.
+func configuredCatalog(urls map[string]string) []catalogItem {
+	entries := []catalogItem{}
+	for _, app := range catalog {
+		if address := urls[app.ID]; address != "" {
+			app.URL = address
+			entries = append(entries, app)
+		}
+	}
+	return entries
 }
 
 // resetPassword is for a server administrator running as the service owner.
@@ -1101,6 +1106,15 @@ func main() {
 		fmt.Println("Password updated. Restart home-dashboard to load the updated account.")
 		return
 	}
+	var urls map[string]string
+	if err := json.Unmarshal([]byte(os.Getenv("DASHBOARD_APP_URLS")), &urls); err != nil {
+		log.Fatal("Invalid dashboard application URLs: ", err)
+	}
+	if err := json.Unmarshal([]byte(os.Getenv("DASHBOARD_UPSTREAMS")), &upstreams); err != nil {
+		log.Fatal("Invalid dashboard upstream URLs: ", err)
+	}
+	catalog = configuredCatalog(urls)
+
 	s, err := newServer(dir)
 	if err != nil {
 		log.Fatal(err)

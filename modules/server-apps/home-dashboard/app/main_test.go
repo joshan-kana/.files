@@ -11,6 +11,10 @@ import (
 	"testing"
 )
 
+func init() {
+	upstreams = map[string]string{"homeassistant": "http://127.0.0.1:8123", "sonarr": "http://127.0.0.1:8989", "radarr": "http://127.0.0.1:7878"}
+}
+
 func testServer(t *testing.T) *Server {
 	t.Helper()
 	s, err := newServer(t.TempDir())
@@ -537,7 +541,9 @@ func TestApplicationPreferencesAndLaunchesPerAccount(t *testing.T) {
 }
 
 func TestApplicationCatalogRespectsDeployedServices(t *testing.T) {
-	t.Setenv("DASHBOARD_ENABLED_APPS", "ha,sonarr")
+	original := catalog
+	t.Cleanup(func() { catalog = original })
+	catalog = configuredCatalog(map[string]string{"ha": "http://ha.example.test", "sonarr": "http://sonarr.example.test:1234"})
 	s := testServer(t)
 	member := addUser(s, "member", false, map[string]bool{"apps": true})
 	token := s.token(member)
@@ -547,7 +553,7 @@ func TestApplicationCatalogRespectsDeployedServices(t *testing.T) {
 	if err := json.Unmarshal(list.Body.Bytes(), &items); err != nil {
 		t.Fatal(err)
 	}
-	if len(items) != 2 || items[0].ID != "ha" || items[1].ID != "sonarr" {
+	if len(items) != 2 || items[0].ID != "ha" || items[1].ID != "sonarr" || items[1].URL != "http://sonarr.example.test:1234" {
 		t.Fatalf("non-deployed services were exposed: %+v", items)
 	}
 	status(t, req(s, "PUT", "/api/profile/apps", map[string]any{"favorites": []string{"immich"}}, token, "http://example.test"), 400)

@@ -22,7 +22,7 @@ Administrators can create, disable, and manage individual Haven accounts and pag
 
 ## Application shortcuts
 
-The NixOS service passes a list of enabled applications into Haven from the resolved declarative scopes and service options. Haven only lists those enabled applications that the signed-in account is permitted to access; a disabled service is not offered as a launcher. The application retains a small set of known service names, destinations, and categories rather than probing private interfaces.
+The NixOS service passes the enabled application URLs and upstream addresses into Haven from the evaluated service configuration. Haven only lists those enabled applications that the signed-in account is permitted to access; a disabled service is not offered as a launcher. The application retains known integration names and categories rather than probing private interfaces.
 
 Each account can pin applications in the launcher. Pinned applications appear first on the Applications page and in the Overview, followed by frequently opened applications. Launch counts and pinned application IDs are persisted alongside that account's other preferences and are not shared with other accounts.
 
