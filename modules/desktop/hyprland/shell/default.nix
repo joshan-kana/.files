@@ -389,7 +389,12 @@ in
           description = "Visual intensity multiplier of the shell's existing music-reactive tint.";
         };
         musicReactiveEmphasis = lib.mkOption {
-          type = lib.types.enum [ "balanced" "bass" "mid" "treble" ];
+          type = lib.types.enum [
+            "balanced"
+            "bass"
+            "mid"
+            "treble"
+          ];
           default = "balanced";
           description = "Frequency region emphasized by the reactive visual response.";
         };

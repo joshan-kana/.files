@@ -71,9 +71,7 @@ QtObject {
         // Bass-heavy tracks no longer pin the whole interface to maximum glow.
         const mid = Math.sqrt(clamp(spectrum.mid));
         const high = Math.sqrt(clamp(spectrum.high));
-        const emphasis = frequencyEmphasis === "bass" ? bass * 0.28
-            : frequencyEmphasis === "mid" ? mid * 0.28
-            : frequencyEmphasis === "treble" ? high * 0.28 : 0;
+        const emphasis = frequencyEmphasis === "bass" ? bass * 0.28 : frequencyEmphasis === "mid" ? mid * 0.28 : frequencyEmphasis === "treble" ? high * 0.28 : 0;
         const targetSustain = presence * clamp(0.10 + bass * 0.16 + relativeBass * 0.43 + mid * 0.10 + emphasis);
         const smoothingAlpha = smoothing <= 0 ? 1 : 1 - Math.pow(smoothing, elapsed * 15);
         sustain += (targetSustain - sustain) * smoothingAlpha;

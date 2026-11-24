@@ -123,15 +123,63 @@ Item {
             ];
         if (reactiveTuning)
             return [
-                { key: "musicReactiveSensitivity", title: "Sensitivity", description: "Response to quiet audio", minimum: 40, maximum: 300, step: 5, suffix: "%" },
-                { key: "musicReactiveAttack", title: "Attack", description: "Strength of beat transients", minimum: 50, maximum: 250, step: 5, suffix: "%" },
-                { key: "musicReactiveRelease", title: "Release speed", description: "Higher values settle sooner", minimum: 40, maximum: 250, step: 5, suffix: "%" },
-                { key: "musicReactiveSmoothing", title: "Smoothing", description: "Smooth the sustained envelope", minimum: 0, maximum: 90, step: 5, suffix: "%" },
-                { key: "musicReactiveIntensity", title: "Tint intensity", description: "Strength of the shared shell tint", minimum: 25, maximum: 200, step: 5, suffix: "%" }
+                {
+                    key: "musicReactiveSensitivity",
+                    title: "Sensitivity",
+                    description: "Response to quiet audio",
+                    minimum: 40,
+                    maximum: 300,
+                    step: 5,
+                    suffix: "%"
+                },
+                {
+                    key: "musicReactiveAttack",
+                    title: "Attack",
+                    description: "Strength of beat transients",
+                    minimum: 50,
+                    maximum: 250,
+                    step: 5,
+                    suffix: "%"
+                },
+                {
+                    key: "musicReactiveRelease",
+                    title: "Release speed",
+                    description: "Higher values settle sooner",
+                    minimum: 40,
+                    maximum: 250,
+                    step: 5,
+                    suffix: "%"
+                },
+                {
+                    key: "musicReactiveSmoothing",
+                    title: "Smoothing",
+                    description: "Smooth the sustained envelope",
+                    minimum: 0,
+                    maximum: 90,
+                    step: 5,
+                    suffix: "%"
+                },
+                {
+                    key: "musicReactiveIntensity",
+                    title: "Tint intensity",
+                    description: "Strength of the shared shell tint",
+                    minimum: 25,
+                    maximum: 200,
+                    step: 5,
+                    suffix: "%"
+                }
             ];
         if (spectrumTuning)
             return [
-                { key: "wallpaperSpectrumOpacity", title: "Spectrum opacity", description: "Strength of wallpaper spectrum bars", minimum: 20, maximum: 100, step: 5, suffix: "%" }
+                {
+                    key: "wallpaperSpectrumOpacity",
+                    title: "Spectrum opacity",
+                    description: "Strength of wallpaper spectrum bars",
+                    minimum: 20,
+                    maximum: 100,
+                    step: 5,
+                    suffix: "%"
+                }
             ];
         if (kind === "nightLight")
             return [
@@ -277,10 +325,7 @@ Item {
 
     function handleKey(key: int, modifiers: int, autoRepeat: bool): bool {
         if (autoRepeat) {
-            const repeatedAction = [
-                "SettingsDetail.toggle", "SettingsDetail.blur", "SettingsDetail.reset",
-                "SettingsDetail.presentation", "SettingsDetail.history"
-            ].some(name => runtime.shellMatchesHint(name, key, modifiers));
+            const repeatedAction = ["SettingsDetail.toggle", "SettingsDetail.blur", "SettingsDetail.reset", "SettingsDetail.presentation", "SettingsDetail.history"].some(name => runtime.shellMatchesHint(name, key, modifiers));
             const choice = reactiveTuning ? runtime.shellNumberIndex("controls", key, 7) : kind === "power" || kind === "stay" ? runtime.shellNumberIndex("controls", key, 5) : -1;
             if (repeatedAction || choice >= 0)
                 return true;
@@ -541,93 +586,92 @@ Item {
                 model: panel.parameters
 
                 delegate: ShellSurface {
-                id: parameterCard
-                required property int index
-                required property var modelData
-                width: (parameterGrid.width - (parameterGrid.columns - 1) * parameterGrid.columnSpacing) / parameterGrid.columns
-                height: Math.max(104, panel.theme.fontSize(70) + panel.theme.spacing3 * 2)
-                Connections {
-                    target: panel
-                    function onParameterAdjustmentRequested(index: int): void {
-                        if (index === parameterCard.index)
-                            parameterSlider.pulseAdjustment();
+                    id: parameterCard
+                    required property int index
+                    required property var modelData
+                    width: (parameterGrid.width - (parameterGrid.columns - 1) * parameterGrid.columnSpacing) / parameterGrid.columns
+                    height: Math.max(104, panel.theme.fontSize(70) + panel.theme.spacing3 * 2)
+                    Connections {
+                        target: panel
+                        function onParameterAdjustmentRequested(index: int): void {
+                            if (index === parameterCard.index)
+                                parameterSlider.pulseAdjustment();
+                        }
                     }
-                }
-                theme: panel.theme
-                motion: panel.motion
-                surfaceLayer: ShellSurface.Control
-                cornerRadius: theme.radiusMedium
-                outlined: panel.selectedIndex === index
-                borderWidth: outlined ? panel.theme.borderFocus : 0
-                borderColor: outlined ? panel.theme.accent : "transparent"
-                fillColor: panel.theme.expressiveSurfaceStrong
+                    theme: panel.theme
+                    motion: panel.motion
+                    surfaceLayer: ShellSurface.Control
+                    cornerRadius: theme.radiusMedium
+                    outlined: panel.selectedIndex === index
+                    borderWidth: outlined ? panel.theme.borderFocus : 0
+                    borderColor: outlined ? panel.theme.accent : "transparent"
+                    fillColor: panel.theme.expressiveSurfaceStrong
 
-                Column {
-                    anchors.fill: parent
-                    anchors.margins: panel.theme.spacing3
-                    spacing: panel.theme.spacing2
-
-                    Row {
-                        id: parameterHeading
-                        width: parent.width
-                        height: Math.max(37, panel.theme.fontSize(30))
+                    Column {
+                        anchors.fill: parent
+                        anchors.margins: panel.theme.spacing3
                         spacing: panel.theme.spacing2
-                        Column {
-                            width: Math.max(1, parent.width - valueReadback.implicitWidth - parameterHint.implicitWidth - parameterHeading.spacing * 2)
-                            spacing: panel.theme.spacing1
-                            ShellText {
-                                runtime: panel.runtime
-                                theme: panel.theme
-                                text: parameterCard.modelData.title
-                                font.weight: Font.DemiBold
-                                font.pixelSize: panel.theme.fontSize(11)
-                            }
-                            ShellText {
-                                runtime: panel.runtime
-                                theme: panel.theme
-                                text: parameterCard.modelData.description
-                                color: panel.theme.textMuted
-                                font.pixelSize: panel.theme.fontSize(9)
-                                elide: Text.ElideRight
-                            }
-                        }
-                        KeyHint {
-                            id: parameterHint
-                            visible: panel.selectedIndex === parameterCard.index
-                            runtime: panel.runtime
-                            theme: panel.theme
-                            shortcut: panel.runtime.shellHint("SettingsDetail.adjust")
-                            compact: true
-                        }
-                        ShellText {
-                            id: valueReadback
-                            runtime: panel.runtime
-                            theme: panel.theme
-                            text: panel.valueLabel(parameterCard.modelData)
-                            font.pixelSize: panel.theme.fontSize(11)
-                            font.weight: Font.DemiBold
-                        }
-                    }
 
-                    ShellSlider {
-                        id: parameterSlider
-                        width: parent.width
-                        height: 32
-                        theme: panel.theme
-                        motion: panel.motion
-                        from: parameterCard.modelData.minimum
-                        to: parameterCard.modelData.maximum
-                        value: panel.currentValue(parameterCard.modelData.key)
-                        enabled: parameterCard.modelData.key !== "temperature" || panel.nightLight.supported
-                        Accessible.role: Accessible.Slider
-                        Accessible.name: parameterCard.modelData.title + " " + panel.valueLabel(parameterCard.modelData)
-                        onInteractionStarted: panel.selectParameter(parameterCard.index)
-                        onValueRequested: next => panel.setValue(parameterCard.modelData.key, Math.round(next / parameterCard.modelData.step) * parameterCard.modelData.step)
+                        Row {
+                            id: parameterHeading
+                            width: parent.width
+                            height: Math.max(37, panel.theme.fontSize(30))
+                            spacing: panel.theme.spacing2
+                            Column {
+                                width: Math.max(1, parent.width - valueReadback.implicitWidth - parameterHint.implicitWidth - parameterHeading.spacing * 2)
+                                spacing: panel.theme.spacing1
+                                ShellText {
+                                    runtime: panel.runtime
+                                    theme: panel.theme
+                                    text: parameterCard.modelData.title
+                                    font.weight: Font.DemiBold
+                                    font.pixelSize: panel.theme.fontSize(11)
+                                }
+                                ShellText {
+                                    runtime: panel.runtime
+                                    theme: panel.theme
+                                    text: parameterCard.modelData.description
+                                    color: panel.theme.textMuted
+                                    font.pixelSize: panel.theme.fontSize(9)
+                                    elide: Text.ElideRight
+                                }
+                            }
+                            KeyHint {
+                                id: parameterHint
+                                visible: panel.selectedIndex === parameterCard.index
+                                runtime: panel.runtime
+                                theme: panel.theme
+                                shortcut: panel.runtime.shellHint("SettingsDetail.adjust")
+                                compact: true
+                            }
+                            ShellText {
+                                id: valueReadback
+                                runtime: panel.runtime
+                                theme: panel.theme
+                                text: panel.valueLabel(parameterCard.modelData)
+                                font.pixelSize: panel.theme.fontSize(11)
+                                font.weight: Font.DemiBold
+                            }
+                        }
+
+                        ShellSlider {
+                            id: parameterSlider
+                            width: parent.width
+                            height: 32
+                            theme: panel.theme
+                            motion: panel.motion
+                            from: parameterCard.modelData.minimum
+                            to: parameterCard.modelData.maximum
+                            value: panel.currentValue(parameterCard.modelData.key)
+                            enabled: parameterCard.modelData.key !== "temperature" || panel.nightLight.supported
+                            Accessible.role: Accessible.Slider
+                            Accessible.name: parameterCard.modelData.title + " " + panel.valueLabel(parameterCard.modelData)
+                            onInteractionStarted: panel.selectParameter(parameterCard.index)
+                            onValueRequested: next => panel.setValue(parameterCard.modelData.key, Math.round(next / parameterCard.modelData.step) * parameterCard.modelData.step)
+                        }
                     }
                 }
             }
-        }
-
         }
 
         ShellText {
