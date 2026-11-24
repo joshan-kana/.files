@@ -66,3 +66,23 @@ test("forecast range and schedule use data rather than normalized synthetic samp
     /temperatureTrack: modelData.key === "temperature"/,
   );
 });
+
+test("all data and capability roles are declared in the theme adapter", () => {
+  for (const role of [
+    "daylight",
+    "night",
+    "temperature",
+    "wind",
+    "cold",
+    "motion",
+    "spectrum",
+    "reactive",
+    "inhibition",
+    "schedule",
+  ]) {
+    assert.match(
+      qml("RuntimeConfig.qml"),
+      new RegExp("property string " + role + ': ""'),
+    );
+  }
+});

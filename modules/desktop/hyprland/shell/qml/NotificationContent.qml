@@ -564,7 +564,7 @@ FocusScope {
                             required property int index
                             readonly property bool stacked: !groupItem.expanded && groupItem.modelData.notifications.length > 1
                             width: groupColumn.width
-                            height: notificationCard.implicitHeight + (stacked ? center.theme.spacing3 : 0)
+                            height: notificationCard.implicitHeight + (stacked ? center.theme.spacing3 + center.theme.spacing1 : 0)
                             property alias card: notificationCard
 
                             Repeater {
@@ -572,12 +572,12 @@ FocusScope {
                                 delegate: SquircleSurface {
                                     required property int index
                                     x: center.theme.spacing2 * (2 - index)
-                                    y: notificationCard.height - center.theme.spacing3 + center.theme.spacing1 * (2 - index)
+                                    y: notificationCard.height - center.theme.spacing3 * 2 + center.theme.spacing2 * (2 - index)
                                     width: member.width - x * 2
                                     height: center.theme.spacing3 * 2
                                     cornerRadius: center.theme.radiusSmall
                                     exponent: center.theme.squircleExponent
-                                    fillColor: center.theme.layer2
+                                    fillColor: index === 0 ? center.theme.layer2 : center.theme.layer3
                                     borderColor: center.theme.subtleBorder
                                     borderWidth: center.theme.borderThin
                                 }
@@ -605,6 +605,8 @@ FocusScope {
                                         center.toggleExpanded();
                                     else
                                         center.expandedGroupKey = groupItem.modelData.key;
+                                    center.rememberSelection();
+                                    center.focusKeyboard();
                                 }
                                 onDefaultRequested: {
                                     if (!center.notificationState.invokeDefault(member.modelData))

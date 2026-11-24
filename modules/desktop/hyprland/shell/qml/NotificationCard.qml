@@ -20,7 +20,7 @@ SquircleSurface {
     readonly property var safeActions: notificationState.explicitActions(notification)
 
     Accessible.role: Accessible.ListItem
-    Accessible.name: (notification ? (notification.appName || "SYSTEM") + ": " + (notification.summary || "") : "Notification") + (read ? ", read" : ", unread")
+    Accessible.name: (notification ? (notification.appName || "SYSTEM") + ": " + (notification.summary || "") : "Notification") + (read ? ", read" : ", unread") + (groupCount > 1 ? ", collapsed stack of " + groupCount : "")
     Accessible.description: (notification ? (notification.body || "") : "") + (safeActions.length > 0 ? ", " + safeActions.length + " actions available" : "") + (notification && notification.hasInlineReply ? ", reply available" : "")
 
     signal activated
@@ -209,7 +209,7 @@ SquircleSurface {
                     horizontalCompact: true
                     quietAction: true
                     icon: card.expanded ? "󰅃" : card.groupCount > 1 ? "󰓩" : "󰅀"
-                    title: card.groupCount > 1 ? card.groupCount + " items" : card.expanded ? "Collapse" : "Details"
+                    title: card.groupCount > 1 ? card.groupCount + " notifications" : card.expanded ? "Collapse" : "Details"
                     shortcut: card.selected ? card.runtime.shellHint("NotificationContent.expand") : ""
                     onActivated: card.activated()
                 }

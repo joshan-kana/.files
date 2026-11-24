@@ -80,13 +80,19 @@ Item {
                 Text {
                     id: volumeLabel
                     anchors.verticalCenter: parent.verticalCenter
-                    visible: channel.compact || channel.selected || channel.muted || !channel.available
-                    width: visible ? implicitWidth : 0
+                    readonly property bool shown: channel.compact || channel.selected || channel.muted || !channel.available
+                    visible: shown
+                    width: shown ? labelMetrics.advanceWidth : 0
                     text: channel.available ? (channel.muted ? "Muted" : channel.percent + "%") : "Unavailable"
                     color: channel.theme.audioLevelColor(channel.muted)
                     font.family: channel.runtime.fontMono
                     font.pixelSize: channel.theme.fontSize(10)
                     font.weight: Font.DemiBold
+                    TextMetrics {
+                        id: labelMetrics
+                        text: volumeLabel.text
+                        font: volumeLabel.font
+                    }
                 }
 
                 ShellAction {

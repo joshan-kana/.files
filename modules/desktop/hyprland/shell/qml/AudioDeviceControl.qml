@@ -125,12 +125,18 @@ ShellSurface {
                 Text {
                     id: levelLabel
                     anchors.verticalCenter: parent.verticalCenter
-                    visible: deviceControl.compact || deviceControl.selected || deviceControl.muted || !deviceControl.available
-                    width: visible ? implicitWidth : 0
+                    readonly property bool shown: deviceControl.compact || deviceControl.selected || deviceControl.muted || !deviceControl.available
+                    visible: shown
+                    width: shown ? labelMetrics.advanceWidth : 0
                     text: deviceControl.available ? (deviceControl.muted ? "Muted" : deviceControl.percent + "%") : "Unavailable"
                     color: deviceControl.theme.audioLevelColor(deviceControl.muted)
                     font.family: deviceControl.runtime.fontMono
                     font.pixelSize: deviceControl.theme.fontSize(deviceControl.compact ? 12 : 10)
+                    TextMetrics {
+                        id: labelMetrics
+                        text: levelLabel.text
+                        font: levelLabel.font
+                    }
                 }
                 KeyHint {
                     id: muteHint
