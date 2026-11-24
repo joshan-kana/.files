@@ -13,17 +13,46 @@ Item {
         spacing: 10
         Rectangle {
             id: first
-            width: 120
+            implicitWidth: 120
+            width: implicitWidth
             height: 40
         }
         Rectangle {
             id: second
-            width: 180
+            implicitWidth: 180
+            width: implicitWidth
             height: 50
         }
         Rectangle {
             id: third
-            width: 90
+            implicitWidth: 90
+            width: implicitWidth
+            height: 30
+        }
+    }
+
+    Desktop.CenteredActionFlow {
+        id: filled
+        fillWidth: true
+        y: 150
+        width: 500
+        spacing: 10
+        Rectangle {
+            id: fillFirst
+            implicitWidth: 120
+            width: filled.actionWidth(fillFirst)
+            height: 40
+        }
+        Rectangle {
+            id: fillSecond
+            implicitWidth: 180
+            width: filled.actionWidth(fillSecond)
+            height: 50
+        }
+        Rectangle {
+            id: fillThird
+            implicitWidth: 90
+            width: filled.actionWidth(fillThird)
             height: 30
         }
     }
@@ -31,6 +60,18 @@ Item {
     TestCase {
         name: "CenteredActionFlow"
         when: windowShown
+
+        function test_fillWidth(): void {
+            tryCompare(fillFirst, "x", 0);
+            tryVerify(() => Math.abs(fillThird.x + fillThird.width - filled.width) < 0.01);
+            verify(fillFirst.width > fillFirst.implicitWidth);
+            filled.width = 340;
+            tryVerify(() => Math.abs(fillSecond.x + fillSecond.width - filled.width) < 0.01);
+            tryCompare(fillThird, "x", 0);
+            tryCompare(fillThird, "width", 340);
+            filled.width = 500;
+            tryVerify(() => Math.abs(fillThird.x + fillThird.width - filled.width) < 0.01);
+        }
 
         function test_wrapping(): void {
             verify(flow.visible);

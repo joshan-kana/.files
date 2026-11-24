@@ -11,11 +11,13 @@ CenteredActionFlow {
     signal actionRequested(string action)
 
     spacing: theme.spacing2
+    fillWidth: true
     Repeater {
         model: bar.entries
         delegate: ShellAction {
+            id: button
             required property var modelData
-            width: Math.min(bar.width, implicitWidth)
+            width: bar.actionWidth(button)
             height: Math.max(bar.theme.minActionTarget, implicitHeight)
             runtime: bar.runtime
             theme: bar.theme

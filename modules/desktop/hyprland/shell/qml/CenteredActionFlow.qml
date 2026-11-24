@@ -5,6 +5,7 @@ Item {
     id: flow
     default property alias actions: body.data
     property real spacing: 8
+    property bool fillWidth: false
     implicitHeight: layout.height
     height: implicitHeight
 
@@ -13,9 +14,10 @@ Item {
         let row = [], widthUsed = 0, rowHeight = 0;
         const limit = Math.max(1, flow.width);
         for (const item of body.children) {
-            if (!item.visible || item.width <= 0 || item.height <= 0)
+            const preferredWidth = flow.fillWidth ? Math.min(limit, item.implicitWidth) : item.width;
+            if (!item.visible || preferredWidth <= 0 || item.height <= 0)
                 continue;
-            if (row.length && widthUsed + flow.spacing + item.width > limit) {
+            if (row.length && widthUsed + flow.spacing + preferredWidth > limit) {
                 rows.push({
                     items: row,
                     width: widthUsed,
@@ -25,9 +27,12 @@ Item {
                 widthUsed = 0;
                 rowHeight = 0;
             }
-            widthUsed += (row.length ? flow.spacing : 0) + item.width;
+            widthUsed += (row.length ? flow.spacing : 0) + preferredWidth;
             rowHeight = Math.max(rowHeight, item.height);
-            row.push(item);
+            row.push({
+                item,
+                preferredWidth
+            });
         }
         if (row.length)
             rows.push({
@@ -38,14 +43,19 @@ Item {
         const positions = [];
         let y = 0;
         for (const current of rows) {
-            let x = Math.max(0, (limit - current.width) / 2);
-            for (const item of current.items) {
+            const extra = flow.fillWidth ? Math.max(0, limit - current.width) : 0;
+            let x = flow.fillWidth ? 0 : Math.max(0, (limit - current.width) / 2);
+            const preferredTotal = current.width - (current.items.length - 1) * flow.spacing;
+            for (const entry of current.items) {
+                const item = entry.item;
+                const itemWidth = entry.preferredWidth + extra * entry.preferredWidth / preferredTotal;
                 positions.push({
                     item: item,
                     x: x,
+                    width: itemWidth,
                     y: y + (current.height - item.height) / 2
                 });
-                x += item.width + flow.spacing;
+                x += itemWidth + flow.spacing;
             }
             y += current.height + flow.spacing;
         }
@@ -53,6 +63,10 @@ Item {
             positions: positions,
             height: Math.max(0, y - flow.spacing)
         };
+    }
+
+    function actionWidth(item: Item): real {
+        return layout.positions.find(position => position.item === item)?.width ?? Math.min(width, item.implicitWidth);
     }
 
     Item {
