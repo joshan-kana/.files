@@ -155,3 +155,16 @@ test("whole tile visuals share one press geometry and fixed action owners", () =
     }
   }
 });
+
+test("secondary tile hit feedback stays local and follows the owning tile without a second press transform", () => {
+  const action = qml("TileQuickAction.qml");
+  assert.match(
+    action,
+    /id: localFeedback\s*parent: action\.hint\.parent\s*x: action\.x\s*y: action\.y\s*width: action\.width\s*height: action\.height/,
+  );
+  assert.match(action, /visible: action\.visible && action\.available/);
+  assert.match(action, /id: interaction\s*feedbackParent: localFeedback/);
+  assert.doesNotMatch(action, /showHover: false|Behavior on scale|KeyHint \{/);
+  assert.match(action, /hoverOpacity: 0\.22/);
+  assert.match(action, /pressOpacity: 0\.32/);
+});
