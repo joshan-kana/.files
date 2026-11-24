@@ -2328,11 +2328,9 @@ FocusScope {
                 } else if (shifted && event.key === root.runtime.shellKeyCode("controls", "T")) {
                     root.nightLight.warmer();
                 } else if (shifted && root.runtime.shellNavigates("controls", "left", event.key, "primary")) {
-                    mediaCard.pulseSeekAdjustment();
-                    root.media.seekStep(-1);
+                    mediaCard.triggerTransport("back", event.isAutoRepeat);
                 } else if (shifted && root.runtime.shellNavigates("controls", "right", event.key, "primary")) {
-                    mediaCard.pulseSeekAdjustment();
-                    root.media.seekStep(1);
+                    mediaCard.triggerTransport("forward", event.isAutoRepeat);
                 } else if ((root.runtime.shellNavigates("controls", "left", event.key))) {
                     root.adjustSelectedAudio(-0.05);
                 } else if ((root.runtime.shellNavigates("controls", "right", event.key))) {
@@ -2372,9 +2370,11 @@ FocusScope {
                 } else if (event.key === root.runtime.shellKeyCode("controls", "M")) {
                     root.muteSelectedAudio();
                 } else if (event.key === root.runtime.shellKeyCode("controls", "Z")) {
-                    root.media.toggleShuffle();
+                    if (!event.isAutoRepeat)
+                        mediaCard.triggerShuffle();
                 } else if (event.key === root.runtime.shellKeyCode("controls", "B")) {
-                    root.media.toggleRepeat();
+                    if (!event.isAutoRepeat)
+                        mediaCard.triggerRepeat();
                 } else if (event.key === root.runtime.shellKeyCode("controls", "X")) {
                     root.system.toggleMicrophoneMute();
                 } else if (event.key === root.runtime.shellKeyCode("controls", "P")) {
@@ -2386,11 +2386,11 @@ FocusScope {
                 } else if ((event.key === root.runtime.shellKeyCode("controls", "Plus") || (event.key === root.runtime.shellKeyCode("controls", "Equal") && shifted)) && !(event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))) {
                     root.nightLight.cooler();
                 } else if (event.key === root.runtime.shellKeyCode("controls", "Space")) {
-                    root.media.togglePlaying();
+                    mediaCard.triggerTransport("play", event.isAutoRepeat);
                 } else if (event.key === root.runtime.shellKeyCode("controls", "Comma")) {
-                    root.media.previous();
+                    mediaCard.triggerTransport("previous", event.isAutoRepeat);
                 } else if (event.key === root.runtime.shellKeyCode("controls", "Period")) {
-                    root.media.next();
+                    mediaCard.triggerTransport("next", event.isAutoRepeat);
                 } else if (event.key === root.runtime.shellKeyCode("controls", "BracketLeft") && root.system.trayCount > 0) {
                     root.trayIndex = (root.trayIndex - 1 + root.system.trayCount) % root.system.trayCount;
                 } else if (event.key === root.runtime.shellKeyCode("controls", "BracketRight") && root.system.trayCount > 0) {

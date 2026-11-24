@@ -14,7 +14,14 @@ ShellSurface {
     implicitWidth: 74
     implicitHeight: 134
     surfaceLayer: ShellSurface.Control
-    cornerRadius: theme.radiusMedium
+    cornerRadius: motion.enabled && press.visualPressed ? theme.radiusSmall : theme.radiusMedium
+    Behavior on cornerRadius {
+        enabled: dayCard.motion.enabled
+        Anim {
+            motion: dayCard.motion
+            type: Anim.FastSpatial
+        }
+    }
     fillColor: active ? theme.blend(theme.controlBase, theme.roleColor("weather"), theme.dark ? 0.16 : 0.09) : theme.layer2
     outlined: active
 
@@ -59,10 +66,11 @@ ShellSurface {
     }
 
     StateLayer {
+        id: press
         theme: dayCard.theme
         motion: dayCard.motion
         selected: dayCard.active
-        cornerRadius: dayCard.theme.radiusMedium
+        cornerRadius: dayCard.cornerRadius
         onActivated: dayCard.activated()
     }
 }

@@ -484,6 +484,10 @@ Item {
                         }
 
                         Keys.onPressed: event => {
+                            if (event.isAutoRepeat && (event.key === panel.runtime.shellKeyCode("clipboard", "Return") || event.key === panel.runtime.shellKeyCode("clipboard", "Enter"))) {
+                                event.accepted = true;
+                                return;
+                            }
                             if ((event.key === panel.runtime.shellKeyCode("clipboard", "Return") || event.key === panel.runtime.shellKeyCode("clipboard", "Enter")) && panel.runtime.shellModifier("clipboard", "Alt", event.modifiers)) {
                                 panel.toggleActions();
                                 event.accepted = true;
@@ -579,6 +583,10 @@ Item {
 
                 Keys.priority: Keys.BeforeItem
                 Keys.onPressed: event => {
+                    if (event.isAutoRepeat && (event.key === panel.runtime.shellKeyCode("clipboard", "Return") || event.key === panel.runtime.shellKeyCode("clipboard", "Enter"))) {
+                        event.accepted = true;
+                        return;
+                    }
                     if ((event.key === panel.runtime.shellKeyCode("clipboard", "Return") || event.key === panel.runtime.shellKeyCode("clipboard", "Enter")) && panel.runtime.shellModifier("clipboard", "Alt", event.modifiers)) {
                         panel.toggleActions();
                     } else if (event.key === panel.runtime.shellKeyCode("clipboard", "Tab") || event.key === panel.runtime.shellKeyCode("clipboard", "I") || event.key === panel.runtime.shellKeyCode("clipboard", "Slash")) {

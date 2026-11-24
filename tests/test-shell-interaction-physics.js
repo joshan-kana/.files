@@ -121,3 +121,14 @@ test("visual transforms do not resize pointer or keyboard targets", () => {
   );
   assert.match(qml("HubTabs.qml"), /id: backPress\s*anchors.fill: backButton/);
 });
+
+test("lightweight state layers share the default press spring and preserve fixed hit geometry", () => {
+  const state = qml("StateLayer.qml");
+  assert.match(
+    state,
+    /defaultEffectScale: motion.enabled && showHover && visualPressed/,
+  );
+  assert.match(state, /effectScaleX: defaultEffectScale/);
+  assert.match(state, /effectScaleY: defaultEffectScale/);
+  assert.match(state, /Behavior on defaultEffectScale/);
+});

@@ -67,8 +67,14 @@ test("all media transport buttons and global shortcuts use the same step", () =>
     /fullTransport\.triggerAction\("back", event\.isAutoRepeat\)/,
   );
   const controls = read("SystemContent.qml");
-  assert.match(controls, /root\.media\.seekStep\(1\)/);
-  assert.match(controls, /root\.media\.seekStep\(-1\)/);
+  assert.match(
+    controls,
+    /mediaCard\.triggerTransport\("forward", event\.isAutoRepeat\)/,
+  );
+  assert.match(
+    controls,
+    /mediaCard\.triggerTransport\("back", event\.isAutoRepeat\)/,
+  );
   for (const [file, contents] of [
     ["Actions.qml", actions],
     ["MediaTransport.qml", transport],

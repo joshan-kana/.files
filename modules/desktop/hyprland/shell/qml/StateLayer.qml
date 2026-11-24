@@ -14,8 +14,17 @@ MouseArea {
     property bool manualPress: false
     property bool heldPress: false
     property bool keyboardHeld: false
-    property real effectScaleX: 1
-    property real effectScaleY: 1
+    property real defaultEffectScale: motion.enabled && showHover && visualPressed ? motion.pressScaleNormal : 1
+    property real effectScaleX: defaultEffectScale
+    property real effectScaleY: defaultEffectScale
+    Behavior on defaultEffectScale {
+        enabled: root.motion.enabled
+        SpringAnimation {
+            spring: root.motion.pressSpring
+            damping: root.motion.pressDamping
+            epsilon: root.motion.pressEpsilon
+        }
+    }
     readonly property bool visualPressed: pressed || manualPress || heldPress || keyboardHeld
     // Passive hover tracks the whole component even when a child receives
     // mouse events. The original MouseArea.containsMouse can briefly drop as

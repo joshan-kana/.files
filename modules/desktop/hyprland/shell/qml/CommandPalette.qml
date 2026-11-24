@@ -1494,6 +1494,10 @@ Item {
                     }
 
                     Keys.onPressed: event => {
+                        if (event.isAutoRepeat && (event.key === palette.runtime.shellKeyCode("palette", "Return") || event.key === palette.runtime.shellKeyCode("palette", "Enter"))) {
+                            event.accepted = true;
+                            return;
+                        }
                         if ((event.key === palette.runtime.shellKeyCode("palette", "Return") || event.key === palette.runtime.shellKeyCode("palette", "Enter")) && (palette.runtime.shellModifier("palette", "Alt", event.modifiers))) {
                             palette.toggleActions();
                             event.accepted = true;
@@ -1548,6 +1552,10 @@ Item {
 
                 Keys.priority: Keys.BeforeItem
                 Keys.onPressed: event => {
+                    if (event.isAutoRepeat && (event.key === palette.runtime.shellKeyCode("palette", "Return") || event.key === palette.runtime.shellKeyCode("palette", "Enter"))) {
+                        event.accepted = true;
+                        return;
+                    }
                     if ((event.key === palette.runtime.shellKeyCode("palette", "Return") || event.key === palette.runtime.shellKeyCode("palette", "Enter")) && (palette.runtime.shellModifier("palette", "Alt", event.modifiers))) {
                         palette.toggleActions();
                     } else if (event.key === palette.runtime.shellKeyCode("palette", "Tab") || event.key === palette.runtime.shellKeyCode("palette", "I") || event.key === palette.runtime.shellKeyCode("palette", "Slash")) {
