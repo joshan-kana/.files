@@ -88,3 +88,19 @@ test("compact transport keycaps and key-down dispatch share the three hybrid act
     );
   }
 });
+
+test("Now Playing centers the entire transport row on a shared vertical axis", () => {
+  const content = qml("MediaContent.qml");
+  for (const id of [
+    "shuffleAction",
+    "repeatAction",
+    "fullTransport",
+    "playerAction",
+  ])
+    assert.match(
+      content,
+      new RegExp(
+        "id: " + id + "\\s+anchors.verticalCenter: parent.verticalCenter",
+      ),
+    );
+});

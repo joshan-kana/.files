@@ -458,6 +458,7 @@ FocusScope {
 
                 ShellAction {
                     id: shuffleAction
+                    anchors.verticalCenter: parent.verticalCenter
                     width: Math.max(58, implicitWidth)
                     height: Math.max(46, implicitHeight)
                     runtime: content.runtime
@@ -477,6 +478,7 @@ FocusScope {
 
                 ShellAction {
                     id: repeatAction
+                    anchors.verticalCenter: parent.verticalCenter
                     width: Math.max(58, implicitWidth)
                     height: Math.max(46, implicitHeight)
                     runtime: content.runtime
@@ -496,6 +498,7 @@ FocusScope {
 
                 MediaTransport {
                     id: fullTransport
+                    anchors.verticalCenter: parent.verticalCenter
                     runtime: content.runtime
                     theme: content.theme
                     motion: content.motion
@@ -504,6 +507,7 @@ FocusScope {
 
                 ShellAction {
                     id: playerAction
+                    anchors.verticalCenter: parent.verticalCenter
                     width: implicitWidth
                     height: Math.max(46, implicitHeight)
                     runtime: content.runtime
