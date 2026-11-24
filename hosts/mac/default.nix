@@ -25,6 +25,9 @@ lib.recursiveUpdate (import ../../profiles/workstation.nix { inherit moduleRegis
   system =
     extendScope
       (editScope moduleRegistry.system {
+        privilege = _: {
+          security.pam.services.sudo_local.touchIdAuth = true;
+        };
         autoDeploy = _: {
           # OrbStack occupies port 4243 on this Mac.
           services.comin.exporter = {
@@ -34,10 +37,6 @@ lib.recursiveUpdate (import ../../profiles/workstation.nix { inherit moduleRegis
         };
       })
       {
-        authentication = _: {
-          security.pam.services.sudo_local.touchIdAuth = true;
-        };
-
         preferences = _: {
           system.defaults = {
             dock = {

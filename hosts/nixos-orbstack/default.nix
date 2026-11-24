@@ -28,6 +28,14 @@ lib.recursiveUpdate (import ../../profiles/minimal.nix { inherit lib moduleRegis
     };
   };
 
+  system = editScope moduleRegistry.system {
+    privilegeSshAgent = _: {
+      systemd.tmpfiles.rules = [
+        "f+ /etc/elevation-authorized-key 0444 root root - ssh-ed25519\\x20AAAAC3NzaC1lZDI1NTE5AAAAIIjtOri4c/7Nw3CMsv+ADMgepdVBTvtBlrTSJR+w5r7s\\x20joshan@nixos-server-sudo\\n"
+      ];
+    };
+  };
+
   networking = editScope moduleRegistry.networking {
     ssh = { lib, ... }: {
       services.openssh = {
@@ -92,10 +100,6 @@ lib.recursiveUpdate (import ../../profiles/minimal.nix { inherit lib moduleRegis
   };
 
   hostEnvironment = _: {
-    systemd.tmpfiles.rules = [
-      "f+ /etc/elevation-authorized-key 0444 root root - ssh-ed25519\\x20AAAAC3NzaC1lZDI1NTE5AAAAIIjtOri4c/7Nw3CMsv+ADMgepdVBTvtBlrTSJR+w5r7s\\x20joshan@nixos-server-sudo\\n"
-    ];
-
     environment.sessionVariables.SSH_AUTH_SOCK = "/opt/orbstack-guest/run/host-ssh-agent.sock";
 
     programs.ssh.extraConfig = ''
