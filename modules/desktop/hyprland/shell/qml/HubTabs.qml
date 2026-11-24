@@ -91,6 +91,16 @@ Item {
                     Accessible.name: modelData.label
 
                     Text {
+                        id: tabLabel
+                        scale: root.motion.enabled && tabPress.visualPressed ? root.motion.pressScaleNormal : 1
+                        Behavior on scale {
+                            enabled: root.motion.enabled
+                            SpringAnimation {
+                                spring: root.motion.pressSpring
+                                damping: root.motion.pressDamping
+                                epsilon: root.motion.pressEpsilon
+                            }
+                        }
                         anchors.centerIn: parent
                         text: tab.modelData.label
                         color: tab.chosen ? root.theme.textStrong : root.theme.textMuted
@@ -105,6 +115,9 @@ Item {
                     }
 
                     StateLayer {
+                        id: tabPress
+                        effectScaleX: tabLabel.scale
+                        effectScaleY: tabLabel.scale
                         theme: root.theme
                         motion: root.motion
                         cornerRadius: root.theme.radiusMedium
@@ -127,6 +140,15 @@ Item {
         id: backButton
         width: Math.max(64, backHint.implicitWidth + root.theme.fontSize(16) + root.theme.spacing2 * 2)
         height: 42
+        scale: root.motion.enabled && backPress.visualPressed ? root.motion.pressScaleNormal : 1
+        Behavior on scale {
+            enabled: root.motion.enabled
+            SpringAnimation {
+                spring: root.motion.pressSpring
+                damping: root.motion.pressDamping
+                epsilon: root.motion.pressEpsilon
+            }
+        }
         anchors.left: parent.left
         theme: root.theme
         motion: root.motion
@@ -158,15 +180,6 @@ Item {
                 compact: true
             }
         }
-
-        StateLayer {
-            theme: root.theme
-            motion: root.motion
-            cornerRadius: root.theme.radiusLarge
-            Accessible.role: Accessible.Button
-            Accessible.name: root.backLabel + " (" + root.runtime.shellHint("ShellExpansionHost.back") + ")"
-            onActivated: root.backRequested()
-        }
     }
 
     // One discoverable contextual-help action for every hub page and detail.
@@ -174,6 +187,15 @@ Item {
         id: helpButton
         width: 42
         height: 42
+        scale: root.motion.enabled && helpPress.visualPressed ? root.motion.pressScaleNormal : 1
+        Behavior on scale {
+            enabled: root.motion.enabled
+            SpringAnimation {
+                spring: root.motion.pressSpring
+                damping: root.motion.pressDamping
+                epsilon: root.motion.pressEpsilon
+            }
+        }
         anchors.right: parent.right
         theme: root.theme
         motion: root.motion
@@ -192,13 +214,30 @@ Item {
             compact: true
             emphasized: root.helpOpen
         }
+    }
 
-        StateLayer {
-            theme: root.theme
-            motion: root.motion
-            cornerRadius: root.theme.radiusLarge
-            selected: root.helpOpen
-            onActivated: root.helpRequested()
-        }
+    StateLayer {
+        id: backPress
+        anchors.fill: backButton
+        effectScaleX: backButton.scale
+        effectScaleY: backButton.scale
+        theme: root.theme
+        motion: root.motion
+        cornerRadius: root.theme.radiusLarge
+        Accessible.role: Accessible.Button
+        Accessible.name: root.backLabel + " (" + root.runtime.shellHint("ShellExpansionHost.back") + ")"
+        onActivated: root.backRequested()
+    }
+
+    StateLayer {
+        id: helpPress
+        anchors.fill: helpButton
+        effectScaleX: helpButton.scale
+        effectScaleY: helpButton.scale
+        theme: root.theme
+        motion: root.motion
+        cornerRadius: root.theme.radiusLarge
+        selected: root.helpOpen
+        onActivated: root.helpRequested()
     }
 }

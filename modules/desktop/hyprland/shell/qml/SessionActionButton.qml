@@ -33,6 +33,15 @@ Item {
         }
         width: 115
         height: 115
+        scale: button.motion.enabled && pointer.visualPressed ? button.motion.pressScaleNormal : 1
+        Behavior on scale {
+            enabled: button.motion.enabled
+            SpringAnimation {
+                spring: button.motion.pressSpring
+                damping: button.motion.pressDamping
+                epsilon: button.motion.pressEpsilon
+            }
+        }
         theme: button.theme
         motion: button.motion
         cornerRadius: button.selected || pointer.pointerHovered ? width / 2 : button.theme.radiusLarge
@@ -79,17 +88,6 @@ Item {
             font.weight: Font.Normal
         }
 
-        StateLayer {
-            id: pointer
-            theme: button.theme
-            motion: button.motion
-            selected: button.selected
-            cornerRadius: surface.cornerRadius
-            exponent: surface.exponent
-            onEntered: button.hovered()
-            onActivated: button.activated()
-        }
-
         TileKeyHint {
             primary: true
             runtime: button.runtime
@@ -101,6 +99,20 @@ Item {
             emphasized: button.selected
             emphasisColor: button.accentColor
         }
+    }
+
+    StateLayer {
+        id: pointer
+        anchors.fill: surface
+        effectScaleX: surface.scale
+        effectScaleY: surface.scale
+        theme: button.theme
+        motion: button.motion
+        selected: button.selected
+        cornerRadius: surface.cornerRadius
+        exponent: surface.exponent
+        onEntered: button.hovered()
+        onActivated: button.activated()
     }
 
     Text {

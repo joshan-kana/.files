@@ -13,6 +13,20 @@ ShellSurface {
         progressSlider.pulseAdjustment();
     }
 
+    function triggerTransport(action: string, autoRepeat: bool): void {
+        if (action === "back" || action === "forward")
+            pulseSeekAdjustment();
+        compactTransport.triggerAction(action, autoRepeat);
+    }
+
+    function triggerShuffle(): void {
+        shuffleButton.trigger();
+    }
+
+    function triggerRepeat(): void {
+        repeatButton.trigger();
+    }
+
     signal fullRequested
 
     SpectrumScale {

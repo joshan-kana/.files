@@ -33,19 +33,22 @@ Item {
     implicitHeight: 92
     // Scale inward at rest and fill the allocated bounds on hover.
     // The hub viewport clips content outside its edge during panel morphs.
-    scale: interaction.pressed ? 0.982 : interaction.pointerHovered ? 1 : 0.988
-
-    Behavior on scale {
-        Anim {
-            motion: tile.motion
-            type: Anim.FastSpatial
-        }
-    }
 
     Accessible.role: Accessible.Button
     Accessible.name: title + ", " + detail + ", " + status
 
     ShellSurface {
+        id: tileBody
+        scale: !tile.motion.enabled ? 1 : interaction.visualPressed ? tile.motion.pressScaleNormal : interaction.pointerHovered ? 1 : 0.988
+
+        Behavior on scale {
+            enabled: tile.motion.enabled
+            SpringAnimation {
+                spring: tile.motion.pressSpring
+                damping: tile.motion.pressDamping
+                epsilon: tile.motion.pressEpsilon
+            }
+        }
         anchors.fill: parent
         theme: tile.theme
         motion: tile.motion
@@ -138,6 +141,8 @@ Item {
 
     StateLayer {
         id: interaction
+        effectScaleX: tileBody.scale
+        effectScaleY: tileBody.scale
         theme: tile.theme
         motion: tile.motion
         selected: tile.connected

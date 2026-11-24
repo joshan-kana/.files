@@ -25,16 +25,18 @@ Item {
 
     // Scale inward at rest and fill the allocated bounds on hover.
     // The hub viewport clips content outside its edge during panel morphs.
-    scale: press.pressed ? 0.94 : press.pointerHovered ? 1 : 0.982
-    Behavior on scale {
-        Anim {
-            motion: chip.motion
-            type: Anim.FastSpatial
-        }
-    }
 
     ShellSurface {
         id: chipSurface
+        scale: !chip.motion.enabled ? 1 : press.visualPressed ? chip.motion.pressScaleSmall : press.pointerHovered ? 1 : 0.982
+        Behavior on scale {
+            enabled: chip.motion.enabled
+            SpringAnimation {
+                spring: chip.motion.pressSpring
+                damping: chip.motion.pressDamping
+                epsilon: chip.motion.pressEpsilon
+            }
+        }
         anchors.fill: parent
         theme: chip.theme
         motion: chip.motion
@@ -107,6 +109,8 @@ Item {
 
     StateLayer {
         id: press
+        effectScaleX: chipSurface.scale
+        effectScaleY: chipSurface.scale
         theme: chip.theme
         motion: chip.motion
         selected: chip.active

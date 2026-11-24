@@ -18,6 +18,7 @@ Item {
     visible: shortcut.length > 0
     width: Math.max(36, hint.implicitWidth + theme.spacing1 * 2)
     height: Math.max(36, hint.implicitHeight + theme.spacing1 * 2)
+
     anchors {
         top: parent.top
         left: parent.left
@@ -26,6 +27,9 @@ Item {
     }
 
     StateLayer {
+        id: interaction
+        effectScaleX: hint.scale
+        effectScaleY: hint.scale
         theme: action.theme
         motion: action.motion
         cornerRadius: action.theme.radiusSmall
@@ -41,6 +45,15 @@ Item {
 
     KeyHint {
         id: hint
+        scale: action.motion.enabled && interaction.visualPressed ? action.motion.pressScaleSmall : 1
+        Behavior on scale {
+            enabled: action.motion.enabled
+            SpringAnimation {
+                spring: action.motion.pressSpring
+                damping: action.motion.pressDamping
+                epsilon: action.motion.pressEpsilon
+            }
+        }
         anchors.centerIn: parent
         shortcut: action.shortcut
         compact: true

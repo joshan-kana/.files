@@ -200,6 +200,6 @@ test("one-shot detail actions execute on initial key-down without auto-repeat", 
   assert.match(detail, /runtime\.shellNumberIndex\("controls", key, 5\)/);
   assert.match(
     stateLayer,
-    /Keys\.onPressed: event => \{[\s\S]*?if \(!event\.isAutoRepeat\)\s*activated\(event\)/,
+    /Keys\.onPressed: event => \{[\s\S]*?if \(!event\.isAutoRepeat\) \{[\s\S]*?playPressFeedback\([\s\S]*?activated\(event\)/,
   );
 });

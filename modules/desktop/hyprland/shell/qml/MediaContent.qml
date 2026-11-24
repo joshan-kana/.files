@@ -443,6 +443,7 @@ FocusScope {
                 spacing: content.theme.spacing2
 
                 ShellAction {
+                    id: shuffleAction
                     width: 58
                     height: 46
                     runtime: content.runtime
@@ -461,6 +462,7 @@ FocusScope {
                 }
 
                 ShellAction {
+                    id: repeatAction
                     width: 58
                     height: 46
                     runtime: content.runtime
@@ -479,6 +481,7 @@ FocusScope {
                 }
 
                 MediaTransport {
+                    id: fullTransport
                     runtime: content.runtime
                     theme: content.theme
                     motion: content.motion
@@ -486,6 +489,7 @@ FocusScope {
                 }
 
                 ShellAction {
+                    id: playerAction
                     width: 148
                     height: 46
                     runtime: content.runtime
@@ -614,7 +618,7 @@ FocusScope {
                     content.closeRequested();
                     event.accepted = true;
                 } else if (event.key === content.runtime.shellKeyCode("media", "Space")) {
-                    content.media.togglePlaying();
+                    fullTransport.triggerAction("play", event.isAutoRepeat);
                     event.accepted = true;
                 } else if (event.key === content.runtime.shellKeyCode("media", "V")) {
                     content.toggleVisualizer();
@@ -623,13 +627,16 @@ FocusScope {
                     content.toggleLyrics();
                     event.accepted = true;
                 } else if (event.key === content.runtime.shellKeyCode("media", "S")) {
-                    content.media.toggleShuffle();
+                    if (!event.isAutoRepeat)
+                        shuffleAction.trigger();
                     event.accepted = true;
                 } else if (event.key === content.runtime.shellKeyCode("media", "R")) {
-                    content.media.toggleRepeat();
+                    if (!event.isAutoRepeat)
+                        repeatAction.trigger();
                     event.accepted = true;
                 } else if (event.key === content.runtime.shellKeyCode("media", "P")) {
-                    content.media.cyclePlayer();
+                    if (!event.isAutoRepeat)
+                        playerAction.trigger();
                     event.accepted = true;
                 } else if (event.key === content.runtime.shellKeyCode("media", "Minus") || event.key === content.runtime.shellKeyCode("media", "Underscore")) {
                     content.media.adjustSeekStep(-1);
@@ -639,17 +646,17 @@ FocusScope {
                     event.accepted = true;
                 } else if ((content.runtime.shellNavigates("media", "left", event.key))) {
                     progressTrack.pulseAdjustment();
-                    content.media.seekStep(-1);
+                    fullTransport.triggerAction("back", event.isAutoRepeat);
                     event.accepted = true;
                 } else if ((content.runtime.shellNavigates("media", "right", event.key))) {
                     progressTrack.pulseAdjustment();
-                    content.media.seekStep(1);
+                    fullTransport.triggerAction("forward", event.isAutoRepeat);
                     event.accepted = true;
                 } else if (event.key === content.runtime.shellKeyCode("media", "Comma")) {
-                    content.media.previous();
+                    fullTransport.triggerAction("previous", event.isAutoRepeat);
                     event.accepted = true;
                 } else if (event.key === content.runtime.shellKeyCode("media", "Period")) {
-                    content.media.next();
+                    fullTransport.triggerAction("next", event.isAutoRepeat);
                     event.accepted = true;
                 }
             }

@@ -58,8 +58,14 @@ test("all media transport buttons and global shortcuts use the same step", () =>
   assert.match(transport, /root\.media\.seekStep\(1\)/);
   assert.match(transport, /root\.media\.seekStep\(-1\)/);
   const page = read("MediaContent.qml");
-  assert.match(page, /content\.media\.seekStep\(1\)/);
-  assert.match(page, /content\.media\.seekStep\(-1\)/);
+  assert.match(
+    page,
+    /fullTransport\.triggerAction\("forward", event\.isAutoRepeat\)/,
+  );
+  assert.match(
+    page,
+    /fullTransport\.triggerAction\("back", event\.isAutoRepeat\)/,
+  );
   const controls = read("SystemContent.qml");
   assert.match(controls, /root\.media\.seekStep\(1\)/);
   assert.match(controls, /root\.media\.seekStep\(-1\)/);

@@ -16,9 +16,13 @@ test("shared shell controls expose actionable screen-reader buttons", () => {
   assert.match(shellAction, /Accessible\.name: title/);
   assert.match(
     shellAction,
-    /Accessible\.onPressAction: \{\s*if \(root\.enabled\)\s*root\.activated\(\)/,
+    /Accessible\.onPressAction: \{\s*if \(root\.enabled\)\s*root\.trigger\(\)/,
   );
   assert.match(shellAction, /onActivated: root\.activated\(\)/);
+  assert.match(
+    shellAction,
+    /function trigger\(\): void \{[\s\S]*?if \(!enabled\)[\s\S]*?interaction\.playPressFeedback\([\s\S]*?activated\(\)/,
+  );
 });
 
 test("focusable shared controls use the same pointer, keyboard and visual state owner", () => {

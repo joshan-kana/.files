@@ -32,6 +32,16 @@ QtObject {
     readonly property int effectsNormal: enabled ? 150 : 0
     readonly property int effectsSlow: enabled ? 220 : 0
 
+    // Low-amplitude press deformation: fast engagement, gently damped return.
+    // Surface geometry and hit regions stay fixed while their visual item scales.
+    readonly property real pressScaleSmall: 0.94
+    readonly property real pressScaleNormal: 0.965
+    readonly property real pressGroupExpand: 1.06
+    readonly property real pressGroupCompress: 0.94
+    readonly property real pressSpring: 3.5
+    readonly property real pressDamping: 0.75
+    readonly property real pressEpsilon: 0.0008
+
     // CSS-style cubic Bézier profiles shared by all shell animations.
     // Short feedback stays responsive, while large surface changes have a
     // deliberate ease-in and longer settling phase. Never overshoot geometry.

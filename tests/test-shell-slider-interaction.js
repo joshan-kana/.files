@@ -66,7 +66,7 @@ test("direct keyboard adjustments and drag previews use the same expressive thum
   );
   assert.match(
     qml("MediaContent.qml"),
-    /progressTrack\.pulseAdjustment\(\);\s*content\.media\.seekStep\(-1\)/,
+    /progressTrack\.pulseAdjustment\(\);\s*fullTransport\.triggerAction\("back", event\.isAutoRepeat\)/,
   );
   assert.match(
     qml("MediaContent.qml"),

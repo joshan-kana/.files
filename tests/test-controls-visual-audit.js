@@ -52,24 +52,25 @@ const tileLayout = (width, textScale, count, spacing = 8) => {
 };
 
 test("hover and press motion on shared Controls tiles stays inside the clipped viewport", () => {
-  for (const name of [
-    "QuickSettingChip.qml",
-    "OpacitySetting.qml",
-    "AdjustableSetting.qml",
-    "ConnectivityTile.qml",
-  ]) {
-    const scale = read(name).match(/^\s*scale:\s*[^\n]+$/m)?.[0];
+  const motion = read("Motion.qml");
+  assert.match(motion, /pressScaleSmall: 0\.94/);
+  assert.match(motion, /pressScaleNormal: 0\.965/);
+  for (const name of ["QuickSettingChip.qml", "ConnectivityTile.qml"]) {
+    const source = read(name);
+    assert.match(source, /interaction\.visualPressed|press\.visualPressed/);
+    assert.match(source, /pressScale(Small|Normal)/);
+    assert.match(source, /pointerHovered \? 1 : 0\.98[28]/);
+    assert.match(source, /!.*motion\.enabled \? 1|motion\.enabled \? 1/);
+  }
+  for (const name of ["OpacitySetting.qml", "AdjustableSetting.qml"]) {
+    const source = read(name);
+    const scale = source.match(/^\s*scale:\s*[^\n]+$/m)?.[0];
     assert.ok(scale, `${name} must expose its interaction scale`);
     const values = scale.match(/\b\d+(?:\.\d+)?\b/g).map(Number);
-    assert.equal(
-      values.length,
-      3,
-      `${name} needs press, hover and rest scales`,
-    );
+    assert.deepEqual(values.length, 3);
     const [pressed, hovered, resting] = values;
-    assert.ok(pressed < resting, `${name} press should shrink`);
-    assert.ok(resting < hovered, `${name} hover should grow from rest`);
-    assert.equal(hovered, 1, `${name} hover must not exceed its layout bounds`);
+    assert.ok(pressed < resting && resting < hovered);
+    assert.equal(hovered, 1);
   }
 });
 

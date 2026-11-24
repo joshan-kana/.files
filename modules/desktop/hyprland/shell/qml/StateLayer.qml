@@ -13,7 +13,10 @@ MouseArea {
     property bool manualHover: false
     property bool manualPress: false
     property bool heldPress: false
-    readonly property bool visualPressed: pressed || manualPress || heldPress
+    property bool keyboardHeld: false
+    property real effectScaleX: 1
+    property real effectScaleY: 1
+    readonly property bool visualPressed: pressed || manualPress || heldPress || keyboardHeld
     // Passive hover tracks the whole component even when a child receives
     // mouse events. The original MouseArea.containsMouse can briefly drop as
     // the pointer crosses interactive descendants, flickering shared tiles.
@@ -22,6 +25,8 @@ MouseArea {
         if (!visible || !enabled) {
             hoverExit.stop();
             pointerHovered = false;
+            if (!visible)
+                resetPressFeedback();
             return;
         }
         if (containsMouse || hoverHandler.hovered) {
@@ -37,6 +42,7 @@ MouseArea {
         if (!enabled) {
             hoverExit.stop();
             pointerHovered = false;
+            resetPressFeedback();
         } else {
             updatePointerHover();
         }
@@ -73,6 +79,23 @@ MouseArea {
         }
     }
 
+    function resetPressFeedback(): void {
+        keyboardHeld = false;
+        heldPress = false;
+        pressFeedback.stop();
+        growRipple.stop();
+        fadeRipple.stop();
+        rippleOpacity = 0;
+    }
+
+    function playPressFeedback(x: real, y: real): void {
+        if (!enabled)
+            return;
+        heldPress = true;
+        pressFeedback.restart();
+        startRipple(x, y);
+    }
+
     function startRipple(x: real, y: real): void {
         // An interaction with no hover surface must not leave a separate
         // ripple tracing an imaginary pill in a connected frame.
@@ -97,11 +120,29 @@ MouseArea {
 
     Keys.onPressed: event => {
         if (keyboardFocusable && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space)) {
-            // Activation happens on the initial press, never on key-up and
-            // never again just because an activation key is held.
-            if (!event.isAutoRepeat)
+            // Immediate activation and matching press feedback occur together.
+            // Held one-shot activation keys do not trigger a second action.
+            if (!event.isAutoRepeat) {
+                keyboardHeld = true;
+                playPressFeedback(width / 2, height / 2);
                 activated(event);
+            }
             event.accepted = true;
+        }
+    }
+    Keys.onReleased: event => {
+        if (keyboardFocusable && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space)) {
+            if (!event.isAutoRepeat) {
+                keyboardHeld = false;
+                fadeRipple.restart();
+            }
+            event.accepted = true;
+        }
+    }
+    onActiveFocusChanged: {
+        if (!activeFocus && keyboardHeld) {
+            keyboardHeld = false;
+            fadeRipple.restart();
         }
     }
 
@@ -109,19 +150,19 @@ MouseArea {
     // A quick physical click can finish between two rendered frames. Preserve
     // the shared press state for one short effects interval so both detached
     // controls and connected frame contours actually display feedback.
-    onPressed: event => {
-        heldPress = true;
-        pressFeedback.restart();
-        startRipple(event.x, event.y);
-    }
+    onPressed: event => playPressFeedback(event.x, event.y)
     onDisabledChanged: {
         if (disabled)
-            heldPress = false;
+            resetPressFeedback();
     }
     Timer {
         id: pressFeedback
         interval: root.motion.enabled ? Math.max(110, root.motion.effectsFast) : 0
-        onTriggered: root.heldPress = false
+        onTriggered: {
+            root.heldPress = false;
+            if (!root.pressed && !root.keyboardHeld)
+                fadeRipple.restart();
+        }
     }
     onReleased: fadeRipple.restart()
     onCanceled: fadeRipple.restart()
@@ -151,74 +192,83 @@ MouseArea {
     // especially through narrow mute buttons and wide network rows. Render
     // this interaction-only overlay as one shaped path using the same shared
     // squircle contour; ordinary surfaces keep the native fast fill.
-    SquircleSurface {
-        id: hoverSurface
+    Item {
         anchors.fill: parent
-        cornerRadius: root.cornerRadius
-        exponent: root.exponent
-        fillColor: "transparent"
-    }
-    Shape {
-        anchors.fill: parent
-        antialiasing: true
-        preferredRendererType: Shape.CurveRenderer
-        visible: opacity > 0
-        opacity: {
-            if (!root.showHover)
+        transform: Scale {
+            origin.x: root.width / 2
+            origin.y: root.height / 2
+            xScale: root.effectScaleX
+            yScale: root.effectScaleY
+        }
+        SquircleSurface {
+            id: hoverSurface
+            anchors.fill: parent
+            cornerRadius: root.cornerRadius
+            exponent: root.exponent
+            fillColor: "transparent"
+        }
+        Shape {
+            anchors.fill: parent
+            antialiasing: true
+            preferredRendererType: Shape.CurveRenderer
+            visible: opacity > 0
+            opacity: {
+                if (!root.showHover)
+                    return 0;
+                if (root.visualPressed)
+                    return root.pressOpacity;
+                if (root.pointerHovered || root.manualHover)
+                    return root.hoverOpacity;
                 return 0;
-            if (root.visualPressed)
-                return root.pressOpacity;
-            if (root.pointerHovered || root.manualHover)
-                return root.hoverOpacity;
-            return 0;
-        }
-        Behavior on opacity {
-            Anim {
-                motion: root.motion
-                type: Anim.FastEffects
             }
-        }
-        ShapePath {
-            fillColor: root.stateColor
-            strokeColor: "transparent"
-            strokeWidth: -1
-            PathSvg {
-                path: hoverSurface.fillPathData
-            }
-        }
-    }
-    Shape {
-        anchors.fill: parent
-        visible: root.rippleOpacity > 0
-        opacity: root.rippleOpacity
-        preferredRendererType: Shape.CurveRenderer
-
-        ShapePath {
-            strokeColor: "transparent"
-            strokeWidth: 0
-            fillGradient: RadialGradient {
-                centerX: root.rippleX
-                centerY: root.rippleY
-                centerRadius: Math.max(1, root.rippleRadius)
-                focalX: centerX
-                focalY: centerY
-
-                GradientStop {
-                    position: 0
-                    color: root.stateColor
-                }
-                GradientStop {
-                    position: 0.72
-                    color: root.stateColor
-                }
-                GradientStop {
-                    position: 1
-                    color: "transparent"
+            Behavior on opacity {
+                Anim {
+                    motion: root.motion
+                    type: Anim.FastEffects
                 }
             }
+            ShapePath {
+                fillColor: root.stateColor
+                strokeColor: "transparent"
+                strokeWidth: -1
+                PathSvg {
+                    path: hoverSurface.fillPathData
+                }
+            }
+        }
+        Shape {
+            anchors.fill: parent
+            visible: root.rippleOpacity > 0
+            opacity: root.rippleOpacity
+            preferredRendererType: Shape.CurveRenderer
 
-            PathSvg {
-                path: hoverSurface.fillPathData
+            ShapePath {
+                strokeColor: "transparent"
+                strokeWidth: 0
+                fillGradient: RadialGradient {
+                    centerX: root.rippleX
+                    centerY: root.rippleY
+                    centerRadius: Math.max(1, root.rippleRadius)
+                    focalX: centerX
+                    focalY: centerY
+
+                    GradientStop {
+                        position: 0
+                        color: root.stateColor
+                    }
+                    GradientStop {
+                        position: 0.72
+                        color: root.stateColor
+                    }
+                    GradientStop {
+                        position: 1
+                        color: "transparent"
+                    }
+                }
+
+                PathSvg {
+                    path: hoverSurface.fillPathData
+                }
             }
         }
     }

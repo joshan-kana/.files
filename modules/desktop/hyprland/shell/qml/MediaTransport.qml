@@ -11,55 +11,126 @@ Item {
     property bool compact: false
     property bool minimal: false
     property bool simple: false
+    property int pressedIndex: -1
+    // Only the responsive layout changes the delegate identities. Player
+    // state updates bind to individual buttons, preserving in-flight feedback.
+    readonly property var actions: [
+        {
+            action: "previous",
+            glyph: "󰒮"
+        },
+        {
+            action: "back",
+            glyph: "󰒫"
+        },
+        {
+            action: "play",
+            glyph: "󰐊"
+        },
+        {
+            action: "forward",
+            glyph: "󰒬"
+        },
+        {
+            action: "next",
+            glyph: "󰒭"
+        }
+    ].filter(item => !simple || item.action === "previous" || item.action === "play" || item.action === "next")
+    onSimpleChanged: pressedIndex = -1
 
     implicitWidth: buttons.implicitWidth
     implicitHeight: buttons.implicitHeight
+
+    function canActivate(action: string): bool {
+        switch (action) {
+        case "previous":
+            return media.canGoPrevious;
+        case "next":
+            return media.canGoNext;
+        case "play":
+            return media.canTogglePlaying;
+        case "back":
+        case "forward":
+            return media.seekable;
+        default:
+            return false;
+        }
+    }
+
+    function activate(action: string): void {
+        if (!canActivate(action))
+            return;
+        switch (action) {
+        case "previous":
+            root.media.previous();
+            break;
+        case "back":
+            root.media.seekStep(-1);
+            break;
+        case "play":
+            root.media.togglePlaying();
+            break;
+        case "forward":
+            root.media.seekStep(1);
+            break;
+        case "next":
+            root.media.next();
+            break;
+        }
+    }
+
+    function triggerAction(action: string, autoRepeat: bool): void {
+        if (!canActivate(action) || (autoRepeat && action !== "back" && action !== "forward"))
+            return;
+        const index = actions.findIndex(item => item.action === action);
+        const button = transportButtons.itemAt(index) as ShellAction;
+        if (button)
+            button.trigger();
+        else
+            activate(action);
+    }
+
+    function hint(action: string): string {
+        switch (action) {
+        case "previous":
+            return runtime.shellHint("MediaTransport.previous");
+        case "next":
+            return runtime.shellHint("MediaTransport.next");
+        case "back":
+            return compact ? runtime.shellHint("MediaTransport.backCompact") : runtime.shellHint("MediaTransport.back");
+        case "forward":
+            return compact ? runtime.shellHint("MediaTransport.forwardCompact") : runtime.shellHint("MediaTransport.forward");
+        default:
+            return runtime.shellHint("MediaTransport.play");
+        }
+    }
+
+    function label(action: string): string {
+        switch (action) {
+        case "previous":
+            return "Previous track";
+        case "next":
+            return "Next track";
+        case "back":
+            return "Seek backward " + media.seekSeconds + " seconds";
+        case "forward":
+            return "Seek forward " + media.seekSeconds + " seconds";
+        default:
+            return media.playing ? "Pause playback" : "Resume playback";
+        }
+    }
 
     Row {
         id: buttons
         spacing: root.theme.spacing2
 
         Repeater {
-            model: [
-                {
-                    label: "Previous track",
-                    hint: root.runtime.shellHint("MediaTransport.previous"),
-                    enabled: root.media.canGoPrevious,
-                    action: "previous",
-                    glyph: "󰒮"
-                },
-                {
-                    label: "Seek backward " + root.media.seekSeconds + " seconds",
-                    hint: root.compact ? root.runtime.shellHint("MediaTransport.backCompact") : root.runtime.shellHint("MediaTransport.back"),
-                    enabled: root.media.seekable,
-                    action: "back",
-                    glyph: "󰒫"
-                },
-                {
-                    label: root.media.playing ? "Pause playback" : "Resume playback",
-                    hint: root.runtime.shellHint("MediaTransport.play"),
-                    enabled: root.media.canTogglePlaying,
-                    action: "play",
-                    glyph: root.media.playing ? "󰏤" : "󰐊"
-                },
-                {
-                    label: "Seek forward " + root.media.seekSeconds + " seconds",
-                    hint: root.compact ? root.runtime.shellHint("MediaTransport.forwardCompact") : root.runtime.shellHint("MediaTransport.forward"),
-                    enabled: root.media.seekable,
-                    action: "forward",
-                    glyph: "󰒬"
-                },
-                {
-                    label: "Next track",
-                    hint: root.runtime.shellHint("MediaTransport.next"),
-                    enabled: root.media.canGoNext,
-                    action: "next",
-                    glyph: "󰒭"
-                }
-            ].filter(item => !root.simple || item.action === "previous" || item.action === "play" || item.action === "next")
-
+            id: transportButtons
+            model: root.actions
             delegate: ShellAction {
+                id: transportButton
                 required property var modelData
+                required property int index
                 width: root.minimal ? (modelData.action === "play" ? 58 : 48) : (modelData.action === "play" ? 86 : 70)
                 height: 46
                 runtime: root.runtime
@@ -68,31 +139,20 @@ Item {
                 compact: true
                 iconOnly: true
                 iconHint: true
-                icon: modelData.glyph
-                title: modelData.label
-                shortcut: modelData.hint
+                connectedGroup: true
+                neighborPressed: root.pressedIndex >= 0 && Math.abs(root.pressedIndex - index) === 1
+                icon: modelData.action === "play" && root.media.playing ? "󰏤" : modelData.glyph
+                title: root.label(modelData.action)
+                shortcut: root.hint(modelData.action)
                 active: modelData.action === "play" && root.media.playing
-                enabled: modelData.enabled
-
-                onActivated: {
-                    switch (modelData.action) {
-                    case "previous":
-                        root.media.previous();
-                        break;
-                    case "back":
-                        root.media.seekStep(-1);
-                        break;
-                    case "play":
-                        root.media.togglePlaying();
-                        break;
-                    case "forward":
-                        root.media.seekStep(1);
-                        break;
-                    case "next":
-                        root.media.next();
-                        break;
-                    }
+                enabled: root.canActivate(modelData.action)
+                onVisualPressedChanged: {
+                    if (visualPressed)
+                        root.pressedIndex = index;
+                    else if (root.pressedIndex === index)
+                        root.pressedIndex = -1;
                 }
+                onActivated: root.activate(modelData.action)
             }
         }
     }
