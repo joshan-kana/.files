@@ -512,6 +512,8 @@ FocusScope {
             themePanel.invoke("leaveSearch");
         } else if (wallpaperPanel.open && wallpaperPanel.panel && wallpaperPanel.panel.searching) {
             wallpaperPanel.invoke("leaveSearch");
+        } else if (settingsPanel.open && settingsPanel.panel && settingsPanel.panel.cancelNested()) {
+            return;
         } else if (mixerOpen) {
             mixerView.finishLoading();
             if (!mixerView.panel || !mixerView.panel.handleKey(Qt.Key_Escape, Qt.NoModifier))
@@ -571,7 +573,7 @@ FocusScope {
         if (!engaged)
             return;
 
-        if (["windows", "glass", "nightLight", "alerts", "stay", "power", "reactive", "spectrum", "bar", "frame", "motion"].includes(requestedView))
+        if (["windows", "glass", "nightLight", "alerts", "stay", "power", "reactive", "spectrum", "bar", "frame", "motion", "displays"].includes(requestedView))
             openSetting(requestedView);
         else if (requestedView === "vhs")
             openVhs();
@@ -666,7 +668,7 @@ FocusScope {
     onRequestedViewChanged: requestedViewTimer.restart()
 
     function openSetting(name: string): void {
-        if (!["windows", "glass", "nightLight", "alerts", "stay", "power", "reactive", "spectrum"].includes(name))
+        if (!["windows", "glass", "nightLight", "alerts", "stay", "power", "reactive", "spectrum", "bar", "frame", "motion", "displays"].includes(name))
             return;
         helpOpen = false;
         closeDetails();
@@ -1212,7 +1214,7 @@ FocusScope {
                             shortcut: root.runtime.shellHint("SystemContent.displays")
                             activeColor: root.theme.roleColor("display")
                             enabled: root.runtime.displaySettings.length > 0
-                            onActivated: root.displaySettingsRequested()
+                            onActivated: root.openSetting("displays")
                         }
 
                         QuickSettingChip {
@@ -1803,6 +1805,7 @@ FocusScope {
                     musicReactiveEnabled: root.musicReactiveEnabled
                     barVisible: root.barVisible
                     frameVisible: root.frameVisible
+                    onNativeDisplayEditorRequested: root.displaySettingsRequested()
                     onWallpaperSpectrumToggleRequested: root.wallpaperSpectrumToggleRequested()
                     onMusicReactiveToggleRequested: root.musicReactiveToggleRequested()
                     onBarToggleRequested: root.barToggleRequested()
@@ -1931,7 +1934,7 @@ FocusScope {
 
                 if (settingsPanel.open) {
                     if (event.key === root.runtime.shellKeyCode("controls", "Backspace")) {
-                        root.backFromDetail();
+                        root.navigateBack();
                         event.accepted = true;
                     } else if (settingsPanel.invoke("handleKey", event.key, event.modifiers, event.isAutoRepeat)) {
                         event.accepted = true;
@@ -2421,7 +2424,7 @@ FocusScope {
                 } else if (root.runtime.shellMatchesHint("SystemContent.statusInspection", event.key, event.modifiers)) {
                     root.openStatus();
                 } else if (root.runtime.shellMatchesHint("SystemContent.displays", event.key, event.modifiers)) {
-                    root.displaySettingsRequested();
+                    root.openSetting("displays");
                 } else if (root.runtime.shellMatchesHint("SystemContent.network", event.key, event.modifiers)) {
                     if (root.system.wifiAvailable)
                         root.system.setWifiEnabled(!root.system.wifiEnabled);

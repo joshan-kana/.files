@@ -208,7 +208,7 @@ test("displays uses standard notifications and the status island owns only live 
   const notices = qml("EventNotifications.qml");
   assert.match(
     controls,
-    /title: "Displays"[\s\S]*?onActivated: root\.displaySettingsRequested\(\)/,
+    /title: "Displays"[\s\S]*?onActivated: root\.openSetting\("displays"\)/,
   );
   assert.match(
     shell,

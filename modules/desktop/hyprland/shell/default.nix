@@ -1099,6 +1099,7 @@ in
           colourPicker = lib.getExe colourPicker;
           nightLightControl = lib.getExe nightLightControl;
           displaySettings = lib.getExe pkgs.nwg-displays;
+          displayControl = lib.getExe displayControl;
           notifySend = lib.getExe' pkgs.libnotify "notify-send";
         };
       };
@@ -1143,6 +1144,14 @@ in
           pkgs.systemd
         ];
         text = builtins.readFile ../../../../scripts/desktop-shell/lock.sh;
+      };
+
+      displayControl = pkgs.writeShellApplication {
+        name = "desktop-shell-display-control";
+        runtimeInputs = [ pkgs.python3 pkgs.systemd osConfig.programs.hyprland.package ];
+        text = ''
+          exec python3 ${../../../../scripts/desktop-shell/display-settings.py} "$@"
+        '';
       };
 
       nightLightControl = pkgs.writeShellApplication {
@@ -1341,6 +1350,15 @@ in
         Install.WantedBy = [ "timers.target" ];
       };
 
+      systemd.user.timers.desktop-shell-display-preview = {
+        Unit.Description = "Revert an unconfirmed display layout";
+        Timer = {
+          OnActiveSec = "20s";
+          AccuracySec = "100ms";
+          Unit = "desktop-shell-display-preview.service";
+        };
+      };
+
       systemd.user.timers.desktop-shell-night-light-apply = {
         Unit = {
           Description = "Re-evaluate Night Light schedules and overrides";
@@ -1354,6 +1372,14 @@ in
       };
 
       systemd.user.services = {
+        desktop-shell-display-preview = {
+          Unit.Description = "Restore the previous display layout";
+          Service = {
+            Type = "oneshot";
+            ExecStart = "${lib.getExe displayControl} rollback";
+          };
+        };
+
         desktop-shell-palette-index = {
           Unit = {
             Description = "Watch local files and bookmarks for command palette indexing";

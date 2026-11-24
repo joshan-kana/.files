@@ -45,6 +45,7 @@ QtObject {
     readonly property string frozenCapture: root.configData.tools.frozenCapture
     readonly property string colourPicker: root.configData.tools.colourPicker
     readonly property string nightLightControl: root.configData.tools.nightLightControl
+    readonly property string displayControl: root.configData.tools.displayControl
     readonly property string displaySettings: root.configData.tools.displaySettings
     readonly property string notifySend: root.configData.tools.notifySend
 
@@ -363,6 +364,7 @@ QtObject {
                 property string frozenCapture: ""
                 property string colourPicker: ""
                 property string nightLightControl: ""
+                property string displayControl: ""
                 property string displaySettings: ""
                 property string notifySend: ""
             }

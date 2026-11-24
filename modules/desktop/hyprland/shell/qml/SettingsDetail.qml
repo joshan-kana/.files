@@ -23,6 +23,7 @@ Item {
     signal musicReactiveToggleRequested
     signal barToggleRequested
     signal frameToggleRequested
+    signal nativeDisplayEditorRequested
     signal keyboardRequested
     signal parameterAdjustmentRequested(int index)
 
@@ -58,7 +59,8 @@ Item {
             reactive: "Music-reactive shell",
             bar: "Desktop bar",
             frame: "Desktop frame",
-            motion: "Animations"
+            motion: "Animations",
+            displays: "Displays"
         })[kind] || "Settings"
     readonly property bool masterState: {
         switch (kind) {
@@ -500,7 +502,13 @@ Item {
         keyboardRequested();
     }
 
+    function cancelNested(): bool {
+        return kind === "displays" && displayDetails.cancelNested();
+    }
+
     function handleKey(key: int, modifiers: int, autoRepeat: bool): bool {
+        if (kind === "displays")
+            return displayDetails.handleKey(key, modifiers, autoRepeat);
         if (autoRepeat) {
             const repeatedAction = ["SettingsDetail.toggle", "SettingsDetail.blur", "SettingsDetail.reset", "SettingsDetail.presentation", "SettingsDetail.history", "SettingsDetail.quietHours", "SettingsDetail.nightResume", "SettingsDetail.nightPauseUntil", "SettingsDetail.powerAutomatic"].some(name => runtime.shellMatchesHint(name, key, modifiers));
             const choice = (kind === "nightLight" || kind === "power") ? runtime.shellNumberIndex("controls", key, 9) : reactiveTuning ? runtime.shellNumberIndex("controls", key, 7) : kind === "alerts" ? runtime.shellNumberIndex("controls", key, 6) : kind === "power" || kind === "stay" ? runtime.shellNumberIndex("controls", key, 5) : -1;
@@ -637,6 +645,17 @@ Item {
                 enabled: panel.masterAvailable
                 onActivated: panel.toggleMaster()
             }
+        }
+
+        DisplaySettings {
+            id: displayDetails
+            visible: panel.kind === "displays"
+            width: parent.width
+            engaged: panel.open && visible
+            runtime: panel.runtime
+            theme: panel.theme
+            motion: panel.motion
+            onNativeEditorRequested: panel.nativeDisplayEditorRequested()
         }
 
         ShellAction {
