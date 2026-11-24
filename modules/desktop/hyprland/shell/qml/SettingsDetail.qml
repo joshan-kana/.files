@@ -65,6 +65,20 @@ Item {
             motion: "Animations",
             displays: "Displays"
         })[kind] || "Settings"
+    readonly property string subtitleText: ({
+            windows: "Window opacity and compositor blur",
+            glass: "Shell translucency and backdrop blur",
+            nightLight: "Colour temperature and warm-light schedule",
+            alerts: "Delivery, quiet hours and notification history",
+            stay: "Idle inhibition and timeout",
+            power: "Performance profiles and automatic AC / battery policy",
+            spectrum: "Audio spectrum bars and wallpaper response",
+            reactive: "Audio-driven tint, response and targets",
+            bar: "Desktop islands and bar layout",
+            frame: "Connected desktop contour and thickness",
+            motion: "Transition timing and reduced motion",
+            displays: "Output layout, resolution and refresh rate"
+        })[kind] || "Capability controls"
     readonly property bool masterState: {
         switch (kind) {
         case "windows":
@@ -639,6 +653,8 @@ Item {
                 ShellText {
                     runtime: panel.runtime
                     theme: panel.theme
+                    width: parent.width
+                    elide: Text.ElideRight
                     text: panel.titleText
                     font.pixelSize: panel.theme.fontSize(14)
                     font.weight: Font.DemiBold
@@ -646,7 +662,9 @@ Item {
                 ShellText {
                     runtime: panel.runtime
                     theme: panel.theme
-                    text: panel.kind === "power" ? panel.powerProfile.label(panel.powerProfile.current) : panel.kind === "nightLight" ? (panel.nightLight.active ? panel.nightLight.temperature + " K · enabled" : "Disabled · " + panel.nightLight.temperature + " K") : panel.hasMaster ? (panel.masterState ? "Enabled" : "Disabled") : "Current settings"
+                    width: parent.width
+                    elide: Text.ElideRight
+                    text: panel.subtitleText
                     color: panel.theme.textMuted
                     font.pixelSize: panel.theme.fontSize(10)
                 }

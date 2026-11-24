@@ -1017,3 +1017,31 @@ test("detail transitions preserve source and destination layout during the cross
     /clip: !host\.systemContent \|\| !host\.systemContent\.detailTransitioning/,
   );
 });
+
+test("capability headers describe their controls instead of repeating master state", () => {
+  const detail = read("SettingsDetail.qml");
+  const subtitles = detail
+    .split("readonly property string subtitleText:")[1]
+    .split("readonly property bool masterState")[0];
+  for (const kind of [
+    "windows",
+    "glass",
+    "nightLight",
+    "alerts",
+    "stay",
+    "power",
+    "spectrum",
+    "reactive",
+    "bar",
+    "frame",
+    "motion",
+    "displays",
+  ])
+    assert.ok(subtitles.includes(kind + ":"), kind);
+  assert.doesNotMatch(
+    subtitles,
+    /Enabled|Disabled|masterState|Current settings/,
+  );
+  assert.match(detail, /text: panel.subtitleText/);
+  assert.match(detail, /title: panel.masterState \? "Disable" : "Enable"/);
+});
