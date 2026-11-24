@@ -107,7 +107,7 @@ test("hub header follows live painted width independently of the destination lay
     /width: Math\.max\(0, shellSurface\.width - host\.theme\.spacing4 \* 2\)/,
   );
   const reveal = qml.match(
-    /readonly property real headerReveal: \{([\s\S]*?)\n        \}/,
+    /readonly property real headerReveal: \{([\s\S]*?)\n {8}\}/,
   )[1];
   assert.match(reveal, /host\.chromeOpacity/);
   assert.doesNotMatch(reveal, /contentWidth|contentHeight|contentLayoutWidth/);
