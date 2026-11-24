@@ -161,7 +161,7 @@ test("bounded frame trace keeps its full halo inside a quantized tile", () => {
     { x: 30, y: 970, at: 4480 },
     { x: 30, y: 30, at: 5420 },
   ];
-  const bounds = trace.traceBounds(points, 5420, 0.25, 0.1, 24, 1920, 1080);
+  const bounds = trace.traceBounds(points, 5420, 0.25, 0.1, 24);
   assert.ok(
     bounds.width < 1920 || bounds.height < 1080,
     "animation must not repaint the entire monitor",
@@ -187,7 +187,7 @@ test("bounded stroke uses local coordinates without changing the traced path", (
     { x: 30, y: 500, at: 2310 },
     { x: 30, y: 30, at: 2780 },
   ];
-  const bounds = trace.traceBounds(path, 2780, 0.45, 0.1, 24, 1000, 550);
+  const bounds = trace.traceBounds(path, 2780, 0.45, 0.1, 24);
   let segments = 0;
   const ctx = {
     clearRect() {},
@@ -247,4 +247,18 @@ test("loading trace follows the owner's actual cubic contour", () => {
     ),
   );
   assert.equal(trace.contour("").length, 0);
+});
+
+test("small local contours preserve the entire glow and taper", () => {
+  const bounds = trace.traceBounds(points, 340, 0.02, 0.1, 24);
+  assert.ok(bounds.x < 0 && bounds.y < 0);
+  assert.ok(bounds.samples.length >= 25);
+  for (const point of bounds.samples) {
+    assert.ok(
+      point.x >= bounds.x + 24 && point.x <= bounds.x + bounds.width - 24,
+    );
+    assert.ok(
+      point.y >= bounds.y + 24 && point.y <= bounds.y + bounds.height - 24,
+    );
+  }
 });

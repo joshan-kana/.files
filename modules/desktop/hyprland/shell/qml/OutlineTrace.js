@@ -102,7 +102,8 @@ function traceSamples(points, length, circuit, fraction) {
   // diagonal shortcuts through tight corners as the highlight travels.
   const tail = head - span;
   const positions = [tail, head];
-  const maxStep = 7;
+  // Keep all taper bands represented even on a small tile.
+  const maxStep = Math.min(7, span / 24);
   for (let at = tail + maxStep; at < head; at += maxStep) positions.push(at);
   for (
     let lap = Math.floor(tail / length);
@@ -129,15 +130,7 @@ function traceSamples(points, length, circuit, fraction) {
 // Reduced-motion operations must remain visibly active. Show an accent
 // segment that follows the same contour without a running animation or
 // full-screen Canvas texture; a solid full perimeter is just another border.
-function traceBounds(
-  points,
-  length,
-  circuit,
-  fraction,
-  padding,
-  width,
-  height,
-) {
+function traceBounds(points, length, circuit, fraction, padding) {
   const geometry = traceSamples(points, length, circuit, fraction);
   if (!geometry.samples.length)
     return { x: 0, y: 0, width: 1, height: 1, samples: [], tail: 0, span: 0 };
@@ -154,10 +147,12 @@ function traceBounds(
   // Quantization prevents reallocating the Canvas backing texture for every
   // single pixel of motion. The clip still always includes the whole halo.
   const tile = 64;
-  const x = Math.max(0, Math.floor((minX - padding) / tile) * tile);
-  const y = Math.max(0, Math.floor((minY - padding) / tile) * tile);
-  const right = Math.min(width, Math.ceil((maxX + padding) / tile) * tile);
-  const bottom = Math.min(height, Math.ceil((maxY + padding) / tile) * tile);
+  // The glow straddles the painted edge. Clamping to the owner's size
+  // cuts off the outer half on local surfaces but not on the screen frame.
+  const x = Math.floor((minX - padding) / tile) * tile;
+  const y = Math.floor((minY - padding) / tile) * tile;
+  const right = Math.ceil((maxX + padding) / tile) * tile;
+  const bottom = Math.ceil((maxY + padding) / tile) * tile;
   return {
     x,
     y,
