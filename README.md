@@ -66,6 +66,6 @@ git submodule update --init --recursive
 ```sh
 nix fmt -- --ci
 git diff --check
-nix flake check
-nix flake check --no-build --all-systems
+nix flake check --option builders ''
+nix flake check --no-build --all-systems --option builders ''
 ```
