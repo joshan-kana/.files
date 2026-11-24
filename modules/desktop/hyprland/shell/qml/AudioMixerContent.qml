@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import Quickshell.Io
 import "DesktopIcons.js" as DesktopIcons
 
 FocusScope {
@@ -34,9 +35,79 @@ FocusScope {
                 capture: true
             })))
     readonly property int microphoneIndex: 1
-    readonly property bool deviceChooserOpen: outputDevice.chooserOpen || inputDevice.chooserOpen
+    readonly property bool deviceChooserOpen: outputDevice.chooserOpen || inputDevice.chooserOpen || routeOpen
     readonly property int selectedStreamIndex: selectedTarget?.kind === "stream" ? streams.findIndex(node => node.id === selectedTarget.node.id) : -1
     readonly property var selectedTarget: targets[Math.max(0, Math.min(selectedIndex, targets.length - 1))] || null
+
+    property bool routeOpen: false
+    property int routeIndex: 0
+    property string routeError: ""
+    property string pendingRoute: ""
+    property int pendingStreamId: -1
+    readonly property var routeStream: selectedTarget?.kind === "stream" ? selectedTarget.node : null
+    readonly property bool routeCapture: !!selectedTarget?.capture
+    readonly property var routeDevices: routeCapture ? system.inputDevices : system.outputDevices
+    readonly property var routedDevice: system.streamDevice(routeStream, routeCapture)
+    readonly property var balanceNode: selectedTarget?.kind === "output" ? system.audioSink : selectedTarget?.kind === "input" ? system.audioSource : routeStream
+    readonly property bool balanceAvailable: !!system.stereoIndices(balanceNode)
+    readonly property real balancePosition: system.balance(balanceNode)
+    onRouteStreamChanged: routeOpen = false
+    onRouteDevicesChanged: {
+        routeIndex = Math.max(0, Math.min(routeIndex, routeDevices.length - 1));
+        if (!routeDevices.length)
+            routeOpen = false;
+    }
+    onRoutedDeviceChanged: {
+        if (pendingRoute !== "" && routeStream?.id === pendingStreamId && routedDevice?.name === pendingRoute) {
+            pendingRoute = "";
+            routeError = "";
+            routeTimeout.stop();
+        }
+    }
+
+    Process {
+        id: routeProcess
+        stderr: StdioCollector { id: routeStderr }
+        onExited: (code, status) => {
+            if (code !== 0) {
+                mixer.pendingRoute = "";
+                mixer.routeError = routeStderr.text.trim() || "Could not request routing";
+                routeTimeout.stop();
+            }
+        }
+    }
+    Timer {
+        id: routeTimeout
+        interval: 2500
+        onTriggered: {
+            if (mixer.pendingRoute !== "") {
+                mixer.routeError = "Routing was not confirmed by PipeWire";
+                mixer.pendingRoute = "";
+            }
+        }
+    }
+    function selectRoute(index: int): void {
+        const target = routeDevices[index];
+        const stream = routeStream;
+        if (!target || !stream || !runtime.pwMetadata || routeProcess.running || pendingRoute !== "")
+            return;
+        if (routedDevice?.id === target.id) {
+            routeOpen = false;
+            return;
+        }
+        pendingRoute = target.name;
+        pendingStreamId = stream.id;
+        routeError = "";
+        routeProcess.exec([runtime.pwMetadata, "-n", "default", String(stream.id), "target.object", target.name, "Spa:String"]);
+        routeTimeout.restart();
+        routeOpen = false;
+    }
+    function adjustBalance(delta: real): void {
+        if (balanceAvailable) {
+            balanceSlider.pulseAdjustment();
+            system.setBalance(balanceNode, balancePosition + delta);
+        }
+    }
 
     signal closeRequested
     signal keyboardRequested
@@ -70,6 +141,7 @@ FocusScope {
         if (!active) {
             outputDevice.chooserOpen = false;
             inputDevice.chooserOpen = false;
+            routeOpen = false;
             return;
         }
         selectIndex(selectedIndex);
@@ -131,7 +203,10 @@ FocusScope {
 
     function toggleSelectedDeviceChooser(): void {
         const target = selectedTarget;
-        if (target?.kind === "input" || target?.capture)
+        if (target?.kind === "stream" && !compact) {
+            routeOpen = !routeOpen && routeDevices.length > 0;
+            routeIndex = Math.max(0, routeDevices.indexOf(routedDevice));
+        } else if (target?.kind === "input")
             inputDevice.toggleDeviceChooser();
         else
             outputDevice.toggleDeviceChooser();
@@ -140,6 +215,34 @@ FocusScope {
     function handleKey(key: int, modifiers: int, autoRepeat: bool): bool {
         if (!active)
             return false;
+        if (routeOpen) {
+            if (key === runtime.shellKeyCode("mixer", "Escape") || runtime.shellMatchesHint("AudioDeviceControl.chooser", key, modifiers)) {
+                routeOpen = false;
+            } else if (runtime.shellNavigates("mixer", "down", key)) {
+                routeIndex = (routeIndex + 1) % routeDevices.length;
+            } else if (runtime.shellNavigates("mixer", "up", key)) {
+                routeIndex = (routeIndex + routeDevices.length - 1) % routeDevices.length;
+            } else if (key === runtime.shellKeyCode("mixer", "Return") || key === runtime.shellKeyCode("mixer", "Enter")) {
+                if (!autoRepeat)
+                    selectRoute(routeIndex);
+            } else {
+                return false;
+            }
+            return true;
+        }
+        if (!compact && runtime.shellMatchesHint("AudioMixerContent.balanceLeft", key, modifiers)) {
+            adjustBalance(-0.1);
+            return true;
+        }
+        if (!compact && runtime.shellMatchesHint("AudioMixerContent.balanceRight", key, modifiers)) {
+            adjustBalance(0.1);
+            return true;
+        }
+        if (!compact && runtime.shellMatchesHint("AudioMixerContent.balanceReset", key, modifiers)) {
+            if (!autoRepeat && balanceAvailable)
+                system.setBalance(balanceNode, 0);
+            return true;
+        }
         const picker = outputDevice.chooserOpen ? outputDevice : inputDevice.chooserOpen ? inputDevice : null;
         if (picker) {
             if (key === mixer.runtime.shellKeyCode("mixer", "Escape") || key === mixer.runtime.shellKeyCode("mixer", "Backspace") || key === mixer.runtime.shellKeyCode("mixer", "D")) {
@@ -183,11 +286,14 @@ FocusScope {
         } else if (mixer.runtime.shellNavigates("mixer", "right", key)) {
             adjustSelected(0.05);
         } else if (key === mixer.runtime.shellKeyCode("mixer", "M") || (!compact && (key === mixer.runtime.shellKeyCode("mixer", "Return") || key === mixer.runtime.shellKeyCode("mixer", "Enter")))) {
-            toggleSelectedMute();
+            if (!autoRepeat)
+                toggleSelectedMute();
         } else if (key === mixer.runtime.shellKeyCode("mixer", "P")) {
-            toggleSelectedDeviceChooser();
+            if (!autoRepeat)
+                toggleSelectedDeviceChooser();
         } else if (key === mixer.runtime.shellKeyCode("mixer", "X")) {
-            system.toggleMicrophoneMute();
+            if (!autoRepeat)
+                system.toggleMicrophoneMute();
         } else {
             return false;
         }
@@ -499,6 +605,102 @@ FocusScope {
                 color: mixer.theme.textMuted
                 font.family: mixer.runtime.fontSans
                 font.pixelSize: mixer.theme.fontSize(11)
+            }
+        }
+
+        Column {
+            visible: !mixer.compact && mixer.routeStream !== null
+            width: parent.width
+            spacing: mixer.theme.spacing1
+            ShellAction {
+                width: parent.width
+                height: 36
+                runtime: mixer.runtime
+                theme: mixer.theme
+                motion: mixer.motion
+                title: (mixer.routeCapture ? "Input: " : "Output: ") + (mixer.routedDevice?.description || mixer.routedDevice?.name || "Not connected")
+                shortcut: mixer.runtime.shellHint("AudioDeviceControl.chooser")
+                compact: true
+                horizontalCompact: true
+                enabled: mixer.routeDevices.length > 0 && mixer.runtime.pwMetadata !== "" && mixer.pendingRoute === ""
+                active: mixer.routeOpen
+                onActivated: mixer.toggleSelectedDeviceChooser()
+            }
+            ListView {
+                width: parent.width
+                height: mixer.routeOpen ? Math.min(4, mixer.routeDevices.length) * 38 : 0
+                visible: mixer.routeOpen
+                clip: true
+                model: mixer.routeDevices
+                currentIndex: mixer.routeIndex
+                onCurrentIndexChanged: if (currentIndex >= 0) positionViewAtIndex(currentIndex, ListView.Contain)
+                delegate: ShellAction {
+                    required property int index
+                    required property var modelData
+                    width: ListView.view.width
+                    height: 36
+                    runtime: mixer.runtime
+                    theme: mixer.theme
+                    motion: mixer.motion
+                    compact: true
+                    horizontalCompact: true
+                    title: (modelData === mixer.routedDevice ? "✓ " : "") + (modelData.description || modelData.name)
+                    shortcut: index === mixer.routeIndex ? "↵" : ""
+                    active: index === mixer.routeIndex
+                    onActivated: mixer.selectRoute(index)
+                }
+            }
+            ShellText {
+                visible: mixer.routeError !== "" || mixer.pendingRoute !== ""
+                width: parent.width
+                runtime: mixer.runtime
+                theme: mixer.theme
+                color: mixer.routeError !== "" ? mixer.theme.warning : mixer.theme.textMuted
+                text: mixer.routeError || "Waiting for PipeWire routing"
+                wrapMode: Text.WordWrap
+            }
+        }
+
+        Row {
+            visible: !mixer.compact && mixer.balanceAvailable
+            width: parent.width
+            height: 40
+            spacing: mixer.theme.spacing2
+            ShellText {
+                width: 90
+                anchors.verticalCenter: parent.verticalCenter
+                runtime: mixer.runtime
+                theme: mixer.theme
+                text: Math.abs(mixer.balancePosition) < 0.01 ? "Balanced" : (mixer.balancePosition < 0 ? "Left " : "Right ") + Math.round(Math.abs(mixer.balancePosition) * 100) + "%"
+            }
+            ShellSlider {
+                id: balanceSlider
+                anchors.verticalCenter: parent.verticalCenter
+                width: Math.max(1, parent.width - 200 - balanceKeys.implicitWidth - parent.spacing * 3)
+                theme: mixer.theme
+                motion: mixer.motion
+                value: (mixer.balancePosition + 1) / 2
+                Accessible.name: "Stereo balance"
+                onValueRequested: value => mixer.system.setBalance(mixer.balanceNode, value * 2 - 1)
+            }
+            KeyHint {
+                id: balanceKeys
+                anchors.verticalCenter: parent.verticalCenter
+                runtime: mixer.runtime
+                theme: mixer.theme
+                shortcut: mixer.runtime.shellHint("AudioMixerContent.balanceLeft") + " / " + mixer.runtime.shellHint("AudioMixerContent.balanceRight")
+            }
+            ShellAction {
+                width: 110
+                height: 36
+                runtime: mixer.runtime
+                theme: mixer.theme
+                motion: mixer.motion
+                compact: true
+                horizontalCompact: true
+                title: "Centre"
+                shortcut: mixer.runtime.shellHint("AudioMixerContent.balanceReset")
+                onActivated: mixer.system.setBalance(mixer.balanceNode, 0)
             }
         }
 

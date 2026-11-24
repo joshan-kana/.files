@@ -4,6 +4,7 @@ import Quickshell.Networking
 import Quickshell.Services.Pipewire
 import Quickshell.Services.SystemTray
 import Quickshell.Services.UPower
+import "AudioRouting.js" as Routing
 
 QtObject {
     id: system
@@ -89,6 +90,28 @@ QtObject {
 
     readonly property var outputDevices: pipewireNodes.filter(node => node && !node.isStream && node.isSink && node.audio)
     readonly property var inputDevices: pipewireNodes.filter(node => node && !node.isStream && !node.isSink && node.audio)
+
+    readonly property var linkGroups: Pipewire.linkGroups ? Pipewire.linkGroups.values : []
+
+    function streamDevice(stream: var, capture: bool): var {
+        return Routing.linkedDevice(linkGroups, stream, capture);
+    }
+    function stereoIndices(node: var): var {
+        return node?.audio ? Routing.stereoIndices(Array.from(node.audio.channels), PwAudioChannel.FrontLeft, PwAudioChannel.FrontRight) : null;
+    }
+    function balance(node: var): real {
+        return node?.audio ? Routing.balance(Array.from(node.audio.volumes), stereoIndices(node)) : 0;
+    }
+    function setBalance(node: var, position: real): void {
+        if (!node?.audio)
+            return;
+        const values = Routing.balancedVolumes(Array.from(node.audio.volumes), stereoIndices(node), position);
+        if (values)
+            node.audio.volumes = values;
+    }
+    function preferredAudioDevice(microphone: bool): var {
+        return microphone ? Pipewire.preferredDefaultAudioSource : Pipewire.preferredDefaultAudioSink;
+    }
 
     function selectAudioDevice(microphone: bool, device: var): void {
         if (!device)

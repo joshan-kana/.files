@@ -1000,7 +1000,7 @@ Item {
                 width: parent.width
                 runtime: panel.runtime
                 theme: panel.theme
-                text: panel.powerProfile.batteryAvailable ? Math.round(panel.powerProfile.battery.percentage * 100) + "% · " + (panel.powerProfile.onBattery ? "Battery power · " + panel.powerProfile.duration(panel.powerProfile.battery.timeToEmpty) + " remaining" : "External power · " + panel.powerProfile.duration(panel.powerProfile.battery.timeToFull) + " to full") + " · " + panel.powerProfile.battery.energy.toFixed(1) + " / " + panel.powerProfile.battery.energyCapacity.toFixed(1) + " Wh" : ""
+                text: panel.powerProfile.batteryAvailable ? Math.round(panel.powerProfile.battery.percentage * 100) + "% · " + (panel.powerProfile.onBattery ? "Battery power · " + panel.powerProfile.duration(panel.powerProfile.battery.timeToEmpty) + " remaining" : "External power" + (panel.powerProfile.battery.timeToFull > 0 ? " · " + panel.powerProfile.duration(panel.powerProfile.battery.timeToFull) + " to full" : "")) + " · " + panel.powerProfile.battery.energy.toFixed(1) + " / " + panel.powerProfile.battery.energyCapacity.toFixed(1) + " Wh" : ""
                 wrapMode: Text.WordWrap
                 color: panel.theme.textMuted
             }
@@ -1011,7 +1011,7 @@ Item {
                     width: panel.width
                     runtime: panel.runtime
                     theme: panel.theme
-                    text: (modelData.model || "Battery") + " · Health " + (modelData.healthSupported ? Math.round(modelData.healthPercentage * 100) + "%" : "unavailable")
+                    text: (modelData.model || "Battery") + " · Health " + (modelData.healthSupported ? Math.round(modelData.healthPercentage) + "%" : "unavailable")
                     color: panel.theme.textMuted
                 }
             }
@@ -1087,6 +1087,15 @@ Item {
                         }
                     }
                 }
+            }
+            ShellText {
+                visible: panel.powerProfile.performanceDegraded
+                width: parent.width
+                runtime: panel.runtime
+                theme: panel.theme
+                text: "Performance restricted · " + panel.powerProfile.degradation
+                color: panel.theme.warning
+                wrapMode: Text.WordWrap
             }
             Repeater {
                 model: panel.powerProfile.holds

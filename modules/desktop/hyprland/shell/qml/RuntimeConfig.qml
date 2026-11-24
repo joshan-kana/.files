@@ -28,6 +28,7 @@ QtObject {
     readonly property string clipboardOperations: root.configData.tools.clipboardOperations
     readonly property string lockSession: root.configData.tools.lockSession
     readonly property string networkConnectionEditor: root.configData.tools.networkConnectionEditor
+    readonly property string pwMetadata: root.configData.tools.pwMetadata
     readonly property string nmcli: root.configData.tools.nmcli
     readonly property string hyprctl: root.configData.tools.hyprctl
     readonly property string easyeffects: root.configData.tools.easyeffects
@@ -320,6 +321,7 @@ QtObject {
                 property string clipboardOperations: ""
                 property string lockSession: ""
                 property string networkConnectionEditor: ""
+                property string pwMetadata: ""
                 property string nmcli: ""
                 property string hyprctl: ""
                 property string easyeffects: ""

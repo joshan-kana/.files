@@ -32,6 +32,7 @@ QtObject {
     readonly property bool batteryAvailable: battery !== null && battery.ready && battery.isLaptopBattery && battery.isPresent
     readonly property var physicalBatteries: UPower.devices ? UPower.devices.values.filter(device => device.ready && device.isLaptopBattery && device.isPresent) : []
     readonly property var holds: active ? PowerProfiles.holds : []
+    readonly property bool performanceDegraded: PowerProfiles.degradationReason !== PerformanceDegradationReason.None
     readonly property string degradation: PerformanceDegradationReason.toString(PowerProfiles.degradationReason)
     readonly property string preferredProfile: onBattery ? batteryProfile : acProfile
     readonly property string resolvedProfile: profiles.includes(preferredProfile) ? preferredProfile : profiles.includes("balanced") ? "balanced" : profiles[0] || ""

@@ -20,6 +20,7 @@ ShellSurface {
     readonly property int percent: microphone ? system.microphoneVolumePercent : system.volumePercent
     readonly property var device: microphone ? system.audioSource : system.audioSink
     readonly property var devices: microphone ? system.inputDevices : system.outputDevices
+    readonly property var preferredDevice: system.preferredAudioDevice(microphone)
 
     function pulseAdjustment(): void {
         levelSlider.pulseAdjustment();
@@ -200,7 +201,7 @@ ShellSurface {
                 MarqueeText {
                     anchors.verticalCenter: parent.verticalCenter
                     width: Math.max(1, parent.width - (pickerHint.visible ? pickerHint.implicitWidth : chooserChevron.implicitWidth) - parent.spacing)
-                    text: deviceControl.device ? (deviceControl.device.description || deviceControl.device.name) : "Hardware unavailable"
+                    text: deviceControl.device ? (deviceControl.device.description || deviceControl.device.name) + (!deviceControl.compact && deviceControl.preferredDevice && deviceControl.preferredDevice !== deviceControl.device ? " · fallback" : "") : "Hardware unavailable"
                     color: deviceControl.theme.textMuted
                     font.family: deviceControl.runtime.fontSans
                     font.pixelSize: deviceControl.theme.fontSize(deviceControl.compact ? 11 : 9)
