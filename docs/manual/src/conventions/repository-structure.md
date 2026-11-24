@@ -2,49 +2,46 @@
 
 Organize code by the capability or application that owns it. Native option namespaces do not determine file placement.
 
-| Location           | Responsibility                                   |
-| ------------------ | ------------------------------------------------ |
-| `flake.nix`        | Flake inputs, outputs, composition, and checks   |
-| `hosts/`           | Host entry points and host-specific policy       |
-| `modules/`         | Shared semantic capabilities                     |
-| `lib/`             | Reusable Nix helpers                             |
-| `overlays/`        | Package definitions and overrides                |
-| `scripts/`         | Repository-wide commands and cross-owner helpers |
-| `patches/`         | Downstream patches grouped by target package     |
-| `tests/`           | Shared, integration, and evaluation checks       |
-| `docs/manual/src/` | Human-maintained guidance and runbooks           |
+| Location    | Responsibility                                             |
+| ----------- | ---------------------------------------------------------- |
+| `flake.nix` | Inputs, outputs, host composition, exports, and checks     |
+| `hosts/`    | Host entry points, hardware, and host-specific policy      |
+| `profiles/` | Reusable selections and defaults for semantic capabilities |
+| `modules/`  | Shared semantic capabilities and their implementation      |
+| `lib/`      | Reusable Nix helpers                                       |
+| `overlays/` | Package definitions and overrides                          |
+| `patches/`  | Downstream patches grouped by target package               |
+| `scripts/`  | Standalone repository and operational commands             |
+| `tests/`    | Repository-integrated verification                         |
+| `docs/`     | Manual, runbooks, and documentation generation             |
+| `.github/`  | GitHub-specific automation                                 |
 
 ## File ownership and placement
 
-Choose a file's location from its **semantic owner**, not from the syntax, the tool that loads it, or the number of places that reference it. Separate source ownership from executable packaging and deployment.
+Locate authored source by its semantic owner, not its language, callers, or installation destination. A capability has one implementation even when exposed through several interfaces.
 
-| Source                                                 | Default location                                                                       | Boundary                                                                                                                            |
-| ------------------------------------------------------ | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Shared feature implementation                          | `modules/<scope>/` or the owning child                                                 | Include native options, runtime source, assets, and feature-specific helpers                                                        |
-| Host-only implementation                               | `hosts/<host>/` with the same semantic scope                                           | Use for genuine host-specific policy or hardware behavior, not a substitute for shared implementation                               |
-| One feature's executable script                        | `modules/<scope>/<feature>/scripts/`                                                   | Keep it with its owner even when several components of that feature invoke it                                                       |
-| Script shared within one semantic capability           | `modules/<scope>/scripts/`                                                             | Share at the nearest meaningful semantic owner; do not elevate it to repository-wide tooling merely because it has multiple callers |
-| Repository workflow or independent cross-owner command | `scripts/`, grouped by purpose where useful                                            | Includes tools exported by `flake.nix` to operate on the repository itself                                                          |
-| Package definition or compatibility override           | `overlays/<package>/default.nix`                                                       | Consumers configure applications; overlays construct packages                                                                       |
-| Downstream patch                                       | `patches/<package>/`                                                                   | Reference the patch from its overlay or package definition; do not maintain a competing patch tree                                  |
-| Runtime application assets and configuration sources   | Beside their consuming implementation                                                  | QML, Lua, JavaScript, CSS, templates, and similar files are not operational scripts merely because they contain executable code     |
-| Tests                                                  | Beside a feature for focused internal tests; `tests/` for shared or flake-level checks | Keep check registration at the appropriate entry point without relocating test ownership                                            |
+| Source                                                         | Location                                                                                    |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Feature-specific configuration, executable helpers, and assets | Owning semantic module                                                                      |
+| Host-specific implementation                                   | Matching host scope                                                                         |
+| Shared capability implementation                               | Owning shared scope or independent package                                                  |
+| Repository workflow and standalone operational commands        | Root `scripts/`, grouped by responsibility when useful                                      |
+| Reusable Nix functions                                         | Nearest owning scope, or `lib/` for genuinely shared functions                              |
+| Independent package definition                                 | `overlays/<package>/default.nix`                                                            |
+| Downstream patch                                               | `patches/<package>/`                                                                        |
+| Repository-integrated tests                                    | Root `tests/`; component-specific tests may follow an independent component's native layout |
 
-Use these cases to resolve ambiguous placement:
+For example, a theme-switching command belongs to the theme capability even when used from a desktop picker, CLI, and flake app. A compositor recording helper belongs to the compositor shell. The system updater and shared release-discovery tools operate on the repository itself; a standalone storage installation or recovery command is operational tooling. Both belong under root `scripts/`.
 
-1. **Called by `flake.nix`:** a command for building, updating, validating, or inspecting the repository belongs in root `scripts/`. A feature's script remains under its semantic owner even when the flake exports or packages it. The caller is not necessarily the owner.
-2. **One configuration consumer:** put substantial feature-specific source next to that consumer. Keep a truly small, readable command inline where a native Nix option or `writeShellApplication` already expresses it clearly.
-3. **Several consumers:** share source with the policy or capability that owns the behavior. Only use root `scripts/` if the command is genuinely cross-owner or repository-wide; two call sites do not prove shared ownership.
-4. **Only one host:** use the host's matching semantic scope for host-specific behavior. Platform support alone does not justify creating host-local copies of shared source.
-5. **Generated or installed files:** keep authored templates and application sources with their owners. Let Nix build/install generated outputs; do not commit generated build artifacts unless they are intentionally tracked inputs required by the project.
+Keep small readable commands inline when native options or Nix executable construction express them directly. Group related implementation files by responsibility when that improves navigation. A single executable helper does not require a nested `scripts/` directory, and a self-contained Nix implementation does not require a directory containing only `default.nix`. Split larger implementations at meaningful boundaries rather than by arbitrary file sizes or languages.
 
-Do not introduce an executable script when a supported native option, application API, or existing utility expresses the same behavior reliably. Avoid extra `default.nix` wrappers, subdirectories, shared libraries, or registries unless they establish a real ownership boundary or reduce duplication. When extracting or relocating source, preserve its runtime dependencies, consumers, behavior, and formatter coverage.
+Keep authored configuration and assets with their owner. Generate installed configuration and build outputs through Nix; track generated inputs only when required by the implementation.
 
 ## Registration and imports
 
-Use the owning directory's existing `default.nix` to register children. Keep package registration in the overlay registry and semantic module registration in the module hierarchy. Avoid parallel registries or special-case composition in the flake when the existing mechanism suffices.
+Register semantic scopes in the owning hierarchy and package overlays in the central overlay registry. Use native imports for ordinary native modules. Source organization does not establish a new independently enabled scope.
 
-Use native module imports for ordinary native modules. A feature may span multiple files when they have coherent responsibilities; one-file wrappers and extra directories are not inherently improvements.
+The flake composes hosts, locks inputs, and exposes packages, apps, checks, and development environments. Export commands through their existing executable interfaces; do not duplicate implementation in the flake. Alternate flake entry points reuse the canonical locked source and policy.
 
 ## Shared versus host-local
 

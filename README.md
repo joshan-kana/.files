@@ -37,10 +37,10 @@ The cross-project operating handbook is included as the `docs/infrastructure-doc
 flake.nix                 Flake outputs, checks, packages, apps, and host composition
 hosts/                    Host entrypoints and host-specific policy
 profiles/                 Reusable host scope selections and defaults
-profiles/                 Reusable machine scope selections
 modules/                  Shared semantic configuration scopes
 lib/                      Semantic-scope and shared Nix helpers
 overlays/                 Package overlays
+patches/                  Downstream package patches
 scripts/                  Repository and operational commands
 tests/                    Evaluated and behavioural checks
 docs/manual/              Manual runbooks and generated-reference source

@@ -16,6 +16,8 @@ Keep scope registration in the existing semantic hierarchy. Use native NixOS, ni
 
 Declare reusable preferences with the owning scope's typed options. Where a separate runtime process needs those values, generate a narrow configuration/manifest from the Nix source of truth instead of maintaining duplicate validation and defaults. Keep ephemeral UI state and application-managed data at runtime rather than expanding the Nix option interface to mirror them.
 
+Distinguish enforced declarative policy from defaults for runtime-adjustable preferences. Where runtime adjustment is supported, a persisted user preference takes precedence over the configured default until reset; explicitly enforced policy takes precedence over both. Live service state remains with its owning service. Use native preference mechanisms where available rather than a competing persistence layer.
+
 ## Conditionals
 
 Use the expression appropriate to what is conditional:

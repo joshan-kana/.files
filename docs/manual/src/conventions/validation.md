@@ -25,6 +25,6 @@ An unexpected derivation change warrants investigation. A matching derivation is
 
 ## Tests and reporting
 
-Prefer focused assertions for stable invariants and real runtime verification for behavior evaluation cannot prove. Do not encode subjective style preferences in a large, brittle source linter.
+Prefer focused assertions for stable invariants and real runtime verification for behavior evaluation cannot prove. Exercise the actual component or executable when asserting behavior; source-text assertions are appropriate for structural invariants rather than substitutes for behavioral tests. Do not encode subjective style preferences in a large, brittle source linter.
 
 Report which evaluations, builds, and live tests actually passed. A merged change, a successful build, and a successful deployment are distinct outcomes.

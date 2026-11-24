@@ -24,7 +24,9 @@ Physical script placement follows [file ownership](repository-structure.md#file-
 
 - Prefer small, readable, directly runnable commands over opaque wrappers.
 - Use native module options for shell settings when possible.
-- Keep feature-specific logic with its owner; use root `scripts/` for repository-wide commands and helpers that genuinely cross owners.
+- Keep feature-specific logic with its owner; use root `scripts/` for standalone repository and operational commands.
+- Package a private helper within its owning module. Reuse an executable or parameterized package builder when several consumers need the same command. Expose an independent package through the existing overlay interface when it has a standalone runtime contract.
+- Declare inputs at the command's interface; do not make a consumer depend on another scope's private implementation or duplicate host-specific configuration.
 - Declare executable runtime dependencies and interpreter requirements rather than depending on an interactive user's shell or `$PATH`.
 - Prefer supported native tools and protocols before writing glue. Keep operations safe to repeat; separate dry-run/reporting paths from destructive actions where appropriate.
 - Preserve observable CLI behavior and help text when refactoring command implementation.
