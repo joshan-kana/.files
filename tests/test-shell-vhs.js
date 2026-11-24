@@ -259,7 +259,7 @@ test("VHS tuning exposes correct keyboard focus, pointer and navigation paths", 
   assert.match(controls, /requestedView === "vhs"/);
   assert.match(
     controls,
-    /vhsPanel\.invoke\("handleKey", event\.key, event\.modifiers\)/,
+    /vhsPanel\.invoke\("handleKey", event\.key, event\.modifiers, event\.isAutoRepeat\)/,
   );
   assert.match(
     controls,
