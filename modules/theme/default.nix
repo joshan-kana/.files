@@ -418,6 +418,15 @@ in
             gtk.gtk4.extraConfig.gtk-decoration-layout = ":";
             dconf.settings."org/gnome/desktop/wm/preferences".button-layout = ":";
           };
+          tofi.home = { config, lib, ... }: {
+            home.file.".config/tofi/config".text = lib.mkAfter ''
+              font = ${config.stylix.fonts.monospace.name}
+              background-color = #${config.lib.stylix.colors.base00}
+              text-color = #${config.lib.stylix.colors.base07}
+              selection-color = #${config.lib.stylix.colors.base0A}
+              border-color = #${config.lib.stylix.colors.base03}
+            '';
+          };
         };
       }
       // lib.optionalAttrs isDarwin {

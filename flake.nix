@@ -430,6 +430,14 @@
             ./modules/options
             stylix.${nativeModules}.stylix
             home-manager.${nativeModules}.home-manager
+            ({ config, ... }: {
+              # Stylix automatically imports its home module only while enabled.
+              # Keep the native option schema available to disabled scope definitions.
+              home-manager.sharedModules = lib.mkIf (!config.stylix.enable) (
+                [ config.stylix.homeManagerIntegration.module ]
+                ++ lib.optional config.home-manager.useGlobalPkgs { stylix.overlays.enable = false; }
+              );
+            })
             ./overlays
             (semantic.rootModule (
               lib.setFunctionArgs (args: (host args) // { _file = toString hostFile; }) (lib.functionArgs host)

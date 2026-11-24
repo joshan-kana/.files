@@ -111,7 +111,11 @@ in
       environment.sessionVariables.MOZ_DISABLE_SAFE_MODE_KEY = disableSafeModeKey;
     };
 
-  floorp = _: { };
+  floorp = _: {
+    home = _: {
+      programs.floorp = { };
+    };
+  };
 
   kitty = _: {
     home = _: {

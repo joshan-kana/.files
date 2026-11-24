@@ -1,8 +1,31 @@
--- Hammerspoon visual settings come from the evaluated Stylix configuration.
+-- Use the evaluated theme when present, otherwise use native macOS appearance.
+local hs = _G.hs
 local M = {}
-local runtime = require("nix_theme")
-local scheme = runtime.colors
-M.fonts = runtime.fonts
+local runtime = package.searchpath("nix_theme", package.path) and require("nix_theme")
+M.fonts = runtime and runtime.fonts
+	or {
+		sansSerif = hs.styledtext.defaultFonts.system.name,
+		monospace = hs.styledtext.defaultFonts.userFixedPitch.name,
+	}
+
+local function nativePalette()
+	local colors = hs.drawing.color.colorsFor("System")
+	return {
+		bg = colors.windowBackgroundColor,
+		bgAlt = colors.controlBackgroundColor,
+		bgSelected = colors.selectedContentBackgroundColor,
+		stroke = colors.separatorColor,
+		fg = colors.labelColor,
+		fgDim = colors.secondaryLabelColor,
+		fgMuted = colors.tertiaryLabelColor,
+		accent = colors.controlAccentColor,
+		green = colors.systemGreenColor,
+		yellow = colors.systemYellowColor,
+		blue = colors.systemBlueColor,
+		magenta = colors.systemPurpleColor,
+		cyan = colors.systemCyanColor,
+	}
+end
 
 -- Canvas color space correction
 -- hs.canvas uses calibrated RGB (gamma ~1.8), not sRGB (gamma ~2.2).
@@ -27,7 +50,7 @@ end
 
 local function resolve(val)
 	if type(val) == "table" and val.red then
-		return val -- already an HS color
+		return { red = val.red, green = val.green, blue = val.blue, alpha = val.alpha or 1 }
 	end
 	if type(val) == "table" and val.hex then
 		return hexToColor(val.hex)
@@ -40,6 +63,7 @@ end
 
 -- Resolve the current shared theme for Hammerspoon drawing.
 function M.colors()
+	local scheme = runtime and runtime.colors or nativePalette()
 	local colors = {}
 	for k, v in pairs(scheme) do
 		colors[k] = resolve(v)
