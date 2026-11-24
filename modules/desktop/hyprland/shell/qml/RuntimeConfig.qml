@@ -86,6 +86,7 @@ QtObject {
     readonly property var paletteQuicklinks: root.configData.palette.quicklinks
     readonly property var paletteSnippets: root.configData.palette.snippets
     readonly property var appearanceDefaults: root.configData.appearance
+    readonly property var captureEncoding: root.configData.capture.encoding
     readonly property bool captureFreezeEnabled: root.configData.capture.freezeEnabled
     readonly property bool notificationSilent: root.configData.notifications.silent
     readonly property bool notificationPresentation: root.configData.notifications.presentation
@@ -286,6 +287,17 @@ QtObject {
 
             property JsonObject capture: JsonObject {
                 property bool freezeEnabled: true
+                property JsonObject encoding: JsonObject {
+                    property string imageFormat: "png"
+                    property int jpegQuality: 95
+                    property bool cursor: false
+                    property string videoFormat: "mp4"
+                    property string codec: "libx264"
+                    property int frameRate: 0
+                    property int videoQuality: 23
+                    property int countdown: 0
+                    property string audio: "none"
+                }
             }
 
             property JsonObject notifications: JsonObject {

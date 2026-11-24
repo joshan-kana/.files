@@ -142,6 +142,13 @@
           "ScreenshotPicker.move" = "NAV_ALL";
           "ScreenshotPicker.resize" = "NAV_ALL_SHIFT";
           "ScreenshotPicker.toggleRecord" = "Z";
+          "ScreenshotPicker.format" = "T";
+          "ScreenshotPicker.quality" = "Q";
+          "ScreenshotPicker.codec" = "C";
+          "ScreenshotPicker.fps" = "R";
+          "ScreenshotPicker.countdown" = "D";
+          "ScreenshotPicker.cursor" = "C";
+          "ScreenshotPicker.resetEncoding" = "X";
         };
         clipboard = {
           "ClipboardPanel.actionMenu" = "ALT+ENTER";

@@ -515,6 +515,24 @@ in
     description = "Default frozen screenshot capture mode.";
   };
 
+  scopeOptions.captureEncoding = lib.mkOption {
+    type = lib.types.submodule {
+      options = {
+        imageFormat = lib.mkOption { type = lib.types.enum [ "png" "jpg" ]; default = "png"; };
+        jpegQuality = lib.mkOption { type = lib.types.enum [ 75 85 95 ]; default = 95; };
+        cursor = lib.mkOption { type = lib.types.bool; default = false; };
+        videoFormat = lib.mkOption { type = lib.types.enum [ "mp4" "mkv" ]; default = "mp4"; };
+        codec = lib.mkOption { type = lib.types.enum [ "libx264" "libx265" ]; default = "libx264"; };
+        frameRate = lib.mkOption { type = lib.types.enum [ 0 30 60 120 ]; default = 0; };
+        videoQuality = lib.mkOption { type = lib.types.enum [ 18 23 28 ]; default = 23; };
+        countdown = lib.mkOption { type = lib.types.enum [ 0 3 5 10 ]; default = 0; };
+        audio = lib.mkOption { type = lib.types.enum [ "none" "system" "microphone" ]; default = "none"; };
+      };
+    };
+    default = { };
+    description = "Capture encoding and recording defaults; user capture preferences override individual fields.";
+  };
+
   scopeOptions.notificationsSilent = lib.mkOption {
     type = lib.types.bool;
     default = false;
@@ -909,6 +927,7 @@ in
           blurSize = config.wayland.windowManager.hyprland.settings.config.decoration.blur.size;
         };
         capture.freezeEnabled = scopeConfig.captureFreezeEnabled;
+        capture.encoding = scopeConfig.captureEncoding;
         notifications = {
           silent = scopeConfig.notificationsSilent;
           presentation = scopeConfig.notificationsPresentation;

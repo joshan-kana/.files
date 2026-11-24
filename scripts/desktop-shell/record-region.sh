@@ -1,8 +1,22 @@
 #!/usr/bin/env bash
 umask 077
 settings="${XDG_RUNTIME_DIR:?}/desktop-shell-recording.conf"
+format=mp4
+codec=libx264
+fps=0
+quality=23
 if [ -f "$settings" ]; then
-  { IFS= read -r output && IFS= read -r geometry && IFS= read -r audio; } <"$settings" || exit 2
+  mapfile -t configuration <"$settings"
+  [ "${#configuration[@]}" -eq 3 ] || [ "${#configuration[@]}" -eq 7 ] || exit 2
+  output="${configuration[0]}"
+  geometry="${configuration[1]}"
+  audio="${configuration[2]}"
+  if [ "${#configuration[@]}" -eq 7 ]; then
+    format="${configuration[3]}"
+    codec="${configuration[4]}"
+    fps="${configuration[5]}"
+    quality="${configuration[6]}"
+  fi
   rm -f -- "$settings"
   [[ $output =~ ^[a-zA-Z0-9_.-]+$ ]] || exit 2
   [[ $geometry =~ ^-?[0-9]+,-?[0-9]+\ [0-9]+x[0-9]+$ ]] || exit 2
@@ -15,9 +29,15 @@ else
   args=()
 fi
 [ -n "$geometry" ] || exit 0
+case "$format" in mp4 | mkv) ;; *) exit 2 ;; esac
+case "$codec" in libx264 | libx265) ;; *) exit 2 ;; esac
+case "$fps" in 0 | 30 | 60 | 120) ;; *) exit 2 ;; esac
+case "$quality" in 18 | 23 | 28) ;; *) exit 2 ;; esac
+args+=(--codec "$codec" --codec-param "crf=$quality")
+if [ "$fps" -ne 0 ]; then args+=(--framerate "$fps"); fi
 directory="${DESKTOP_SHELL_RECORDING_DIR:-$HOME/Videos/Screencasts}"
 mkdir -p "$directory"
-output="$directory/Recording-$(date +%Y%m%d-%H%M%S)-$$.mp4"
+output="$directory/Recording-$(date +%Y%m%d-%H%M%S)-$$.$format"
 case "$audio" in
 system)
   sink="$(pactl get-default-sink)"

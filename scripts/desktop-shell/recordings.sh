@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 action="${1:-}"
-recordings="$HOME/Videos/Screencasts"
+recordings="${DESKTOP_SHELL_RECORDING_DIR:-$HOME/Videos/Screencasts}"
 preview_dir="${XDG_RUNTIME_DIR:?}/desktop-shell-recordings-preview"
 case "$action" in
 list)
@@ -12,7 +12,7 @@ list)
   {
     if [ -d "$recordings" ]; then
       while IFS=$'\t' read -r modified name size; do
-        [[ $name =~ ^Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.mp4$ ]] || continue
+        [[ $name =~ ^Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.(mp4|mkv)$ ]] || continue
         path="$recordings/$name"
         [ -f "$path" ] && [ ! -L "$path" ] || continue
         key="$(printf '%s|%s|%s' "$name" "$modified" "$size" | sha256sum | cut -d' ' -f1)"
@@ -27,15 +27,15 @@ list)
         read -r duration <"$metadata"
         printf '%s\t%s\t%s\t%s\n' "$modified" "$name" "$size" "$duration"
       done < <(find "$recordings" -maxdepth 1 -type f -regextype posix-extended \
-        -regex '.*/Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.mp4' -printf '%T@\t%f\t%s\n')
+        -regex '.*/Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.(mp4|mkv)' -printf '%T@\t%f\t%s\n')
     fi
     screenshots="${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots"
     if [ -d "$screenshots" ]; then
       while IFS=$'\t' read -r modified name size; do
-        [[ $name =~ ^Screenshot-[0-9]{8}-[0-9]{6}-[0-9]+\.png$ ]] || continue
+        [[ $name =~ ^Screenshot-[0-9]{8}-[0-9]{6}-[0-9]+\.(png|jpg)$ ]] || continue
         printf '%s\t%s\t%s\t0\n' "$modified" "$name" "$size"
       done < <(find "$screenshots" -maxdepth 1 -type f -regextype posix-extended \
-        -regex '.*/Screenshot-[0-9]{8}-[0-9]{6}-[0-9]+\.png' -printf '%T@\t%f\t%s\n')
+        -regex '.*/Screenshot-[0-9]{8}-[0-9]{6}-[0-9]+\.(png|jpg)' -printf '%T@\t%f\t%s\n')
     fi
   } | sort -rn | sed -n '1,100p'
   ;;
@@ -46,10 +46,10 @@ clear-preview)
 preview | open | edit | copy | trash | ocr)
   [ "$#" -eq 2 ] || exit 2
   name="$2"
-  if [[ $name =~ ^Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.mp4$ ]]; then
+  if [[ $name =~ ^Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.(mp4|mkv)$ ]]; then
     path="$recordings/$name"
     kind=recording
-  elif [[ $name =~ ^Screenshot-[0-9]{8}-[0-9]{6}-[0-9]+\.png$ ]]; then
+  elif [[ $name =~ ^Screenshot-[0-9]{8}-[0-9]{6}-[0-9]+\.(png|jpg)$ ]]; then
     path="${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots/$name"
     kind=image
   else
@@ -63,7 +63,9 @@ preview | open | edit | copy | trash | ocr)
     exec losslesscut --disable-networking "$path"
   elif [ "$action" = copy ]; then
     [ "$kind" = image ] || exit 2
-    exec wl-copy --type image/png <"$path"
+    mime=image/png
+    if [[ $name == *.jpg ]]; then mime=image/jpeg; fi
+    exec wl-copy --type "$mime" <"$path"
   elif [ "$action" = trash ]; then
     exec gio trash "$path"
   elif [ "$action" = ocr ]; then

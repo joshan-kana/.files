@@ -1171,7 +1171,7 @@ ShellRoot {
         }
 
         function showCaptureText(name: string): void {
-            if (!/^(?:Screenshot-[0-9]{8}-[0-9]{6}-[0-9]+\.png|Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.mp4)$/.test(name))
+            if (!/^(?:Screenshot-[0-9]{8}-[0-9]{6}-[0-9]+\.(?:png|jpg)|Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.(?:mp4|mkv))$/.test(name))
                 return;
             actions.showSystem(null, null, "recordings:" + name);
         }

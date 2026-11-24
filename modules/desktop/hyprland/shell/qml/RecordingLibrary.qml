@@ -67,7 +67,7 @@ Item {
         keyboardRequested();
     }
     function queueText(name: string): void {
-        if (!/^(?:Screenshot-[0-9]{8}-[0-9]{6}-[0-9]+\.png|Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.mp4)$/.test(name))
+        if (!/^(?:Screenshot-[0-9]{8}-[0-9]{6}-[0-9]+\.(?:png|jpg)|Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.(?:mp4|mkv))$/.test(name))
             return;
         pendingTextName = name;
         if (open) {
@@ -125,7 +125,7 @@ Item {
         const result = [];
         for (const row of output.split("\n")) {
             const columns = row.split("\t");
-            if (columns.length !== 4 || !/^(Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.mp4|Screenshot-[0-9]{8}-[0-9]{6}-[0-9]+\.png)$/.test(columns[1]))
+            if (columns.length !== 4 || !/^(Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.(?:mp4|mkv)|Screenshot-[0-9]{8}-[0-9]{6}-[0-9]+\.(?:png|jpg))$/.test(columns[1]))
                 continue;
             const size = Number(columns[2]);
             const modified = Number(columns[0]);
@@ -134,7 +134,7 @@ Item {
                 continue;
             result.push({
                 name: columns[1],
-                isImage: columns[1].endsWith(".png"),
+                isImage: columns[1].startsWith("Screenshot-"),
                 size,
                 modified,
                 duration

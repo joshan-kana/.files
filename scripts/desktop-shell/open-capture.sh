@@ -5,13 +5,13 @@ screenshot | edit-screenshot | text-screenshot)
   path="$2"
   name="${path##*/}"
   dir="${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots"
-  [[ $name =~ ^Screenshot-[0-9]{8}-[0-9]{6}-[0-9]+\.png$ ]] || exit 2
+  [[ $name =~ ^Screenshot-[0-9]{8}-[0-9]{6}-[0-9]+\.(png|jpg)$ ]] || exit 2
   [[ $path == "$dir/$name" ]] || exit 2
   ;;
 recording | edit-recording | text-recording)
   name="$2"
-  [[ $name =~ ^Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.mp4$ ]] || exit 2
-  path="$HOME/Videos/Screencasts/$name"
+  [[ $name =~ ^Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.(mp4|mkv)$ ]] || exit 2
+  path="${DESKTOP_SHELL_RECORDING_DIR:-$HOME/Videos/Screencasts}/$name"
   ;;
 *) exit 2 ;;
 esac

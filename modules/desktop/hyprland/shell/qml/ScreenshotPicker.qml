@@ -20,7 +20,72 @@ Item {
     property string exportAction: "copy"
     property bool annotateAfterCapture: false
     property string selectionMode: "image"
-    property string audioMode: "none"
+    property var encodingOverrides: parseEncoding(qmlCapturePreferences.encodingOverrides)
+    readonly property string audioMode: String(encoding("audio"))
+    property int remaining: 0
+    readonly property bool countingDown: remaining > 0
+    property bool frozenCursor: false
+    readonly property var encodingControls: {
+        const record = selectionMode === "record";
+        const lossless = copying || annotateAfterCapture;
+        const fields = record ? [
+            {key: "videoFormat", action: "ScreenshotPicker.format", title: String(encoding("videoFormat")).toUpperCase(), values: ["mp4", "mkv"]},
+            {key: "codec", action: "ScreenshotPicker.codec", title: encoding("codec") === "libx265" ? "HEVC" : "H.264", values: ["libx264", "libx265"]},
+            {key: "frameRate", action: "ScreenshotPicker.fps", title: encoding("frameRate") === 0 ? "AUTO FPS" : encoding("frameRate") + " FPS", values: [0, 30, 60, 120]},
+            {key: "videoQuality", action: "ScreenshotPicker.quality", title: "CRF " + encoding("videoQuality"), values: [18, 23, 28]},
+            {key: "countdown", action: "ScreenshotPicker.countdown", title: "DELAY " + encoding("countdown") + "s", values: [0, 3, 5, 10]}
+        ] : [
+            {key: "imageFormat", action: "ScreenshotPicker.format", title: lossless ? "PNG EXPORT" : String(encoding("imageFormat")).toUpperCase(), values: ["png", "jpg"]},
+            {key: "jpegQuality", action: "ScreenshotPicker.quality", title: "JPEG " + encoding("jpegQuality") + "%", values: [75, 85, 95]},
+            {key: "cursor", action: "ScreenshotPicker.cursor", title: "CURSOR " + (encoding("cursor") ? "ON" : "OFF") + (frozenForCapture ? " · NEXT" : ""), values: [false, true]}
+        ];
+        return fields.concat([{key: "", action: "ScreenshotPicker.resetEncoding", title: "DEFAULTS", values: []}]);
+    }
+    function parseEncoding(raw: string): var {
+        try {
+            const value = JSON.parse(raw);
+            return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+        } catch (_) {
+            return {};
+        }
+    }
+    function encoding(key: string): var {
+        return Object.prototype.hasOwnProperty.call(encodingOverrides, key) ? encodingOverrides[key] : runtime.captureEncoding[key];
+    }
+    function setEncoding(key: string, value: var): void {
+        if (countingDown || exporting)
+            return;
+        const next = Object.assign({}, encodingOverrides);
+        next[key] = value;
+        qmlCapturePreferences.encodingOverrides = JSON.stringify(next);
+        qmlCapturePreferences.sync();
+    }
+    function cycleEncoding(field: var): void {
+        if (countingDown || exporting || (selectionMode !== "record" && (copying || annotateAfterCapture) && ["imageFormat", "jpegQuality"].includes(field.key)))
+            return;
+        if (field.key === "") {
+            qmlCapturePreferences.encodingOverrides = "{}";
+            qmlCapturePreferences.sync();
+        } else {
+            const index = field.values.indexOf(encoding(field.key));
+            setEncoding(field.key, field.values[(index + 1) % field.values.length]);
+        }
+    }
+    function imageArguments(pixels: var): var {
+        return [runtime.frozenCapture, exportAction, snapshotPath, String(pixels.x), String(pixels.y), String(pixels.w), String(pixels.h), String(encoding("imageFormat")), String(encoding("jpegQuality"))];
+    }
+    Timer {
+        id: recordCountdown
+        interval: 1000
+        repeat: true
+        onTriggered: {
+            picker.remaining -= 1;
+            if (picker.remaining <= 0) {
+                stop();
+                picker.captureNow();
+            }
+        }
+    }
     readonly property string audioLabel: audioMode === "system" ? "SYSTEM AUDIO" : audioMode === "microphone" ? "MICROPHONE" : "NO AUDIO"
     property string snapshotPath: ""
     property string statusText: ""
@@ -34,6 +99,7 @@ Item {
         category: "Capture"
         property bool freezeEnabled: picker.runtime.captureFreezeEnabled
         property string preferenceSource: ""
+        property string encodingOverrides: "{}"
     }
     property real startX: 0
     property real startY: 0
@@ -82,8 +148,8 @@ Item {
         copying = copy;
         selectionMode = mode;
         annotateAfterCapture = false;
-        if (mode !== "record")
-            audioMode = "none";
+        frozenCursor = Boolean(encoding("cursor"));
+        remaining = 0;
         initialiseSelection = true;
         statusText = "";
         frozenForCapture = mode !== "record" && freezeEnabled;
@@ -96,7 +162,7 @@ Item {
             Qt.callLater(() => initialiseRect());
         } else if (frozenForCapture) {
             pending = true;
-            snapshotProcess.exec([runtime.frozenCapture, "snapshot", target.name]);
+            snapshotProcess.exec([runtime.frozenCapture, "snapshot", target.name, frozenCursor ? "cursor" : "no-cursor"]);
         } else {
             // Live selection never displays an old frame. The final snapshot
             // is collected only after the shared modal has been hidden.
@@ -117,6 +183,7 @@ Item {
     }
 
     function resetToDeclared(): void {
+        qmlCapturePreferences.encodingOverrides = "{}";
         qmlCapturePreferences.preferenceSource = "default";
         qmlCapturePreferences.setValue("preferenceSource", "default");
         qmlCapturePreferences.sync();
@@ -159,7 +226,7 @@ Item {
         repeat: false
         onTriggered: {
             if (picker.pending && picker.frozenForCapture && picker.captureScreen) {
-                snapshotProcess.exec([picker.runtime.frozenCapture, "snapshot", picker.captureScreen.name]);
+                snapshotProcess.exec([picker.runtime.frozenCapture, "snapshot", picker.captureScreen.name, picker.encoding("cursor") ? "cursor" : "no-cursor"]);
                 modeRevealDelay.restart();
             }
         }
@@ -200,7 +267,7 @@ Item {
         if (liveExportPending) {
             liveExportPending = false;
             const pixels = selectedPixels;
-            exportProcess.exec([runtime.frozenCapture, exportAction, snapshotPath, String(pixels.x), String(pixels.y), String(pixels.w), String(pixels.h)]);
+            exportProcess.exec(imageArguments(pixels));
             return;
         }
         if (!pending)
@@ -216,6 +283,8 @@ Item {
     function dismiss(clearFile: bool): void {
         if (exporting)
             return;
+        recordCountdown.stop();
+        remaining = 0;
         modeSnapshotDelay.stop();
         modeRevealDelay.stop();
         const oldPath = snapshotPath;
@@ -238,6 +307,19 @@ Item {
     function capture(action: string): void {
         if (!open || exporting || pending || selectionWidth < 5 || selectionHeight < 5)
             return;
+        if (countingDown)
+            return;
+        if (selectionMode === "record" && Number(encoding("countdown")) > 0) {
+            remaining = Number(encoding("countdown"));
+            recordCountdown.start();
+            return;
+        }
+        captureNow();
+    }
+
+    function captureNow(): void {
+        if (!open || exporting || pending || selectionWidth < 5 || selectionHeight < 5)
+            return;
         const pixelRect = selectedPixels;
         if (selectionMode === "record") {
             // Recorder geometry stays in compositor logical coordinates.
@@ -249,7 +331,7 @@ Item {
             exporting = true;
             open = false;
             statusText = "STARTING RECORDING…";
-            recordingStart.exec([runtime.recordingToggle, "start", outputName, recordGeometry, selectedAudio]);
+            recordingStart.exec([runtime.recordingToggle, "start", outputName, recordGeometry, selectedAudio, String(encoding("videoFormat")), String(encoding("codec")), String(encoding("frameRate")), String(encoding("videoQuality"))]);
             return;
         }
         exportAction = annotateAfterCapture ? "annotate" : (copying ? "copy" : "save");
@@ -268,7 +350,7 @@ Item {
             statusText = exportAction === "annotate" ? "OPENING ANNOTATION…" : (copying ? "COPYING EXACT FRAME…" : "SAVING EXACT FRAME…");
             if (exportAction === "annotate")
                 open = false;
-            exportProcess.exec([runtime.frozenCapture, exportAction, snapshotPath, String(pixelRect.x), String(pixelRect.y), String(pixelRect.w), String(pixelRect.h)]);
+            exportProcess.exec(imageArguments(pixelRect));
         }
     }
 
@@ -291,7 +373,7 @@ Item {
 
     function cycleAudio(): void {
         if (selectionMode === "record")
-            audioMode = audioMode === "none" ? "system" : audioMode === "system" ? "microphone" : "none";
+            setEncoding("audio", audioMode === "none" ? "system" : audioMode === "system" ? "microphone" : "none");
     }
 
     function nextMonitor(): void {
@@ -311,7 +393,7 @@ Item {
         repeat: false
         onTriggered: {
             if (picker.liveExportPending && picker.captureScreen)
-                snapshotProcess.exec([picker.runtime.frozenCapture, "snapshot", picker.captureScreen.name]);
+                snapshotProcess.exec([picker.runtime.frozenCapture, "snapshot", picker.captureScreen.name, picker.encoding("cursor") ? "cursor" : "no-cursor"]);
         }
     }
 
@@ -471,7 +553,7 @@ Item {
                 picker.dismiss(true);
                 return;
             }
-            if (picker.exporting)
+            if (picker.exporting || picker.countingDown)
                 return;
             picker.dragging = true;
             picker.initialiseSelection = false;
@@ -504,7 +586,7 @@ Item {
             topMargin: picker.theme.spacing5
         }
         width: Math.min(picker.width - 48, 1000)
-        height: 37 + picker.theme.spacing2 * 3 + pickerLegend.implicitHeight
+        height: 37 * 2 + picker.theme.spacing2 * 4 + pickerLegend.implicitHeight
         z: 5
         theme: picker.theme
         motion: picker.motion
@@ -538,7 +620,7 @@ Item {
                     }
                     Text {
                         width: parent.width
-                        text: picker.statusText.length > 0 ? picker.statusText : "DRAG TO SELECT · RELEASE TO ADJUST"
+                        text: picker.countingDown ? "STARTING IN " + picker.remaining + "s · ESC CANCEL" : picker.statusText.length > 0 ? picker.statusText : "DRAG TO SELECT · RELEASE TO ADJUST"
                         color: picker.theme.textMuted
                         font.family: picker.runtime.fontSans
                         font.pixelSize: picker.theme.fontSize(9)
@@ -597,6 +679,29 @@ Item {
                 }
             }
 
+            Row {
+                width: parent.width
+                height: 37
+                spacing: picker.theme.spacing1
+                Repeater {
+                    model: picker.encodingControls
+                    delegate: ShellAction {
+                        required property var modelData
+                        width: (parent.width - (picker.encodingControls.length - 1) * picker.theme.spacing1) / picker.encodingControls.length
+                        height: 37
+                        runtime: picker.runtime
+                        theme: picker.theme
+                        motion: picker.motion
+                        compact: true
+                        horizontalCompact: true
+                        title: modelData.title
+                        shortcut: picker.runtime.shellHint(modelData.action)
+                        enabled: !picker.countingDown && !picker.exporting && !(picker.selectionMode !== "record" && (picker.copying || picker.annotateAfterCapture) && ["imageFormat", "jpegQuality"].includes(modelData.key))
+                        onActivated: picker.cycleEncoding(modelData)
+                    }
+                }
+            }
+
             KeyHintStrip {
                 id: pickerLegend
                 width: parent.width
@@ -647,21 +752,43 @@ Item {
         Keys.onPressed: event => {
             if (!picker.open || picker.exporting)
                 return;
+            if (picker.countingDown) {
+                if (event.key === picker.runtime.shellKeyCode("capture", "Escape")) {
+                    recordCountdown.stop();
+                    picker.remaining = 0;
+                    picker.statusText = "COUNTDOWN CANCELLED";
+                }
+                event.accepted = true;
+                return;
+            }
+            for (const field of picker.encodingControls) {
+                if (picker.runtime.shellMatchesHint(field.action, event.key, event.modifiers)) {
+                    if (!event.isAutoRepeat)
+                        picker.cycleEncoding(field);
+                    event.accepted = true;
+                    return;
+                }
+            }
             const resize = !!(picker.runtime.shellModifier("capture", "Shift", event.modifiers));
             const step = resize ? 8 : 16;
             if (event.key === picker.runtime.shellKeyCode("capture", "Escape")) {
                 picker.dismiss(true);
             } else if (event.key === picker.runtime.shellKeyCode("capture", "Return") || event.key === picker.runtime.shellKeyCode("capture", "Enter")) {
-                picker.capture("");
+                if (!event.isAutoRepeat)
+                    picker.capture("");
             } else if (event.key === picker.runtime.shellKeyCode("capture", "Tab")) {
-                picker.nextMonitor();
+                if (!event.isAutoRepeat)
+                    picker.nextMonitor();
             } else if (event.key === picker.runtime.shellKeyCode("capture", "E")) {
-                if (picker.selectionMode === "record")
-                    picker.cycleAudio();
-                else
-                    picker.toggleAnnotation();
+                if (!event.isAutoRepeat) {
+                    if (picker.selectionMode === "record")
+                        picker.cycleAudio();
+                    else
+                        picker.toggleAnnotation();
+                }
             } else if (event.key === picker.runtime.shellKeyCode("capture", "Z") && picker.selectionMode !== "record") {
-                picker.toggleFreeze();
+                if (!event.isAutoRepeat)
+                    picker.toggleFreeze();
             } else if (event.key === picker.runtime.shellKeyCode("capture", "F")) {
                 picker.initialiseSelection = false;
                 picker.startX = 0;
