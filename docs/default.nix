@@ -381,7 +381,7 @@ let
       } | ${toString (builtins.length facts.serverApps)} | ${toString (builtins.length facts.systemPackages)} | ${toString (builtins.length facts.homePackages)} |"
     ) hostNames}
 
-    Backup coverage on each platform is described in [Backups](../infrastructure/backups.md).
+    Backup coverage on each platform is described in [Backups](infrastructure/backups.md).
   '';
 
   semanticScopesMarkdown = ''
@@ -764,7 +764,7 @@ let
 
     # Overview
 
-    - [Fleet](overview/fleet.md)
+    - [Fleet](fleet.md)
 
     # Conventions
 
@@ -895,7 +895,7 @@ let
     "infrastructure/networking.md" = networkingMarkdown;
     "infrastructure/packages.md" = packagesMarkdown;
     "infrastructure/storage.md" = infrastructureStorageMarkdown;
-    "overview/fleet.md" = fleetMarkdown;
+    "fleet.md" = fleetMarkdown;
   }
   // systemFiles
   // hostRunbookIndexFiles
