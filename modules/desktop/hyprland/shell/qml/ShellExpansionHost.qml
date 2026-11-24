@@ -205,6 +205,8 @@ PanelWindow {
             systemContent.navigateBack();
         } else if (helpVisible) {
             toggleHelp();
+        } else if (mediaContent) {
+            mediaContent.navigateBack();
         } else if (activityContent) {
             activityContent.navigateBack();
         } else if (calendarContent) {

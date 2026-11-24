@@ -10,6 +10,7 @@ FocusScope {
     required property RuntimeConfig runtime
     required property Theme theme
     required property Motion motion
+    required property AppearancePreferences appearance
 
     property bool compact: false
     property bool active: false
@@ -41,6 +42,7 @@ FocusScope {
 
     readonly property string foregroundRole: "audio"
     readonly property bool foregroundBusy: routeProcess.running || pendingRoute !== "" || effectsState.awaitingConfirmation || effectsState.requestedPreset !== null
+    readonly property var reactiveHelp: compact ? [] : quickReactive.helpBindings
     property bool presetOpen: false
     property int presetIndex: 0
     function togglePresetPicker(): void {
@@ -239,6 +241,8 @@ FocusScope {
     function handleKey(key: int, modifiers: int, autoRepeat: bool): bool {
         if (!active)
             return false;
+        if (!compact && !deviceChooserOpen && quickReactive.handleKey(key, modifiers, autoRepeat))
+            return true;
         if (presetOpen) {
             if (key === runtime.shellKeyCode("mixer", "Escape") || runtime.shellMatchesHint("AudioMixerContent.effectsPresets", key, modifiers)) {
                 if (!autoRepeat)
@@ -403,6 +407,20 @@ FocusScope {
                     title: "Audio mixer"
                     detail: "Output, input and every application channel"
                 }
+            }
+
+            ReactiveQuickControls {
+                id: quickReactive
+                visible: !mixer.compact
+                width: parent.width
+                runtime: mixer.runtime
+                theme: mixer.theme
+                motion: mixer.motion
+                appearance: mixer.appearance
+                engaged: mixer.active && !mixer.compact && !mixer.deviceChooserOpen
+                scope: "mixer"
+                parameterKeys: ["musicReactiveSensitivity", "musicReactiveAttack", "musicReactiveRelease", "musicReactiveSmoothing", "musicReactiveIntensity"]
+                onKeyboardRequested: mixer.keyboardRequested()
             }
 
             Grid {

@@ -172,8 +172,9 @@ FocusScope {
     readonly property bool settingsOpen: settingsPanel.open
     readonly property bool vhsOpen: vhsPanel.open
     readonly property bool recordingsOpen: recordingsPanel.open
+    readonly property var helpBindings: baseHelpBindings.concat(settingsPanel.open ? settingsPanel.panel?.reactiveHelp || [] : mixerOpen ? mixerView.panel?.reactiveHelp || [] : wallpaperPanel.open && !wallpaperPanel.panel?.policyView ? wallpaperPanel.panel?.reactiveHelp || [] : [])
     readonly property string helpTitle: settingsPanel.open ? "Capability details" : statusOpen ? "System status" : recordingsPanel.open ? "Captures" : wallpaperPanel.open ? "Wallpaper library" : mixerOpen ? "Application mixer" : resourcesPanel.open ? "Resource monitor" : (bluetoothPanel.open ? "Bluetooth controls" : (networkPanel.open ? "Network controls" : (themePanel.open ? "Theme controls" : (sessionPanel.open ? "Session controls" : (trayMenu.open ? "Tray menu controls" : "System controls")))))
-    readonly property var helpBindings: settingsPanel.open ? [
+    readonly property var baseHelpBindings: settingsPanel.open ? [
         {
             key: root.runtime.shellHint("SettingsDetail.toggle"),
             action: "Toggle this capability"
@@ -513,6 +514,8 @@ FocusScope {
             themePanel.invoke("leaveSearch");
         } else if (wallpaperPanel.open && wallpaperPanel.panel && wallpaperPanel.panel.searching) {
             wallpaperPanel.invoke("leaveSearch");
+        } else if (wallpaperPanel.open && wallpaperPanel.panel && wallpaperPanel.panel.cancelReactiveEditing()) {
+            return;
         } else if (wallpaperPanel.open && wallpaperPanel.panel && wallpaperPanel.panel.policyView) {
             wallpaperPanel.invoke("togglePolicyView");
         } else if (settingsPanel.open && settingsPanel.panel && settingsPanel.panel.cancelNested()) {
@@ -1527,6 +1530,7 @@ FocusScope {
 
                     AudioMixerContent {
                         id: audioDeck
+                        appearance: root.appearance
                         width: parent.width
                         height: Math.max(implicitHeight, mediaCard.implicitHeight)
                         compact: true
@@ -1739,6 +1743,7 @@ FocusScope {
             requested: root.mixerOpen
             sourceComponent: Component {
                 AudioMixerContent {
+                    appearance: root.appearance
                     active: root.engaged && root.mixerOpen
                     system: root.system
                     runtime: root.runtime

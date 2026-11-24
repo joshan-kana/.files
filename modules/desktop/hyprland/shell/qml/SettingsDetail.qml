@@ -47,6 +47,8 @@ Item {
     readonly property bool hasMaster: ["windows", "glass", "nightLight", "alerts", "stay", "spectrum", "reactive", "bar", "frame", "motion"].includes(kind)
     readonly property bool hasBlur: ["windows", "glass"].includes(kind)
     readonly property bool reactiveTuning: kind === "reactive"
+    readonly property bool contextualReactive: ["bar", "frame", "glass", "spectrum"].includes(kind)
+    readonly property var reactiveHelp: contextualReactive ? quickReactive.helpBindings : []
     readonly property bool spectrumTuning: kind === "spectrum"
     readonly property bool hasReset: hasBlur || spectrumTuning || kind === "alerts" || kind === "nightLight" || kind === "power" || ["bar", "frame", "motion"].includes(kind)
     readonly property string titleText: ({
@@ -177,53 +179,7 @@ Item {
                 }
             ];
         if (reactiveTuning)
-            return [
-                {
-                    key: "musicReactiveSensitivity",
-                    title: "Sensitivity",
-                    description: "Response to quiet audio",
-                    minimum: 40,
-                    maximum: 300,
-                    step: 5,
-                    suffix: "%"
-                },
-                {
-                    key: "musicReactiveAttack",
-                    title: "Attack",
-                    description: "Strength of beat transients",
-                    minimum: 50,
-                    maximum: 250,
-                    step: 5,
-                    suffix: "%"
-                },
-                {
-                    key: "musicReactiveRelease",
-                    title: "Release speed",
-                    description: "Higher values settle sooner",
-                    minimum: 40,
-                    maximum: 250,
-                    step: 5,
-                    suffix: "%"
-                },
-                {
-                    key: "musicReactiveSmoothing",
-                    title: "Smoothing",
-                    description: "Smooth the sustained envelope",
-                    minimum: 0,
-                    maximum: 90,
-                    step: 5,
-                    suffix: "%"
-                },
-                {
-                    key: "musicReactiveIntensity",
-                    title: "Tint intensity",
-                    description: "Strength of the shared shell tint",
-                    minimum: 25,
-                    maximum: 200,
-                    step: 5,
-                    suffix: "%"
-                }
-            ];
+            return appearance.reactiveParameters;
         if (spectrumTuning)
             return [
                 {
@@ -550,10 +506,12 @@ Item {
     }
 
     function cancelNested(): bool {
-        return kind === "displays" && displayDetails.cancelNested();
+        return quickReactive.cancelEditing() || (kind === "displays" && displayDetails.cancelNested());
     }
 
     function handleKey(key: int, modifiers: int, autoRepeat: bool): bool {
+        if (quickReactive.handleKey(key, modifiers, autoRepeat))
+            return true;
         if (kind === "displays")
             return displayDetails.handleKey(key, modifiers, autoRepeat);
         if (autoRepeat) {
@@ -704,7 +662,7 @@ Item {
                 motion: panel.motion
                 compact: true
                 horizontalCompact: true
-                icon: panel.masterState ? "󰈆" : "󰈅"
+                icon: DesktopIcons.toggleGlyph(panel.masterState)
                 title: panel.masterState ? "Disable" : "Enable"
                 shortcut: panel.runtime.shellHint("SettingsDetail.toggle")
                 active: panel.masterState
@@ -736,6 +694,19 @@ Item {
             title: "Restore parameter default"
             shortcut: panel.runtime.shellHint("SettingsDetail.reset")
             onActivated: panel.resetAppearance()
+        }
+
+        ReactiveQuickControls {
+            id: quickReactive
+            visible: panel.contextualReactive
+            width: parent.width
+            runtime: panel.runtime
+            theme: panel.theme
+            motion: panel.motion
+            appearance: panel.appearance
+            engaged: panel.open && visible
+            parameterKeys: panel.kind === "spectrum" ? ["musicReactiveSensitivity", "musicReactiveIntensity"] : ["musicReactiveIntensity"]
+            onKeyboardRequested: panel.keyboardRequested()
         }
 
         Row {

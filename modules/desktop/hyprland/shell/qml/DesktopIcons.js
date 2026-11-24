@@ -50,3 +50,8 @@ function capabilityGlyph(kind, state) {
       return glyphFor(kind);
   }
 }
+
+// The glyph is the current state; the adjacent verb describes the action.
+function toggleGlyph(active) {
+  return active ? "󰔡" : "󰔢";
+}

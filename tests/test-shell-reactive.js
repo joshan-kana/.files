@@ -238,3 +238,31 @@ test("Weather date follows the live system clock across midnight", () => {
   assert.match(weather, /Qt\.formatDateTime\(clock\.date, "dddd, d MMMM"\)/);
   assert.doesNotMatch(weather, /Qt\.formatDate\(new Date\(\)/);
 });
+
+test("contextual reactive editors share the full editor's canonical preference descriptors and actions", () => {
+  const quick = qml("ReactiveQuickControls.qml");
+  assert.match(quick, /appearance\.reactiveParameters\.find/);
+  assert.match(
+    qml("SettingsDetail.qml"),
+    /return appearance\.reactiveParameters/,
+  );
+  for (const file of [
+    "SettingsDetail.qml",
+    "AudioMixerContent.qml",
+    "MediaContent.qml",
+    "WallpaperPanel.qml",
+  ]) {
+    const src = qml(file);
+    assert.match(src, /ReactiveQuickControls \{/);
+    assert.match(src, /quickReactive\.handleKey/);
+  }
+  for (const action of [
+    "toggleMusicReactive",
+    "applyReactivePreset",
+    "cycleReactiveTarget",
+    "setReactiveParameter",
+  ])
+    assert.ok(quick.includes("appearance." + action + "("), action);
+  assert.match(quick, /parameterSlider\.beginKeyboardAdjustment\(\)/);
+  assert.match(quick, /if \(!autoRepeat\)/);
+});

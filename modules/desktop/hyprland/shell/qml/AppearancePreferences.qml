@@ -65,6 +65,53 @@ QtObject {
     readonly property string musicReactiveTarget: ["all", "frame", "shell"].includes(effective("musicReactiveTarget")) ? effective("musicReactiveTarget") : "all"
     readonly property int wallpaperSpectrumBars: Math.max(24, Math.min(96, effective("wallpaperSpectrumBars")))
     readonly property real wallpaperSpectrumOpacity: Math.max(0.2, Math.min(1.0, effective("wallpaperSpectrumOpacity")))
+    readonly property var reactiveParameters: [
+        {
+            key: "musicReactiveSensitivity",
+            title: "Sensitivity",
+            description: "Response to quiet audio",
+            minimum: 40,
+            maximum: 300,
+            step: 5,
+            suffix: "%"
+        },
+        {
+            key: "musicReactiveAttack",
+            title: "Attack",
+            description: "Strength of beat transients",
+            minimum: 50,
+            maximum: 250,
+            step: 5,
+            suffix: "%"
+        },
+        {
+            key: "musicReactiveRelease",
+            title: "Release speed",
+            description: "Higher values settle sooner",
+            minimum: 40,
+            maximum: 250,
+            step: 5,
+            suffix: "%"
+        },
+        {
+            key: "musicReactiveSmoothing",
+            title: "Smoothing",
+            description: "Smooth the sustained envelope",
+            minimum: 0,
+            maximum: 90,
+            step: 5,
+            suffix: "%"
+        },
+        {
+            key: "musicReactiveIntensity",
+            title: "Tint intensity",
+            description: "Strength of the shared shell tint",
+            minimum: 25,
+            maximum: 200,
+            step: 5,
+            suffix: "%"
+        }
+    ]
     readonly property var musicReactiveParameterKeys: ["musicReactiveSensitivity", "musicReactiveAttack", "musicReactiveRelease", "musicReactiveSmoothing", "musicReactiveIntensity", "musicReactiveEmphasis"]
     readonly property string musicReactivePreset: {
         if (musicReactiveParameterKeys.every(key => !hasOverride(key)))

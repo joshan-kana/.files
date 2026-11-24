@@ -289,12 +289,21 @@ test("semantic action bindings change their handler and hint without changing a 
     path.join(qmlDir, "SystemContent.qml"),
     "utf8",
   );
-  for (const action of Object.keys(actionAssignments))
+  const reactive = fs.readFileSync(
+    path.join(qmlDir, "ReactiveQuickControls.qml"),
+    "utf8",
+  );
+  for (const action of Object.keys(actionAssignments)) {
+    const contextual = action.startsWith("ReactiveQuickControls.");
     assert.ok(
-      controls.includes(
-        `shellMatchesHint("${action}", event.key, event.modifiers)`,
+      (contextual ? reactive : controls).includes(
+        contextual
+          ? `shellMatchesHint("${action}", key, modifiers)`
+          : `shellMatchesHint("${action}", event.key, event.modifiers)`,
       ),
+      action,
     );
+  }
 });
 
 test("power, notifications and preset choices use positional shifted letters", () => {

@@ -20,6 +20,7 @@ Item {
     readonly property string libraryRoot: Quickshell.env("HOME") + "/wallpapers/"
     readonly property var collections: ["", ...new Set(entries.map(path => path.startsWith(libraryRoot) ? path.slice(libraryRoot.length, path.lastIndexOf("/")) : "").filter(value => value.length > 0))].sort()
     property bool policyView: false
+    readonly property var reactiveHelp: quickReactive.helpBindings
     property var policy: ({
             mode: "off",
             target: "all",
@@ -276,7 +277,12 @@ Item {
             break;
         }
     }
+    function cancelReactiveEditing(): bool {
+        return quickReactive.cancelEditing();
+    }
     function handlePolicyKey(key: int, modifiers: int, autoRepeat: bool): bool {
+        if (!policyView && !searching && quickReactive.handleKey(key, modifiers, autoRepeat))
+            return true;
         const actions = policyView ? scheduleActions : galleryPolicyActions;
         for (const entry of actions) {
             if (runtime.shellMatchesHint(entry.action, key, modifiers)) {
@@ -548,6 +554,18 @@ Item {
             eyebrow: "Appearance / wallpapers"
             title: "Wallpaper library"
             detail: panel.outputLabel + " · " + (panel.busy ? "Applying wallpaper…" : panel.resizeMode.toUpperCase() + " · Image / video")
+        }
+
+        ReactiveQuickControls {
+            id: quickReactive
+            width: parent.width
+            runtime: panel.runtime
+            theme: panel.theme
+            motion: panel.motion
+            appearance: panel.appearance
+            engaged: panel.open && !panel.policyView && !panel.searching
+            parameterKeys: ["musicReactiveIntensity"]
+            onKeyboardRequested: panel.keyboardRequested()
         }
 
         SearchFieldSurface {

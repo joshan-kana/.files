@@ -109,6 +109,10 @@
     "SystemContent.barDetails" = "SHIFT+J";
     "SystemContent.frameDetails" = "SHIFT+K";
     "SystemContent.motionDetails" = "SHIFT+X";
+    "ReactiveQuickControls.toggle" = "SHIFT+T";
+    "ReactiveQuickControls.preset" = "SHIFT+P";
+    "ReactiveQuickControls.target" = "SHIFT+G";
+    "ReactiveQuickControls.parameter" = "SHIFT+I";
 
   };
 
