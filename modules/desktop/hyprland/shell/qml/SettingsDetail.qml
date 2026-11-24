@@ -1285,35 +1285,47 @@ Item {
                 surfaceLayer: ShellSurface.Group
                 cornerRadius: panel.theme.radiusLarge
                 fillColor: panel.theme.blend(panel.theme.groupBase, panel.theme.roleColor("inhibition"), panel.system.idleInhibited ? 0.13 : 0.04)
-                Column {
+                Row {
                     id: awakeContent
                     width: parent.width - panel.theme.spacing4 * 2
                     anchors.centerIn: parent
-                    spacing: panel.theme.spacing2
-                    ShellText {
-                        width: parent.width
-                        runtime: panel.runtime
-                        theme: panel.theme
-                        text: panel.idleStatus
-                        textRole: ShellText.Display
-                        color: panel.theme.readableRoleColor("inhibition")
-                        wrapMode: Text.WordWrap
-                    }
-                    ShellText {
-                        visible: panel.system.idleInhibited && panel.system.idleInhibitDeadline > 0
-                        runtime: panel.runtime
-                        theme: panel.theme
-                        text: "Ends at " + ClockFormatting.wallClock(new Date(panel.system.idleInhibitDeadline))
-                        textRole: ShellText.Supporting
-                    }
-                    LevelTrack {
-                        visible: panel.system.idleInhibited && panel.system.idleInhibitDeadline > 0 && panel.system.idleInhibitMinutes > 0
-                        width: parent.width
-                        height: visible ? panel.theme.prominentTrack : 0
+                    spacing: panel.theme.spacing4
+                    readonly property bool finite: panel.system.idleInhibited && panel.system.idleInhibitDeadline > 0 && panel.system.idleInhibitMinutes > 0
+                    ResourceGauge {
+                        id: countdown
+                        visible: awakeContent.finite
+                        width: visible ? panel.theme.fontSize(124) : 0
+                        height: visible ? width : 0
+                        anchors.verticalCenter: parent.verticalCenter
                         theme: panel.theme
                         motion: panel.motion
-                        fraction: Math.max(0, (panel.system.idleInhibitDeadline - panel.clockMs) / Math.max(1, panel.system.idleInhibitMinutes * 60000))
+                        value: Math.max(0, (panel.system.idleInhibitDeadline - panel.clockMs) / Math.max(1, panel.system.idleInhibitMinutes * 60000))
                         accentColor: panel.theme.roleColor("inhibition")
+                        readback: Math.max(0, Math.ceil((panel.system.idleInhibitDeadline - panel.clockMs) / 60000)) + "m"
+                        label: "Remaining"
+                    }
+                    Column {
+                        width: Math.max(1, awakeContent.width - countdown.width - (countdown.visible ? awakeContent.spacing : 0))
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: panel.theme.spacing2
+                        ShellText {
+                            width: parent.width
+                            runtime: panel.runtime
+                            theme: panel.theme
+                            text: awakeContent.finite ? "Stay awake" : panel.idleStatus
+                            textRole: ShellText.Display
+                            color: panel.theme.readableRoleColor("inhibition")
+                            wrapMode: Text.WordWrap
+                        }
+                        ShellText {
+                            visible: awakeContent.finite
+                            width: parent.width
+                            runtime: panel.runtime
+                            theme: panel.theme
+                            text: "Ends at " + ClockFormatting.wallClock(new Date(panel.system.idleInhibitDeadline))
+                            textRole: ShellText.Supporting
+                            wrapMode: Text.WordWrap
+                        }
                     }
                 }
             }
@@ -1334,7 +1346,7 @@ Item {
                             required property int index
                             required property int modelData
                             width: modelData === 0 ? durationFlow.width : Math.floor((durationFlow.width - (durationFlow.columns - 1) * durationFlow.spacing) / durationFlow.columns)
-                            height: 52
+                            height: Math.max(panel.theme.fontSize(44), implicitHeight)
                             runtime: panel.runtime
                             theme: panel.theme
                             motion: panel.motion

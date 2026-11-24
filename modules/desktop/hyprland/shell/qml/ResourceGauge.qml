@@ -11,6 +11,7 @@ Item {
     property bool known: true
     property color accentColor: theme.accent
     property string label: ""
+    property string readback: ""
     property bool compact: false
     property bool compactRingTuning: false
     property string compactIcon: "󰁹"
@@ -64,7 +65,7 @@ Item {
         visible: !gauge.compact
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
-            text: gauge.known ? Math.round(gauge.animatedValue * 100) + "%" : "··"
+            text: gauge.known ? (gauge.readback || Math.round(gauge.animatedValue * 100) + "%") : "··"
             color: gauge.accentColor
             font.family: gauge.theme.runtime.fontMono
             font.pixelSize: gauge.theme.fontSize(24)
