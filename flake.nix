@@ -830,6 +830,7 @@
                     python3
                     bash
                     nix
+                    jq
                     vdirsyncer
                   ]
                   ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [ pkgs.kdePackages.qtdeclarative ];
