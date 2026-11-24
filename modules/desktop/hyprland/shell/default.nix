@@ -765,11 +765,19 @@ in
     type = lib.types.submodule {
       options = {
         intervalSeconds = lib.mkOption {
-          type = lib.types.enum [ 1 2 5 ];
+          type = lib.types.enum [
+            1
+            2
+            5
+          ];
           default = 2;
         };
         historyLength = lib.mkOption {
-          type = lib.types.enum [ 30 60 120 ];
+          type = lib.types.enum [
+            30
+            60
+            120
+          ];
           default = 30;
         };
       };
@@ -1006,7 +1014,7 @@ in
         accessibility.textScale = scopeConfig.textScale;
         motion.animationsEnabled = scopeConfig.animationsEnabled;
         motion.durationMultiplier = scopeConfig.shellMotionSpeed;
-        resourceSampling = scopeConfig.resourceSampling;
+        inherit (scopeConfig) resourceSampling;
         session.restoreWindowsOnExit = scopeConfig.restoreWindowsOnExit;
         palette = {
           inherit (scopeConfig) quicklinks;

@@ -89,11 +89,41 @@ Item {
     readonly property bool masterAvailable: kind !== "nightLight" || nightLight.supported && !nightLight.busy
     readonly property var parameters: {
         if (kind === "bar")
-            return [{key: "barIslandHeight", title: "Island height", description: "Shared bar density", minimum: 44, maximum: 60, step: 2, suffix: " px"}];
+            return [
+                {
+                    key: "barIslandHeight",
+                    title: "Island height",
+                    description: "Shared bar density",
+                    minimum: 44,
+                    maximum: 60,
+                    step: 2,
+                    suffix: " px"
+                }
+            ];
         if (kind === "frame")
-            return [{key: "frameThickness", title: "Frame thickness", description: "Shared edge geometry", minimum: 18, maximum: 36, step: 2, suffix: " px"}];
+            return [
+                {
+                    key: "frameThickness",
+                    title: "Frame thickness",
+                    description: "Shared edge geometry",
+                    minimum: 18,
+                    maximum: 36,
+                    step: 2,
+                    suffix: " px"
+                }
+            ];
         if (kind === "motion")
-            return [{key: "motionDuration", title: "Transition duration", description: "Shell transitions only; key-down remains immediate", minimum: 75, maximum: 150, step: 5, suffix: "%"}];
+            return [
+                {
+                    key: "motionDuration",
+                    title: "Transition duration",
+                    description: "Shell transitions only; key-down remains immediate",
+                    minimum: 75,
+                    maximum: 150,
+                    step: 5,
+                    suffix: "%"
+                }
+            ];
         if (kind === "windows")
             return [
                 {

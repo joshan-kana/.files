@@ -25,9 +25,15 @@ Item {
 
     function activateAction(action: string): void {
         switch (action) {
-        case "ResourceDashboard.refresh": resourceState.refresh(); break;
-        case "ResourceDashboard.interval": resourceState.cycleInterval(); break;
-        case "ResourceDashboard.history": resourceState.cycleHistory(); break;
+        case "ResourceDashboard.refresh":
+            resourceState.refresh();
+            break;
+        case "ResourceDashboard.interval":
+            resourceState.cycleInterval();
+            break;
+        case "ResourceDashboard.history":
+            resourceState.cycleHistory();
+            break;
         case "ResourceDashboard.processes":
             showCores = false;
             showProcesses = !showProcesses;
@@ -36,7 +42,9 @@ Item {
             if (showProcesses)
                 resourceState.sortByMemory = !resourceState.sortByMemory;
             break;
-        case "ResourceDashboard.defaults": resourceState.resetSampling(); break;
+        case "ResourceDashboard.defaults":
+            resourceState.resetSampling();
+            break;
         }
     }
     function handleKey(key: int, modifiers: int, autoRepeat: bool): bool {
@@ -353,6 +361,7 @@ Item {
                     Repeater {
                         model: panel.showProcesses ? panel.resourceState.processes : []
                         delegate: Row {
+                            id: processRow
                             required property var modelData
                             width: parent.width
                             spacing: panel.theme.spacing2
@@ -360,26 +369,26 @@ Item {
                                 width: 80
                                 runtime: panel.runtime
                                 theme: panel.theme
-                                text: modelData.pid
+                                text: processRow.modelData.pid
                             }
                             ShellText {
                                 width: Math.max(1, parent.width - 260)
                                 runtime: panel.runtime
                                 theme: panel.theme
-                                text: modelData.name
+                                text: processRow.modelData.name
                                 elide: Text.ElideRight
                             }
                             ShellText {
                                 width: 75
                                 runtime: panel.runtime
                                 theme: panel.theme
-                                text: modelData.cpu.toFixed(1) + "%"
+                                text: processRow.modelData.cpu.toFixed(1) + "%"
                             }
                             ShellText {
                                 width: 75
                                 runtime: panel.runtime
                                 theme: panel.theme
-                                text: modelData.memory.toFixed(1) + "%"
+                                text: processRow.modelData.memory.toFixed(1) + "%"
                             }
                         }
                     }
@@ -462,12 +471,30 @@ Item {
             spacing: panel.theme.spacing2
             Repeater {
                 model: [
-                    {action: "ResourceDashboard.refresh", title: "Refresh"},
-                    {action: "ResourceDashboard.interval", title: panel.resourceState.intervalSeconds + "s sampling"},
-                    {action: "ResourceDashboard.history", title: panel.resourceState.historyLength + " samples"},
-                    {action: "ResourceDashboard.processes", title: panel.showProcesses ? "History" : "Processes"},
-                    {action: "ResourceDashboard.sort", title: panel.resourceState.sortByMemory ? "Sort: memory" : "Sort: CPU"},
-                    {action: "ResourceDashboard.defaults", title: "Defaults"}
+                    {
+                        action: "ResourceDashboard.refresh",
+                        title: "Refresh"
+                    },
+                    {
+                        action: "ResourceDashboard.interval",
+                        title: panel.resourceState.intervalSeconds + "s sampling"
+                    },
+                    {
+                        action: "ResourceDashboard.history",
+                        title: panel.resourceState.historyLength + " samples"
+                    },
+                    {
+                        action: "ResourceDashboard.processes",
+                        title: panel.showProcesses ? "History" : "Processes"
+                    },
+                    {
+                        action: "ResourceDashboard.sort",
+                        title: panel.resourceState.sortByMemory ? "Sort: memory" : "Sort: CPU"
+                    },
+                    {
+                        action: "ResourceDashboard.defaults",
+                        title: "Defaults"
+                    }
                 ]
                 delegate: ShellAction {
                     required property var modelData

@@ -138,10 +138,7 @@ test("buttons across panels own hints while decorative symbols are not fake shor
     /shortcut: panel\.runtime\.shellHint\("ResourceDashboard\.toggleCores"\)/,
   );
   assert.doesNotMatch(resources, /ResourceDashboard\.toggleCoresHint/);
-  assert.match(
-    resources,
-    /action: "ResourceDashboard\.refresh"/,
-  );
+  assert.match(resources, /action: "ResourceDashboard\.refresh"/);
 
   const recordings = read("RecordingLibrary");
   assert.match(

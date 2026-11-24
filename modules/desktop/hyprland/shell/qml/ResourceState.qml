@@ -85,7 +85,12 @@ QtObject {
             root.processesAvailable = code === 0;
             root.processes = code === 0 ? root.processOutput.text.trim().split("\n").slice(1, 7).map(line => {
                 const fields = line.trim().split(/\s+/);
-                return {pid: fields[0], cpu: Number(fields[1]), memory: Number(fields[2]), name: fields.slice(3).join(" ")};
+                return {
+                    pid: fields[0],
+                    cpu: Number(fields[1]),
+                    memory: Number(fields[2]),
+                    name: fields.slice(3).join(" ")
+                };
             }).filter(row => Number.isFinite(row.cpu) && Number.isFinite(row.memory)) : [];
         }
     }
