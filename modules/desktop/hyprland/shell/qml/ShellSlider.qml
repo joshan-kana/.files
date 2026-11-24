@@ -11,7 +11,7 @@ Item {
     property real value: 0
     property bool interactive: true
     // Animate external/keyboard changes, never fight pointer dragging.
-    property bool animateValueChanges: false
+    property bool animateValueChanges: true
     property color accentColor: theme.accent
     property real trackHeight: 10
     property real handleSize: 20
@@ -20,7 +20,7 @@ Item {
     // jump when the thumb changes shape.
     property real thumbTrackGap: 5
     readonly property real thumbCenterX: handleSize / 2 + displayedValue * Math.max(1, width - handleSize)
-    readonly property bool thumbPressed: motion.enabled && (interaction.pressed || keyboardPulse.running)
+    readonly property bool thumbPressed: motion.enabled && (interaction.pressed || motion.keyboardSlider === root)
     readonly property bool thumbHovered: interaction.containsMouse && Math.abs(interaction.mouseX - thumbCenterX) <= handleSize * 0.85
     readonly property real normalizedValue: to === from ? 0 : Math.max(0, Math.min(1, (value - from) / (to - from)))
     property real displayedValue: interaction.pressed ? fractionForX(interaction.mouseX) : normalizedValue
@@ -54,17 +54,24 @@ Item {
         return from + fractionForX(mouseX) * (to - from);
     }
 
-    // Called by the existing keyboard action owner on key-down. This is
-    // visual feedback only: no value write or deferred action is involved.
-    function pulseAdjustment(): void {
+    // The existing key-down dispatch owns the value change. Feedback stays
+    // compressed until the physical key is released, even at a range limit.
+    function beginKeyboardAdjustment(): void {
         if (enabled && visible && interactive && motion.enabled)
-            keyboardPulse.restart();
+            motion.beginKeyboardAdjustment(root);
     }
 
-    Timer {
-        id: keyboardPulse
-        interval: Math.max(100, root.motion.effectsFast)
+    function clearKeyboardAdjustment(): void {
+        if (motion && motion.keyboardSlider === root)
+            motion.endKeyboardAdjustment();
     }
+
+    onVisibleChanged: if (!visible)
+        clearKeyboardAdjustment()
+    onEnabledChanged: if (!enabled)
+        clearKeyboardAdjustment()
+    onInteractiveChanged: if (!interactive)
+        clearKeyboardAdjustment()
 
     // Split the active and inactive tracks around the thumb instead of
     // painting a fake gap with an opaque colour over frosted surfaces.

@@ -382,7 +382,7 @@ Item {
                                 target: panel
                                 function onParameterAdjustmentRequested(index: int): void {
                                     if (index === parameterRow.index)
-                                        vhsSlider.pulseAdjustment();
+                                        vhsSlider.beginKeyboardAdjustment();
                                 }
                             }
                             width: parent.width

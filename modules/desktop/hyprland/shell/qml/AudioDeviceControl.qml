@@ -22,8 +22,8 @@ ShellSurface {
     readonly property var devices: microphone ? system.inputDevices : system.outputDevices
     readonly property var preferredDevice: system.preferredAudioDevice(microphone)
 
-    function pulseAdjustment(): void {
-        levelSlider.pulseAdjustment();
+    function beginKeyboardAdjustment(): void {
+        levelSlider.beginKeyboardAdjustment();
     }
 
     signal selectedRequested
@@ -165,7 +165,6 @@ ShellSurface {
                 motion: deviceControl.motion
                 enabled: deviceControl.available
                 value: deviceControl.level
-                animateValueChanges: true
                 accentColor: deviceControl.theme.audioLevelColor(deviceControl.muted)
                 trackHeight: deviceControl.compact ? 11 : 9
                 handleSize: deviceControl.compact ? 20 : 16

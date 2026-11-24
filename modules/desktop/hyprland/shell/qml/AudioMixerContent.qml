@@ -125,7 +125,7 @@ FocusScope {
     }
     function adjustBalance(delta: real): void {
         if (balanceAvailable) {
-            balanceSlider.pulseAdjustment();
+            balanceSlider.beginKeyboardAdjustment();
             system.setBalance(balanceNode, balancePosition + delta);
         }
     }
@@ -202,10 +202,10 @@ FocusScope {
     function adjustSelected(delta: real): void {
         const target = selectedTarget;
         if (target?.kind === "output") {
-            outputDevice.pulseAdjustment();
+            outputDevice.beginKeyboardAdjustment();
             system.adjustVolume(delta);
         } else if (target?.kind === "input") {
-            inputDevice.pulseAdjustment();
+            inputDevice.beginKeyboardAdjustment();
             system.setMicrophoneVolume(system.microphoneVolume + delta);
         } else if (target?.node) {
             streamAdjustmentRequested(selectedStreamIndex);
@@ -670,7 +670,7 @@ FocusScope {
                                 target: mixer
                                 function onStreamAdjustmentRequested(index: int): void {
                                     if (index === streamRow.index)
-                                        streamControl.pulseAdjustment();
+                                        streamControl.beginKeyboardAdjustment();
                                 }
                             }
                             anchors {

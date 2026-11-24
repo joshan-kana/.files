@@ -53,6 +53,41 @@ QtObject {
     readonly property real pressDamping: 0.75
     readonly property real pressEpsilon: 0.0008
 
+    // The active keyboard adjustment belongs to the physical key, not the
+    // interval between repeat events. The scoped key owner records presses
+    // and releases; only the slider that actually adjusts receives feedback.
+    property Item keyboardSlider: null
+    property int keyboardEventKey: 0
+    property int adjustmentKey: 0
+
+    function noteKeyDown(key: int): void {
+        if ([Qt.Key_Shift, Qt.Key_Control, Qt.Key_Alt, Qt.Key_Meta, Qt.Key_AltGr].includes(key))
+            return;
+        if (keyboardSlider && key !== adjustmentKey)
+            endKeyboardAdjustment();
+        keyboardEventKey = key;
+    }
+
+    function beginKeyboardAdjustment(slider: Item): void {
+        if (!keyboardEventKey)
+            return;
+        adjustmentKey = keyboardEventKey;
+        keyboardSlider = slider;
+    }
+
+    function releaseAdjustmentKey(key: int): bool {
+        if (key !== adjustmentKey || !keyboardSlider)
+            return false;
+        endKeyboardAdjustment();
+        return true;
+    }
+
+    function endKeyboardAdjustment(): void {
+        keyboardSlider = null;
+        adjustmentKey = 0;
+        keyboardEventKey = 0;
+    }
+
     // CSS-style cubic Bézier profiles shared by all shell animations.
     // Short feedback stays responsive, while large surface changes have a
     // deliberate ease-in and longer settling phase. Never overshoot geometry.

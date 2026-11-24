@@ -75,6 +75,7 @@ FocusScope {
         if (engaged) {
             keyboardFocus.forceActiveFocus();
         } else {
+            content.motion.endKeyboardAdjustment();
             helpOpen = false;
             scrubbing = false;
         }
@@ -669,7 +670,16 @@ FocusScope {
             anchors.fill: parent
             focus: content.engaged
 
+            onActiveFocusChanged: if (!activeFocus)
+                content.motion.endKeyboardAdjustment()
+
+            Keys.onReleased: event => {
+                if (!event.isAutoRepeat && content.motion.releaseAdjustmentKey(event.key))
+                    event.accepted = true;
+            }
+
             Keys.onPressed: event => {
+                content.motion.noteKeyDown(event.key);
                 const helpKey = event.key === content.runtime.shellKeyCode("media", "Question") || (event.key === content.runtime.shellKeyCode("media", "Slash") && (content.runtime.shellModifier("media", "Shift", event.modifiers)));
 
                 if (content.helpOpen) {
@@ -742,11 +752,11 @@ FocusScope {
                     content.media.adjustSeekStep(1);
                     event.accepted = true;
                 } else if ((content.runtime.shellNavigates("media", "left", event.key))) {
-                    progressTrack.pulseAdjustment();
+                    progressTrack.beginKeyboardAdjustment();
                     fullTransport.triggerAction("back", event.isAutoRepeat);
                     event.accepted = true;
                 } else if ((content.runtime.shellNavigates("media", "right", event.key))) {
-                    progressTrack.pulseAdjustment();
+                    progressTrack.beginKeyboardAdjustment();
                     fullTransport.triggerAction("forward", event.isAutoRepeat);
                     event.accepted = true;
                 } else if (content.runtime.shellMatchesHint("MediaTransport.previous", event.key, event.modifiers)) {

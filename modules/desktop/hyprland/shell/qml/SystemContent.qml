@@ -120,7 +120,7 @@ FocusScope {
 
     function adjustSlider(direction: int): void {
         if (selectedSlider === "brightness" && brightness.supported) {
-            brightnessSlider.pulseAdjustment();
+            brightnessSlider.beginKeyboardAdjustment();
             brightness.adjust(direction * 5);
         } else if (selectedSlider === "windows")
             appearance.setWindowOpacity(Math.max(0.20, Math.min(1, Math.round((appearance.windowOpacity + direction * 0.05) * 100) / 100)));
@@ -661,6 +661,7 @@ FocusScope {
             nightLight.refresh();
             requestedViewTimer.restart();
         } else {
+            root.motion.endKeyboardAdjustment();
             helpOpen = false;
             selectedSlider = "";
             closeDetails();
@@ -1908,7 +1909,16 @@ FocusScope {
                     event.accepted = true;
             }
 
+            onActiveFocusChanged: if (!activeFocus)
+                root.motion.endKeyboardAdjustment()
+
+            Keys.onReleased: event => {
+                if (!event.isAutoRepeat && root.motion.releaseAdjustmentKey(event.key))
+                    event.accepted = true;
+            }
+
             Keys.onPressed: event => {
+                root.motion.noteKeyDown(event.key);
                 if (event.key === root.runtime.shellKeyCode("controls", "Escape")) {
                     root.navigateBack();
                     event.accepted = true;

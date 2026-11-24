@@ -20,8 +20,8 @@ Item {
     readonly property string displayName: stream ? system.streamDisplayName(stream) : ""
     readonly property int percent: available ? Math.round(stream.audio.volume * 100) : 0
 
-    function pulseAdjustment(): void {
-        levelSlider.pulseAdjustment();
+    function beginKeyboardAdjustment(): void {
+        levelSlider.beginKeyboardAdjustment();
     }
 
     signal selectedRequested
@@ -137,7 +137,6 @@ Item {
                 motion: channel.motion
                 enabled: channel.available
                 value: channel.available ? channel.stream.audio.volume : 0
-                animateValueChanges: true
                 accentColor: channel.theme.audioLevelColor(channel.muted)
                 trackHeight: channel.compact ? 6 : 10
                 handleSize: channel.compact ? 14 : 18

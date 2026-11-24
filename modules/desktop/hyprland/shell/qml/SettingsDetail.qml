@@ -919,7 +919,7 @@ Item {
                         target: panel
                         function onParameterAdjustmentRequested(index: int): void {
                             if (index === parameterCard.index)
-                                parameterSlider.pulseAdjustment();
+                                parameterSlider.beginKeyboardAdjustment();
                         }
                     }
                     theme: panel.theme

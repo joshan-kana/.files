@@ -12,7 +12,7 @@ Item {
     property bool active: false
 
     function pulseSeekAdjustment(): void {
-        progressSlider.pulseAdjustment();
+        progressSlider.beginKeyboardAdjustment();
     }
 
     function triggerTransport(action: string, autoRepeat: bool): void {
