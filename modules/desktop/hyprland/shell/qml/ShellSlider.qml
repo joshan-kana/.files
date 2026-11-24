@@ -20,9 +20,10 @@ Item {
     // jump when the thumb changes shape.
     property real thumbTrackGap: 5
     readonly property real thumbCenterX: handleSize / 2 + displayedValue * Math.max(1, width - handleSize)
+    readonly property bool thumbPressed: motion.enabled && (interaction.pressed || keyboardPulse.running)
     readonly property bool thumbHovered: interaction.containsMouse && Math.abs(interaction.mouseX - thumbCenterX) <= handleSize * 0.85
     readonly property real normalizedValue: to === from ? 0 : Math.max(0, Math.min(1, (value - from) / (to - from)))
-    property real displayedValue: normalizedValue
+    property real displayedValue: interaction.pressed ? fractionForX(interaction.mouseX) : normalizedValue
     Behavior on displayedValue {
         enabled: root.animateValueChanges && root.motion.enabled && !interaction.pressed
         // A Bézier restarts its ease on every key-repeat event. Keep velocity
@@ -39,14 +40,30 @@ Item {
     signal interactionStarted(real value)
     signal interactionUpdated(real value)
     signal interactionFinished(real value)
+    signal interactionCanceled
 
     implicitHeight: Math.max(handleSize, 28)
     opacity: enabled ? 1 : 0.42
 
-    function valueForX(mouseX: real): real {
+    function fractionForX(mouseX: real): real {
         const usable = Math.max(1, width - handleSize);
-        const fraction = Math.max(0, Math.min(1, (mouseX - handleSize / 2) / usable));
-        return from + fraction * (to - from);
+        return Math.max(0, Math.min(1, (mouseX - handleSize / 2) / usable));
+    }
+
+    function valueForX(mouseX: real): real {
+        return from + fractionForX(mouseX) * (to - from);
+    }
+
+    // Called by the existing keyboard action owner on key-down. This is
+    // visual feedback only: no value write or deferred action is involved.
+    function pulseAdjustment(): void {
+        if (enabled && visible && interactive && motion.enabled)
+            keyboardPulse.restart();
+    }
+
+    Timer {
+        id: keyboardPulse
+        interval: Math.max(100, root.motion.effectsFast)
     }
 
     // Split the active and inactive tracks around the thumb instead of
@@ -73,8 +90,8 @@ Item {
 
     Rectangle {
         id: handle
-        width: Math.max(4, root.handleSize * (interaction.pressed ? 0.26 : root.thumbHovered ? 0.5 : 0.42))
-        height: Math.min(root.height, root.handleSize * (interaction.pressed ? 1.14 : 1))
+        width: Math.max(4, root.handleSize * (root.thumbPressed ? 0.26 : root.motion.enabled && root.thumbHovered ? 0.5 : 0.42))
+        height: Math.min(root.height, root.handleSize * (root.thumbPressed ? 1.14 : 1))
         radius: width / 2
         x: root.thumbCenterX - width / 2
         anchors.verticalCenter: parent.verticalCenter
@@ -118,6 +135,6 @@ Item {
             root.interactionFinished(next);
             root.valueRequested(next);
         }
-        onCanceled: root.interactionFinished(root.value)
+        onCanceled: root.interactionCanceled()
     }
 }

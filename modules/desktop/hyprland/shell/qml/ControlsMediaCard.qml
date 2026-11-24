@@ -9,6 +9,10 @@ ShellSurface {
     required property RuntimeConfig runtime
     property bool active: false
 
+    function pulseSeekAdjustment(): void {
+        progressSlider.pulseAdjustment();
+    }
+
     signal fullRequested
 
     SpectrumScale {
@@ -135,6 +139,7 @@ ShellSurface {
         }
 
         ShellSlider {
+            id: progressSlider
             width: parent.width
             height: card.media.available ? 24 : 0
             visible: card.media.available
@@ -212,8 +217,8 @@ ShellSurface {
     }
 
     TileKeyHint {
-        primary: true
         id: openHint
+        primary: true
         visible: shortcut.length > 0
         shortcut: card.runtime.shellHint("ControlsMediaCard.open")
         runtime: card.runtime

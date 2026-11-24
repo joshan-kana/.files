@@ -21,6 +21,10 @@ ShellSurface {
     readonly property var device: microphone ? system.audioSource : system.audioSink
     readonly property var devices: microphone ? system.inputDevices : system.outputDevices
 
+    function pulseAdjustment(): void {
+        levelSlider.pulseAdjustment();
+    }
+
     signal selectedRequested
 
     implicitHeight: deviceContents.implicitHeight + (compact ? theme.spacing3 * 2 : theme.spacing2 * 2)
@@ -153,6 +157,7 @@ ShellSurface {
                 monitoring: deviceControl.active && deviceControl.visible && meter.visible
             }
             ShellSlider {
+                id: levelSlider
                 width: Math.max(1, parent.width - meter.width - (meter.visible ? parent.spacing : 0))
                 anchors.verticalCenter: parent.verticalCenter
                 theme: deviceControl.theme

@@ -119,9 +119,10 @@ FocusScope {
     }
 
     function adjustSlider(direction: int): void {
-        if (selectedSlider === "brightness" && brightness.supported)
+        if (selectedSlider === "brightness" && brightness.supported) {
+            brightnessSlider.pulseAdjustment();
             brightness.adjust(direction * 5);
-        else if (selectedSlider === "windows")
+        } else if (selectedSlider === "windows")
             appearance.setWindowOpacity(Math.max(0.20, Math.min(1, Math.round((appearance.windowOpacity + direction * 0.05) * 100) / 100)));
         else if (selectedSlider === "glass")
             appearance.setGlassOpacity(Math.max(0.20, Math.min(1, Math.round((appearance.glassOpacity + direction * 0.05) * 100) / 100)));
@@ -172,9 +173,18 @@ FocusScope {
     readonly property bool recordingsOpen: recordingsPanel.open
     readonly property string helpTitle: settingsPanel.open ? "Capability details" : statusOpen ? "System status" : recordingsPanel.open ? "Captures" : wallpaperPanel.open ? "Wallpaper library" : mixerOpen ? "Application mixer" : resourcesPanel.open ? "Resource monitor" : (bluetoothPanel.open ? "Bluetooth controls" : (networkPanel.open ? "Network controls" : (themePanel.open ? "Theme controls" : (sessionPanel.open ? "Session controls" : (trayMenu.open ? "Tray menu controls" : "System controls")))))
     readonly property var helpBindings: settingsPanel.open ? [
-        { key: root.runtime.shellHint("SettingsDetail.toggle"), action: "Toggle this capability" },
-        { key: root.runtime.shellHint("SettingsDetail.adjust"), action: "Adjust selected parameter" },
-        { key: root.runtime.shellHint("SystemContent.legend.back"), action: "Back to Controls" }
+        {
+            key: root.runtime.shellHint("SettingsDetail.toggle"),
+            action: "Toggle this capability"
+        },
+        {
+            key: root.runtime.shellHint("SettingsDetail.adjust"),
+            action: "Adjust selected parameter"
+        },
+        {
+            key: root.runtime.shellHint("SystemContent.legend.back"),
+            action: "Back to Controls"
+        }
     ] : vhsPanel.open ? [
         {
             key: root.runtime.shellHint("VhsPanel.select"),
@@ -992,6 +1002,7 @@ FocusScope {
                                 width: parent.width
                                 spacing: root.theme.spacing2
                                 ShellSlider {
+                                    id: brightnessSlider
                                     width: Math.max(1, parent.width - (root.brightness.supported ? brightnessHint.implicitWidth + parent.spacing : 0))
                                     theme: root.theme
                                     motion: root.motion
@@ -2218,16 +2229,7 @@ FocusScope {
                 // key must not alternately enable/disable a capability, while
                 // repeat of local navigation or range adjustment stays useful.
                 if (event.isAutoRepeat) {
-                    const oneShot = [
-                        "SystemContent.alerts", "SystemContent.stayAwake", "SystemContent.powerProfile",
-                        "SystemContent.nightLight", "SystemContent.windowTransparency",
-                        "SystemContent.shellGlass", "SystemContent.vhsToggle",
-                        "SystemContent.vhsTune", "SystemContent.networkDetails",
-                        "SystemContent.bluetoothDetails", "SystemContent.windowsDetails",
-                        "SystemContent.glassDetails", "SystemContent.nightLightDetails",
-                        "SystemContent.alertsDetails", "SystemContent.stayDetails",
-                        "SystemContent.powerDetails"
-                    ].some(name => root.runtime.shellMatchesHint(name, event.key, event.modifiers));
+                    const oneShot = ["SystemContent.alerts", "SystemContent.stayAwake", "SystemContent.powerProfile", "SystemContent.nightLight", "SystemContent.windowTransparency", "SystemContent.shellGlass", "SystemContent.vhsToggle", "SystemContent.vhsTune", "SystemContent.networkDetails", "SystemContent.bluetoothDetails", "SystemContent.windowsDetails", "SystemContent.glassDetails", "SystemContent.nightLightDetails", "SystemContent.alertsDetails", "SystemContent.stayDetails", "SystemContent.powerDetails"].some(name => root.runtime.shellMatchesHint(name, event.key, event.modifiers));
                     if (oneShot) {
                         event.accepted = true;
                         return;
@@ -2315,8 +2317,10 @@ FocusScope {
                 } else if (shifted && event.key === root.runtime.shellKeyCode("controls", "T")) {
                     root.nightLight.warmer();
                 } else if (shifted && root.runtime.shellNavigates("controls", "left", event.key, "primary")) {
+                    mediaCard.pulseSeekAdjustment();
                     root.media.seekStep(-1);
                 } else if (shifted && root.runtime.shellNavigates("controls", "right", event.key, "primary")) {
+                    mediaCard.pulseSeekAdjustment();
                     root.media.seekStep(1);
                 } else if ((root.runtime.shellNavigates("controls", "left", event.key))) {
                     root.adjustSelectedAudio(-0.05);

@@ -412,6 +412,7 @@ FocusScope {
                     content.scrubbing = false;
                     content.media.seekTo(target);
                 }
+                onInteractionCanceled: content.scrubbing = false
             }
 
             Row {
@@ -637,9 +638,11 @@ FocusScope {
                     content.media.adjustSeekStep(1);
                     event.accepted = true;
                 } else if ((content.runtime.shellNavigates("media", "left", event.key))) {
+                    progressTrack.pulseAdjustment();
                     content.media.seekStep(-1);
                     event.accepted = true;
                 } else if ((content.runtime.shellNavigates("media", "right", event.key))) {
+                    progressTrack.pulseAdjustment();
                     content.media.seekStep(1);
                     event.accepted = true;
                 } else if (event.key === content.runtime.shellKeyCode("media", "Comma")) {

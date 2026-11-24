@@ -15,7 +15,7 @@ test("slider morphs into a narrow pressed thumb without moving the value centre"
   );
   assert.match(
     slider,
-    /interaction\.pressed \? 0\.26 : root\.thumbHovered \? 0\.5 : 0\.42/,
+    /root\.thumbPressed \? 0\.26 : root\.motion\.enabled && root\.thumbHovered \? 0\.5 : 0\.42/,
   );
   assert.match(slider, /x: root\.thumbCenterX - width \/ 2/);
   assert.match(slider, /motion: root\.motion\s+type: Anim\.FastSpatial/);
@@ -34,6 +34,42 @@ test("slider keeps a transparent thumb gap and press-time value dispatch", () =>
     slider,
     /onPositionChanged: event => \{[\s\S]*?root\.interactionUpdated\(next\);/,
   );
-  assert.match(slider, /onCanceled: root\.interactionFinished\(root\.value\)/);
+  assert.match(slider, /onCanceled: root\.interactionCanceled\(\)/);
   assert.doesNotMatch(slider, /Keys\.onReleased|onClicked:/);
+});
+
+test("direct keyboard adjustments and drag previews use the same expressive thumb without delaying state writes", () => {
+  assert.match(
+    slider,
+    /thumbPressed: motion\.enabled && \(interaction\.pressed \|\| keyboardPulse\.running\)/,
+  );
+  assert.match(
+    slider,
+    /displayedValue: interaction\.pressed \? fractionForX\(interaction\.mouseX\) : normalizedValue/,
+  );
+  assert.match(
+    slider,
+    /function pulseAdjustment\(\): void \{[\s\S]*?keyboardPulse\.restart\(\)/,
+  );
+  const qml = (name) =>
+    fs.readFileSync(
+      path.join(__dirname, "../modules/desktop/hyprland/shell/qml", name),
+      "utf8",
+    );
+  assert.match(
+    qml("SystemContent.qml"),
+    /brightnessSlider\.pulseAdjustment\(\);\s*brightness\.adjust\(direction \* 5\)/,
+  );
+  assert.match(
+    qml("SystemContent.qml"),
+    /mediaCard\.pulseSeekAdjustment\(\);\s*root\.media\.seekStep\(1\)/,
+  );
+  assert.match(
+    qml("MediaContent.qml"),
+    /progressTrack\.pulseAdjustment\(\);\s*content\.media\.seekStep\(-1\)/,
+  );
+  assert.match(
+    qml("MediaContent.qml"),
+    /onInteractionCanceled: content\.scrubbing = false/,
+  );
 });

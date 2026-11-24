@@ -20,6 +20,10 @@ Item {
     readonly property string displayName: stream ? system.streamDisplayName(stream) : ""
     readonly property int percent: available ? Math.round(stream.audio.volume * 100) : 0
 
+    function pulseAdjustment(): void {
+        levelSlider.pulseAdjustment();
+    }
+
     signal selectedRequested
 
     implicitHeight: compact ? 64 : 70
@@ -126,6 +130,7 @@ Item {
             }
 
             ShellSlider {
+                id: levelSlider
                 width: Math.max(1, parent.width - streamMeter.width - (streamMeter.visible ? parent.spacing : 0))
                 anchors.verticalCenter: parent.verticalCenter
                 theme: channel.theme
