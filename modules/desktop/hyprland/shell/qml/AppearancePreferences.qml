@@ -23,6 +23,8 @@ QtObject {
         property real musicReactiveSmoothing: appearance.runtime.appearanceDefaults.musicReactiveSmoothing
         property real musicReactiveIntensity: appearance.runtime.appearanceDefaults.musicReactiveIntensity
         property string musicReactiveEmphasis: appearance.runtime.appearanceDefaults.musicReactiveEmphasis
+        property string musicReactiveTarget: appearance.runtime.appearanceDefaults.musicReactiveTarget
+        property int wallpaperSpectrumBars: appearance.runtime.appearanceDefaults.wallpaperSpectrumBars
         property real wallpaperSpectrumOpacity: appearance.runtime.appearanceDefaults.wallpaperSpectrumOpacity
         property int barIslandHeight: appearance.runtime.appearanceDefaults.barIslandHeight
         property int frameThickness: appearance.runtime.appearanceDefaults.frameThickness
@@ -60,6 +62,8 @@ QtObject {
     readonly property real musicReactiveSmoothing: Math.max(0, Math.min(0.9, effective("musicReactiveSmoothing")))
     readonly property real musicReactiveIntensity: Math.max(0.25, Math.min(2.0, effective("musicReactiveIntensity")))
     readonly property string musicReactiveEmphasis: ["balanced", "bass", "mid", "treble"].includes(effective("musicReactiveEmphasis")) ? effective("musicReactiveEmphasis") : "balanced"
+    readonly property string musicReactiveTarget: ["all", "frame", "shell"].includes(effective("musicReactiveTarget")) ? effective("musicReactiveTarget") : "all"
+    readonly property int wallpaperSpectrumBars: Math.max(24, Math.min(96, effective("wallpaperSpectrumBars")))
     readonly property real wallpaperSpectrumOpacity: Math.max(0.2, Math.min(1.0, effective("wallpaperSpectrumOpacity")))
     readonly property var musicReactiveParameterKeys: ["musicReactiveSensitivity", "musicReactiveAttack", "musicReactiveRelease", "musicReactiveSmoothing", "musicReactiveIntensity", "musicReactiveEmphasis"]
     readonly property string musicReactivePreset: {
@@ -252,9 +256,21 @@ QtObject {
         saved.sync();
     }
 
+    function cycleReactiveTarget(): void {
+        const choices = ["all", "frame", "shell"];
+        storeOverride("musicReactiveTarget", choices[(choices.indexOf(musicReactiveTarget) + 1) % choices.length]);
+        saved.sync();
+    }
+
+    function setSpectrumBars(value: int): void {
+        storeOverride("wallpaperSpectrumBars", Math.max(24, Math.min(96, value)));
+        saved.sync();
+    }
+
     function resetReactiveTuning(): void {
         for (const key of musicReactiveParameterKeys)
             clearOverride(key);
+        clearOverride("musicReactiveTarget");
     }
 
     function applyReactivePreset(name: string): void {
@@ -276,6 +292,7 @@ QtObject {
 
     function resetSpectrumTuning(): void {
         clearOverride("wallpaperSpectrumOpacity");
+        clearOverride("wallpaperSpectrumBars");
     }
 
     function toggleFrame(): void {

@@ -226,7 +226,8 @@ Item {
                     maximum: 100,
                     step: 5,
                     suffix: "%"
-                }
+                },
+                {key: "wallpaperSpectrumBars", title: "Bar density", description: "Number of spectrum bars", minimum: 24, maximum: 96, step: 8, suffix: " bars"}
             ];
         if (kind === "alerts")
             return [
@@ -297,6 +298,8 @@ Item {
     function currentValue(key: string): real {
         if (key === "barIslandHeight" || key === "frameThickness")
             return appearance[key];
+        if (key === "wallpaperSpectrumBars")
+            return appearance.wallpaperSpectrumBars;
         if (key === "motionDuration")
             return Math.round(motion.durationMultiplier * 100);
         if (key.startsWith("musicReactive") || key === "wallpaperSpectrumOpacity")
@@ -325,6 +328,8 @@ Item {
     function setValue(key: string, value: real): void {
         if (key === "barIslandHeight" || key === "frameThickness")
             appearance.setGeometryPreference(key, value);
+        else if (key === "wallpaperSpectrumBars")
+            appearance.setSpectrumBars(value);
         else if (key === "motionDuration")
             motion.setDurationMultiplier(value / 100);
         else if (key.startsWith("musicReactive") || key === "wallpaperSpectrumOpacity")
@@ -536,7 +541,7 @@ Item {
         if (kind === "displays")
             return displayDetails.handleKey(key, modifiers, autoRepeat);
         if (autoRepeat) {
-            const repeatedAction = ["SettingsDetail.toggle", "SettingsDetail.blur", "SettingsDetail.reset", "SettingsDetail.resetParameter", "SettingsDetail.presentation", "SettingsDetail.history", "SettingsDetail.quietHours", "SettingsDetail.nightResume", "SettingsDetail.nightPauseUntil", "SettingsDetail.powerAutomatic"].some(name => runtime.shellMatchesHint(name, key, modifiers));
+            const repeatedAction = ["SettingsDetail.toggle", "SettingsDetail.blur", "SettingsDetail.reset", "SettingsDetail.resetParameter", "SettingsDetail.reactiveTarget", "SettingsDetail.presentation", "SettingsDetail.history", "SettingsDetail.quietHours", "SettingsDetail.nightResume", "SettingsDetail.nightPauseUntil", "SettingsDetail.powerAutomatic"].some(name => runtime.shellMatchesHint(name, key, modifiers));
             const choice = (kind === "nightLight" || kind === "power") ? runtime.shellNumberIndex("controls", key, 9) : reactiveTuning ? runtime.shellNumberIndex("controls", key, 7) : kind === "alerts" ? runtime.shellNumberIndex("controls", key, 6) : kind === "power" || kind === "stay" ? runtime.shellNumberIndex("controls", key, 5) : -1;
             if (repeatedAction || choice >= 0)
                 return true;
@@ -556,6 +561,10 @@ Item {
         }
         if (runtime.shellMatchesHint("SettingsDetail.reset", key, modifiers) && hasReset) {
             resetAppearance();
+            return true;
+        }
+        if (reactiveTuning && runtime.shellMatchesHint("SettingsDetail.reactiveTarget", key, modifiers)) {
+            appearance.cycleReactiveTarget();
             return true;
         }
         if (kind === "power" && runtime.shellMatchesHint("SettingsDetail.powerAutomatic", key, modifiers)) {
@@ -819,6 +828,20 @@ Item {
             }
 
             ShellAction {
+                visible: panel.reactiveTuning
+                width: parent.width
+                height: visible ? 42 : 0
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                compact: true
+                horizontalCompact: true
+                title: "Tint target · " + ({all: "Frame and shell", frame: "Frame only", shell: "Detached shell surfaces"})[panel.appearance.musicReactiveTarget]
+                shortcut: panel.runtime.shellHint("SettingsDetail.reactiveTarget")
+                onActivated: panel.appearance.cycleReactiveTarget()
+            }
+
+            ShellAction {
                 visible: panel.spectrumTuning
                 width: parent.width
                 height: visible ? 42 : 0
@@ -827,7 +850,7 @@ Item {
                 motion: panel.motion
                 compact: true
                 horizontalCompact: true
-                title: "Restore default opacity"
+                title: "Restore spectrum defaults"
                 shortcut: panel.runtime.shellHint("SettingsDetail.reset")
                 onActivated: panel.resetAppearance()
             }

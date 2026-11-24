@@ -43,7 +43,7 @@ SquircleSurface {
     // Every reactive pane and detached island consumes the spectrum's
     // three-stop ramp. Connected islands stay transparent: DesktopFrame
     // owns their shared screen-wide gradient and silhouette.
-    readonly property bool musicActive: theme.musicReactiveEnabled && (reactiveSurface || (surfaceLayer === ShellSurface.Pane && (elevated || width >= 300)) || (surfaceLayer === ShellSurface.Group && width >= 480))
+    readonly property bool musicActive: theme.musicReactiveEnabled && theme.musicReactiveTarget !== "frame" && (reactiveSurface || (surfaceLayer === ShellSurface.Pane && (elevated || width >= 300)) || (surfaceLayer === ShellSurface.Group && width >= 480))
 
     reactiveGradientStrength: musicActive ? theme.musicReactiveWash : 0
     reactiveGradientLow: theme.spectrumColor(0)

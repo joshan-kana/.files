@@ -12,6 +12,7 @@ Variants {
     required property Theme theme
     property bool enabled: false
     property real intensity: 0.8
+    property int barCount: 64
 
     model: Quickshell.screens
 
@@ -62,7 +63,7 @@ Variants {
                 spectrum: visuals.spectrum
                 theme: visuals.theme
                 frequencyScale: frequencies
-                barCount: 64
+                barCount: visuals.barCount
                 opacity: visuals.intensity
             }
         }

@@ -243,6 +243,7 @@
           "SettingsDetail.blur" = "B";
           "SettingsDetail.reset" = "R";
           "SettingsDetail.resetParameter" = "SHIFT+R";
+          "SettingsDetail.reactiveTarget" = "G";
           "SettingsDetail.adjust" = "NAV_HORIZONTAL";
           "SettingsDetail.presentation" = "P";
           "SettingsDetail.history" = "Y";

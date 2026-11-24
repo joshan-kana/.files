@@ -44,6 +44,7 @@ const frameColorBody = new Function(
   "Qt",
   "shellGlassEnabled",
   "glassOpacity",
+  "musicReactiveTarget",
   expression("reactiveFrameColor"),
 );
 const colorAt = (
@@ -53,6 +54,7 @@ const colorAt = (
   enabled = true,
   glass = false,
   opacity = 0.7,
+  target = "all",
 ) => {
   const wash = enabled ? Math.min(0.42, energy * 0.58 + beat * 0.14) : 0;
   const reactiveColor = (base, p) =>
@@ -64,6 +66,7 @@ const colorAt = (
     { rgba: (r, g, b, a) => ({ r, g, b, a }) },
     glass,
     opacity,
+    target,
   );
 };
 const contrast = (a, b) =>
@@ -113,4 +116,8 @@ test("the connected frame uses the original five colour stops and keeps its clip
   assert.match(frame, /fillRule: Qt\.OddEvenFill/);
   assert.match(frame, /strokeColor: frame\.reactiveBorder/);
   assert.doesNotMatch(frame, /FrameRibbonItem|FrameFillItem/);
+});
+
+test("frame tint can be disabled without disabling shell energy", () => {
+  assert.deepEqual(colorAt(0.5, 1, 1, true, false, 0.7, "shell"), {...background, a: 1});
 });

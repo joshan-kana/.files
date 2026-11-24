@@ -79,6 +79,7 @@ ShellRoot {
         musicReactiveEnergy: reactive.sustain
         musicReactiveBeat: reactive.beatPulse
         musicReactiveIntensity: qmlAppearance.musicReactiveIntensity
+        musicReactiveTarget: qmlAppearance.musicReactiveTarget
     }
 
     Motion {
@@ -340,6 +341,7 @@ ShellRoot {
         theme: root.themeRef
         enabled: root.wallpaperSpectrumEnabled
         intensity: qmlAppearance.wallpaperSpectrumOpacity
+        barCount: qmlAppearance.wallpaperSpectrumBars
     }
 
     DesktopFrame {
