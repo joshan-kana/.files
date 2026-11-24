@@ -147,23 +147,28 @@ case "$#:${1-}" in
   selections=""
   ;;
 0:)
-  selections=$(
-    set +o pipefail
-    {
-      printf 'all\tUpdate inputs, packages, containers and schemas\n'
-      printf 'all-inputs\tUpdate all inputs\n'
-      printf 'all-containers\tUpdate all containers\n'
-      printf 'all-packages\tUpdate auto-updating overlay packages\n'
-      printf 'all-schemas\tRefresh generated schemas\n'
-      nix eval --json .#lib.updateablePackages |
-        jq -r 'to_entries[] | .key as $system | .value[] | ["package", ($system + "/" + .)] | @tsv'
-      nix flake metadata --json --no-update-lock-file |
-        jq -r '.locks.nodes[.locks.root].inputs | keys[] | ["input", .] | @tsv'
-      update-container-lock --list | jq -Rr '["container", .] | @tsv'
-      update-schemas --list | jq -Rr '["schema", .] | @tsv'
-    } | fzf --multi --no-sort --layout=reverse --border --height=85% --delimiter=$'\t' --with-nth=2 \
-      --header='Tab: select multiple • Enter: update'
-  ) || exit 0
+  choices=$(
+    set -e
+    printf 'all\tUpdate inputs, packages, containers and schemas\n'
+    printf 'all-inputs\tUpdate all inputs\n'
+    printf 'all-containers\tUpdate all containers\n'
+    printf 'all-packages\tUpdate auto-updating overlay packages\n'
+    printf 'all-schemas\tRefresh generated schemas\n'
+    nix eval --json .#lib.updateablePackages |
+      jq -r 'to_entries[] | .key as $system | .value[] | ["package", ($system + "/" + .)] | @tsv'
+    nix flake metadata --json --no-update-lock-file |
+      jq -r '.locks.nodes[.locks.root].inputs | keys[] | ["input", .] | @tsv'
+    update-container-lock --list | jq -Rr '["container", .] | @tsv'
+    update-schemas --list | jq -Rr '["schema", .] | @tsv'
+  )
+  selections=$(fzf --multi --no-sort --layout=reverse --border --height=85% --delimiter=$'\t' --with-nth=2 \
+    --header='Tab: select multiple • Enter: update' <<<"$choices") || {
+    status=$?
+    case "$status" in
+    1 | 130) exit 0 ;;
+    *) exit "$status" ;;
+    esac
+  }
   ;;
 1:--all) selections=$'all\t*' ;;
 *)
