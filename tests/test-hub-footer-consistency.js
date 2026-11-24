@@ -195,7 +195,7 @@ test("detail navigation has one global Escape hint and locally owned movement hi
   const strip = source("KeyHintStrip.qml");
   assert.match(strip, /model: strip\.wrappedRows/);
   assert.match(strip, /opacity: 0\s*enabled: false/);
-  assert.match(strip, /if \(!hint \|\| strip\.hints\[i\]\.visible === false\)/);
+  assert.match(strip, /if \(!hint \|\| hint\.modelData\.visible === false\)/);
   assert.doesNotMatch(strip, /visible: false\s*Repeater/);
   assert.match(
     strip,

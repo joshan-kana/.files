@@ -535,7 +535,7 @@ FocusScope {
                         motion: mixer.motion
                         compact: true
                         horizontalCompact: true
-                        icon: "󰑐"
+                        icon: DesktopIcons.actionGlyph("refresh")
                         title: "Refresh effects"
                         shortcut: mixer.runtime.shellHint("AudioMixerContent.effectsRefresh")
                         enabled: !effectsState.busy

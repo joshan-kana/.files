@@ -24,7 +24,11 @@ test("connected media controls keep fixed layout slots and stable identities thr
   assert.match(transport, /onVisualPressedChanged:/);
   assert.match(
     qml("ShellAction.qml"),
-    /connectedGroup \? motion.pressGroupExpand : motion.pressScaleNormal/,
+    /connectedGroup \? 1 : motion.pressScaleNormal/,
+  );
+  assert.match(
+    qml("ShellAction.qml"),
+    /bodyScaleX: Math.max\(0, Math.min\(1, animatedScaleX\)\)/,
   );
   assert.match(
     qml("ShellAction.qml"),

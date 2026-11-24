@@ -129,7 +129,7 @@ FocusScope {
                 iconOnly: true
                 iconHint: true
                 inlineIconHint: true
-                icon: "󰑐"
+                icon: DesktopIcons.actionGlyph("refresh")
                 shortcut: panel.runtime.shellHint("WeatherContent.refresh")
                 title: "Refresh forecast"
                 enabled: !panel.weather.loading

@@ -46,6 +46,12 @@ test("restore-declared resets all notification overrides but retains Activity re
     source.match(
       /function resetToDeclared\(\): void \{([\s\S]*?)\n {4}\}/,
     )?.[1] ?? "";
+  const delivery =
+    source.match(
+      /function resetDeliveryPreferences\(\): void \{([\s\S]*?)\n {4}\}/,
+    )?.[1] ?? "";
+  assert.match(body, /resetDeliveryPreferences\(\)/);
+  assert.doesNotMatch(delivery, /appsJson|clearAll|journal =|archiveFile/);
   for (const key of [
     "preferenceSource",
     "presentationSource",
@@ -53,7 +59,7 @@ test("restore-declared resets all notification overrides but retains Activity re
     "appsJson",
   ])
     assert.ok(
-      body.includes(`settings.setValue("${key}"`),
+      (body + delivery).includes(`settings.setValue("${key}"`),
       `missing reset: ${key}`,
     );
   assert.doesNotMatch(body, /clearAll|journal =|archiveFile/);

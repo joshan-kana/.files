@@ -292,16 +292,21 @@ QtObject {
         }
     }
 
-    function resetToDeclared(): void {
+    function resetDeliveryPreferences(): void {
         settings.preferenceSource = "default";
         settings.presentationSource = "default";
         settings.historySource = "default";
-        settings.appsJson = "{}";
         temporarySilentUntil = 0;
         resetQuietHours();
         settings.setValue("preferenceSource", "default");
         settings.setValue("presentationSource", "default");
         settings.setValue("historySource", "default");
+        settings.sync();
+    }
+
+    function resetToDeclared(): void {
+        resetDeliveryPreferences();
+        settings.appsJson = "{}";
         settings.setValue("appsJson", "{}");
         settings.sync();
     }

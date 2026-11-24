@@ -38,7 +38,7 @@ Item {
         savedGallery.sync();
     }
     function handleGalleryKey(key: int, modifiers: int, repeat: bool): bool {
-        for (const action of ["ThemePanel.favorite", "ThemePanel.favorites", "ThemePanel.polarity", "ThemePanel.previous"]) {
+        for (const action of ["ThemePanel.favorite", "ThemePanel.favorites", "ThemePanel.polarity", "ThemePanel.previous", "ThemePanel.defaults"]) {
             if (!runtime.shellMatchesHint(action, key, modifiers))
                 continue;
             if (!repeat)
@@ -60,6 +60,9 @@ Item {
             break;
         case "ThemePanel.previous":
             activateTheme(previousTheme);
+            break;
+        case "ThemePanel.defaults":
+            activateTheme(defaultTheme);
             break;
         }
     }
@@ -92,7 +95,7 @@ Item {
         }
     }
 
-    implicitHeight: header.height + panel.theme.spacing4 * 3 + searchSurface.height + operationBanner.implicitHeight + panel.theme.spacing3 * 2 + Math.min(505, Math.max(280, Math.ceil(themes.length / Math.max(1, themeList.columnCount)) * themeList.cellHeight)) + qmlFooter.implicitHeight
+    implicitHeight: operationBanner.y + operationBanner.height + panel.theme.spacing3 * 2 + Math.min(505, Math.max(280, Math.ceil(filteredThemes.length / Math.max(1, themeList.columnCount)) * themeList.cellHeight)) + qmlFooter.height
     visible: open
     onFilteredThemesChanged: selectedIndex = Math.max(0, Math.min(selectedIndex, filteredThemes.length - 1))
 
@@ -428,7 +431,7 @@ Item {
         }
     }
 
-    Flow {
+    CenteredActionFlow {
         id: galleryButtons
         anchors {
             top: searchSurface.bottom
@@ -442,7 +445,6 @@ Item {
                 {
                     action: "ThemePanel.favorite",
                     glyph: panel.selectedTheme() && panel.favoriteNames.includes(panel.selectedTheme().name) ? "󰋑" : "󰋕",
-                    iconOnly: true,
                     title: panel.selectedTheme() && panel.favoriteNames.includes(panel.selectedTheme().name) ? "Remove favourite" : "Favourite",
                     enabled: !!panel.selectedTheme()
                 },
@@ -461,10 +463,15 @@ Item {
                 },
                 {
                     action: "ThemePanel.previous",
-                    glyph: "󰑐",
-                    iconOnly: true,
-                    title: panel.previousTheme ? "Restore " + panel.themeLabel(panel.previousTheme) : "No previous theme",
+                    glyph: DesktopIcons.actionGlyph("revert"),
+                    title: "Previous theme",
                     enabled: !!panel.previousTheme && !panel.operationRunning && panel.previousTheme !== panel.currentTheme
+                },
+                {
+                    action: "ThemePanel.defaults",
+                    glyph: DesktopIcons.actionGlyph("reset"),
+                    title: "Default theme",
+                    enabled: !!panel.defaultTheme && !panel.operationRunning && panel.defaultTheme !== panel.currentTheme
                 }
             ]
             delegate: ShellAction {
@@ -523,7 +530,7 @@ Item {
         }
         readonly property int columnCount: panel.theme.textScale >= 1.5 || width < 580 ? 1 : width < 950 ? 2 : 3
         cellWidth: width / columnCount
-        cellHeight: Math.max(204, panel.theme.fontSize(204))
+        cellHeight: Math.max(210, panel.theme.fontSize(210))
         model: panel.filteredThemes
         clip: true
         currentIndex: panel.selectedIndex
@@ -564,21 +571,21 @@ Item {
                 id: card
                 anchors {
                     fill: parent
-                    rightMargin: panel.theme.spacing3
-                    bottomMargin: panel.theme.spacing3
+                    rightMargin: panel.theme.spacing2
+                    bottomMargin: panel.theme.spacing2
                 }
                 theme: panel.theme
                 motion: panel.motion
                 surfaceLayer: ShellSurface.Control
-                fillColor: themeCard.index === panel.selectedIndex ? panel.theme.layer2 : "transparent"
-                cornerRadius: panel.theme.radiusLarge
+                fillColor: themeCard.index === panel.selectedIndex ? panel.theme.layer2 : panel.theme.groupBase
+                cornerRadius: panel.theme.radiusMedium
                 borderColor: themeCard.index === panel.selectedIndex ? panel.theme.accent : "transparent"
                 borderWidth: themeCard.index === panel.selectedIndex ? panel.theme.borderFocus * 2 : 0
 
                 Column {
                     anchors {
                         fill: parent
-                        margins: panel.theme.spacing3
+                        margins: panel.theme.spacing2
                     }
                     spacing: panel.theme.spacing2
 
@@ -588,7 +595,7 @@ Item {
                     ShellSurface {
                         id: palettePreview
                         width: parent.width
-                        height: Math.max(145, parent.height - panel.theme.fontSize(34))
+                        height: Math.max(1, parent.height - themeIdentity.implicitHeight - parent.spacing)
                         theme: panel.theme
                         motion: panel.motion
                         surfaceLayer: ShellSurface.Group
@@ -788,23 +795,33 @@ Item {
                     }
 
                     Row {
+                        id: themeIdentity
                         width: parent.width
                         spacing: panel.theme.spacing2
                         Text {
-                            width: parent.width - status.width - parent.spacing
+                            width: parent.width - status.width - favoriteMark.width - parent.spacing * 2
                             text: themeCard.modelData.label || themeCard.modelData.name
                             color: panel.theme.textStrong
                             font.family: panel.runtime.fontSans
-                            font.pixelSize: panel.theme.fontSize(12)
+                            font.pixelSize: panel.theme.fontAction
                             font.weight: Font.DemiBold
-                            elide: Text.ElideRight
+                            wrapMode: Text.WordWrap
                         }
                         Text {
                             id: status
-                            text: themeCard.modelData.name === panel.currentTheme ? "ACTIVE" : panel.favoriteNames.includes(themeCard.modelData.name) ? "♥" : ""
+                            text: themeCard.modelData.name === panel.currentTheme ? "󰄬" : ""
                             color: panel.theme.positive
-                            font.family: panel.runtime.fontSans
-                            font.pixelSize: panel.theme.fontSize(9)
+                            font.pixelSize: panel.theme.iconSmall
+                            font.family: "Symbols Nerd Font"
+                        }
+                        Text {
+                            id: favoriteMark
+                            visible: panel.favoriteNames.includes(themeCard.modelData.name)
+                            width: visible ? implicitWidth : 0
+                            text: "󰋑"
+                            color: panel.theme.readableRoleColor("theme")
+                            font.family: "Symbols Nerd Font"
+                            font.pixelSize: panel.theme.iconSmall
                         }
                     }
                 }
@@ -814,7 +831,8 @@ Item {
                     theme: panel.theme
                     motion: panel.motion
                     selected: themeCard.index === panel.selectedIndex
-                    cornerRadius: panel.theme.radiusLarge
+                    cornerRadius: panel.theme.radiusMedium
+                    Accessible.name: (themeCard.modelData.label || themeCard.modelData.name) + (themeCard.modelData.name === panel.currentTheme ? ", active theme" : "")
                     onActivated: {
                         panel.selectedIndex = themeCard.index;
                         panel.activateSelected();
@@ -826,6 +844,7 @@ Item {
 
     Column {
         id: qmlFooter
+        height: implicitHeight
 
         anchors {
             right: parent.right

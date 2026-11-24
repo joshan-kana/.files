@@ -47,7 +47,6 @@ QtObject {
     readonly property real pressScaleSmall: 0.94
     readonly property real pressScaleNormal: 0.965
     readonly property real hoverRestScale: 0.988
-    readonly property real pressGroupExpand: 1.06
     readonly property real pressGroupCompress: 0.94
     readonly property real pressSpring: 3.5
     readonly property real pressDamping: 0.75

@@ -507,6 +507,7 @@ Item {
                 model: [
                     {
                         action: "ResourceDashboard.refresh",
+                        glyph: DesktopIcons.actionGlyph("refresh"),
                         title: "Refresh"
                     },
                     {
@@ -527,7 +528,8 @@ Item {
                     },
                     {
                         action: "ResourceDashboard.defaults",
-                        title: "Defaults"
+                        glyph: DesktopIcons.actionGlyph("reset"),
+                        title: "Restore defaults"
                     }
                 ]
                 delegate: ShellAction {
@@ -540,6 +542,7 @@ Item {
                     compact: true
                     horizontalCompact: true
                     title: modelData.title
+                    icon: modelData.glyph || ""
                     shortcut: panel.runtime.shellHint(modelData.action)
                     enabled: modelData.action !== "ResourceDashboard.sort" || panel.showProcesses
                     onActivated: panel.activateAction(modelData.action)

@@ -252,6 +252,7 @@
           "ResourceDashboard.defaults" = "D";
           "ResourceDashboard.toggleCores" = "C";
           "SessionPanel.confirm" = "ENTER";
+          "SessionPanel.defaults" = "R";
           "SessionPanel.lock" = "Q";
           "SessionPanel.logout" = "E";
           "SessionPanel.move" = "NAV_ALL";
@@ -264,6 +265,7 @@
           "SettingsDetail.reset" = "R";
           "SettingsDetail.resetParameter" = "SHIFT+R";
           "SettingsDetail.adjust" = "NAV_HORIZONTAL";
+          "SettingsDetail.select" = "NAV_VERTICAL";
           "SettingsDetail.presentation" = "P";
           "SettingsDetail.history" = "Y";
           "SettingsDetail.quietHours" = "Q";
@@ -360,18 +362,20 @@
           "VhsPanel.adjust" = "NAV_HORIZONTAL";
           "VhsPanel.toggle" = "T";
           "VhsPanel.reset" = "R";
+          "VhsPanel.defaults" = "SHIFT+R";
           "VhsPanel.select" = "NAV_VERTICAL · TAB/SHIFT+TAB";
           "SystemContent.windowTransparency" = "SHIFT+D";
           "ThemePanel.apply" = "ENTER";
           "ThemePanel.cancel" = "X";
           "ThemePanel.columns" = "NAV_HORIZONTAL";
-          "ThemePanel.page" = "U/D";
+          "ThemePanel.page" = "U/D · PGUP/PGDN";
           "ThemePanel.rows" = "NAV_VERTICAL";
           "ThemePanel.search" = "/";
           "ThemePanel.favorite" = "V";
           "ThemePanel.favorites" = "B";
           "ThemePanel.polarity" = "C";
           "ThemePanel.previous" = "R";
+          "ThemePanel.defaults" = "SHIFT+R";
           "WallpaperPanel.favorite" = "V";
           "WallpaperPanel.favorites" = "B";
           "WallpaperPanel.collection" = "C";
@@ -393,7 +397,7 @@
           "WallpaperPanel.default" = "R";
           "WallpaperPanel.display" = "M";
           "WallpaperPanel.fit" = "F";
-          "WallpaperPanel.page" = "U/D";
+          "WallpaperPanel.page" = "U/D · PGUP/PGDN";
           "WallpaperPanel.rows" = "NAV_VERTICAL";
           "WallpaperPanel.search" = "/";
           "WallpaperPanel.set" = "ENTER";

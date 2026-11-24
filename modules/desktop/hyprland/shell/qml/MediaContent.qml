@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "DesktopIcons.js" as DesktopIcons
 
 FocusScope {
     id: content
@@ -601,7 +602,7 @@ FocusScope {
                     compact: true
                     horizontalCompact: true
                     title: "Restore default player"
-                    icon: "󰑐"
+                    icon: DesktopIcons.actionGlyph("reset")
                     iconOnly: true
                     inlineIconHint: true
                     quietAction: true

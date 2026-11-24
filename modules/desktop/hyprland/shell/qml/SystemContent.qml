@@ -1225,7 +1225,7 @@ FocusScope {
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
-                            icon: "󰑓"
+                            icon: DesktopIcons.actionGlyph("reset")
                             title: root.resetRunning ? "Restoring…" : "Restore defaults"
                             shortcut: root.runtime.shellHint("SystemContent.reset")
                             foregroundBusy: root.dashboardExposed && root.resetRunning

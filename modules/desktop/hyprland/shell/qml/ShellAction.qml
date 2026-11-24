@@ -1,6 +1,5 @@
 import QtQuick
 import Quickshell
-import QtQuick.Controls as Controls
 
 Item {
     id: root
@@ -51,10 +50,6 @@ Item {
     Accessible.checked: switchControl && active
     Accessible.name: title
     Accessible.description: subtitle
-    Controls.ToolTip.visible: root.iconOnly && root.visible && (interaction.pointerHovered || interaction.activeFocus) && root.title.length > 0
-    Controls.ToolTip.text: root.title
-    Controls.ToolTip.delay: 650
-    Controls.ToolTip.timeout: 4000
     // Assistive-technology press must use the same activation signal as
     // pointer and keyboard controls. A role/name without a press handler is
     // discoverable but cannot actually invoke sender-owned actions.
@@ -67,15 +62,17 @@ Item {
     property bool connectedGroup: false
     property bool neighborPressed: false
     readonly property bool visualPressed: interaction.visualPressed
-    property real bodyScaleX: !motion.enabled ? 1 : visualPressed ? (connectedGroup ? motion.pressGroupExpand : motion.pressScaleNormal) : neighborPressed ? motion.pressGroupCompress : 1
-    property real bodyScaleY: motion.enabled && visualPressed ? motion.pressScaleNormal : 1
+    property real animatedScaleX: !motion.enabled ? 1 : visualPressed ? (connectedGroup ? 1 : motion.pressScaleNormal) : neighborPressed ? motion.pressGroupCompress : connectedGroup ? motion.hoverRestScale : 1
+    readonly property real bodyScaleX: Math.max(0, Math.min(1, animatedScaleX))
+    property real animatedScaleY: motion.enabled && visualPressed ? motion.pressScaleNormal : 1
+    readonly property real bodyScaleY: Math.max(0, Math.min(1, animatedScaleY))
     function trigger(): void {
         if (!enabled)
             return;
         interaction.playPressFeedback(width / 2, height / 2);
         activated();
     }
-    Behavior on bodyScaleX {
+    Behavior on animatedScaleX {
         enabled: root.motion.enabled
         SpringAnimation {
             spring: root.motion.pressSpring
@@ -83,7 +80,7 @@ Item {
             epsilon: root.motion.pressEpsilon
         }
     }
-    Behavior on bodyScaleY {
+    Behavior on animatedScaleY {
         enabled: root.motion.enabled
         SpringAnimation {
             spring: root.motion.pressSpring

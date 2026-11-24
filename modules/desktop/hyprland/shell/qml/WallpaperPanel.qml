@@ -123,7 +123,6 @@ Item {
         {
             action: "WallpaperPanel.favorite",
             glyph: favoritePaths.includes(selectedPath()) ? "󰋑" : "󰋕",
-            iconOnly: true,
             title: favoritePaths.includes(selectedPath()) ? "Remove favourite" : "Favourite",
             enabled: policyKnown && !policyBusy && selectedPath() !== ""
         },
@@ -199,6 +198,7 @@ Item {
         },
         {
             action: "WallpaperPolicy.defaults",
+            glyph: DesktopIcons.actionGlyph("reset"),
             title: "Restore policy defaults"
         },
         {
@@ -601,7 +601,7 @@ Item {
                     verticalCenter: parent.verticalCenter
                     rightMargin: panel.theme.spacing1
                 }
-                width: 161
+                width: Math.min(parent.width * 0.5, implicitWidth)
                 height: parent.height - panel.theme.spacing1 * 2
                 runtime: panel.runtime
                 theme: panel.theme
@@ -631,12 +631,12 @@ Item {
             }
         }
 
-        Flow {
+        CenteredActionFlow {
             id: galleryButtons
             width: parent.width
             spacing: panel.theme.spacing2
             ShellAction {
-                width: implicitWidth
+                width: Math.min(galleryButtons.width, implicitWidth)
                 height: implicitHeight
                 runtime: panel.runtime
                 theme: panel.theme
@@ -650,16 +650,14 @@ Item {
             }
 
             ShellAction {
-                width: implicitWidth
+                width: Math.min(galleryButtons.width, implicitWidth)
                 height: implicitHeight
                 runtime: panel.runtime
                 theme: panel.theme
                 motion: panel.motion
                 compact: true
-                title: "Restore default wallpaper"
-                iconOnly: true
-                inlineIconHint: true
-                icon: "󰑐"
+                title: "Default wallpaper"
+                icon: DesktopIcons.actionGlyph("reset")
                 shortcut: panel.runtime.shellHint("WallpaperPanel.default")
                 horizontalCompact: true
                 enabled: !panel.busy
@@ -704,7 +702,7 @@ Item {
 
         Item {
             width: parent.width
-            height: 465
+            height: Math.min(panel.theme.fontSize(465), Math.max(panel.theme.fontSize(220), Math.ceil(panel.filteredEntries.length / Math.max(1, gallery.columnCount)) * gallery.cellHeight))
 
             // The theme gallery's compact, scrollable card grid is a better
             // match for choosing from a library than a one-at-a-time carousel.
@@ -866,7 +864,7 @@ Item {
                                 right: parent.right
                                 bottom: parent.bottom
                             }
-                            height: 32
+                            height: Math.max(32, panel.theme.fontSize(34))
                             color: panel.theme.surface
 
                             Row {
@@ -877,7 +875,7 @@ Item {
                                 }
                                 spacing: panel.theme.spacing1
                                 Text {
-                                    width: Math.max(1, parent.width - stateLabel.implicitWidth - parent.spacing)
+                                    width: Math.max(1, parent.width - stateLabel.implicitWidth - favoriteMark.width - parent.spacing * 2)
                                     anchors.verticalCenter: parent.verticalCenter
                                     text: entry.modelData.slice(entry.modelData.lastIndexOf("/") + 1)
                                     color: panel.theme.textStrong
@@ -888,10 +886,20 @@ Item {
                                 Text {
                                     id: stateLabel
                                     anchors.verticalCenter: parent.verticalCenter
-                                    text: entry.applied ? "ACTIVE" : panel.favoritePaths.includes(entry.modelData) ? "♥" : ""
+                                    text: entry.applied ? "󰄬" : ""
                                     color: panel.theme.positive
-                                    font.family: panel.runtime.fontSans
-                                    font.pixelSize: panel.theme.fontSize(9)
+                                    font.family: "Symbols Nerd Font"
+                                    font.pixelSize: panel.theme.iconSmall
+                                }
+                                Text {
+                                    id: favoriteMark
+                                    visible: panel.favoritePaths.includes(entry.modelData)
+                                    width: visible ? implicitWidth : 0
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: "󰋑"
+                                    color: panel.theme.readableRoleColor("wallpaper")
+                                    font.family: "Symbols Nerd Font"
+                                    font.pixelSize: panel.theme.iconSmall
                                 }
                             }
                         }
@@ -902,6 +910,7 @@ Item {
                             motion: panel.motion
                             selected: entry.current
                             cornerRadius: panel.theme.radiusMedium
+                            Accessible.name: entry.modelData.slice(entry.modelData.lastIndexOf("/") + 1) + (entry.applied ? ", active wallpaper" : "")
                             onActivated: panel.activateThumbnail(entry.index)
                         }
 
@@ -912,7 +921,7 @@ Item {
                             visible: entry.current
                             cornerRadius: panel.theme.radiusMedium
                             exponent: panel.theme.squircleExponent
-                            borderColor: panel.theme.roleColor("wallpaper")
+                            borderColor: panel.theme.accent
                             borderWidth: panel.theme.borderFocus * 2
                         }
                     }

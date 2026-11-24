@@ -49,7 +49,7 @@ Item {
     readonly property bool hasBlur: ["windows", "glass"].includes(kind)
     readonly property bool reactiveTuning: kind === "reactive"
     readonly property bool spectrumTuning: kind === "spectrum"
-    readonly property bool hasReset: hasBlur || spectrumTuning || kind === "alerts" || kind === "nightLight" || kind === "power" || ["bar", "frame", "motion"].includes(kind)
+    readonly property bool hasReset: hasBlur || spectrumTuning || reactiveTuning || kind === "alerts" || kind === "nightLight" || kind === "power" || ["bar", "frame", "motion"].includes(kind)
     readonly property string titleText: ({
             windows: "Window transparency",
             glass: "Frosted glass",
@@ -433,10 +433,11 @@ Item {
     function resetAppearance(): void {
         if (kind === "bar" || kind === "frame") {
             appearance.clearOverride(kind === "bar" ? "barIslandHeight" : "frameThickness");
+            appearance.clearOverride(kind === "bar" ? "barVisible" : "frameVisible");
             return;
         }
         if (kind === "motion") {
-            motion.resetDurationMultiplier();
+            motion.resetToDeclared();
             return;
         }
         if (kind === "power") {
@@ -448,15 +449,17 @@ Item {
             return;
         }
         if (kind === "alerts") {
-            notifications.resetQuietHours();
+            notifications.resetDeliveryPreferences();
             return;
         }
         if (reactiveTuning) {
             appearance.resetReactiveTuning();
+            appearance.clearOverride("musicReactiveEnabled");
             return;
         }
         if (spectrumTuning) {
             appearance.resetSpectrumTuning();
+            appearance.clearOverride("wallpaperSpectrumEnabled");
             return;
         }
         if (kind === "windows") {
@@ -568,7 +571,7 @@ Item {
             appearance.toggleBlur();
             return true;
         }
-        if (runtime.shellMatchesHint("SettingsDetail.resetParameter", key, modifiers) && parameters.length > 0) {
+        if (runtime.shellMatchesHint("SettingsDetail.resetParameter", key, modifiers) && parameters.length > 1) {
             resetParameter();
             return true;
         }
@@ -711,7 +714,7 @@ Item {
             }
             ShellAction {
                 id: appearanceReset
-                visible: panel.hasBlur || panel.spectrumTuning || ["bar", "frame", "motion"].includes(panel.kind)
+                visible: panel.hasReset
                 width: visible ? implicitWidth : 0
                 height: visible ? implicitHeight : 0
                 anchors.verticalCenter: parent.verticalCenter
@@ -719,11 +722,9 @@ Item {
                 theme: panel.theme
                 motion: panel.motion
                 compact: true
-                iconOnly: true
-                inlineIconHint: true
-                quietAction: true
+                horizontalCompact: true
                 icon: DesktopIcons.actionGlyph("reset")
-                title: "Restore " + panel.titleText.toLowerCase() + " defaults"
+                title: "Restore defaults"
                 shortcut: panel.runtime.shellHint("SettingsDetail.reset")
                 onActivated: panel.resetAppearance()
             }
@@ -1139,19 +1140,6 @@ Item {
                 enabled: panel.masterAvailable
                 onActivated: panel.nightLight.change("pause", "0")
             }
-            ShellAction {
-                width: implicitWidth
-                height: implicitHeight
-                runtime: panel.runtime
-                theme: panel.theme
-                motion: panel.motion
-                title: "Restore Night Light defaults"
-                shortcut: panel.runtime.shellHint("SettingsDetail.reset")
-                compact: true
-                horizontalCompact: true
-                enabled: panel.masterAvailable
-                onActivated: panel.nightLight.change("reset", "")
-            }
         }
 
         Column {
@@ -1373,18 +1361,6 @@ Item {
                     wrapMode: Text.WordWrap
                 }
             }
-            ShellAction {
-                width: implicitWidth
-                height: implicitHeight
-                runtime: panel.runtime
-                theme: panel.theme
-                motion: panel.motion
-                title: "Restore power policy defaults"
-                shortcut: panel.runtime.shellHint("SettingsDetail.reset")
-                compact: true
-                horizontalCompact: true
-                onActivated: panel.powerProfile.resetPolicy()
-            }
         }
 
         Column {
@@ -1577,19 +1553,6 @@ Item {
                         }
                     }
                 }
-                ShellAction {
-                    runtime: panel.runtime
-                    theme: panel.theme
-                    motion: panel.motion
-                    compact: true
-                    horizontalCompact: true
-                    width: implicitWidth
-                    height: implicitHeight
-                    icon: DesktopIcons.actionGlyph("reset")
-                    title: "Restore quiet-hour defaults"
-                    shortcut: panel.runtime.shellHint("SettingsDetail.reset")
-                    onActivated: panel.notifications.resetQuietHours()
-                }
             }
             ShellSection {
                 runtime: panel.runtime
@@ -1667,6 +1630,18 @@ Item {
             color: panel.theme.textMuted
             wrapMode: Text.WordWrap
             font.pixelSize: panel.theme.fontSize(10)
+        }
+        KeyHintStrip {
+            visible: panel.parameters.length > 1
+            width: parent.width
+            runtime: panel.runtime
+            theme: panel.theme
+            hints: [
+                {
+                    shortcut: panel.runtime.shellHint("SettingsDetail.select"),
+                    label: "Select parameter"
+                }
+            ]
         }
     }
 }

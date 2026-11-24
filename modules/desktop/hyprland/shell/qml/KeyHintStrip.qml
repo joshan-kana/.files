@@ -12,6 +12,7 @@ Item {
     property bool trailing: false
     property int groupSpacing: theme.spacing2
 
+    property var measuredItems: []
     implicitHeight: hintRows.implicitHeight
 
     // Measure actual keycaps using the same component and font settings as
@@ -28,6 +29,12 @@ Item {
         Repeater {
             id: measuredHints
             model: strip.hints
+            onItemAdded: (index, item) => {
+                const next = strip.measuredItems.slice();
+                next.splice(index, 0, item);
+                strip.measuredItems = next;
+            }
+            onItemRemoved: (index, item) => strip.measuredItems = strip.measuredItems.filter(entry => entry !== item)
             delegate: KeyHint {
                 required property var modelData
                 runtime: strip.runtime
@@ -46,10 +53,8 @@ Item {
         let entries = [];
         let occupied = 0;
         const limit = Math.max(1, strip.width);
-        const count = measuredHints.count;
-        for (let i = 0; i < count; i++) {
-            const hint = measuredHints.itemAt(i);
-            if (!hint || strip.hints[i].visible === false)
+        for (const hint of strip.measuredItems) {
+            if (!hint || hint.modelData.visible === false)
                 continue;
             const width = hint.implicitWidth;
             if (entries.length > 0 && occupied + strip.groupSpacing + width > limit) {
@@ -58,7 +63,7 @@ Item {
                 occupied = 0;
             }
             occupied += (entries.length > 0 ? strip.groupSpacing : 0) + width;
-            entries.push(strip.hints[i]);
+            entries.push(hint.modelData);
         }
         if (entries.length > 0)
             rows.push(entries);

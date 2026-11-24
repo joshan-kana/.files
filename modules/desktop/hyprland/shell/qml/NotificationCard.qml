@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "DesktopIcons.js" as DesktopIcons
 import Quickshell.Services.Notifications
 
 SquircleSurface {
@@ -365,7 +366,7 @@ SquircleSurface {
                         iconOnly: true
                         inlineIconHint: true
                         quietAction: true
-                        icon: "󰑐"
+                        icon: DesktopIcons.actionGlyph("reset")
                         title: "Restore app defaults"
                         shortcut: card.selected ? card.runtime.shellHint("NotificationCard.defaults") : ""
                         onActivated: card.notificationState.resetApplicationPreferences(card.notification)

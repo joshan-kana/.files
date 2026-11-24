@@ -74,7 +74,7 @@ test("shared motion tokens drive compact, normal and split-button deformation", 
     assert.match(
       src,
       name === "ShellAction.qml"
-        ? /Behavior on bodyScaleX \{/
+        ? /Behavior on animatedScaleX \{/
         : /Behavior on scale \{/,
     );
     assert.match(src, /SpringAnimation \{/);

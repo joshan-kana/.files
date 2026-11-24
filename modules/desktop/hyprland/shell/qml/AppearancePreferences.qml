@@ -428,6 +428,11 @@ QtObject {
         vhsApply.restart();
     }
 
+    function resetVhs(): void {
+        clearOverride("vhsEnabled");
+        applyVhsPreset("Default");
+    }
+
     function resetVhsParameter(key: string): void {
         if (!vhsParameterKeys.includes(key))
             return;

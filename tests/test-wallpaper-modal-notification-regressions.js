@@ -235,13 +235,13 @@ test("other transient Wayland surfaces keep their backing geometry stable", () =
   );
 });
 
-test("Wallpaper gallery keeps thumbnail names and ACTIVE but removes redundant selected-name row", () => {
+test("Wallpaper gallery keeps thumbnail names and independent active/favourite markers", () => {
   const wallpaper = qml("WallpaperPanel.qml");
   assert.match(wallpaper, /id: gallery[\s\S]*?height: parent.height/);
   assert.match(wallpaper, /id: filenameBar/);
   assert.match(
     wallpaper,
-    /id: stateLabel[\s\S]*?text: entry\.applied \? "ACTIVE" : panel\.favoritePaths\.includes\(entry\.modelData\) \? "♥" : ""/,
+    /id: stateLabel[\s\S]*?text: entry\.applied \? "󰄬" : ""[\s\S]*?id: favoriteMark[\s\S]*?panel\.favoritePaths\.includes\(entry\.modelData\)/,
   );
   assert.match(wallpaper, /bottom: filenameBar.top/);
   assert.doesNotMatch(

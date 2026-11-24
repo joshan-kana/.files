@@ -148,7 +148,7 @@ Item {
                 iconHint: true
                 inlineIconHint: true
                 shortcut: content.runtime.shellHint("StatusContent.refresh")
-                icon: "󰑐"
+                icon: DesktopIcons.actionGlyph("refresh")
                 title: "Refresh current status"
                 onActivated: content.refreshRequested()
             }

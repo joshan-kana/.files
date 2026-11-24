@@ -59,7 +59,8 @@ function toggleGlyph(active) {
 function actionGlyph(action) {
   return (
     {
-      reset: "󰑐",
+      reset: "󰁯",
+      revert: "󰕌",
       refresh: "󰑐",
       confirm: "󰄬",
       cancel: "󰜺",

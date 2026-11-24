@@ -236,6 +236,11 @@ Item {
 
     function activateShortcut(key: int, modifiers: int): bool {
         const index = entries.findIndex(entry => runtime.shellMatchesHint(entry.binding, key, modifiers));
+        if (runtime.shellMatchesHint("SessionPanel.defaults", key, modifiers)) {
+            if (armedAction.length === 0)
+                resetToDeclared();
+            return true;
+        }
         if (index < 0)
             return false;
         activateIndex(index);
@@ -367,6 +372,22 @@ Item {
             font.family: panel.runtime.fontSans
             font.pixelSize: panel.theme.fontSize(11)
             font.weight: Font.DemiBold
+        }
+
+        ShellAction {
+            width: implicitWidth
+            height: implicitHeight
+            anchors.horizontalCenter: parent.horizontalCenter
+            runtime: panel.runtime
+            theme: panel.theme
+            motion: panel.motion
+            compact: true
+            horizontalCompact: true
+            icon: DesktopIcons.actionGlyph("reset")
+            title: "Restore session defaults"
+            shortcut: panel.runtime.shellHint("SessionPanel.defaults")
+            enabled: panel.armedAction.length === 0
+            onActivated: panel.resetToDeclared()
         }
 
         // Direct action keycaps already live on their tiles. Centre only the

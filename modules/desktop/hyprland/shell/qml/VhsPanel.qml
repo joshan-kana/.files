@@ -137,6 +137,11 @@ Item {
                 appearance.applyVhsPreset(["Subtle", "Analog", "Degraded", "Default"][presetIndex]);
             return true;
         }
+        if (runtime.shellMatchesHint("VhsPanel.defaults", key, modifiers)) {
+            if (!autoRepeat)
+                appearance.resetVhs();
+            return true;
+        }
         if (runtime.shellMatchesHint("VhsPanel.reset", key, modifiers)) {
             if (!autoRepeat)
                 appearance.resetVhsParameter(parameters[selectedIndex].key);
@@ -203,7 +208,7 @@ Item {
             }
 
             Column {
-                width: Math.max(1, parent.width - capabilityGlyph.width - toggleButton.width - 2 * parent.spacing)
+                width: Math.max(1, parent.width - capabilityGlyph.width - toggleButton.width - defaultsButton.width - 3 * parent.spacing)
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: panel.theme.spacing1
 
@@ -239,6 +244,21 @@ Item {
                 shortcut: panel.runtime.shellHint("VhsPanel.toggle")
                 onActivated: panel.appearance.toggleVhs()
             }
+            ShellAction {
+                id: defaultsButton
+                width: implicitWidth
+                height: implicitHeight
+                anchors.verticalCenter: parent.verticalCenter
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                compact: true
+                horizontalCompact: true
+                icon: DesktopIcons.actionGlyph("reset")
+                title: "Restore defaults"
+                shortcut: panel.runtime.shellHint("VhsPanel.defaults")
+                onActivated: panel.appearance.resetVhs()
+            }
         }
 
         Row {
@@ -256,7 +276,7 @@ Item {
                     theme: panel.theme
                     motion: panel.motion
                     title: modelData
-                    icon: ["󰨛", "󰕧", "󰓎", "󰑐"][index]
+                    icon: ["󰨛", "󰕧", "󰓎", DesktopIcons.actionGlyph("reset")][index]
                     shortcut: panel.runtime.shellChoiceHint(index)
                     compact: true
                     connectedGroup: true

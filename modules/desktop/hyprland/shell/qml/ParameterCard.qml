@@ -33,6 +33,23 @@ ShellSurface {
     borderColor: outlined ? theme.accent : "transparent"
     fillColor: theme.expressiveSurfaceStrong
 
+    HoverHandler {
+        id: cardHover
+    }
+    StateLayer {
+        theme: card.theme
+        motion: card.motion
+        selected: card.selectedParameter
+        manualHover: cardHover.hovered
+        effectScaleX: 1
+        effectScaleY: 1
+        cornerRadius: card.cornerRadius
+        Accessible.role: Accessible.Button
+        Accessible.name: "Select " + card.title
+        Accessible.onPressAction: card.selectedRequested()
+        onActivated: card.selectedRequested()
+    }
+
     Column {
         id: parameterContent
         width: parent.width - card.theme.spacing3 * 2
@@ -72,16 +89,6 @@ ShellSurface {
                         textRole: ShellText.Supporting
                         wrapMode: Text.WordWrap
                     }
-                }
-                StateLayer {
-                    theme: card.theme
-                    motion: card.motion
-                    selected: card.selectedParameter
-                    cornerRadius: card.theme.radiusSmall
-                    Accessible.role: Accessible.Button
-                    Accessible.name: "Select " + card.title
-                    Accessible.onPressAction: card.selectedRequested()
-                    onActivated: card.selectedRequested()
                 }
             }
             KeyHint {
