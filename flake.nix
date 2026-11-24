@@ -724,7 +724,9 @@
           semantic-options = builtins.seq semanticOptionsTest pkgs.emptyFile;
         }
         // lib.optionalAttrs pkgs.stdenv.hostPlatform.isDarwin {
-          darwin-eval = builtins.seq self.darwinConfigurations.mac.config.system.build.toplevel.drvPath pkgs.emptyFile;
+          darwin-eval = builtins.deepSeq (builtins.mapAttrs (
+            _: host: host.config.system.build.toplevel.drvPath
+          ) self.darwinConfigurations) pkgs.emptyFile;
         }
         // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
           shell-access =
