@@ -566,12 +566,20 @@ in
           description = "Select the configured power profile on AC/battery transitions.";
         };
         acProfile = lib.mkOption {
-          type = lib.types.enum [ "power-saver" "balanced" "performance" ];
+          type = lib.types.enum [
+            "power-saver"
+            "balanced"
+            "performance"
+          ];
           default = "balanced";
           description = "Preferred power profile on external power.";
         };
         batteryProfile = lib.mkOption {
-          type = lib.types.enum [ "power-saver" "balanced" "performance" ];
+          type = lib.types.enum [
+            "power-saver"
+            "balanced"
+            "performance"
+          ];
           default = "power-saver";
           description = "Preferred power profile on battery.";
         };
@@ -893,7 +901,7 @@ in
           historyEnabled = scopeConfig.notificationsHistoryEnabled;
           quietHours = scopeConfig.notificationQuietHours;
         };
-        powerPolicy = scopeConfig.powerPolicy;
+        inherit (scopeConfig) powerPolicy;
         weather.location = scopeConfig.weatherLocation;
         keybindings = cheatsheetBindings;
         shortcutHints = {
