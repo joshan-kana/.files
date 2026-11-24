@@ -468,7 +468,9 @@ test("The compact mixer uses content-driven height and does not delay rendering"
     mixer,
     /monitoring: mixer.active && list.visible && streamRow.inViewport/,
   );
-  assert.doesNotMatch(mixer, /setInterval|setTimeout|Timer \{/);
+  assert.doesNotMatch(mixer, /setInterval|setTimeout/);
+  assert.match(mixer, /Timer \{\s*id: routeTimeout/);
+  assert.equal((mixer.match(/Timer \{/g) || []).length, 1);
   assert.doesNotMatch(mixer, /shortcut: "ESC"/);
 });
 

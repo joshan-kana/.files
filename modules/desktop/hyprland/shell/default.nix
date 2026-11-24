@@ -925,6 +925,7 @@ in
         shellBindings = import ./keybindings.nix;
 
         tools = {
+          pwMetadata = lib.getExe' pkgs.pipewire "pw-metadata";
           bluetoothctl = lib.getExe' pkgs.bluez "bluetoothctl";
           weatherCurl = lib.getExe pkgs.curl;
           agendaQuery = lib.getExe agendaQuery;

@@ -407,6 +407,9 @@
         };
         mixer = {
           "AudioMixerContent.effectsToggle" = "B";
+          "AudioMixerContent.balanceLeft" = "NAV_KEY_LEFT_PRIMARY_SHIFT";
+          "AudioMixerContent.balanceRight" = "NAV_KEY_RIGHT_PRIMARY_SHIFT";
+          "AudioMixerContent.balanceReset" = "C";
           "AudioMixerContent.effectsOpen" = "E";
           "AudioMixerContent.effectsRefresh" = "R";
           "AudioMixerContent.level" = "NAV_HORIZONTAL";

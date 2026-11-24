@@ -230,11 +230,11 @@ FocusScope {
             }
             return true;
         }
-        if (!compact && runtime.shellMatchesHint("AudioMixerContent.balanceLeft", key, modifiers)) {
+        if (!compact && runtime.shellModifier("mixer", "Shift", modifiers) && runtime.shellNavigates("mixer", "left", key, "primary")) {
             adjustBalance(-0.1);
             return true;
         }
-        if (!compact && runtime.shellMatchesHint("AudioMixerContent.balanceRight", key, modifiers)) {
+        if (!compact && runtime.shellModifier("mixer", "Shift", modifiers) && runtime.shellNavigates("mixer", "right", key, "primary")) {
             adjustBalance(0.1);
             return true;
         }
