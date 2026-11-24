@@ -50,7 +50,6 @@ let
         '';
       };
     };
-
 in
 {
   imports = lib.optionals isDarwin [ serviceModule ];

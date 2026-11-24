@@ -58,6 +58,5 @@ in
         "github-webhook-secret:${githubWebhookSecret}"
       ];
     };
-
   };
 }

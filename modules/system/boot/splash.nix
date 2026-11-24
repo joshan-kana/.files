@@ -1,5 +1,4 @@
 { lib, system, ... }:
-
 {
   config = lib.optionalAttrs (lib.systems.elaborate system).isLinux {
     boot = {

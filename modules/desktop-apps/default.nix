@@ -44,7 +44,9 @@ in
   };
 
   warp = _: {
-    home = _: { home.packages = [ pkgs.warp-terminal ]; };
+    home = _: {
+      home.packages = [ pkgs.warp-terminal ];
+    };
   };
 
   mullvad =
@@ -60,7 +62,9 @@ in
   chromium =
     _:
     lib.optionalAttrs isLinux {
-      home = _: { home.packages = [ pkgs.chromium ]; };
+      home = _: {
+        home.packages = [ pkgs.chromium ];
+      };
     };
 
   zen = _: {
@@ -150,7 +154,9 @@ in
   };
 
   gimp = _: {
-    home = _: { home.packages = [ pkgs.gimp ]; };
+    home = _: {
+      home.packages = [ pkgs.gimp ];
+    };
   };
 
   githubDesktop = _: {
@@ -180,7 +186,9 @@ in
   };
 
   libreoffice = _: {
-    home = _: { home.packages = [ pkgs.libreoffice ]; };
+    home = _: {
+      home.packages = [ pkgs.libreoffice ];
+    };
   };
 
   sunshine =
@@ -256,7 +264,9 @@ in
     };
 
   vlc = _: {
-    home = _: { home.packages = [ pkgs.vlc ]; };
+    home = _: {
+      home.packages = [ pkgs.vlc ];
+    };
   };
 
   mopidy = _: {
@@ -286,7 +296,9 @@ in
         ];
       }
       // lib.optionalAttrs isDarwin {
-        home = _: { home.packages = [ pkgs.ollama ]; };
+        home = _: {
+          home.packages = [ pkgs.ollama ];
+        };
         launchd.user.agents.ollama.serviceConfig = {
           ProgramArguments = [
             (lib.getExe pkgs.ollama)
@@ -313,19 +325,25 @@ in
   discord =
     _:
     lib.optionalAttrs (isDarwin || (isLinux && isx86_64)) {
-      home = _: { home.packages = [ pkgs.discord ]; };
+      home = _: {
+        home.packages = [ pkgs.discord ];
+      };
     };
 
   dropbox =
     _:
     lib.optionalAttrs (isDarwin || (isLinux && isx86_64)) {
-      home = _: { home.packages = [ pkgs.dropbox ]; };
+      home = _: {
+        home.packages = [ pkgs.dropbox ];
+      };
     };
 
   onlyoffice =
     _:
     lib.optionalAttrs (isLinux && isx86_64) {
-      home = _: { home.packages = [ pkgs.onlyoffice-desktopeditors ]; };
+      home = _: {
+        home.packages = [ pkgs.onlyoffice-desktopeditors ];
+      };
     };
 
   beeperMatrixClient = _: {
@@ -335,70 +353,100 @@ in
   };
 
   chatgpt = _: {
-    home = _: { home.packages = [ pkgs.chatgpt ]; };
+    home = _: {
+      home.packages = [ pkgs.chatgpt ];
+    };
   };
 
   bambuStudio = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.bambu-studio ]; };
+    home = _: {
+      home.packages = [ pkgs.bambu-studio ];
+    };
   };
 
   coolRetroTerm = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.cool-retro-term ]; };
+    home = _: {
+      home.packages = [ pkgs.cool-retro-term ];
+    };
   };
 
   googleChrome = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.google-chrome ]; };
+    home = _: {
+      home.packages = [ pkgs.google-chrome ];
+    };
   };
 
   inkscape = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.inkscape ]; };
+    home = _: {
+      home.packages = [ pkgs.inkscape ];
+    };
   };
 
   krita = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.krita ]; };
+    home = _: {
+      home.packages = [ pkgs.krita ];
+    };
   };
 
   prusaSlicer = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.prusa-slicer ]; };
+    home = _: {
+      home.packages = [ pkgs.prusa-slicer ];
+    };
   };
 
   qbittorrent = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.qbittorrent ]; };
+    home = _: {
+      home.packages = [ pkgs.qbittorrent ];
+    };
   };
 
   zed = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.zed-editor ]; };
+    home = _: {
+      home.packages = [ pkgs.zed-editor ];
+    };
   };
 
   filelight =
     _:
     lib.optionalAttrs isLinux {
-      home = _: { home.packages = [ pkgs.kdePackages.filelight ]; };
+      home = _: {
+        home.packages = [ pkgs.kdePackages.filelight ];
+      };
     };
   gparted =
     _:
     lib.optionalAttrs isLinux {
-      home = _: { home.packages = [ pkgs.gparted ]; };
+      home = _: {
+        home.packages = [ pkgs.gparted ];
+      };
     };
   nautilus =
     _:
     lib.optionalAttrs isLinux {
-      home = _: { home.packages = [ pkgs.nautilus ]; };
+      home = _: {
+        home.packages = [ pkgs.nautilus ];
+      };
     };
   waypipe =
     _:
     lib.optionalAttrs isLinux {
-      home = _: { home.packages = [ pkgs.waypipe ]; };
+      home = _: {
+        home.packages = [ pkgs.waypipe ];
+      };
     };
 
   arc =
     { pkgs, ... }:
     lib.optionalAttrs isDarwin {
-      home = _: { home.packages = [ pkgs.arc ]; };
+      home = _: {
+        home.packages = [ pkgs.arc ];
+      };
     };
 
   cryptomator = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.cryptomator ]; };
+    home = _: {
+      home.packages = [ pkgs.cryptomator ];
+    };
   };
 
   ghostty = { pkgs, ... }: {
@@ -410,13 +458,17 @@ in
   linear =
     { pkgs, ... }:
     lib.optionalAttrs isDarwin {
-      home = _: { home.packages = [ pkgs.linear ]; };
+      home = _: {
+        home.packages = [ pkgs.linear ];
+      };
     };
 
   iterm2 =
     { pkgs, ... }:
     lib.optionalAttrs isDarwin {
-      home = _: { home.packages = [ pkgs.iterm2 ]; };
+      home = _: {
+        home.packages = [ pkgs.iterm2 ];
+      };
     };
 
   microsoftOfficeSuite =
@@ -436,7 +488,9 @@ in
     };
 
   openWebui = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.open-webui-desktop ]; };
+    home = _: {
+      home.packages = [ pkgs.open-webui-desktop ];
+    };
   };
 
   openclaw =
@@ -454,7 +508,9 @@ in
   vial =
     { pkgs, ... }:
     lib.optionalAttrs isDarwin {
-      home = _: { home.packages = [ pkgs.vial ]; };
+      home = _: {
+        home.packages = [ pkgs.vial ];
+      };
     };
 
   keymapp =

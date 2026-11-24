@@ -107,5 +107,4 @@ lib.recursiveUpdate (import ../../profiles/minimal.nix { inherit lib moduleRegis
         ForwardAgent yes
     '';
   };
-
 }

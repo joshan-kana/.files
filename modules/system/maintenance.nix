@@ -83,7 +83,6 @@ let
       ${lib.escapeShellArgs command}
       printf '%s\n' "$due" > "$stamp"
     '';
-
 in
 assert cleanupIntervalDays >= 1 && cleanupIntervalDays <= 31;
 assert timeParts != null && startHour * 60 + startMinute + 10 < 1440;

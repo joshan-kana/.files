@@ -328,7 +328,6 @@ in
         themePackages = [ theme ];
         showDelay = 0;
       };
-
     };
 
   scopeOptions.name = lib.mkOption {
@@ -734,5 +733,4 @@ in
       };
     };
   };
-
 }
