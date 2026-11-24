@@ -70,7 +70,7 @@ Item {
             alerts: "Delivery, quiet hours and notification history",
             stay: "Idle inhibition and timeout",
             power: "Performance profiles and automatic AC / battery policy",
-            spectrum: "Audio spectrum bars and wallpaper response",
+            spectrum: "Shared visualizer response and wallpaper appearance",
             reactive: "Audio-driven tint, response and targets",
             bar: "Desktop islands and bar layout",
             frame: "Connected desktop contour and thickness",
@@ -196,6 +196,33 @@ Item {
         if (spectrumTuning)
             return [
                 {
+                    key: "spectrumSensitivity",
+                    title: "Sensitivity",
+                    description: "Visual amplitude without changing the reactive tint",
+                    minimum: 40,
+                    maximum: 300,
+                    step: 5,
+                    suffix: "%"
+                },
+                {
+                    key: "spectrumAttack",
+                    title: "Attack speed",
+                    description: "Rise speed of visualizer bands",
+                    minimum: 25,
+                    maximum: 250,
+                    step: 5,
+                    suffix: "%"
+                },
+                {
+                    key: "spectrumRelease",
+                    title: "Release speed",
+                    description: "Fall speed of visualizer bands",
+                    minimum: 25,
+                    maximum: 250,
+                    step: 5,
+                    suffix: "%"
+                },
+                {
                     key: "wallpaperSpectrumOpacity",
                     title: "Spectrum opacity",
                     description: "Strength of wallpaper spectrum bars",
@@ -287,7 +314,7 @@ Item {
             return appearance.wallpaperSpectrumBars;
         if (key === "motionDuration")
             return Math.round(motion.durationMultiplier * 100);
-        if (key.startsWith("musicReactive") || key === "wallpaperSpectrumOpacity")
+        if (key.startsWith("musicReactive") || key.startsWith("spectrum") || key === "wallpaperSpectrumOpacity")
             return Math.round(appearance[key] * 100);
         if (key === "windowOpacity")
             return Math.round(appearance.windowOpacity * 100);
@@ -317,8 +344,8 @@ Item {
             appearance.setSpectrumBars(value);
         else if (key === "motionDuration")
             motion.setDurationMultiplier(value / 100);
-        else if (key.startsWith("musicReactive") || key === "wallpaperSpectrumOpacity")
-            appearance.setReactiveParameter(key, value / 100);
+        else if (key.startsWith("musicReactive") || key.startsWith("spectrum") || key === "wallpaperSpectrumOpacity")
+            appearance.setVisualParameter(key, value / 100);
         else if (key === "windowOpacity")
             appearance.setWindowOpacity(value / 100);
         else if (key === "glassOpacity")

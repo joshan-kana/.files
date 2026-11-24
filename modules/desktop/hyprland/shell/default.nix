@@ -398,6 +398,21 @@ in
           default = "balanced";
           description = "Frequency region emphasized by the reactive visual response.";
         };
+        spectrumSensitivity = lib.mkOption {
+          type = lib.types.numbers.between 0.4 3.0;
+          default = 1.0;
+          description = "Visual amplitude without changing the reactive tint.";
+        };
+        spectrumAttack = lib.mkOption {
+          type = lib.types.numbers.between 0.25 2.5;
+          default = 1.0;
+          description = "Rise speed of visualizer bands.";
+        };
+        spectrumRelease = lib.mkOption {
+          type = lib.types.numbers.between 0.25 2.5;
+          default = 1.0;
+          description = "Fall speed of visualizer bands.";
+        };
         wallpaperSpectrumBars = lib.mkOption {
           type = lib.types.ints.between 24 96;
           default = 64;

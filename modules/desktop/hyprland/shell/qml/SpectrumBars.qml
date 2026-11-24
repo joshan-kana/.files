@@ -43,5 +43,8 @@ Item {
         lowHz: root.spectrum.lowHz
         highHz: root.spectrum.highHz
         decaying: root.spectrum.decaying
+        sensitivity: root.spectrum.sensitivity
+        attackMultiplier: root.spectrum.attackMultiplier
+        releaseMultiplier: root.spectrum.releaseMultiplier
     }
 }

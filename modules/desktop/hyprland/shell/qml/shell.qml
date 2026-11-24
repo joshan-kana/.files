@@ -321,6 +321,9 @@ ShellRoot {
 
     SpectrumState {
         id: qmlSpectrum
+        sensitivity: qmlAppearance.spectrumSensitivity
+        attackMultiplier: qmlAppearance.spectrumAttack
+        releaseMultiplier: qmlAppearance.spectrumRelease
         // No DSP client unless a visible spectrum consumer needs live audio.
         active: (qmlMedia.playing && qmlAmbientBar.shown) || (qmlExpansionState.hasCurrent && (qmlExpansionState.currentName === "system" || qmlExpansionState.currentName === "media")) || root.wallpaperSpectrumEnabled || root.musicReactiveSurfaceVisible
     }

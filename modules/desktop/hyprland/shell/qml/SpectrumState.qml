@@ -7,6 +7,9 @@ QtObject {
     id: spectrum
 
     property bool active: false
+    property real sensitivity: 1.0
+    property real attackMultiplier: 1.0
+    property real releaseMultiplier: 1.0
     property bool connectionGate: true
     readonly property Socket currentSocket: socketLoader.item as Socket
     readonly property bool connected: currentSocket ? currentSocket.connected : false
@@ -110,10 +113,10 @@ QtObject {
         const bassEnd = targetBands.length * Math.log(250 / Math.max(1, lowHz)) / Math.log(Math.max(2, highHz / Math.max(1, lowHz)));
         // Five easing coefficients per display frame, not one exponential for
         // every FFT band. These are identical to the previous per-band rates.
-        const bassAttack = 1 - Math.exp(-delta * 320);
-        const bassRelease = 1 - Math.exp(-delta * 110);
-        const highAttack = 1 - Math.exp(-delta * 120);
-        const highRelease = 1 - Math.exp(-delta * 45);
+        const bassAttack = 1 - Math.exp(-delta * 320 * attackMultiplier);
+        const bassRelease = 1 - Math.exp(-delta * 110 * releaseMultiplier);
+        const highAttack = 1 - Math.exp(-delta * 120 * attackMultiplier);
+        const highRelease = 1 - Math.exp(-delta * 45 * releaseMultiplier);
         const decay = decaying ? 1 - Math.exp(-delta * 10) : 0;
         for (let i = 0; i < targetBands.length; i++) {
             const current = bands[i];

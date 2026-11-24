@@ -91,6 +91,8 @@ test("interpolation preserves 120 Hz attack, release, decay and energy values", 
         interpolating: true,
         lowHz: 20,
         highHz: 20000,
+        attackMultiplier: 1,
+        releaseMultiplier: 1,
         hasEnergy: true,
         smoothingSilence: false,
       };
@@ -130,6 +132,8 @@ test("active animation reuses two buffers without producing identical frame iden
     interpolating: true,
     lowHz: 20,
     highHz: 20000,
+    attackMultiplier: 1,
+    releaseMultiplier: 1,
     hasEnergy: false,
   };
   const seen = [];
@@ -217,4 +221,69 @@ test("bar-only audio updates leave QML interpolation idle while maintaining full
   );
   assert.equal(state.smoothingSilence, true);
   assert.equal(state.interpolating, true);
+});
+
+test("visualizer attack and release are independently adjustable without changing the decay tail", () => {
+  const advance = qmlFunction("advanceBands");
+  const measure = (
+    from,
+    to,
+    attackMultiplier,
+    releaseMultiplier,
+    decaying = false,
+  ) => {
+    const state = {
+      bands: Array(96).fill(from),
+      targetBands: Array(96).fill(to),
+      frameA: [],
+      frameB: [],
+      decaying,
+      interpolating: true,
+      lowHz: 20,
+      highHz: 20000,
+      attackMultiplier,
+      releaseMultiplier,
+      hasEnergy: true,
+      smoothingSilence: false,
+    };
+    advance(state, 1 / 120);
+    return state.bands[50];
+  };
+  assert.ok(measure(0, 1, 2, 1) > measure(0, 1, 0.5, 1));
+  assert.ok(measure(1, 0, 1, 2) < measure(1, 0, 1, 0.5));
+  assert.equal(measure(1, 0, 2, 2, true), measure(1, 0, 0.5, 0.5, true));
+});
+
+test("spectrum tuning is persistent, resettable, and independent of reactive tint", () => {
+  const qml = (name) =>
+    fs.readFileSync(
+      path.join(__dirname, "../modules/desktop/hyprland/shell/qml", name),
+      "utf8",
+    );
+  const preferences = qml("AppearancePreferences.qml");
+  const detail = qml("SettingsDetail.qml");
+  const shell = qml("shell.qml");
+  const reactive = qml("MusicReactiveState.qml");
+  for (const name of [
+    "spectrumSensitivity",
+    "spectrumAttack",
+    "spectrumRelease",
+  ]) {
+    assert.ok(preferences.includes(`effective("${name}")`));
+    assert.ok(preferences.includes(`clearOverride("${name}")`));
+    assert.ok(detail.includes(`key: "${name}"`));
+    assert.ok(shell.includes(`qmlAppearance.${name}`));
+    assert.ok(!reactive.includes(name));
+  }
+  for (const property of [
+    "sensitivity",
+    "attackMultiplier",
+    "releaseMultiplier",
+  ])
+    assert.ok(
+      qml("SpectrumBars.qml").includes(
+        `${property}: root.spectrum.${property}`,
+      ),
+    );
+  assert.match(qml("SpectrumCurve.qml"), /raw \* spectrum.sensitivity/);
 });

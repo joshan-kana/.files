@@ -23,6 +23,9 @@ QtObject {
         property real musicReactiveSmoothing: appearance.runtime.appearanceDefaults.musicReactiveSmoothing
         property real musicReactiveIntensity: appearance.runtime.appearanceDefaults.musicReactiveIntensity
         property string musicReactiveEmphasis: appearance.runtime.appearanceDefaults.musicReactiveEmphasis
+        property real spectrumSensitivity: appearance.runtime.appearanceDefaults.spectrumSensitivity
+        property real spectrumAttack: appearance.runtime.appearanceDefaults.spectrumAttack
+        property real spectrumRelease: appearance.runtime.appearanceDefaults.spectrumRelease
         property int wallpaperSpectrumBars: appearance.runtime.appearanceDefaults.wallpaperSpectrumBars
         property real wallpaperSpectrumOpacity: appearance.runtime.appearanceDefaults.wallpaperSpectrumOpacity
         property int barIslandHeight: appearance.runtime.appearanceDefaults.barIslandHeight
@@ -61,6 +64,9 @@ QtObject {
     readonly property real musicReactiveSmoothing: Math.max(0, Math.min(0.9, effective("musicReactiveSmoothing")))
     readonly property real musicReactiveIntensity: Math.max(0.25, Math.min(2.0, effective("musicReactiveIntensity")))
     readonly property string musicReactiveEmphasis: ["balanced", "bass", "mid", "treble"].includes(effective("musicReactiveEmphasis")) ? effective("musicReactiveEmphasis") : "balanced"
+    readonly property real spectrumSensitivity: Math.max(0.4, Math.min(3.0, effective("spectrumSensitivity")))
+    readonly property real spectrumAttack: Math.max(0.25, Math.min(2.5, effective("spectrumAttack")))
+    readonly property real spectrumRelease: Math.max(0.25, Math.min(2.5, effective("spectrumRelease")))
     readonly property int wallpaperSpectrumBars: Math.max(24, Math.min(96, effective("wallpaperSpectrumBars")))
     readonly property real wallpaperSpectrumOpacity: Math.max(0.2, Math.min(1.0, effective("wallpaperSpectrumOpacity")))
     readonly property var reactiveParameters: [
@@ -275,13 +281,16 @@ QtObject {
         saved.sync();
     }
 
-    function setReactiveParameter(key: string, value: real): void {
+    function setVisualParameter(key: string, value: real): void {
         const bounds = {
             musicReactiveSensitivity: [0.4, 3.0],
             musicReactiveAttack: [0.5, 2.5],
             musicReactiveRelease: [0.4, 2.5],
             musicReactiveSmoothing: [0.0, 0.9],
             musicReactiveIntensity: [0.25, 2.0],
+            spectrumSensitivity: [0.4, 3.0],
+            spectrumAttack: [0.25, 2.5],
+            spectrumRelease: [0.25, 2.5],
             wallpaperSpectrumOpacity: [0.2, 1.0]
         };
         const range = bounds[key];
@@ -329,6 +338,9 @@ QtObject {
     }
 
     function resetSpectrumTuning(): void {
+        clearOverride("spectrumSensitivity");
+        clearOverride("spectrumAttack");
+        clearOverride("spectrumRelease");
         clearOverride("wallpaperSpectrumOpacity");
         clearOverride("wallpaperSpectrumBars");
     }

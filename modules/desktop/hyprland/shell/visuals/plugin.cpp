@@ -33,6 +33,12 @@ class SpectrumBarsItem : public QQuickItem {
   Q_PROPERTY(double highHz READ highHz WRITE setHighHz NOTIFY highHzChanged)
   Q_PROPERTY(
       bool decaying READ decaying WRITE setDecaying NOTIFY decayingChanged)
+  Q_PROPERTY(double sensitivity READ sensitivity WRITE setSensitivity NOTIFY
+                 sensitivityChanged)
+  Q_PROPERTY(double attackMultiplier READ attackMultiplier WRITE
+                 setAttackMultiplier NOTIFY attackMultiplierChanged)
+  Q_PROPERTY(double releaseMultiplier READ releaseMultiplier WRITE
+                 setReleaseMultiplier NOTIFY releaseMultiplierChanged)
 public:
   explicit SpectrumBarsItem(QQuickItem *parent = nullptr) : QQuickItem(parent) {
     setFlag(ItemHasContents, true);
@@ -55,6 +61,9 @@ public:
   double lowHz() const { return lowHz_; }
   double highHz() const { return highHz_; }
   bool decaying() const { return decaying_; }
+  double sensitivity() const { return sensitivity_; }
+  double attackMultiplier() const { return attackMultiplier_; }
+  double releaseMultiplier() const { return releaseMultiplier_; }
 
   void setTargetBands(const QVariantList &v) {
     if (targetBands_ == v)
@@ -100,8 +109,32 @@ public:
     }
   }
 
+  void setSensitivity(double value) {
+    if (sensitivity_ == value)
+      return;
+    sensitivity_ = value;
+    emit sensitivityChanged();
+    update();
+  }
+  void setAttackMultiplier(double value) {
+    if (attackMultiplier_ == value)
+      return;
+    attackMultiplier_ = value;
+    emit attackMultiplierChanged();
+    update();
+  }
+  void setReleaseMultiplier(double value) {
+    if (releaseMultiplier_ == value)
+      return;
+    releaseMultiplier_ = value;
+    emit releaseMultiplierChanged();
+    update();
+  }
 signals:
   void targetBandsChanged();
+  void sensitivityChanged();
+  void attackMultiplierChanged();
+  void releaseMultiplierChanged();
   void edgesChanged();
   void barColorsChanged();
   void lowHzChanged();
@@ -134,10 +167,10 @@ protected:
     const float bassEnd =
         binCount * std::log(250.0f / std::max(1.0f, float(lowHz_))) /
         std::log(std::max(2.0f, float(highHz_ / std::max(1.0, lowHz_))));
-    const float bassAttack = 1 - std::exp(-delta * 320);
-    const float bassRelease = 1 - std::exp(-delta * 110);
-    const float highAttack = 1 - std::exp(-delta * 120);
-    const float highRelease = 1 - std::exp(-delta * 45);
+    const float bassAttack = 1 - std::exp(-delta * 320 * attackMultiplier_);
+    const float bassRelease = 1 - std::exp(-delta * 110 * releaseMultiplier_);
+    const float highAttack = 1 - std::exp(-delta * 120 * attackMultiplier_);
+    const float highRelease = 1 - std::exp(-delta * 45 * releaseMultiplier_);
     const float decay = decaying_ ? 1 - std::exp(-delta * 10) : 0;
     float diff = 0;
     for (int i = 0; i < binCount; ++i) {
@@ -176,7 +209,8 @@ protected:
                    int(std::ceil(edges_[i + 1].toFloat() * (binCount - 1))));
       const float peak =
           *std::max_element(current_.begin() + lo, current_.begin() + hi + 1);
-      levels[i] = std::pow(std::clamp(peak, 0.0f, 1.0f), 0.88f);
+      levels[i] =
+          std::pow(std::clamp(peak * float(sensitivity_), 0.0f, 1.0f), 0.88f);
     }
     QSGGeometry *g = node->geometry();
     // Keep one fixed buffer for the entire spectrum. Counting only visible
@@ -237,6 +271,7 @@ private:
   std::vector<float> current_;
   double lowHz_ = 20.0, highHz_ = 20000.0;
   bool decaying_ = false;
+  double sensitivity_ = 1.0, attackMultiplier_ = 1.0, releaseMultiplier_ = 1.0;
   QElapsedTimer frameClock_;
   QMetaObject::Connection frameConnection_;
   std::atomic<bool> animating_{false};

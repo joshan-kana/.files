@@ -50,7 +50,7 @@ Item {
             const raw = Math.max(values[source] || 0, values[Math.min(source + 1, values.length - 1)] || 0);
             points.push({
                 x: frequencyScale.fromNormalized(source / Math.max(1, values.length - 1)) * width,
-                y: height - Math.max(2, Math.pow(Math.max(0, Math.min(1, raw)), 0.82) * height * 0.92)
+                y: height - Math.max(2, Math.pow(Math.max(0, Math.min(1, raw * spectrum.sensitivity)), 0.82) * height * 0.92)
             });
         }
         if (points.length < 2)
