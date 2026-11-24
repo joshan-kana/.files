@@ -41,9 +41,7 @@ Item {
     property var parameterTarget: null
     property string priorQuery: ""
     property string selectionIdentity: ""
-    // JsonAdapter fills nested arrays after the first QML property evaluation.
-    // Refresh on the actual runtime FileView load rather than retaining an
-    // empty provider list from the initial binding evaluation.
+    // Refresh declared providers after the runtime configuration is reloaded.
     property var quicklinks: []
     property var defaultSnippets: []
     property var userSnippets: null

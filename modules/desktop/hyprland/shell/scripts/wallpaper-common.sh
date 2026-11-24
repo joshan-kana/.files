@@ -16,3 +16,7 @@ wallpaper_transition() {
     transition_args=(--transition-type none)
   fi
 }
+
+wallpaper_default_resize() {
+  jq -er '.appearance.wallpaperResizeMode | select(. == "fit" or . == "crop")' "$1"
+}

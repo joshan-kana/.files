@@ -21,17 +21,7 @@ Item {
     readonly property string libraryRoot: Quickshell.env("HOME") + "/wallpapers/"
     readonly property var collections: ["", ...new Set(entries.map(path => path.startsWith(libraryRoot) ? path.slice(libraryRoot.length, path.lastIndexOf("/")) : "").filter(value => value.length > 0))].sort()
     property bool policyView: false
-    property var policy: ({
-            mode: "off",
-            target: "all",
-            intervalMinutes: 60,
-            favoritesOnly: false,
-            collection: "",
-            dayStart: 420,
-            nightStart: 1140,
-            dayWallpaper: "",
-            nightWallpaper: ""
-        })
+    property var policy: runtime.configData.wallpaperRotation
     property bool policyKnown: false
     property string policyError: ""
     property double nextDue: 0

@@ -55,7 +55,7 @@ QtObject {
 
     readonly property var overrideKeys: parseOverrideKeys(saved.userOverrides)
     readonly property bool wallpaperSpectrumEnabled: effective("wallpaperSpectrumEnabled")
-    readonly property string wallpaperResizeMode: effective("wallpaperResizeMode") === "crop" ? "crop" : "fit"
+    readonly property string wallpaperResizeMode: ["fit", "crop"].includes(effective("wallpaperResizeMode")) ? effective("wallpaperResizeMode") : runtime.appearanceDefaults.wallpaperResizeMode
     readonly property string wallpaperTargetOutput: effective("wallpaperTargetOutput")
     readonly property bool musicReactiveEnabled: effective("musicReactiveEnabled")
     readonly property real musicReactiveSensitivity: Math.max(0.4, Math.min(3.0, effective("musicReactiveSensitivity")))
@@ -63,7 +63,7 @@ QtObject {
     readonly property real musicReactiveRelease: Math.max(0.4, Math.min(2.5, effective("musicReactiveRelease")))
     readonly property real musicReactiveSmoothing: Math.max(0, Math.min(0.9, effective("musicReactiveSmoothing")))
     readonly property real musicReactiveIntensity: Math.max(0.25, Math.min(2.0, effective("musicReactiveIntensity")))
-    readonly property string musicReactiveEmphasis: ["balanced", "bass", "mid", "treble"].includes(effective("musicReactiveEmphasis")) ? effective("musicReactiveEmphasis") : "balanced"
+    readonly property string musicReactiveEmphasis: ["balanced", "bass", "mid", "treble"].includes(effective("musicReactiveEmphasis")) ? effective("musicReactiveEmphasis") : runtime.appearanceDefaults.musicReactiveEmphasis
     readonly property real spectrumSensitivity: Math.max(0.4, Math.min(3.0, effective("spectrumSensitivity")))
     readonly property real spectrumAttack: Math.max(0.25, Math.min(2.5, effective("spectrumAttack")))
     readonly property real spectrumRelease: Math.max(0.25, Math.min(2.5, effective("spectrumRelease")))
@@ -169,7 +169,7 @@ QtObject {
     function hasOverride(key: string): bool {
         return overrideKeys.includes(key);
     }
-    readonly property string mediaVisualizerMode: effective("mediaVisualizerMode") === "curve" ? "curve" : "bars"
+    readonly property string mediaVisualizerMode: ["curve", "bars"].includes(effective("mediaVisualizerMode")) ? effective("mediaVisualizerMode") : runtime.appearanceDefaults.mediaVisualizerMode
     readonly property bool mediaLyricsVisible: effective("mediaLyricsVisible")
     readonly property var seekIntervals: [5, 10, 15, 30, 60]
     readonly property string mediaPreferredPlayer: effective("mediaPreferredPlayer")

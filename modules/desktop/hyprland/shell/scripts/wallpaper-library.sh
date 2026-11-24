@@ -116,7 +116,7 @@ current-resize)
   if [ -f "$current_file" ]; then
     head -n 1 "$current_file"
   else
-    jq -r '.appearance.wallpaperResizeMode // "fit"' "$runtime"
+    wallpaper_default_resize "$runtime"
   fi
   ;;
 current)
@@ -140,7 +140,7 @@ current)
   fi
   ;;
 set)
-  resize="${3:-crop}"
+  resize="${3:?Resize mode required}"
   image="${4:-}"
   case "$resize" in crop | fit) ;; *)
     printf 'Invalid resize mode\n' >&2

@@ -43,7 +43,10 @@ test("service-backed event notifications share the freedesktop server, not islan
   );
   assert.match(shell, /EventNotifications \{/);
   assert.match(nix, /notifySend = lib\.getExe' pkgs\.libnotify "notify-send"/);
-  assert.match(qml("RuntimeConfig.qml"), /property string notifySend: ""/);
+  assert.match(
+    qml("RuntimeConfig.qml"),
+    /property string notifySend: root\.configData\.tools\.notifySend/,
+  );
 });
 
 test("a visible notification can be targeted from the global keyboard without grabbing toast focus", () => {

@@ -975,7 +975,9 @@ in
           pkgs.mpvpaper
           pkgs.coreutils
         ];
-        text = builtins.readFile ./scripts/wallpaper-video-from-state.sh;
+        text =
+          builtins.readFile ./scripts/wallpaper-common.sh
+          + builtins.readFile ./scripts/wallpaper-video-from-state.sh;
       };
 
       # The subscribed iCal URL is a runtime-only secret. Google Calendar
@@ -1123,7 +1125,7 @@ in
         accessibility.textScale = scopeConfig.textScale;
         motion.animationsEnabled = scopeConfig.animationsEnabled;
         motion.durationMultiplier = scopeConfig.shellMotionSpeed;
-        inherit (scopeConfig) resourceSampling;
+        inherit (scopeConfig) resourceSampling nightLight wallpaperRotation;
         session.restoreWindowsOnExit = scopeConfig.restoreWindowsOnExit;
         palette = {
           inherit (scopeConfig) quicklinks;
@@ -1306,12 +1308,8 @@ in
           pkgs.kdePackages.kdialog
         ];
         text = ''
-          ${lib.optionalString (scopeConfig.captureLocations.screenshots != "")
-            "export DESKTOP_SHELL_SCREENSHOT_DIR=${lib.escapeShellArg scopeConfig.captureLocations.screenshots}"
-          }
-          ${lib.optionalString (scopeConfig.captureLocations.recordings != "")
-            "export DESKTOP_SHELL_RECORDING_DIR=${lib.escapeShellArg scopeConfig.captureLocations.recordings}"
-          }
+          export DESKTOP_SHELL_SCREENSHOT_DIR=${lib.escapeShellArg scopeConfig.captureLocations.screenshots}
+          export DESKTOP_SHELL_RECORDING_DIR=${lib.escapeShellArg scopeConfig.captureLocations.recordings}
           exec python3 ${./scripts/capture-locations.py} "$@"
         '';
       };

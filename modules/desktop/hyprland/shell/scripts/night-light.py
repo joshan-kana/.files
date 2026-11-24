@@ -14,17 +14,7 @@ from zoneinfo import ZoneInfo
 
 SERVICE = "desktop-shell-night-light.service"
 TIMER = "desktop-shell-night-light-apply.timer"
-DEFAULTS = {
-    "mode": "off",
-    "temperature": 4500,
-    "startMinute": 1140,
-    "endMinute": 420,
-    "days": 127,
-    "transitionMinutes": 15,
-    "latitude": None,
-    "longitude": None,
-}
-DEFAULTS.update(json.loads(os.environ.get("DESKTOP_NIGHT_LIGHT_DEFAULTS", "{}")))
+DEFAULTS = json.loads(os.environ["DESKTOP_NIGHT_LIGHT_DEFAULTS"])
 STATE_DIR = Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local/state"))) / "desktop-shell"
 STATE = STATE_DIR / "night-light"
 RUNTIME = Path(os.environ.get("XDG_RUNTIME_DIR", str(STATE_DIR))) / "desktop-shell-night-light.json"

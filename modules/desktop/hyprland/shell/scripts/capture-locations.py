@@ -11,9 +11,9 @@ from pathlib import Path
 HOME = Path.home()
 STATE = Path(os.environ.get("XDG_STATE_HOME", HOME / ".local/state")) / "desktop-shell/capture-locations.json"
 DEFAULTS = {
-    "screenshots": os.environ.get("DESKTOP_SHELL_SCREENSHOT_DIR")
+    "screenshots": os.environ["DESKTOP_SHELL_SCREENSHOT_DIR"]
     or str(Path(os.environ.get("XDG_PICTURES_DIR", HOME / "Pictures")) / "Screenshots"),
-    "recordings": os.environ.get("DESKTOP_SHELL_RECORDING_DIR") or str(HOME / "Videos/Screencasts"),
+    "recordings": os.environ["DESKTOP_SHELL_RECORDING_DIR"] or str(HOME / "Videos/Screencasts"),
 }
 
 

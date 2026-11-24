@@ -8,9 +8,8 @@ QtObject {
     id: root
 
     signal themeChanged
-    property alias jsonAdapter: data
     readonly property var themeAdapter: themeData
-    readonly property var configData: root.jsonAdapter
+    readonly property var configData: parseConfig(configFile.text())
 
     readonly property string terminal: root.configData.defaults.terminal
     readonly property string editor: root.configData.defaults.editor
@@ -240,166 +239,29 @@ QtObject {
         }
     }
 
+    // Runtime configuration is evaluated by Nix; missing configuration is
+    // an installation error, not another source of preference defaults.
+    function parseConfig(text: string): var {
+        try {
+            const config = JSON.parse(text);
+            for (const key of ["accessibility", "defaults", "motion", "resourceSampling", "session", "palette", "appearance", "capture", "notifications", "weather", "tools", "shortcuts", "shortcutHints", "shellBindings", "nightLight", "wallpaperRotation"]) {
+                if (!config[key] || typeof config[key] !== "object" || Array.isArray(config[key]))
+                    throw new Error("Missing runtime configuration object: " + key);
+            }
+            if (!Array.isArray(config.keybindings))
+                throw new Error("Missing runtime keybindings");
+            return config;
+        } catch (error) {
+            console.error("Invalid desktop-shell runtime configuration: " + error.message);
+            Qt.exit(1);
+            throw error;
+        }
+    }
+
     property FileView configFile: FileView {
         path: Quickshell.env("DESKTOP_SHELL_RUNTIME") || ""
         blockLoading: true
         watchChanges: true
-        onFileChanged: {
-            reload();
-            root.themeChanged();
-        }
-
-        JsonAdapter {
-            id: data
-
-            property JsonObject accessibility: JsonObject {
-                property real textScale: 1.0
-            }
-
-            property JsonObject defaults: JsonObject {
-                property string terminal: ""
-                property string editor: ""
-            }
-
-            property JsonObject motion: JsonObject {
-                property bool animationsEnabled: true
-                property real durationMultiplier: 1.0
-            }
-
-            property JsonObject resourceSampling: JsonObject {
-                property int intervalSeconds: 2
-                property int historyLength: 30
-            }
-
-            property JsonObject session: JsonObject {
-                property bool restoreWindowsOnExit: false
-            }
-
-            property JsonObject palette: JsonObject {
-                property var quicklinks: []
-                property var snippets: []
-                property var fileRoots: []
-            }
-
-            property JsonObject appearance: JsonObject {
-                property bool wallpaperSpectrumEnabled: false
-                property string wallpaperResizeMode: "fit"
-                property string wallpaperTargetOutput: ""
-                property bool musicReactiveEnabled: false
-                property real musicReactiveSensitivity: 1.0
-                property real musicReactiveAttack: 1.0
-                property real musicReactiveRelease: 1.0
-                property real musicReactiveSmoothing: 0.0
-                property real musicReactiveIntensity: 1.0
-                property string musicReactiveEmphasis: "balanced"
-                property real spectrumSensitivity: 1.0
-                property real spectrumAttack: 1.0
-                property real spectrumRelease: 1.0
-                property int wallpaperSpectrumBars: 64
-                property real wallpaperSpectrumOpacity: 0.8
-                property int barIslandHeight: 50
-                property int frameThickness: 26
-                property bool barVisible: true
-                property bool frameVisible: true
-                property bool windowTransparencyEnabled: false
-                property bool shellGlassEnabled: false
-                property real windowOpacity: 0.82
-                property real glassOpacity: 0.70
-                property bool blurEnabled: true
-                property int blurSize: 15
-                property bool vhsEnabled: false
-                property real vhsIntensity: 0.45
-                property real vhsTracking: 1.0
-                property real vhsChroma: 1.0
-                property real vhsNoise: 1.0
-                property real vhsScanlines: 1.0
-                property real vhsSpeed: 1.0
-                property real vhsDropouts: 0.0
-                property string mediaVisualizerMode: "bars"
-                property bool mediaLyricsVisible: false
-                property string mediaPreferredPlayer: ""
-                property int mediaSeekSeconds: 10
-            }
-
-            property JsonObject capture: JsonObject {
-                property bool freezeEnabled: true
-                property JsonObject encoding: JsonObject {
-                    property string imageFormat: "png"
-                    property int jpegQuality: 95
-                    property bool cursor: false
-                    property string videoFormat: "mp4"
-                    property string codec: "libx264"
-                    property int frameRate: 0
-                    property int videoQuality: 23
-                    property int countdown: 0
-                    property string audio: "none"
-                }
-            }
-
-            property JsonObject notifications: JsonObject {
-                property bool silent: false
-                property bool presentation: false
-                property bool historyEnabled: true
-                property var applications: ({})
-                property JsonObject quietHours: JsonObject {
-                    property bool enabled: false
-                    property int startMinute: 1320
-                    property int endMinute: 420
-                    property int days: 127
-                }
-            }
-
-            property JsonObject weather: JsonObject {
-                property string location: ""
-                property string units: "metric"
-            }
-
-            property JsonObject tools: JsonObject {
-                property string bluetoothctl: ""
-                property string weatherCurl: ""
-                property string agendaQuery: ""
-                property string agendaSetup: ""
-                property string brightnessctl: ""
-                property string cliphist: ""
-                property string emojiTest: ""
-                property string resourceProbe: ""
-                property string copyText: ""
-                property string clipboardCopy: ""
-                property string clipboardPreview: ""
-                property string clipboardOperations: ""
-                property string lockSession: ""
-                property string networkConnectionEditor: ""
-                property string pwMetadata: ""
-                property string nmcli: ""
-                property string hyprctl: ""
-                property string easyeffectsCli: ""
-                property string easyeffects: ""
-                property string vhsControl: ""
-                property string sessionCommand: ""
-                property string urlOpen: ""
-                property string paletteSearch: ""
-                property string clipboardPaste: ""
-                property string wallpaperPolicy: ""
-                property string wallpaperLibrary: ""
-                property string recordingToggle: ""
-                property string captureLocations: ""
-                property string recordingLibrary: ""
-                property string frozenCapture: ""
-                property string colourPicker: ""
-                property string nightLightControl: ""
-                property string displayControl: ""
-                property string displaySettings: ""
-                property string notifySend: ""
-            }
-
-            property var keybindings: []
-            property var shortcuts: ({})
-            property var shortcutHints: ({})
-            property var shellBindings: ({
-                    base: ({}),
-                    overrides: ({}),
-                    hints: ({})
-                })
-        }
+        onFileChanged: reload()
     }
 }

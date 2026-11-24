@@ -11,13 +11,13 @@ QtObject {
     property bool active: false
     property bool busy: false
     readonly property bool foregroundBusy: busy || queuedTemperature >= 0 || Object.keys(queuedSchedule).length > 0
-    property string mode: "off"
-    property int temperature: 4500
+    property string mode: runtime.configData.nightLight.mode
+    property int temperature: runtime.configData.nightLight.temperature
     property int effectiveTemperature: 6500
-    property int startMinute: 1140
-    property int endMinute: 420
-    property int days: 127
-    property int transitionMinutes: 15
+    property int startMinute: runtime.configData.nightLight.startMinute
+    property int endMinute: runtime.configData.nightLight.endMinute
+    property int days: runtime.configData.nightLight.days
+    property int transitionMinutes: runtime.configData.nightLight.transitionMinutes
     property bool solarAvailable: false
     property double nextTransition: 0
     property string temporaryOverride: ""

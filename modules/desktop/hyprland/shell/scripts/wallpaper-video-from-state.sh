@@ -8,7 +8,7 @@ elif [ "$output" = all ]; then
   runtime="${XDG_CONFIG_HOME:-$HOME/.config}/desktop-shell/runtime.json"
   video="$(jq -r '.wallpaperVideoDefault // empty' "$runtime")"
   [ -n "$video" ] || exit 0
-  resize=fit
+  resize="$(wallpaper_default_resize "$runtime")" || exit 1
 else
   exit 0
 fi

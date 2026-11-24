@@ -18,18 +18,7 @@ STATE_DIR = Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local/stat
 STATE = STATE_DIR / "policy.json"
 PROGRESS = STATE_DIR / "rotation.json"
 TIMER = "desktop-shell-wallpaper-rotation.timer"
-DEFAULTS = {
-    "mode": "off",
-    "target": "all",
-    "intervalMinutes": 60,
-    "favoritesOnly": False,
-    "collection": "",
-    "dayStart": 420,
-    "nightStart": 1140,
-    "dayWallpaper": "",
-    "nightWallpaper": "",
-}
-DEFAULTS.update(json.loads(os.environ.get("DESKTOP_WALLPAPER_POLICY_DEFAULTS", "{}")))
+DEFAULTS = json.loads(os.environ["DESKTOP_WALLPAPER_POLICY_DEFAULTS"])
 
 
 def read(path):

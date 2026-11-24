@@ -30,6 +30,7 @@ for _ in {1..25}; do
     if [ ! -f "$state_dir/all.wall" ]; then
       # A declarative video is the fallback for uncovered displays, not
       # another wildcard player competing with gallery selections.
+      resize="$(wallpaper_default_resize "$runtime")"
       default_still="$wallpaper"
       if [ -n "$default_video" ]; then
         default_still="$(desktop-shell-wallpaper-library poster "$default_video")"
@@ -38,10 +39,10 @@ for _ in {1..25}; do
         [ -n "$output" ] || continue
         if [ -n "$default_still" ] && [ ! -f "$state_dir/$output.wall" ]; then
           if [ -n "$default_video" ]; then
-            awww img --outputs "$output" --transition-type none "$default_still"
+            awww img --outputs "$output" --resize "$resize" --transition-type none "$default_still"
           else
             # shellcheck disable=SC2154 # Populated by wallpaper_transition in the shared source.
-            awww img --outputs "$output" "${transition_args[@]}" "$wallpaper"
+            awww img --outputs "$output" --resize "$resize" "${transition_args[@]}" "$wallpaper"
           fi
         fi
       done < <(awww query | sed -n 's/^: \([^:]*\):.*/\1/p')

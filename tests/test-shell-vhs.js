@@ -249,7 +249,7 @@ test("VHS tuning exposes correct keyboard focus, pointer and navigation paths", 
     "vhsDropouts",
   ]) {
     assert.match(defaults, new RegExp(key + " = lib\\.mkOption"));
-    assert.match(runtime, new RegExp("property real " + key));
+    assert.doesNotMatch(runtime, new RegExp("property real " + key));
     assert.match(preferences, new RegExp("property real " + key));
     assert.ok(panel.includes('key: "' + key + '"'));
   }

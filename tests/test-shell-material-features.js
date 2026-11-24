@@ -39,8 +39,8 @@ test("shared blur has one Nix baseline and one runtime override in both detail p
     nix,
     /blurSize = config\.wayland\.windowManager\.hyprland\.settings\.config\.decoration\.blur\.size;/,
   );
-  assert.match(runtime, /property bool blurEnabled: true/);
-  assert.match(runtime, /property int blurSize: 15/);
+  assert.match(runtime, /appearanceDefaults: root\.configData\.appearance/);
+  assert.doesNotMatch(runtime, /property (?:bool blurEnabled|int blurSize):/);
   assert.match(
     settings,
     /readonly property bool blurEnabled: effective\("blurEnabled"\)/,

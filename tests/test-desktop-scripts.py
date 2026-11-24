@@ -40,6 +40,33 @@ class DesktopScriptTests(unittest.TestCase):
                 "XDG_CONFIG_HOME": str(self.home / "config"),
                 "PATH": str(self.bin) + os.pathsep + self.env.get("PATH", ""),
                 "USER": "fixture",
+                "DESKTOP_NIGHT_LIGHT_DEFAULTS": json.dumps(
+                    {
+                        "mode": "off",
+                        "temperature": 4500,
+                        "startMinute": 1140,
+                        "endMinute": 420,
+                        "days": 127,
+                        "transitionMinutes": 15,
+                        "latitude": None,
+                        "longitude": None,
+                    }
+                ),
+                "DESKTOP_WALLPAPER_POLICY_DEFAULTS": json.dumps(
+                    {
+                        "mode": "off",
+                        "target": "all",
+                        "intervalMinutes": 60,
+                        "favoritesOnly": False,
+                        "collection": "",
+                        "dayStart": 420,
+                        "nightStart": 1140,
+                        "dayWallpaper": "",
+                        "nightWallpaper": "",
+                    }
+                ),
+                "DESKTOP_SHELL_SCREENSHOT_DIR": "",
+                "DESKTOP_SHELL_RECORDING_DIR": "",
             }
         )
 
@@ -78,7 +105,8 @@ class DesktopScriptTests(unittest.TestCase):
         """Night Light inherits defaults, honours overnight days and temporary overrides."""
         spec = importlib.util.spec_from_file_location("night_light", SCRIPTS / "night-light.py")
         night = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(night)
+        with mock.patch.dict(os.environ, self.env):
+            spec.loader.exec_module(night)
         config = dict(night.DEFAULTS, mode="custom", days=2, temperature=4300, transitionMinutes=15)
         monday = dt.datetime(2026, 11, 23, 19, 0, tzinfo=dt.UTC)
         self.assertEqual(night.effective(monday, config, {})[0], 6500)
@@ -134,9 +162,13 @@ esac
         self.assertFalse(json.loads(run("state"))["active"])
         run("toggle")
         self.assertTrue(json.loads(run("state"))["active"])
+        defaults = json.loads(self.env["DESKTOP_NIGHT_LIGHT_DEFAULTS"])
+        defaults["temperature"] = 3900
+        self.env["DESKTOP_NIGHT_LIGHT_DEFAULTS"] = json.dumps(defaults)
+        self.assertEqual(json.loads(run("state"))["temperature"], 4100)
         run("reset")
         self.assertFalse(json.loads(run("state"))["active"])
-        self.assertEqual(json.loads(run("state"))["temperature"], 4500)
+        self.assertEqual(json.loads(run("state"))["temperature"], 3900)
 
     def test_wallpaper_rotation_respects_selection_and_native_fit(self):
         """Rotate through existing favourites, and respect a manual selection."""
@@ -183,6 +215,9 @@ esac
             current = str(root / "nature/a.png")
             self.assertEqual(rotation.apply(state, progress)["lastPath"], current)
             self.assertEqual(rotation.apply({}, progress), {})
+        with mock.patch.dict(rotation.DEFAULTS, intervalMinutes=120):
+            self.assertEqual(rotation.resolved(state)["intervalMinutes"], 5)
+            self.assertEqual(rotation.resolved({})["intervalMinutes"], 120)
 
     def test_display_preview_preserves_native_layout(self):
         """A display preview never persists until verified confirmation."""
@@ -254,6 +289,36 @@ esac
             self.assertEqual(arguments[-2:], [output, str(video)])
             if target != "all":
                 (wallpapers / f"{target}.wall").unlink()
+
+    def test_wallpaper_default_resize_follows_runtime_configuration(self):
+        """Every default path reads the same value, while saved selections win."""
+        config = self.home / "config" / "desktop-shell"
+        config.mkdir(parents=True)
+        runtime = config / "runtime.json"
+        video = self.home / "wallpaper.mp4"
+        video.write_bytes(b"fixture")
+        self.executable("mpvpaper", 'printf "%s\n" "$@" > "$XDG_RUNTIME_DIR/mpvpaper-args"')
+        self.executable("awww", 'echo ": Virtual-1: 100x100"')
+        for name in ("wallpaper-library", "wallpaper-video-from-state"):
+            source = self.home / (name + ".sh")
+            source.write_text(
+                "set -euo pipefail\n" + (SCRIPTS / "wallpaper-common.sh").read_text() + (SCRIPTS / (name + ".sh")).read_text()
+            )
+        for mode in ("fit", "crop"):
+            runtime.write_text(json.dumps({"appearance": {"wallpaperResizeMode": mode}, "wallpaperVideoDefault": str(video)}))
+            result = self.run_script(self.home / "wallpaper-library.sh", "current-resize", "all")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.strip(), mode)
+            self.run_script(self.home / "wallpaper-video-from-state.sh", "all")
+            options = (self.runtime / "mpvpaper-args").read_text()
+            self.assertEqual("panscan=1" in options, mode == "crop")
+        wallpapers = self.state / "desktop-shell" / "wallpapers"
+        wallpapers.mkdir(parents=True, exist_ok=True)
+        (wallpapers / "all.wall").write_text(f"fit\n{video}\n")
+        self.assertEqual(self.run_script(self.home / "wallpaper-library.sh", "current-resize", "Virtual-1").stdout.strip(), "fit")
+        (wallpapers / "all.wall").unlink()
+        runtime.write_text('{"appearance":{}}')
+        self.assertNotEqual(self.run_script(self.home / "wallpaper-library.sh", "current-resize", "all").returncode, 0)
 
     def test_recording_start_acknowledges_service_owned_state(self):
         """Successful service admission is not merely a queued systemd job."""
