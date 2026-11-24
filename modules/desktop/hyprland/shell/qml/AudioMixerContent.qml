@@ -35,15 +35,40 @@ FocusScope {
                 capture: true
             })))
     readonly property int microphoneIndex: 1
-    readonly property bool deviceChooserOpen: outputDevice.chooserOpen || inputDevice.chooserOpen || routeOpen
+    readonly property bool deviceChooserOpen: outputDevice.chooserOpen || inputDevice.chooserOpen || routeOpen || presetOpen
     readonly property int selectedStreamIndex: selectedTarget?.kind === "stream" ? streams.findIndex(node => node.id === selectedTarget.node.id) : -1
     readonly property var selectedTarget: targets[Math.max(0, Math.min(selectedIndex, targets.length - 1))] || null
+
+    property bool presetOpen: false
+    property int presetIndex: 0
+    function togglePresetPicker(): void {
+        if (presetOpen) {
+            presetOpen = false;
+            return;
+        }
+        if (effectsState.presetsKnown && !effectsState.presetBusy && effectsState.presets.length > 0) {
+            presetIndex = Math.max(0, effectsState.presets.findIndex(entry => entry.name === effectsState.activePresets.output || entry.name === effectsState.activePresets.input));
+            routeOpen = false;
+            outputDevice.chooserOpen = false;
+            inputDevice.chooserOpen = false;
+            presetOpen = true;
+        }
+    }
+    function chooseEffectPreset(index: int): void {
+        const entry = effectsState.presets[index];
+        if (entry)
+            effectsState.choosePreset(entry.name);
+        presetOpen = false;
+    }
 
     property bool routeOpen: false
     property int routeIndex: 0
     property string routeError: ""
     property string pendingRoute: ""
     property int pendingStreamId: -1
+    property bool pendingCapture: false
+    readonly property var pendingStream: streams.find(stream => stream.id === pendingStreamId) || null
+    readonly property var confirmedRoute: system.streamDevice(pendingStream, pendingCapture)
     readonly property var routeStream: selectedTarget?.kind === "stream" ? selectedTarget.node : null
     readonly property bool routeCapture: !!selectedTarget?.capture
     readonly property var routeDevices: routeCapture ? system.inputDevices : system.outputDevices
@@ -56,13 +81,6 @@ FocusScope {
         routeIndex = Math.max(0, Math.min(routeIndex, routeDevices.length - 1));
         if (!routeDevices.length)
             routeOpen = false;
-    }
-    onRoutedDeviceChanged: {
-        if (pendingRoute !== "" && routeStream?.id === pendingStreamId && routedDevice?.name === pendingRoute) {
-            pendingRoute = "";
-            routeError = "";
-            routeTimeout.stop();
-        }
     }
 
     Process {
@@ -83,7 +101,7 @@ FocusScope {
         interval: 2500
         onTriggered: {
             if (mixer.pendingRoute !== "") {
-                mixer.routeError = "Routing was not confirmed by PipeWire";
+                mixer.routeError = mixer.confirmedRoute?.name === mixer.pendingRoute ? "" : "Routing was not confirmed by PipeWire. Check EasyEffects or WirePlumber policy.";
                 mixer.pendingRoute = "";
             }
         }
@@ -99,6 +117,7 @@ FocusScope {
         }
         pendingRoute = target.name;
         pendingStreamId = stream.id;
+        pendingCapture = routeCapture;
         routeError = "";
         routeProcess.exec([runtime.pwMetadata, "-n", "default", String(stream.id), "target.object", target.name, "Spa:String"]);
         routeTimeout.restart();
@@ -144,6 +163,7 @@ FocusScope {
             outputDevice.chooserOpen = false;
             inputDevice.chooserOpen = false;
             routeOpen = false;
+            presetOpen = false;
             return;
         }
         selectIndex(selectedIndex);
@@ -217,6 +237,27 @@ FocusScope {
     function handleKey(key: int, modifiers: int, autoRepeat: bool): bool {
         if (!active)
             return false;
+        if (presetOpen) {
+            if (key === runtime.shellKeyCode("mixer", "Escape") || runtime.shellMatchesHint("AudioMixerContent.effectsPresets", key, modifiers)) {
+                if (!autoRepeat)
+                    presetOpen = false;
+            } else if (runtime.shellNavigates("mixer", "down", key)) {
+                presetIndex = (presetIndex + 1) % effectsState.presets.length;
+            } else if (runtime.shellNavigates("mixer", "up", key)) {
+                presetIndex = (presetIndex + effectsState.presets.length - 1) % effectsState.presets.length;
+            } else if (key === runtime.shellKeyCode("mixer", "Return") || key === runtime.shellKeyCode("mixer", "Enter")) {
+                if (!autoRepeat)
+                    chooseEffectPreset(presetIndex);
+            } else {
+                return false;
+            }
+            return true;
+        }
+        if (!compact && runtime.shellMatchesHint("AudioMixerContent.effectsPresets", key, modifiers)) {
+            if (!autoRepeat)
+                togglePresetPicker();
+            return true;
+        }
         if (routeOpen) {
             if (key === runtime.shellKeyCode("mixer", "Escape") || runtime.shellMatchesHint("AudioDeviceControl.chooser", key, modifiers)) {
                 routeOpen = false;
@@ -483,6 +524,53 @@ FocusScope {
                     shortcut: mixer.runtime.shellHint("AudioMixerContent.effectsRefresh")
                     enabled: !effectsState.busy
                     onActivated: effectsState.refresh()
+                }
+            }
+            ShellText {
+                width: parent.width
+                runtime: mixer.runtime
+                theme: mixer.theme
+                text: effectsState.presetStatus
+                color: effectsState.presetError ? mixer.theme.warning : mixer.theme.textMuted
+                elide: Text.ElideRight
+                font.pixelSize: mixer.theme.fontSize(10)
+            }
+            ShellAction {
+                width: parent.width
+                height: 36
+                runtime: mixer.runtime
+                theme: mixer.theme
+                motion: mixer.motion
+                compact: true
+                horizontalCompact: true
+                title: effectsState.presetsKnown && effectsState.presets.length === 0 ? "No local presets · Create one in EasyEffects" : "Choose effects preset"
+                shortcut: mixer.runtime.shellHint("AudioMixerContent.effectsPresets")
+                active: mixer.presetOpen
+                enabled: effectsState.presetsKnown && !effectsState.presetBusy && effectsState.presets.length > 0
+                onActivated: mixer.togglePresetPicker()
+            }
+            ListView {
+                width: parent.width
+                height: mixer.presetOpen ? Math.min(4, effectsState.presets.length) * 38 : 0
+                visible: mixer.presetOpen
+                clip: true
+                model: effectsState.presets
+                currentIndex: mixer.presetIndex
+                onCurrentIndexChanged: if (currentIndex >= 0) positionViewAtIndex(currentIndex, ListView.Contain)
+                delegate: ShellAction {
+                    required property int index
+                    required property var modelData
+                    width: ListView.view.width
+                    height: 36
+                    runtime: mixer.runtime
+                    theme: mixer.theme
+                    motion: mixer.motion
+                    compact: true
+                    horizontalCompact: true
+                    title: modelData.name + " · " + (modelData.input && modelData.output ? "Input + output" : modelData.input ? "Input" : "Output")
+                    shortcut: index === mixer.presetIndex ? "↵" : ""
+                    active: index === mixer.presetIndex
+                    onActivated: mixer.chooseEffectPreset(index)
                 }
             }
         }

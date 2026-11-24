@@ -417,6 +417,7 @@
           "AudioMixerContent.balanceReset" = "C";
           "AudioMixerContent.effectsOpen" = "E";
           "AudioMixerContent.effectsRefresh" = "R";
+          "AudioMixerContent.effectsPresets" = "F";
           "AudioMixerContent.level" = "NAV_HORIZONTAL";
           "AudioMixerContent.select" = "NAV_VERTICAL";
           "AudioStreamControl.mute" = "M";

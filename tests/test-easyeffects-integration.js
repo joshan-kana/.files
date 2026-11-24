@@ -24,7 +24,7 @@ const keymap = JSON.parse(
   ),
 );
 
-test("EasyEffects owns DSP while the shell uses its documented bypass CLI only", () => {
+test("EasyEffects owns DSP while the shell uses its documented native CLI", () => {
   const state = source("EasyEffectsState.qml");
   assert.match(state, /required property RuntimeConfig runtime/);
   assert.match(
@@ -89,6 +89,7 @@ test("effect actions use the canonical mixer-local keyboard registry", () => {
     ["AudioMixerContent.effectsToggle", "B"],
     ["AudioMixerContent.effectsOpen", "E"],
     ["AudioMixerContent.effectsRefresh", "R"],
+    ["AudioMixerContent.effectsPresets", "F"],
   ]) {
     assert.deepEqual(keymap.hints[name], {
       scope: "mixer",
@@ -103,4 +104,19 @@ test("effect actions use the canonical mixer-local keyboard registry", () => {
       ),
     );
   }
+});
+
+test("native EasyEffects preset parsing keeps pipeline ownership and confirms both sides", () => {
+  const vm = require("node:vm");
+  const f = vm.runInNewContext(source("EasyEffectsPresets.js") + "\n({parsePresets, parseActive, confirmed})");
+  assert.deepEqual(JSON.parse(JSON.stringify(f.parsePresets("No output presets.\nNo input presets.\n"))), []);
+  const presets = f.parsePresets("Output presets:\n1\tMusic\n2\tShared\n\nInput presets:\n1\tShared\n");
+  assert.equal(presets.length, 2);
+  assert.equal(presets[1].input, true);
+  assert.equal(presets[1].output, true);
+  assert.equal(f.confirmed(presets[1], f.parseActive("input: Shared\noutput: Shared\n")), true);
+  assert.equal(f.confirmed(presets[1], f.parseActive("input: Shared\noutput: Music\n")), false);
+  assert.equal(f.parsePresets("unrecognized text"), null);
+  assert.match(source("EasyEffectsState.qml"), /"--load-preset", name/);
+  assert.match(source("EasyEffectsState.qml"), /Preset load not confirmed by EasyEffects/);
 });
