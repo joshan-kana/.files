@@ -605,9 +605,10 @@ FocusScope {
                     onActivated: content.media.resetPreferredPlayer()
                 }
                 ShellText {
-                    anchors.verticalCenter: parent.verticalCenter
                     runtime: content.runtime
                     theme: content.theme
+                    height: Math.max(40, implicitHeight)
+                    verticalAlignment: Text.AlignVCenter
                     text: content.media.preferenceStatus
                     color: content.theme.textMuted
                     font.pixelSize: content.theme.fontSize(10)
