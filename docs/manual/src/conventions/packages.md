@@ -7,7 +7,7 @@ Use the first suitable packaging source for the required functionality and suppo
 3. **Official binary release:** Package a reproducible, verified upstream artifact when neither earlier option suffices.
 4. **Source build:** Maintain a derivation when the preceding choices cannot meet the requirement.
 
-A source is unsuitable when it lacks required functionality, is stale, fails to build or run, or cannot support the target platform. Prefer the least invasive remedy. Revisit deviations when upstream support improves.
+Choose a source that provides the required functionality and works on the target platform. Prefer the least invasive override of a suitable upstream package.
 
 ## Package ownership
 
@@ -27,22 +27,20 @@ Prefer a narrow override of the existing nixpkgs derivation over replacing it. A
 
 ### Temporary compatibility overrides
 
-A package's `overlays/<package>/default.nix` owns its durable definition, customizations, maintained downstream patches, package variants, and associated source pins. A missing upstream capability or the use of a downstream patch does not by itself make an override temporary. Use a temporary layer only for an intentionally interim measure with a specific removal condition. Place temporary compatibility overrides in a sibling `overlays/<package>/temporary.nix`, composed **after** the durable overlay in the same `nixpkgs.overlays` list. Where several independent fixes need separate removal, use separate sibling Nix files with descriptive names. Keep downstream patch contents in root `patches/<package>/`.
+Keep maintained downstream patches, package variants, customizations and their pins in the durable package definition. A temporary override is an interim measure with a defined removal condition, not simply an override of upstream code. Compose `overlays/<package>/temporary.nix` after the durable overlay in the same `nixpkgs.overlays` list. Independent temporary fixes may use separate, descriptively named sibling files.
 
-Prefer `overrideAttrs` for temporary derivation adjustments and update-policy changes. Use package-specific override mechanisms where necessary, preserving the package interfaces consumed by downstream modules and callers.
+Prefer `overrideAttrs` for derivation adjustments and use package-specific override mechanisms when needed. Preserve the package interfaces consumed by downstream modules.
 
-Temporary overrides must not participate in routine package updates. Set `passthru.autoUpdate = false` on each affected package that has an independent update contract or already participates in the package updater, preserving other `passthru` attributes. Each temporary layer that applies a downstream patch explicitly sets `passthru.autoUpdate = false`, even if the durable package already sets it. Applying the temporary layer last takes precedence over the durable package's update policy. For package-set extensions, set the policy on the affected derivation rather than on the extension list. Stock-only build fixes and generated package environments without an independent source update contract remain outside the package updater; do not add update metadata solely to classify a compatibility layer. Keep an explicit update filename pointed at the file that owns a separately maintained source when its location differs from the package entry point. Do not add a separate lifecycle registry or upstream-fix metadata.
+Set `passthru.autoUpdate = false` on each temporary override of a package participating in the updater. A temporary layer applying a downstream patch must explicitly set it even when the durable definition already does. Merge with existing `passthru` metadata. Set the policy on the affected derivation, not the package-set extension. An unpatched stock-only build adjustment or generated environment without an independent update contract does not need update metadata.
 
-A purely temporary package override can have a `default.nix` that only composes its sibling `temporary.nix`. Keep the entry in the central overlay registry until the whole override is no longer needed. Document the technical reason and removal condition beside the fix, without coupling it to a particular update run or issue. Preserve intentional customization independently of compatibility changes.
+A temporary-only overlay retains its registered `default.nix` entry point. Explain the reason for the workaround and its removal condition beside the fix.
 
-When the stock package or upstream source may have resolved the problem, remove only the temporary overlay and its import in an isolated change, then evaluate and build every affected platform and perform relevant runtime checks. Remove unreferenced downstream patches at the same time. The durable package's original `autoUpdate` setting applies again automatically, without a manual reset. If the package has no remaining customizations, remove its now-empty overlay registration and directory as well.
-
-Do not preserve a fork or compatibility pin merely because it already exists.
+Remove a temporary layer and its import once the normal package satisfies the requirement and passes affected build and runtime checks. Remove unused patch files and any empty overlay registration. The durable definition and its update policy remain intact.
 
 ## Update policy
 
-Stock nixpkgs packages and patches to stock derivations follow the nixpkgs lock update. Packages sourced from flake inputs follow those locked inputs, without a separate source-version pin. Downstream dependency hashes are refreshed independently of source revisions when an override is necessary. Independently packaged source or binary releases use immutable versions and hashes, with standard updating where possible; resolve mutable release metadata during updates rather than evaluation.
+Stock packages follow the nixpkgs lock; packages sourced from flake inputs follow their input locks. Independently maintained source and binary releases use immutable revisions or versions and hashes. Resolve mutable release metadata during updates rather than evaluation. Refresh downstream dependency hashes when required by the selected source.
 
-A flake input follows its lockfile independently of `passthru.autoUpdate`. Do not confuse package update eligibility with whether an overlay is intentional or temporary. Declare `passthru.autoUpdate = true` for package-owned release or dependency hashes that are safe to refresh routinely, or `false` when they require explicit selection. Omit the metadata when there is no separately maintained package update. Set `passthru.autoUpdate = false` for packages with downstream patches; patch application and compatibility must be reviewed before updating them. Keep update policy with package metadata, not in host-specific lists or another version database.
+Package update eligibility is defined by `passthru.autoUpdate`: `true` for routine updates, `false` for explicit selection, and absent for packages without an independent update contract or downstream patches. Patched packages must declare `false` regardless of the patch lifecycle. Flake lock updates are independent of this flag and still require compatibility review. When a package's maintained source is outside its entry point, point its update filename at the owning file. Keep update policy in package metadata.
 
-Updates must fail without replacing a working lock or pin. Validate a proposed replacement on relevant architectures, including launch behavior or patch application where needed. Compatibility exceptions are removed only after the normal package is verified.
+Validate proposed revisions on the relevant architectures, including patch application and launch behavior where applicable. Keep the last verified lock or pin recoverable when an update fails.

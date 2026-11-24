@@ -4,13 +4,13 @@ Validate the behavioral effect of a change, not only the source syntax. Choose c
 
 ## Baseline
 
-Run the repository's formatter/linter check, whitespace check, and configured flake checks. Review unsupported or skipped systems rather than treating one platform's result as fleet-wide verification.
+Run `nix fmt -- --ci`, `git diff --check`, and the configured flake checks. Review skipped systems separately.
 
 After applying automatic fixes, run the complete formatter/linter pipeline again in check mode and verify that it produces no changes. Audit file-to-formatter assignments when changing tooling: each supported source type needs coverage, and no file should have competing formatters. Confirm deliberate exclusions remain excluded.
 
 For manual changes, build the assembled documentation source and rendered book, check links/navigation, and inspect representative output.
 
-The baseline must be independent of remote builders: native `nix flake check` and cross-platform `nix flake check --no-build --all-systems` must be evaluable on both supported macOS and Linux development hosts without requiring remote builders to be configured. Cross-system evaluation must not accidentally demand a foreign-architecture build. Distinguish this portability check from actual platform-specific compilation and runtime verification.
+Run native `nix flake check` and cross-system `nix flake check --no-build --all-systems` without requiring remote builders. Cross-system evaluation must not require foreign-architecture builds. Perform platform-specific builds and runtime checks separately.
 
 ## Evidence by change type
 
@@ -25,6 +25,6 @@ An unexpected derivation change warrants investigation. A matching derivation is
 
 ## Tests and reporting
 
-Prefer focused assertions for stable invariants and real runtime verification for behavior evaluation cannot prove. Exercise the actual component or executable when asserting behavior; source-text assertions are appropriate for structural invariants rather than substitutes for behavioral tests. Do not encode subjective style preferences in a large, brittle source linter.
+Test behavior by exercising the component or executable. Use source assertions for stable structural invariants, rather than as substitutes for behavioral tests or subjective style checks.
 
 Report which evaluations, builds, and live tests actually passed. A merged change, a successful build, and a successful deployment are distinct outcomes.

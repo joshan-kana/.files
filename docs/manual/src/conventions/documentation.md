@@ -1,6 +1,6 @@
 # Documentation
 
-Write enduring decisions, constraints, rationale, and exceptions at their owning source. Keep policy separate from implementation inventories and change history.
+Keep durable policy, operational procedures, evaluated configuration, and change history in their respective sources.
 
 ## Ownership
 
@@ -9,12 +9,12 @@ Write enduring decisions, constraints, rationale, and exceptions at their owning
 - **Generated reference:** evaluated host configuration, scopes, options, package inventories, and other changeable facts.
 - **Infrastructure handbook:** cross-project architecture, security/recovery policy, and accepted operating decisions.
 
-Link to the authoritative source instead of duplicating mutable information that can be derived from configuration.
+Derive host and package inventories, paths, and other mutable configuration facts from their authoritative definitions. Link to the generated reference instead of maintaining parallel inventories.
 
 ## Manual authoring
 
 Maintain human-written pages under `docs/manual/src/`. Generated pages belong to the documentation build output, not Git. Register navigation through the existing manual assembly rather than maintaining a competing sidebar.
 
-A code change does not require a convention edit unless it changes the rule itself. When policy changes, write the resulting decision directly, with enough rationale and exceptions to guide future work. Comments should explain non-obvious behavior, not restate code.
+Update conventions when an enduring rule changes. Record the rule and the technical rationale or exceptions needed to apply it.
 
-Validate formatting, links, assembled navigation, and rendered pages. Keep unrelated behavior changes separate from documentation-only work.
+Validate the manual as described in [validation](validation.md).

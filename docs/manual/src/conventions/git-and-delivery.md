@@ -9,14 +9,10 @@ Use a topic branch for changes intended for review. Keep unrelated changes separ
 ## History and review
 
 - Keep a pull request focused on one coherent change. Separate mechanical moves from behavioral changes where practical.
-- Use repository issues to record trackable work, native relationships for true dependencies, and project fields for workflow metadata.
-- Draft PRs are appropriate while implementation or verification remains incomplete. Mark ready only when reviewable and sufficiently validated.
-- Link closing issues only when the change actually completes them; otherwise record a reference.
+- Keep commits focused on one coherent change. Use the handbook's issue, relationship and review workflow.
 - Reconcile with the target branch without discarding concurrent changes. Use lease-protected force pushes after an intentional rebase.
 - Preserve published default-branch history; make corrections through reviewable follow-up changes.
 
 ## Delivery
 
-Review the diff, affected evaluations, relevant builds, and runtime validation. Delivery and deployment follow their respective operational procedures; a merged PR does not imply live deployment.
-
-Record validation results and remaining limitations in the pull request rather than in permanent convention pages.
+Review and record the checks described in [validation](validation.md) in the pull request. Deployment follows the applicable operational procedure.

@@ -13,8 +13,8 @@ nix develop -c $SHELL
 Common commands:
 
 ```sh
-nix fmt | fmt               # apply repository formatting/fixes
-nix flake check | chk       # run repository validation
+nix fmt                     # apply repository formatting/fixes (or fmt)
+nix flake check             # run repository validation (or chk)
 nix run .#theme-warm        # prebuild and cache all theme variants
 docs                        # build the generated manual
 docs-serve                  # live-preview the generated manual
@@ -64,7 +64,8 @@ git submodule update --init --recursive
 ## Validation
 
 ```sh
-nix fmt
+nix fmt -- --ci
 git diff --check
 nix flake check
+nix flake check --no-build --all-systems
 ```

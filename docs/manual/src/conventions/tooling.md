@@ -1,12 +1,10 @@
 # Tooling
 
-Use the repository-provided development environment, formatter, tests, and commands. Prefer reproducible dependencies to globally installed tools.
+Use the repository's development environment and reproducible toolchain.
 
 ## Toolchain
 
 Use `nix develop` for repository work and Nix-provided tools for missing temporary dependencies. Keep formatter and linter definitions in the shared tooling configuration. Add language support through the same toolchain rather than introducing a separate ad hoc path for each feature.
-
-Formatting, linting, type checks, and runtime tests verify different properties; one cannot stand in for the others.
 
 ## Formatting and linting
 
@@ -20,15 +18,14 @@ Use narrow, explained exceptions for external API naming contracts, intentionall
 
 ## Commands and scripts
 
-Physical script placement follows [file ownership](repository-structure.md#file-ownership-and-placement). Source files are located by semantic ownership; Nix wrappers, flake outputs, and runtime units reference or package them without duplicating the implementation. In particular, a script used by only one feature does not become a repository-wide command simply because that feature is composed through `flake.nix`.
+Follow [file ownership](repository-structure.md#file-ownership-and-placement) for executable source. Nix wrappers, flake outputs and runtime units expose the same implementation.
 
 - Prefer small, readable, directly runnable commands over opaque wrappers.
 - Use native module options for shell settings when possible.
-- Keep feature-specific logic with its owner; use root `scripts/` for standalone repository and operational commands.
 - Package a private helper within its owning module. Reuse an executable or parameterized package builder when several consumers need the same command. Expose an independent package through the existing overlay interface when it has a standalone runtime contract.
-- Declare inputs at the command's interface; do not make a consumer depend on another scope's private implementation or duplicate host-specific configuration.
+- Declare inputs at the command interface and keep private implementations within their owning scope.
 - Declare executable runtime dependencies and interpreter requirements rather than depending on an interactive user's shell or `$PATH`.
 - Prefer supported native tools and protocols before writing glue. Keep operations safe to repeat; separate dry-run/reporting paths from destructive actions where appropriate.
 - Preserve observable CLI behavior and help text when refactoring command implementation.
 
-Test commands under the environments in which they will run. Avoid introducing another layer of tooling unless it removes real repetition or complexity.
+Test commands in the environments in which they run.

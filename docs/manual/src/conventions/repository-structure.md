@@ -18,7 +18,7 @@ Organize code by the capability or application that owns it. Native option names
 
 ## File ownership and placement
 
-Locate authored source by its semantic owner, not its language, callers, or installation destination. A capability has one implementation even when exposed through several interfaces.
+Keep source with its semantic owner, independently of language, installation destination, or the number of consumers. Multiple interfaces can expose the same implementation.
 
 | Source                                                         | Location                                                                                    |
 | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
@@ -31,20 +31,16 @@ Locate authored source by its semantic owner, not its language, callers, or inst
 | Downstream patch                                               | `patches/<package>/`                                                                        |
 | Repository-integrated tests                                    | Root `tests/`; component-specific tests may follow an independent component's native layout |
 
-For example, a theme-switching command belongs to the theme capability even when used from a desktop picker, CLI, and flake app. A compositor recording helper belongs to the compositor shell. The system updater and shared release-discovery tools operate on the repository itself; a standalone storage installation or recovery command is operational tooling. Both belong under root `scripts/`.
+For example, a command shared by a graphical theme picker and a CLI belongs to the theme scope. A recording helper belongs to the compositor shell. Repository updaters and standalone installation or recovery commands belong under root `scripts/`.
 
-Keep small readable commands inline when native options or Nix executable construction express them directly. Group related implementation files by responsibility when that improves navigation. A single executable helper does not require a nested `scripts/` directory, and a self-contained Nix implementation does not require a directory containing only `default.nix`. Split larger implementations at meaningful boundaries rather than by arbitrary file sizes or languages.
+Keep small readable commands inline when native options or Nix executable construction express them directly. Use a single Nix file for a self-contained implementation, or a directory when it has associated source, assets, or meaningful subcomponents. Group helpers by responsibility; a separate `scripts/` directory is optional. Split implementations along functional boundaries.
 
 Keep authored configuration and assets with their owner. Generate installed configuration and build outputs through Nix; track generated inputs only when required by the implementation.
 
 ## Registration and imports
 
-Register semantic scopes in the owning hierarchy and package overlays in the central overlay registry. Use native imports for ordinary native modules. Source organization does not establish a new independently enabled scope.
+Register semantic scopes in the owning hierarchy and package overlays in the central overlay registry. Use native imports for ordinary native modules. A file or directory is not by itself a semantic scope.
 
 The flake composes hosts, locks inputs, and exposes packages, apps, checks, and development environments. Export commands through their existing executable interfaces; do not duplicate implementation in the flake. Alternate flake entry points reuse the canonical locked source and policy.
 
-## Shared versus host-local
-
-Common behavior belongs with its shared owner. Genuine differences belong to the affected host under the same semantic scope. Extend shared definitions instead of copying or replacing them to change a single option.
-
-Keep package construction in overlays, runtime integration with the consuming capability, and appearance policy with the theme. Verify registration, imports, and affected host evaluations after structural changes.
+See [semantic scopes](semantic-scopes.md) for shared and host-local composition.

@@ -12,4 +12,4 @@ Keep OS-specific native options within the matching platform branch. Use archite
 
 Hardware dependencies, virtualization limitations, and host-only services justify local differences. Keep these within the relevant host's semantic scope rather than imposing them globally.
 
-Evaluate every affected host. Build packages on compatible target systems where architecture matters, and distinguish evaluation from builds and runtime verification. A check executed on one architecture does not prove the others work.
+Evaluate affected hosts and validate packages and runtime behavior on the applicable platforms as described in [validation](validation.md).
