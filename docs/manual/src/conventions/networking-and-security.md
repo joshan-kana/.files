@@ -18,7 +18,6 @@ For containers, distinguish the host-published binding from the container's inte
 - Give each service the narrowest identities, file permissions, and privileged operations it needs.
 - Keep privilege boundaries separate from network reachability and service access. A general service interface must not grant access to restricted operations.
 - Keep sensitive values out of logs, errors, command lines, and commit metadata.
-- Provision local account passwords through runtime account tools. Preserve restored account state rather than embedding bootstrap passwords in Nix.
 
 Use the platform's configured privilege mechanism; on NixOS, use `run0` with Polkit rather than alternative privilege-elevation tools. Verify access from intended and unintended network paths when exposure changes.
 

@@ -13,7 +13,7 @@ Choose a source that provides the required functionality and works on the target
 
 Put independent package definitions and source pins under `overlays/<package>/default.nix`, registered in `overlays/default.nix`. Store downstream patch files in root `patches/<package>/` and reference them from the package definition. Keep an ordinary package's derivation with its overlay rather than adding a redundant file or registry. Extract reusable builders into `lib/` only when genuinely shared.
 
-Keep overlays limited to package definitions and overrides. Register native service and Home Manager modules through host composition, with custom service implementations beside their owning capability. Consumers use `pkgs.<name>` and own service settings, application behavior, and platform enablement. Small launch wrappers and generated configuration need not become independent packages.
+Consumers use `pkgs.<name>` and own service settings, application behavior, and platform enablement. Small launch wrappers and generated configuration need not become independent packages.
 
 Reusable artifact builders handle installation and packaging; release discovery and update policy are selected separately according to the source. Keep provider-specific update behavior out of general package builders.
 

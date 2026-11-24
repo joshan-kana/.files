@@ -27,7 +27,7 @@ Cross-system evaluation must not require foreign-architecture builds. Perform ad
 - **Service change:** inspect effective units, dependencies, credentials, ownership, network exposure, and startup behavior.
 - **Desktop change:** validate actual rendering, focus, input, performance, and accessibility.
 - **Security/network change:** verify listener bindings, firewall rules, authentication, and reachable paths.
-- **Storage change:** verify data preservation, permissions, backup coverage, and recovery. Check the fresh-provisioning path against all required datasets and mountpoints.
+- **Storage change:** verify data preservation, permissions, backup coverage, and recovery.
 
 An unexpected derivation change warrants investigation. A matching derivation is useful evidence of preservation, but does not establish every runtime property.
 
