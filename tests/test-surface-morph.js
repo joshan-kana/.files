@@ -88,7 +88,7 @@ test("help opacity is owned by the help widget beneath the shared container", ()
 test("host flickable never steals hover/scroll gestures from nested views", () => {
   assert.match(
     qml,
-    /interactive: contentHeight > height && !host\.detailVisible && host\.expansionState\.currentName !== "activity" && host\.expansionState\.currentName !== "calendar"/,
+    /interactive: contentHeight > height && host\.hostPageShortcutsEnabled/,
   );
   assert.match(
     qml,

@@ -110,8 +110,8 @@ PanelWindow {
     readonly property bool confirmationPending: !!systemContent && (systemContent.resetConfirmPending || systemContent.sessionConfirmationPending || systemContent.networkPasswordPending || systemContent.recordingDeletePending)
     readonly property string escapeHintLabel: confirmationPending ? "Cancel" : (systemContent && systemContent.detailSearchFocused) ? "Exit search" : helpVisible || detailVisible || (systemContent && (systemContent.audioChooserOpen || systemContent.selectedSlider.length > 0)) || (activityContent && (activityContent.replyEditing || activityContent.policyOpen || activityContent.expandedGroupKey.length > 0)) ? "Back" : "Close"
     // Hub scrolling is a fallback only for views without their own paging
-    // owner. Calendar, Activity, and open details consume PageUp/Down locally.
-    readonly property bool hostPageShortcutsEnabled: expansionState.hasCurrent && !helpVisible && (expansionState.currentName === "weather" || expansionState.currentName === "media" || (expansionState.currentName === "system" && !detailVisible))
+    // owner. Calendar, Activity and collection details consume paging locally.
+    readonly property bool hostPageShortcutsEnabled: expansionState.hasCurrent && !helpVisible && (expansionState.currentName === "weather" || expansionState.currentName === "media" || (expansionState.currentName === "system" && (!detailVisible || !!systemContent?.detailUsesHostPaging)))
     readonly property bool detailVisible: !!systemContent && (systemContent.settingsOpen || systemContent.vhsOpen || systemContent.trayMenuOpen || systemContent.networkOpen || systemContent.bluetoothOpen || systemContent.themeOpen || systemContent.wallpaperOpen || systemContent.sessionOpen || systemContent.resourcesOpen || systemContent.recordingsOpen || systemContent.statusOpen || systemContent.mixerOpen)
     readonly property string helpCaption: systemContent ? systemContent.helpTitle : mediaContent ? "Now Playing controls" : expansionState.currentName === "activity" ? "Activity controls" : expansionState.currentName === "weather" ? "Weather controls" : "Home controls"
     readonly property var otherHelpKeys: expansionState.currentName === "activity" ? [
@@ -374,6 +374,9 @@ PanelWindow {
 
     Connections {
         target: host.systemContent
+        function onCurrentDetailChanged(): void {
+            contentViewport.contentY = 0;
+        }
         function onRevealContent(top: real, bottom: real): void {
             host.revealContent(top, bottom);
         }
@@ -1047,7 +1050,7 @@ PanelWindow {
                 // Nested detail galleries and the Activity/Calendar pages own
                 // their own scrolling. The host Flickable must not steal their
                 // mouse grabs or cancel hover while the pointer crosses tiles.
-                interactive: contentHeight > height && !host.detailVisible && host.expansionState.currentName !== "activity" && host.expansionState.currentName !== "calendar"
+                interactive: contentHeight > height && host.hostPageShortcutsEnabled
 
                 // Keep inactive prewarmed pages alive, but remove their zero-opacity
                 // items from hit-testing. Qt can still route pointer events into

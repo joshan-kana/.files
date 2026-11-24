@@ -178,6 +178,9 @@ FocusScope {
     readonly property bool statusOpen: statusPanel.open
     readonly property bool settingsOpen: settingsPanel.open
     readonly property bool vhsOpen: vhsPanel.open
+    // List/gallery views own their own paging. Static editors share the hub
+    // viewport when their measured content exceeds the monitor budget.
+    readonly property bool detailUsesHostPaging: settingsOpen || vhsOpen || statusOpen || sessionOpen || resourcesOpen || (wallpaperOpen && !!wallpaperPanel.panel?.policyView)
     readonly property bool recordingsOpen: recordingsPanel.open
     readonly property string helpTitle: settingsPanel.open ? "Capability details" : statusOpen ? "System status" : recordingsPanel.open ? "Captures" : wallpaperPanel.open ? "Wallpaper library" : mixerOpen ? "Application mixer" : resourcesPanel.open ? "Resource monitor" : (bluetoothPanel.open ? "Bluetooth controls" : (networkPanel.open ? "Network controls" : (themePanel.open ? "Theme controls" : (sessionPanel.open ? "Session controls" : (trayMenu.open ? "Tray menu controls" : "System controls")))))
     readonly property var helpBindings: settingsPanel.open ? [
@@ -1871,6 +1874,7 @@ FocusScope {
                     barVisible: root.barVisible
                     frameVisible: root.frameVisible
                     onNativeDisplayEditorRequested: root.displaySettingsRequested()
+                    onRevealSelection: (top, bottom) => root.revealContent(top, bottom)
                     onWallpaperSpectrumToggleRequested: root.wallpaperSpectrumToggleRequested()
                     onMusicReactiveToggleRequested: root.musicReactiveToggleRequested()
                     onBarToggleRequested: root.barToggleRequested()
@@ -1893,6 +1897,7 @@ FocusScope {
                     motion: root.motion
                     appearance: root.appearance
                     onKeyboardRequested: keyboardFocus.forceActiveFocus()
+                    onRevealSelection: (top, bottom) => root.revealContent(top, bottom)
                 }
             }
         }

@@ -12,6 +12,7 @@ Item {
 
     signal keyboardRequested
     signal parameterAdjustmentRequested(int index)
+    signal revealSelection(real top, real bottom)
 
     property bool open: false
     property int selectedIndex: 0
@@ -120,6 +121,11 @@ Item {
     function selectParameter(index: int): void {
         selectedIndex = Math.max(0, Math.min(parameters.length - 1, index));
         keyboardRequested();
+        const card = parameterRepeater.itemAt(selectedIndex);
+        if (card) {
+            const top = card.mapToItem(panel, 0, 0).y;
+            revealSelection(top, top + card.height);
+        }
     }
 
     function adjustSelected(direction: int): void {
@@ -293,6 +299,7 @@ Item {
             readonly property int columns: width >= panel.theme.fontSize(750) ? 2 : 1
             spacing: panel.theme.spacing3
             Repeater {
+                id: parameterRepeater
                 model: panel.parameters
                 delegate: ParameterCard {
                     id: parameterRow

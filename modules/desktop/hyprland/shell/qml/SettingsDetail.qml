@@ -28,6 +28,7 @@ Item {
     signal nativeDisplayEditorRequested
     signal keyboardRequested
     signal parameterAdjustmentRequested(int index)
+    signal revealSelection(real top, real bottom)
 
     property string kind: ""
     property bool open: false
@@ -535,6 +536,11 @@ Item {
             return;
         selectedIndex = (index + parameters.length) % parameters.length;
         keyboardRequested();
+        const card = parameterRepeater.itemAt(selectedIndex);
+        if (card) {
+            const top = card.mapToItem(panel, 0, 0).y;
+            revealSelection(top, top + card.height);
+        }
     }
 
     function cancelNested(): bool {

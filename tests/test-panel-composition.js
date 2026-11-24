@@ -122,3 +122,16 @@ test("galleries share measured geometry through 200 percent text scale", () => {
     );
   }
 });
+
+test("overflowing static detail editors retain the hub scroll path", () => {
+  assert.match(
+    qml("SystemContent.qml"),
+    /detailUsesHostPaging: settingsOpen \|\| vhsOpen/,
+  );
+  assert.match(
+    qml("ShellExpansionHost.qml"),
+    /systemContent\?\.detailUsesHostPaging/,
+  );
+  for (const name of ["SettingsDetail.qml", "VhsPanel.qml"])
+    assert.match(qml(name), /revealSelection\(top, top \+ card.height\)/);
+});
