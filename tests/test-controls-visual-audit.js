@@ -613,7 +613,7 @@ test("Session actions keep their natural size in three-plus-two rows", () => {
   );
   assert.match(
     read("SystemContent.qml"),
-    /implicitWidth: sessionPanel.open \? sessionPanel.implicitWidth/,
+    /sessionPanel.open \? sessionPanel : resourcesPanel.open/,
   );
   assert.match(session, /width: Math.min\(buttonGrid.width, rowCount \* 154/);
   assert.match(session, /anchors.horizontalCenter: parent.horizontalCenter/);
@@ -635,7 +635,7 @@ test("main panel and compact Media use measured geometry with bounded empty stat
   for (const [source, fragment] of [
     [
       controls,
-      "implicitWidth: sessionPanel.open ? sessionPanel.implicitWidth : detailsVisible ? theme.controlsDetailWidth : dashboardWidthBudget",
+      "implicitWidth: currentDetail ? currentDetail.width : detailsVisible ? theme.controlsDetailWidth : dashboardWidthBudget",
     ],
     [controls, "active: root.engaged && !root.detailsVisible"],
     [
@@ -826,7 +826,7 @@ test("Session uses compact hub width, not the Controls dashboard width", () => {
   const host = read("ShellExpansionHost.qml");
   assert.match(
     controls,
-    /implicitWidth: sessionPanel.open \? sessionPanel.implicitWidth : detailsVisible \? theme.controlsDetailWidth : dashboardWidthBudget/,
+    /implicitWidth: currentDetail \? currentDetail.width : detailsVisible \? theme.controlsDetailWidth : dashboardWidthBudget/,
   );
   assert.match(
     session,
@@ -1010,7 +1010,7 @@ test("detail transitions preserve source and destination layout during the cross
   );
   assert.match(
     controls,
-    /id: settingsPanel[\s\S]*?width: root\.detailLayoutWidth\s+x: \(parent\.width - width\) \/ 2/,
+    /id: settingsPanel[\s\S]*?width: Math\.min\(root\.detailLayoutWidth, panel\?\.implicitWidth \|\| root\.theme.richDetailWidth\)\s+x: \(parent\.width - width\) \/ 2/,
   );
   assert.match(detail, /visible: exposed \|\| opacity > 0\.01/);
   assert.match(detail, /enabled: exposed/);
@@ -1044,4 +1044,38 @@ test("capability headers describe their controls instead of repeating master sta
   );
   assert.match(detail, /text: panel.subtitleText/);
   assert.match(detail, /title: panel.masterState \? "Disable" : "Enable"/);
+});
+
+test("shared actions measure visible content and retain full fixed labels", () => {
+  const action = read("ShellAction.qml");
+  assert.match(action, /actionLabelMetrics.advanceWidth/);
+  assert.match(action, /font: inlineLabel.font/);
+  assert.match(action, /inlineGlyphWidth/);
+  assert.match(action, /inlineHintWidth/);
+  assert.match(action, /id: inlineLabel[\s\S]*?wrapMode: Text.WordWrap/);
+  assert.match(action, /id: stackedLabel[\s\S]*?wrapMode: Text.WordWrap/);
+});
+
+test("detail panel geometry follows the owning loader rather than dashboard width", () => {
+  const controls = read("SystemContent.qml");
+  const detail = read("SettingsDetail.qml");
+  const theme = read("Theme.qml");
+  assert.match(controls, /implicitWidth: currentDetail \? currentDetail.width/);
+  assert.match(
+    controls,
+    /implicitHeight: currentDetail \? currentDetail.implicitHeight/,
+  );
+  assert.match(
+    theme,
+    /compactDetailWidth: Math.min\(controlsDetailWidth, fontSize\(640\)\)/,
+  );
+  assert.match(
+    detail,
+    /implicitWidth:.*theme.richDetailWidth : theme.compactDetailWidth/,
+  );
+  assert.match(
+    detail,
+    /height: Math.max\(104, parameterContent.implicitHeight/,
+  );
+  assert.match(detail, /id: durationGrid/);
 });

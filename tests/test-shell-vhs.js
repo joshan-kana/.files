@@ -265,7 +265,11 @@ test("VHS tuning exposes correct keyboard focus, pointer and navigation paths", 
     controls,
     /shellMatchesHint\("SystemContent\.vhsTune", event\.key, event\.modifiers\)/,
   );
-  assert.match(controls, /vhsPanel\.open \? vhsPanel\.implicitHeight/);
+  assert.match(controls, /vhsPanel\.open \? vhsPanel : statusOpen/);
+  assert.match(
+    controls,
+    /implicitHeight: currentDetail \? currentDetail.implicitHeight/,
+  );
   assert.match(
     controls,
     /function closeDetails\(\)[\s\S]*?vhsPanel\.closeView\(\)/,

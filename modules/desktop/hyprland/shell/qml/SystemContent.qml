@@ -482,8 +482,11 @@ FocusScope {
     signal mediaRequested
     signal revealContent(real top, real bottom)
 
-    implicitWidth: sessionPanel.open ? sessionPanel.implicitWidth : detailsVisible ? theme.controlsDetailWidth : dashboardWidthBudget
-    implicitHeight: settingsPanel.open ? settingsPanel.implicitHeight : vhsPanel.open ? vhsPanel.implicitHeight : statusOpen ? statusPanel.implicitHeight : recordingsPanel.open ? recordingsPanel.implicitHeight : wallpaperPanel.open ? wallpaperPanel.implicitHeight : mixerOpen ? mixerView.implicitHeight : sessionPanel.open ? sessionPanel.implicitHeight : resourcesPanel.open ? resourcesPanel.implicitHeight : networkPanel.open ? networkPanel.implicitHeight : bluetoothPanel.open ? bluetoothPanel.implicitHeight : themePanel.open ? themePanel.implicitHeight : content.implicitHeight
+    // The exposed detail owns its measured destination. Keep each outgoing
+    // loader at its own width while the expansion host clips the crossfade.
+    readonly property Item currentDetail: settingsPanel.open ? settingsPanel : vhsPanel.open ? vhsPanel : statusOpen ? statusPanel : recordingsPanel.open ? recordingsPanel : wallpaperPanel.open ? wallpaperPanel : mixerOpen ? mixerView : sessionPanel.open ? sessionPanel : resourcesPanel.open ? resourcesPanel : networkPanel.open ? networkPanel : bluetoothPanel.open ? bluetoothPanel : themePanel.open ? themePanel : null
+    implicitWidth: currentDetail ? currentDetail.width : detailsVisible ? theme.controlsDetailWidth : dashboardWidthBudget
+    implicitHeight: currentDetail ? currentDetail.implicitHeight : content.implicitHeight
     focus: engaged
 
     function closeDetails(): void {
@@ -1740,7 +1743,7 @@ FocusScope {
         DeferredDetail {
             id: resourcesPanel
             motion: root.motion
-            width: root.detailLayoutWidth
+            width: Math.min(root.detailLayoutWidth, root.theme.richDetailWidth)
             x: (parent.width - width) / 2
             height: Math.max(1, implicitHeight)
             sourceComponent: Component {
@@ -1757,7 +1760,7 @@ FocusScope {
         DeferredDetail {
             id: networkPanel
             motion: root.motion
-            width: root.detailLayoutWidth
+            width: Math.min(root.detailLayoutWidth, root.theme.standardDetailWidth)
             x: (parent.width - width) / 2
             height: Math.max(1, implicitHeight)
             sourceComponent: Component {
@@ -1774,7 +1777,7 @@ FocusScope {
         DeferredDetail {
             id: bluetoothPanel
             motion: root.motion
-            width: root.detailLayoutWidth
+            width: Math.min(root.detailLayoutWidth, root.theme.standardDetailWidth)
             x: (parent.width - width) / 2
             height: Math.max(1, implicitHeight)
             sourceComponent: Component {
@@ -1808,7 +1811,7 @@ FocusScope {
         DeferredDetail {
             id: settingsPanel
             motion: root.motion
-            width: root.detailLayoutWidth
+            width: Math.min(root.detailLayoutWidth, panel?.implicitWidth || root.theme.richDetailWidth)
             x: (parent.width - width) / 2
             height: Math.max(1, implicitHeight)
             sourceComponent: Component {
@@ -1840,7 +1843,7 @@ FocusScope {
         DeferredDetail {
             id: vhsPanel
             motion: root.motion
-            width: root.detailLayoutWidth
+            width: Math.min(root.detailLayoutWidth, root.theme.richDetailWidth)
             x: (parent.width - width) / 2
             height: Math.max(1, implicitHeight)
             sourceComponent: Component {

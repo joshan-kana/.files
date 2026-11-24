@@ -104,8 +104,8 @@ Item {
                     readonly property color gaugeColor: cpu ? panel.theme.roleColor("resources") : panel.theme.roleColor("connectivity")
                     readonly property real percentage: cpu ? panel.resourceState.cpuPercent : panel.resourceState.memoryPercent
                     readonly property string detailText: cpu ? "Processor activity" : panel.resourceState.kibString(panel.resourceState.memoryUsed) + " / " + panel.resourceState.kibString(panel.resourceState.memoryTotal)
-                    width: (panel.width - panel.theme.spacing3) * (cpu ? 0.57 : 0.43)
-                    height: 245
+                    width: (panel.width - panel.theme.spacing3) / 2
+                    height: Math.max(168, metricContent.implicitHeight + panel.theme.spacing4 * 2)
                     theme: panel.theme
                     motion: panel.motion
                     surfaceLayer: ShellSurface.Group
@@ -113,6 +113,7 @@ Item {
                     fillColor: panel.theme.blend(panel.theme.groupBase, tile.gaugeColor, cpu ? (panel.theme.dark ? 0.065 : 0.035) : (panel.theme.dark ? 0.055 : 0.03))
 
                     Column {
+                        id: metricContent
                         anchors.centerIn: parent
                         spacing: panel.theme.spacing1
                         Row {
@@ -155,7 +156,7 @@ Item {
 
         ShellSurface {
             width: parent.width
-            height: 93
+            height: Math.max(82, panel.theme.fontSize(55) + panel.theme.spacing3 * 2)
             theme: panel.theme
             motion: panel.motion
             surfaceLayer: ShellSurface.Group
@@ -219,7 +220,7 @@ Item {
 
         ShellSurface {
             width: parent.width
-            height: 90
+            height: Math.max(82, panel.theme.fontSize(55) + panel.theme.spacing3 * 2)
             theme: panel.theme
             motion: panel.motion
             surfaceLayer: ShellSurface.Group
@@ -291,7 +292,7 @@ Item {
 
         ShellSurface {
             width: parent.width
-            height: 237
+            height: 273
             theme: panel.theme
             motion: panel.motion
             surfaceLayer: ShellSurface.Group
@@ -343,7 +344,7 @@ Item {
                             id: historyGraph
                             required property int index
                             width: parent.width
-                            height: 54
+                            height: 66
                             runtime: panel.runtime
                             theme: panel.theme
                             label: index === 0 ? "CPU" : index === 1 ? "MEMORY" : "NETWORK · RX+TX"

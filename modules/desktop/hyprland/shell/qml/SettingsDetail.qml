@@ -41,7 +41,7 @@ Item {
     }
     readonly property string idleStatus: !system.idleInhibited ? "Idle allowed" : system.idleInhibitDeadline <= 0 ? "Inhibited until disabled" : Math.max(0, Math.ceil((system.idleInhibitDeadline - clockMs) / 60000)) + " min remaining"
     visible: open
-    implicitWidth: theme.controlsDetailWidth
+    implicitWidth: kind === "displays" ? theme.controlsDetailWidth : reactiveTuning || spectrumTuning || kind === "alerts" || kind === "nightLight" || kind === "power" ? theme.richDetailWidth : theme.compactDetailWidth
     implicitHeight: content.implicitHeight
 
     readonly property bool hasMaster: ["windows", "glass", "nightLight", "alerts", "stay", "spectrum", "reactive", "bar", "frame", "motion"].includes(kind)
@@ -649,7 +649,7 @@ Item {
 
         Row {
             width: parent.width
-            height: Math.max(44, heading.implicitHeight)
+            height: Math.max(44, heading.implicitHeight, masterAction.implicitHeight)
             spacing: panel.theme.spacing3
 
             Text {
@@ -673,27 +673,27 @@ Item {
                     runtime: panel.runtime
                     theme: panel.theme
                     width: parent.width
-                    elide: Text.ElideRight
+                    wrapMode: Text.WordWrap
                     text: panel.titleText
-                    font.pixelSize: panel.theme.fontSize(14)
+                    font.pixelSize: panel.theme.fontDetailTitle
                     font.weight: Font.DemiBold
                 }
                 ShellText {
                     runtime: panel.runtime
                     theme: panel.theme
                     width: parent.width
-                    elide: Text.ElideRight
+                    wrapMode: Text.WordWrap
                     text: panel.subtitleText
                     color: panel.theme.textMuted
-                    font.pixelSize: panel.theme.fontSize(10)
+                    font.pixelSize: panel.theme.fontSupporting
                 }
             }
 
             ShellAction {
                 id: masterAction
                 visible: panel.hasMaster
-                width: visible ? 133 : 0
-                height: 40
+                width: visible ? implicitWidth : 0
+                height: implicitHeight
                 anchors.verticalCenter: parent.verticalCenter
                 runtime: panel.runtime
                 theme: panel.theme
@@ -755,7 +755,7 @@ Item {
             }
             ShellAction {
                 id: resetButton
-                width: 124
+                width: implicitWidth
                 height: 40
                 runtime: panel.runtime
                 theme: panel.theme
@@ -894,7 +894,7 @@ Item {
                     required property int index
                     required property var modelData
                     width: (parameterGrid.width - (parameterGrid.columns - 1) * parameterGrid.columnSpacing) / parameterGrid.columns
-                    height: Math.max(104, panel.theme.fontSize(70) + panel.theme.spacing3 * 2)
+                    height: Math.max(104, parameterContent.implicitHeight + panel.theme.spacing3 * 2)
                     Connections {
                         target: panel
                         function onParameterAdjustmentRequested(index: int): void {
@@ -912,32 +912,37 @@ Item {
                     fillColor: panel.theme.expressiveSurfaceStrong
 
                     Column {
-                        anchors.fill: parent
-                        anchors.margins: panel.theme.spacing3
+                        id: parameterContent
+                        width: parent.width - panel.theme.spacing3 * 2
+                        anchors.centerIn: parent
                         spacing: panel.theme.spacing2
 
                         Row {
                             id: parameterHeading
                             width: parent.width
-                            height: Math.max(37, panel.theme.fontSize(30))
+                            height: Math.max(parameterCopy.implicitHeight, valueReadback.implicitHeight, parameterHint.implicitHeight)
                             spacing: panel.theme.spacing2
                             Column {
+                                id: parameterCopy
                                 width: Math.max(1, parent.width - valueReadback.implicitWidth - parameterHint.implicitWidth - parameterHeading.spacing * 2)
                                 spacing: panel.theme.spacing1
                                 ShellText {
                                     runtime: panel.runtime
                                     theme: panel.theme
+                                    width: parent.width
                                     text: parameterCard.modelData.title
                                     font.weight: Font.DemiBold
-                                    font.pixelSize: panel.theme.fontSize(11)
+                                    font.pixelSize: panel.theme.fontAction
+                                    wrapMode: Text.WordWrap
                                 }
                                 ShellText {
                                     runtime: panel.runtime
                                     theme: panel.theme
+                                    width: parent.width
                                     text: parameterCard.modelData.description
                                     color: panel.theme.textMuted
-                                    font.pixelSize: panel.theme.fontSize(9)
-                                    elide: Text.ElideRight
+                                    font.pixelSize: panel.theme.fontSupporting
+                                    wrapMode: Text.WordWrap
                                 }
                             }
                             KeyHint {
@@ -953,7 +958,7 @@ Item {
                                 runtime: panel.runtime
                                 theme: panel.theme
                                 text: panel.valueLabel(parameterCard.modelData)
-                                font.pixelSize: panel.theme.fontSize(11)
+                                font.pixelSize: panel.theme.fontReadback
                                 font.weight: Font.DemiBold
                             }
                         }
@@ -1293,24 +1298,33 @@ Item {
                 theme: panel.theme
                 text: panel.idleStatus + " · Choose or replace the current duration:"
                 color: panel.theme.textMuted
-                font.pixelSize: panel.theme.fontSize(10)
+                font.pixelSize: panel.theme.fontSupporting
+                width: parent.width
+                wrapMode: Text.WordWrap
             }
-            Repeater {
-                model: [15, 30, 60, 120, 0]
-                delegate: ShellAction {
-                    required property int index
-                    required property int modelData
-                    width: panel.width
-                    height: 40
-                    runtime: panel.runtime
-                    theme: panel.theme
-                    motion: panel.motion
-                    compact: true
-                    horizontalCompact: true
-                    title: modelData === 0 ? "Until disabled" : modelData + " minutes"
-                    shortcut: panel.runtime.shellChoiceHint(index)
-                    active: panel.system.idleInhibited && panel.system.idleInhibitMinutes === modelData
-                    onActivated: panel.system.setIdleInhibitMinutes(modelData)
+            Grid {
+                id: durationGrid
+                width: parent.width
+                columns: width >= panel.theme.fontSize(480) ? 2 : 1
+                columnSpacing: panel.theme.spacing2
+                rowSpacing: panel.theme.spacing2
+                Repeater {
+                    model: [15, 30, 60, 120, 0]
+                    delegate: ShellAction {
+                        required property int index
+                        required property int modelData
+                        width: modelData === 0 ? durationGrid.width : (durationGrid.width - (durationGrid.columns - 1) * durationGrid.columnSpacing) / durationGrid.columns
+                        height: 52
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        motion: panel.motion
+                        compact: true
+                        horizontalCompact: true
+                        title: modelData === 0 ? "Until disabled" : modelData + " minutes"
+                        shortcut: panel.runtime.shellChoiceHint(index)
+                        active: panel.system.idleInhibited && panel.system.idleInhibitMinutes === modelData
+                        onActivated: panel.system.setIdleInhibitMinutes(modelData)
+                    }
                 }
             }
         }
