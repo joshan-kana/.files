@@ -139,7 +139,7 @@ test("status is a Controls detail with shared data and nested Escape", () => {
   const shell = qml("shell.qml");
   assert.match(
     controls,
-    /title: "Status"[\s\S]*?onActivated: root\.openStatus\(\)/,
+    /title: "Status"[\s\S]*?onDetailsRequested: root\.openStatus\(\)/,
   );
   assert.match(controls, /function openStatus\(\): void/);
   assert.match(controls, /StatusContent \{[\s\S]*?keyboard: root\.keyboard/);
@@ -208,7 +208,7 @@ test("displays uses standard notifications and the status island owns only live 
   const notices = qml("EventNotifications.qml");
   assert.match(
     controls,
-    /title: "Displays"[\s\S]*?onActivated: root\.openSetting\("displays"\)/,
+    /title: "Displays"[\s\S]*?onDetailsRequested: root\.openSetting\("displays"\)/,
   );
   assert.match(
     shell,

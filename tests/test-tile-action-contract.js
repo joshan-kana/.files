@@ -155,11 +155,11 @@ test("Session QWE/ASD still uses the positional physical keymap", () => {
   );
 });
 
-test("compact media card primary actions also use the left corner", () => {
+test("detail-only compact cards use the right corner", () => {
   for (const name of ["AudioMixerContent", "ControlsMediaCard"]) {
     const source = qml(name);
     assert.ok(source.includes("TileKeyHint {"));
-    assert.ok(source.includes("primary: true"));
+    assert.ok(source.includes("primary: false"));
   }
 });
 
@@ -179,4 +179,41 @@ test("Ethernet-only connectivity keeps status accurate and disables unsupported 
     "onActivated: tile.detailsRequested()",
   ])
     assert.ok(tile.includes(sourceLine), sourceLine);
+});
+
+test("dashboard destination-only tiles advertise a right-corner detail action without a duplicate quick action", () => {
+  const controls = qml("SystemContent");
+  const tiles = [
+    ...controls.matchAll(/QuickSettingChip \{([\s\S]*?)\n {24}\}/g),
+  ].map((match) => match[1]);
+  assert.equal(tiles.length, 17);
+  for (const name of [
+    "resources",
+    "captures",
+    "displays",
+    "statusInspection",
+  ]) {
+    const tile = tiles.find((entry) =>
+      entry.includes(`"SystemContent.${name}"`),
+    );
+    assert.ok(tile, name);
+    assert.ok(
+      tile.includes(
+        `detailShortcut: root.runtime.shellHint("SystemContent.${name}")`,
+      ),
+    );
+    assert.doesNotMatch(tile, /\bshortcut:|onActivated:/);
+    assert.match(tile, /onDetailsRequested: root\.open/);
+  }
+  const reset = tiles.find((entry) => entry.includes('"SystemContent.reset"'));
+  assert.match(
+    reset,
+    /shortcut: root.runtime.shellHint\("SystemContent.reset"\)/,
+  );
+  assert.doesNotMatch(reset, /detailShortcut:/);
+  const chip = qml("QuickSettingChip");
+  assert.match(
+    chip,
+    /shortcut: chip.detailShortcut.length > 0 \? chip.shortcut : ""/,
+  );
 });

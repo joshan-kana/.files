@@ -250,7 +250,7 @@ Item {
         TileKeyHint {
             id: openHint
             z: 1
-            primary: true
+            primary: false
             visible: shortcut.length > 0
             shortcut: card.runtime.shellHint("ControlsMediaCard.open")
             runtime: card.runtime

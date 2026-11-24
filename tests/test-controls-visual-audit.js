@@ -747,8 +747,8 @@ test("Quick Actions retain handlers and keep Restore Defaults last", () => {
     actions,
     /onActivated: root.resetConfirmPending = !root.resetConfirmPending/,
   );
-  assert.match(actions, /onActivated: root.openResources\(\)/);
-  assert.match(actions, /onActivated: root.openRecordings\(\)/);
+  assert.match(actions, /onDetailsRequested: root.openResources\(\)/);
+  assert.match(actions, /onDetailsRequested: root.openRecordings\(\)/);
 });
 
 test("all visual and action tile heights remain fixed when categories rebalance", () => {

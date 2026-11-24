@@ -112,7 +112,7 @@ test("media and audio cards reserve measured top-left keycap safe space", () => 
     mixer,
     /implicitHeight: body\.implicitHeight \+ \(compact \? compactTopInset \+ theme\.spacing3/,
   );
-  assert.match(mixer, /TileKeyHint \{[\s\S]*?primary: true/);
+  assert.match(mixer, /TileKeyHint \{[\s\S]*?primary: false/);
   assert.match(
     controls,
     /height: Math\.max\(implicitHeight, mediaCard\.implicitHeight\)/,
@@ -177,7 +177,7 @@ test("buttons across panels own hints while decorative symbols are not fake shor
 test("compact controllers preserve direct positional action hints", () => {
   for (const name of ["ControlsMediaCard", "AudioMixerContent"]) {
     const src = read(name);
-    assert.match(src, /TileKeyHint \{[\s\S]*?primary: true/);
+    assert.match(src, /TileKeyHint \{[\s\S]*?primary: false/);
     assert.match(
       src,
       /onActivated: (?:card\.fullRequested|mixer\.expandRequested)\(\)/,

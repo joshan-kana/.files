@@ -1209,9 +1209,9 @@ FocusScope {
                             motion: root.motion
                             icon: DesktopIcons.glyphFor("resources")
                             title: "Resources"
-                            shortcut: root.runtime.shellHint("SystemContent.resources")
+                            detailShortcut: root.runtime.shellHint("SystemContent.resources")
                             activeColor: root.theme.roleColor("resources")
-                            onActivated: root.openResources()
+                            onDetailsRequested: root.openResources()
                         }
 
                         QuickSettingChip {
@@ -1222,9 +1222,9 @@ FocusScope {
                             motion: root.motion
                             icon: DesktopIcons.glyphFor("captures")
                             title: "Captures"
-                            shortcut: root.runtime.shellHint("SystemContent.captures")
+                            detailShortcut: root.runtime.shellHint("SystemContent.captures")
                             activeColor: root.theme.roleColor("capture")
-                            onActivated: root.openRecordings()
+                            onDetailsRequested: root.openRecordings()
                         }
 
                         QuickSettingChip {
@@ -1235,10 +1235,10 @@ FocusScope {
                             motion: root.motion
                             icon: DesktopIcons.glyphFor("displays")
                             title: "Displays"
-                            shortcut: root.runtime.shellHint("SystemContent.displays")
+                            detailShortcut: root.runtime.shellHint("SystemContent.displays")
                             activeColor: root.theme.roleColor("display")
                             enabled: root.runtime.displaySettings.length > 0
-                            onActivated: root.openSetting("displays")
+                            onDetailsRequested: root.openSetting("displays")
                         }
 
                         QuickSettingChip {
@@ -1249,9 +1249,9 @@ FocusScope {
                             motion: root.motion
                             icon: DesktopIcons.glyphFor("status")
                             title: "Status"
-                            shortcut: root.runtime.shellHint("SystemContent.statusInspection")
+                            detailShortcut: root.runtime.shellHint("SystemContent.statusInspection")
                             activeColor: root.theme.roleColor("resources")
-                            onActivated: root.openStatus()
+                            onDetailsRequested: root.openStatus()
                         }
 
                         QuickSettingChip {
