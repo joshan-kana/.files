@@ -1926,7 +1926,7 @@ FocusScope {
                     if (event.key === root.runtime.shellKeyCode("controls", "Backspace")) {
                         root.backFromDetail();
                         event.accepted = true;
-                    } else if (vhsPanel.invoke("handleKey", event.key, event.modifiers)) {
+                    } else if (vhsPanel.invoke("handleKey", event.key, event.modifiers, event.isAutoRepeat)) {
                         event.accepted = true;
                     }
                     return;
