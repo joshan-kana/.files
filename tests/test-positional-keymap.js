@@ -158,13 +158,29 @@ test("all directional widgets delegate keys to the shared navigation mapping", (
     "AudioMixerContent.qml",
   ]) {
     const source = qml(name);
-    for (const direction of ["left", "right", "up", "down"])
-      assert.ok(
-        new RegExp('shellNavigates\\("[^"]+", "' + direction + '",').test(
-          source,
-        ),
-        name + ": missing " + direction + " navigation",
-      );
+    for (const direction of ["left", "right", "up", "down"]) {
+      if (
+        name === "MediaContent.qml" &&
+        ["left", "right"].includes(direction)
+      ) {
+        const action = direction === "left" ? "back" : "forward";
+        for (const suffix of ["", "Arrow"])
+          assert.ok(
+            source.includes(
+              `shellMatchesHint("MediaTransport.${action}${suffix}",`,
+            ),
+          );
+        // The evaluated registry and remapping of these directional actions
+        // are exercised in test-shell-keybindings.js.
+      } else {
+        assert.ok(
+          new RegExp('shellNavigates\\("[^"]+", "' + direction + '",').test(
+            source,
+          ),
+          name + ": missing " + direction + " navigation",
+        );
+      }
+    }
   }
 });
 
