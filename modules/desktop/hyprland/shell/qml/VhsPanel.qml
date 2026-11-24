@@ -10,6 +10,7 @@ Item {
     required property AppearancePreferences appearance
 
     signal keyboardRequested
+    signal parameterAdjustmentRequested(int index)
 
     property bool open: false
     property int selectedIndex: 0
@@ -122,11 +123,24 @@ Item {
 
     function adjustSelected(direction: int): void {
         const entry = parameters[selectedIndex];
-        if (entry)
+        if (entry) {
+            parameterAdjustmentRequested(selectedIndex);
             setParameter(entry, parameterValue(entry.key) + direction * entry.step);
+        }
     }
 
-    function handleKey(key: int, modifiers: int): bool {
+    function handleKey(key: int, modifiers: int, autoRepeat: bool): bool {
+        const presetIndex = modifiers === Qt.NoModifier ? runtime.shellNumberIndex("controls", key, 4) : -1;
+        if (presetIndex >= 0) {
+            if (!autoRepeat)
+                appearance.applyVhsPreset(["Subtle", "Analog", "Degraded", "Default"][presetIndex]);
+            return true;
+        }
+        if (runtime.shellMatchesHint("VhsPanel.reset", key, modifiers)) {
+            if (!autoRepeat)
+                appearance.resetVhsParameter(parameters[selectedIndex].key);
+            return true;
+        }
         if (key === runtime.shellKeyCode("controls", "Tab") || key === runtime.shellKeyCode("controls", "Backtab")) {
             const backward = key === runtime.shellKeyCode("controls", "Backtab") || runtime.shellModifier("controls", "Shift", modifiers);
             selectParameter((selectedIndex + parameters.length + (backward ? -1 : 1)) % parameters.length);
@@ -149,7 +163,8 @@ Item {
             return true;
         }
         if (runtime.shellMatchesHint("VhsPanel.toggle", key, modifiers)) {
-            appearance.toggleVhs();
+            if (!autoRepeat)
+                appearance.toggleVhs();
             return true;
         }
         return false;
@@ -189,7 +204,7 @@ Item {
                 }
 
                 Text {
-                    text: "Signal tuning"
+                    text: "Signal tuning · " + panel.appearance.vhsPreset
                     color: panel.theme.textMuted
                     font.family: panel.runtime.fontSans
                     font.pixelSize: panel.theme.fontSize(10)
@@ -222,6 +237,44 @@ Item {
                     emphasized: panel.appearance.vhsEnabled
                 }
             }
+        }
+
+        Row {
+            width: parent.width
+            height: 40
+            spacing: panel.theme.spacing2
+            Repeater {
+                model: ["Subtle", "Analog", "Degraded", "Default"]
+                delegate: ShellAction {
+                    required property int index
+                    required property string modelData
+                    width: (panel.width - panel.theme.spacing2 * 3) / 4
+                    height: 40
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    motion: panel.motion
+                    title: modelData
+                    shortcut: panel.runtime.shellNumberHint("controls", index)
+                    compact: true
+                    horizontalCompact: true
+                    active: panel.appearance.vhsPreset === modelData
+                    onActivated: panel.appearance.applyVhsPreset(modelData)
+                }
+            }
+        }
+
+        ShellAction {
+            width: parent.width
+            height: 40
+            runtime: panel.runtime
+            theme: panel.theme
+            motion: panel.motion
+            title: "Restore " + panel.parameters[panel.selectedIndex].title.toLowerCase()
+            shortcut: panel.runtime.shellHint("VhsPanel.reset")
+            compact: true
+            horizontalCompact: true
+            enabled: panel.appearance.hasOverride(panel.parameters[panel.selectedIndex].key)
+            onActivated: panel.appearance.resetVhsParameter(panel.parameters[panel.selectedIndex].key)
         }
 
         Column {
@@ -312,6 +365,14 @@ Item {
                         }
 
                         ShellSlider {
+                            id: vhsSlider
+                            Connections {
+                                target: panel
+                                function onParameterAdjustmentRequested(index: int): void {
+                                    if (index === parameterRow.index)
+                                        vhsSlider.pulseAdjustment();
+                                }
+                            }
                             width: parent.width
                             height: 36
                             theme: panel.theme

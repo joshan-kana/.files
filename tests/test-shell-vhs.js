@@ -304,7 +304,7 @@ test("VHS tuning exposes correct keyboard focus, pointer and navigation paths", 
   );
   assert.match(
     panel,
-    /title: "Dropouts", description: "Irregular dark horizontal tape streaks"/,
+    /title: "Dropouts",\s*description: "Irregular dark horizontal tape streaks"/,
   );
 });
 

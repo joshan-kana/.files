@@ -76,6 +76,21 @@ QtObject {
     readonly property real glassOpacity: Math.max(0.20, Math.min(1, effective("glassOpacity")))
     readonly property bool blurEnabled: effective("blurEnabled")
     readonly property int blurSize: Math.max(5, Math.min(25, effective("blurSize")))
+    readonly property var vhsParameterKeys: ["vhsIntensity", "vhsTracking", "vhsChroma", "vhsNoise", "vhsScanlines", "vhsSpeed", "vhsDropouts"]
+    readonly property var vhsPresets: ({
+        Subtle: [0.25, 0.15, 0.25, 0.10, 0.15, 0.8, 0.0],
+        Analog: [0.55, 0.45, 0.55, 0.3, 0.4, 1.0, 0.1],
+        Degraded: [0.85, 0.8, 0.8, 0.65, 0.7, 1.3, 0.55]
+    })
+    readonly property string vhsPreset: {
+        if (vhsParameterKeys.every(key => !hasOverride(key)))
+            return "Default";
+        for (const name of Object.keys(vhsPresets)) {
+            if (vhsParameterKeys.every((key, index) => Math.abs(effective(key) - vhsPresets[name][index]) <= 0.005))
+                return name;
+        }
+        return "Custom";
+    }
     readonly property bool vhsEnabled: effective("vhsEnabled")
     readonly property real vhsIntensity: Math.max(0, Math.min(1, effective("vhsIntensity")))
     readonly property real vhsTracking: Math.max(0, Math.min(1, effective("vhsTracking")))
@@ -305,6 +320,30 @@ QtObject {
         if (runtime.vhsControl.length === 0)
             return;
         Quickshell.execDetached([runtime.vhsControl, vhsEnabled ? "on" : "off", String(Math.round(vhsIntensity * 100)), String(Math.round(vhsTracking * 100)), String(Math.round(vhsChroma * 100)), String(Math.round(vhsNoise * 100)), String(Math.round(vhsScanlines * 100)), String(Math.round(vhsSpeed * 100)), String(Math.round(vhsDropouts * 100))]);
+    }
+
+    // A preset changes only VHS parameters; it does not toggle the effect
+    // or modify any other appearance preference.
+    function applyVhsPreset(name: string): void {
+        if (name === "Default") {
+            for (const key of vhsParameterKeys)
+                clearOverride(key);
+        } else {
+            const values = vhsPresets[name];
+            if (!values)
+                return;
+            for (let index = 0; index < vhsParameterKeys.length; ++index)
+                storeOverride(vhsParameterKeys[index], values[index]);
+        }
+        saved.sync();
+        vhsApply.restart();
+    }
+
+    function resetVhsParameter(key: string): void {
+        if (!vhsParameterKeys.includes(key))
+            return;
+        clearOverride(key);
+        vhsApply.restart();
     }
 
     function toggleVhs(): void {
