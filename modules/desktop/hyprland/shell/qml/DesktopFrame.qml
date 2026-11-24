@@ -6,7 +6,6 @@ import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Wayland
 import "FrameGeometry.js" as FrameGeometry
-import "OutlineTrace.js" as OutlineTrace
 
 // A single geometric silhouette per screen: the desktop frame, bar islands,
 // expanded hub and notification dock share one continuous inside boundary.
@@ -43,17 +42,6 @@ Variants {
     // Keep the one-pixel frame outline readable against wallpaper glass.
     // Audio colours belong in the continuous surface fill, not the stroke.
     readonly property color reactiveBorder: Qt.rgba(theme.subtleBorder.r, theme.subtleBorder.g, theme.subtleBorder.b, theme.shellGlassEnabled ? theme.glassContourBorder.a : theme.subtleBorder.a)
-    property real progress: 0
-
-    NumberAnimation on progress {
-        running: frame.busy && frame.motion.enabled
-        from: 0
-        to: 1
-        duration: frame.motion.contourLap
-        loops: Animation.Infinite
-        easing.type: frame.motion.contourEasing
-    }
-
     model: Quickshell.screens
 
     delegate: Scope {
@@ -196,49 +184,14 @@ Variants {
                 }
             }
 
-            OutlinePulse {
+            BusyContour {
                 anchors.fill: parent
-                active: output.exposed && output.busyHere && !frame.motion.enabled
+                motion: frame.motion
+                active: output.exposed && output.busyHere
                 contourPath: output.geometry.inner
+                points: output.geometry.points
+                perimeter: output.geometry.length
                 highlightColor: frame.busyColor
-                lineWidth: 2
-            }
-
-            Canvas {
-                id: busyTrace
-                readonly property var bounds: output.exposed && output.busyHere && frame.motion.enabled ? OutlineTrace.traceBounds(output.geometry.points, output.geometry.length, frame.progress, 0.10, 24, drawing.width, drawing.height) : null
-                x: bounds ? bounds.x : 0
-                y: bounds ? bounds.y : 0
-                width: bounds ? bounds.width : 1
-                height: bounds ? bounds.height : 1
-                visible: output.exposed && output.busyHere && frame.motion.enabled
-                antialiasing: true
-                onPaint: {
-                    if (bounds)
-                        OutlineTrace.paint(getContext("2d"), output.geometry.points, output.geometry.length, frame.progress, 0.10, frame.busyColor, 2, width, height, bounds.x, bounds.y, bounds);
-                }
-                onBoundsChanged: requestPaint()
-                Connections {
-                    target: frame
-                    function onProgressChanged() {
-                        busyTrace.requestPaint();
-                    }
-                    function onBusyColorChanged() {
-                        busyTrace.requestPaint();
-                    }
-                    function onBusyChanged() {
-                        busyTrace.requestPaint();
-                    }
-                }
-                Connections {
-                    target: output
-                    function onGeometryChanged() {
-                        busyTrace.requestPaint();
-                    }
-                    function onBusyHereChanged() {
-                        busyTrace.requestPaint();
-                    }
-                }
             }
         }
 

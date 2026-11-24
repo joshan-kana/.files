@@ -1225,6 +1225,5 @@ PanelWindow {
         active: !host.frameVisible && host.loadingOperationVisible
         motion: host.motion
         highlightColor: host.loadingOperationColor
-        lineWidth: 3
     }
 }

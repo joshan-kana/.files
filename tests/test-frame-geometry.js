@@ -874,44 +874,29 @@ test("clock reappears with the closing hub morph rather than a binary timer swit
   assert.match(shell, /clockReveal: resizeOverlay\.open/);
 });
 
-test("frame pulse is only painted during active reduced-motion loading", () => {
-  const qml = fs.readFileSync(
-    path.join(
-      __dirname,
-      "../modules/desktop/hyprland/shell/qml/DesktopFrame.qml",
-    ),
-    "utf8",
-  );
+test("frame and local surfaces use the same busy contour renderer", () => {
+  const root = path.join(__dirname, "../modules/desktop/hyprland/shell/qml");
+  const frame = fs.readFileSync(path.join(root, "DesktopFrame.qml"), "utf8");
+  const local = fs.readFileSync(path.join(root, "LoadingOutline.qml"), "utf8");
+  const busy = fs.readFileSync(path.join(root, "BusyContour.qml"), "utf8");
   assert.match(
-    qml,
-    /OutlinePulse\s*\{[\s\S]*?active: output\.exposed && output\.busyHere && !frame\.motion\.enabled/,
+    frame,
+    /BusyContour\s*\{[\s\S]*?active: output\.exposed && output\.busyHere/,
   );
-  assert.match(qml, /contourPath: output\.geometry\.inner/);
-  assert.doesNotMatch(qml, /stationaryPath/);
-});
-
-test("motion-enabled frame loading uses the shared tapered glowing tracer", () => {
-  const qml = fs.readFileSync(
-    path.join(
-      __dirname,
-      "../modules/desktop/hyprland/shell/qml/DesktopFrame.qml",
-    ),
-    "utf8",
-  );
-  assert.match(qml, /import "OutlineTrace\.js" as OutlineTrace/);
+  assert.match(frame, /contourPath: output\.geometry\.inner/);
+  assert.match(local, /BusyContour\s*\{/);
+  assert.match(busy, /import "OutlineTrace\.js" as OutlineTrace/);
   assert.match(
-    qml,
+    busy,
     /Canvas\s*\{[\s\S]*?onPaint: \{[\s\S]*?OutlineTrace\.paint/,
   );
+  assert.match(busy, /visible: trace\.active && trace\.motion\.enabled/);
   assert.match(
-    qml,
-    / {12}Canvas\s*\{[\s\S]*?onPaint: \{[\s\S]*?OutlineTrace\.paint/,
+    busy,
+    /OutlinePulse\s*\{[\s\S]*?active: trace\.active && !trace\.motion\.enabled/,
   );
-  assert.match(
-    qml,
-    /visible: output\.exposed && output\.busyHere && frame\.motion\.enabled/,
-  );
-  assert.match(qml, /OutlinePulse\s*\{/);
+  assert.doesNotMatch(frame, /stationaryPath|Canvas\s*\{/);
+  assert.doesNotMatch(local, /Canvas\s*\{/);
 });
 
 test("the hub's content reveal follows its surface without leaving visible clipped fragments", () => {
@@ -988,15 +973,15 @@ test("moving full-screen loading trace uses a bounded Canvas texture", () => {
   const qml = fs.readFileSync(
     path.join(
       __dirname,
-      "../modules/desktop/hyprland/shell/qml/DesktopFrame.qml",
+      "../modules/desktop/hyprland/shell/qml/BusyContour.qml",
     ),
     "utf8",
   );
-  assert.match(qml, /OutlineTrace\.traceBounds\(output\.geometry\.points/);
+  assert.match(qml, /OutlineTrace\.traceBounds\(trace\.points/);
   assert.match(qml, /width: bounds \? bounds\.width : 1/);
   assert.match(qml, /height: bounds \? bounds\.height : 1/);
   assert.match(qml, /onBoundsChanged: requestPaint\(\)/);
-  assert.doesNotMatch(qml, /id: busyTrace\s+anchors\.fill: parent/);
+  assert.doesNotMatch(qml, /id: movingSegment\s+anchors\.fill: parent/);
 });
 
 test("reduced-motion loading softly pulses the full contour without moving geometry", () => {
@@ -1006,17 +991,19 @@ test("reduced-motion loading softly pulses the full contour without moving geome
     path.join(root, "LoadingOutline.qml"),
     "utf8",
   );
+  const busy = fs.readFileSync(path.join(root, "BusyContour.qml"), "utf8");
+  const motion = fs.readFileSync(path.join(root, "Motion.qml"), "utf8");
   const pulse = fs.readFileSync(path.join(root, "OutlinePulse.qml"), "utf8");
   assert.match(
     frame,
-    /OutlinePulse\s*\{[\s\S]*?active: output\.exposed && output\.busyHere && !frame\.motion\.enabled/,
+    /BusyContour\s*\{[\s\S]*?active: output\.exposed && output\.busyHere/,
   );
   assert.match(frame, /contourPath: output\.geometry\.inner/);
   assert.match(
-    outline,
-    /OutlinePulse\s*\{[\s\S]*?active: outline\.active && !outline\.motionEnabled/,
+    busy,
+    /OutlinePulse\s*\{[\s\S]*?active: trace\.active && !trace\.motion\.enabled/,
   );
-  assert.match(outline, /contourPath: outline\.contourPath/);
+  assert.match(outline, /BusyContour\s*\{/);
   assert.match(pulse, /property real intensity: 0\.22/);
   assert.match(pulse, /SequentialAnimation on intensity/);
   assert.match(pulse, /running: pulse\.active/);
@@ -1024,14 +1011,14 @@ test("reduced-motion loading softly pulses the full contour without moving geome
   assert.match(pulse, /from: 0\.22[\s\S]*?to: 1[\s\S]*?duration: 1800/);
   assert.match(pulse, /from: 1[\s\S]*?to: 0\.22[\s\S]*?duration: 1800/);
   assert.match(pulse, /easing\.type: Easing\.InOutSine/);
-  assert.match(frame, /duration: frame\.motion\.contourLap/);
+  assert.match(motion, /duration: root\.contourLap/);
   assert.match(pulse, /opacity: pulse\.intensity/);
   assert.match(pulse, /strokeWidth: pulse\.lineWidth \* 4/);
   assert.match(pulse, /strokeWidth: pulse\.lineWidth\s*\n/);
   assert.match(pulse, /path: pulse\.contourPath/);
   assert.doesNotMatch(pulse, /Canvas|requestPaint/);
-  assert.match(outline, /visible: outline\.active && outline\.motionEnabled/);
-  assert.match(outline, /running: outline\.active && outline\.motionEnabled/);
+  assert.match(busy, /visible: trace\.active && trace\.motion\.enabled/);
+  assert.match(motion, /running: root\.enabled && root\.contourRunning/);
 });
 
 test("expanded gallery preserves the shallow media island before their joined contour", () => {
@@ -1406,14 +1393,19 @@ test("local and connected loading outlines use the same eased lap", () => {
     /readonly property int contourEasing: Easing\.InOutSine/,
   );
   assert.match(
-    read("DesktopFrame"),
-    /duration: frame\.motion\.contourLap[\s\S]*?easing\.type: frame\.motion\.contourEasing/,
+    read("Motion"),
+    /duration: root\.contourLap[\s\S]*?easing\.type: root\.contourEasing/,
   );
   assert.match(
-    read("LoadingOutline"),
-    /duration: outline\.motion\.contourLap[\s\S]*?easing\.type: outline\.motion\.contourEasing/,
+    read("BusyContour"),
+    /OutlineTrace\.paint\([\s\S]*?trace\.motion\.contourProgress, 0\.10/,
   );
-  assert.doesNotMatch(read("LoadingOutline"), /Easing\.Linear|lapDuration:/);
+  assert.match(read("DesktopFrame"), /BusyContour \{/);
+  assert.match(read("LoadingOutline"), /BusyContour \{/);
+  assert.doesNotMatch(
+    read("LoadingOutline"),
+    /Easing\.Linear|lapDuration:|NumberAnimation|Canvas/,
+  );
   for (const [name, owner] of [
     ["ShellSurface", "root"],
     ["ShellExpansionHost", "host"],

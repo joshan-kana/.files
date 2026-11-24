@@ -70,10 +70,7 @@ test("frame and floating hub share one busy-state source and semantic colour", (
   assert.match(shell, /busyColor: expansionHost\.loadingOperationColor/);
   assert.match(shell, /busyScreen: qmlExpansionState\.screen/);
   assert.match(frame, /highlightColor: frame\.busyColor/);
-  assert.match(
-    frame,
-    /active: output\.exposed && output\.busyHere && !frame\.motion\.enabled/,
-  );
+  assert.match(frame, /active: output\.exposed && output\.busyHere/);
 });
 
 test("background operations show only on their owning visible dashboard tiles", () => {
@@ -117,8 +114,8 @@ test("background operations show only on their owning visible dashboard tiles", 
     /LoadingOutline \{[\s\S]*?surface: root[\s\S]*?motion: root\.motion/,
   );
   assert.match(
-    source("LoadingOutline.qml"),
-    /active: outline.active && !outline.motionEnabled/,
+    source("BusyContour.qml"),
+    /active: trace.active && !trace.motion.enabled/,
   );
   for (const [name, owner] of [
     ["ShellAction.qml", "root"],

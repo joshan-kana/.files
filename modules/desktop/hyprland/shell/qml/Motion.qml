@@ -27,6 +27,41 @@ QtObject {
     readonly property int normal: enabled ? 160 : 0
     readonly property int contourLap: enabled ? 1900 : 0
     readonly property int contourEasing: Easing.InOutSine
+    // One eased phase for visible busy contours. Keep it alive across a
+    // navigation morph so a tile handing off to the frame does not restart.
+    property var contourOwners: []
+    property real contourProgress: 0
+    property bool contourRunning: false
+    property NumberAnimation contourAnimation: NumberAnimation {
+        target: root
+        property: "contourProgress"
+        from: 0
+        to: 1
+        duration: root.contourLap
+        loops: Animation.Infinite
+        easing.type: root.contourEasing
+        running: root.enabled && root.contourRunning
+    }
+    property Timer contourIdle: Timer {
+        interval: Math.max(1, root.morph)
+        onTriggered: {
+            if (root.contourOwners.length === 0)
+                root.contourRunning = false;
+        }
+    }
+    function setContourActive(owner: QtObject, active: bool): void {
+        const next = contourOwners.filter(item => item && item !== owner);
+        if (active)
+            next.push(owner);
+        contourOwners = next;
+        if (next.length > 0) {
+            contourIdle.stop();
+            contourRunning = true;
+        } else if (contourRunning) {
+            contourIdle.restart();
+        }
+    }
+
     readonly property int spinnerCycle: enabled ? 1100 : 0
 
     readonly property int spatialFast: enabled ? Math.round(150 * durationMultiplier) : 0
