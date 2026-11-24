@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Shared transition settings for wallpaper services and gallery operations.
 wallpaper_transition_duration=1.05
+# shellcheck disable=SC2329 # Only image entry points invoke the shared transition.
 wallpaper_transition() {
   # shellcheck disable=SC2034 # This array is consumed by wallpaper entry points.
   transition_args=(
