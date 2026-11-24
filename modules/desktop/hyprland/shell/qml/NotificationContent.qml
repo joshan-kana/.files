@@ -54,7 +54,7 @@ FocusScope {
 
     signal closeRequested
     implicitWidth: 620
-    implicitHeight: header.implicitHeight + footer.implicitHeight + theme.spacing4 + theme.spacing2 * 2 + (groups.length === 0 ? theme.fontSize(100) : Math.min(theme.fontSize(510), Math.max(theme.fontSize(80), list.contentHeight)))
+    implicitHeight: header.implicitHeight + footer.implicitHeight + theme.spacing4 + theme.spacing2 + (groups.length === 0 ? emptyState.implicitHeight : Math.min(theme.fontSize(510), Math.max(theme.fontSize(80), list.contentHeight)))
     focus: engaged
 
     function focusRequested(): void {
@@ -265,11 +265,12 @@ FocusScope {
             width: parent.width
             spacing: center.theme.spacing1
 
-            Row {
+            Flow {
                 id: titleBar
                 width: parent.width
                 spacing: center.theme.spacing3
                 Column {
+                    id: titleBlock
                     spacing: center.theme.spacing1
                     Text {
                         text: "Notifications"
@@ -286,20 +287,29 @@ FocusScope {
                     }
                 }
                 Item {
-                    width: Math.max(0, titleBar.width - titleBar.children[0].implicitWidth - actions.implicitWidth - titleBar.spacing * 2)
+                    visible: titleBar.width >= titleBlock.implicitWidth + actions.preferredWidth + titleBar.spacing * 2
+                    width: visible ? Math.max(0, titleBar.width - titleBlock.implicitWidth - actions.preferredWidth - titleBar.spacing * 2) : 0
                     height: 1
                 }
-                Row {
+                Flow {
                     id: actions
+                    readonly property real preferredWidth: {
+                        let total = 0;
+                        for (const item of children)
+                            total += item.width;
+                        return total + spacing * Math.max(0, children.length - 1);
+                    }
+                    width: Math.min(preferredWidth, titleBar.width)
                     spacing: center.theme.spacing2
                     ShellAction {
+                        id: markAllReadAction
                         runtime: center.runtime
                         theme: center.theme
                         motion: center.motion
                         compact: true
                         enabled: center.notificationState.unreadCount > 0
-                        width: center.theme.minActionTarget
-                        height: center.theme.minActionTarget
+                        width: Math.max(center.theme.minActionTarget, implicitWidth)
+                        height: Math.max(center.theme.minActionTarget, implicitHeight)
                         iconOnly: true
                         icon: "󰄭"
                         title: "Mark all read"
@@ -308,13 +318,14 @@ FocusScope {
                         onActivated: center.notificationState.markAllRead()
                     }
                     ShellAction {
+                        id: markAllUnreadAction
                         runtime: center.runtime
                         theme: center.theme
                         motion: center.motion
                         compact: true
                         enabled: center.notificationState.count > center.notificationState.unreadCount
-                        width: center.theme.minActionTarget
-                        height: center.theme.minActionTarget
+                        width: Math.max(center.theme.minActionTarget, implicitWidth)
+                        height: Math.max(center.theme.minActionTarget, implicitHeight)
                         iconOnly: true
                         icon: "󰄬"
                         title: "Mark all unread"
@@ -323,14 +334,15 @@ FocusScope {
                         onActivated: center.notificationState.markAllUnread()
                     }
                     ShellAction {
+                        id: silentAction
                         runtime: center.runtime
                         theme: center.theme
                         motion: center.motion
                         compact: true
                         active: center.notificationState.silent
                         activeColor: center.theme.warning
-                        width: center.theme.minActionTarget
-                        height: center.theme.minActionTarget
+                        width: Math.max(center.theme.minActionTarget, implicitWidth)
+                        height: Math.max(center.theme.minActionTarget, implicitHeight)
                         iconOnly: true
                         icon: center.notificationState.silent ? "󰂛" : "󰂚"
                         title: center.notificationState.silent ? "Resume alerts" : "Pause alerts"
@@ -339,14 +351,15 @@ FocusScope {
                         onActivated: center.notificationState.toggleSilent()
                     }
                     ShellAction {
+                        id: presentationAction
                         runtime: center.runtime
                         theme: center.theme
                         motion: center.motion
                         compact: true
                         active: center.notificationState.presentation
                         activeColor: center.theme.warning
-                        width: center.theme.minActionTarget
-                        height: center.theme.minActionTarget
+                        width: Math.max(center.theme.minActionTarget, implicitWidth)
+                        height: Math.max(center.theme.minActionTarget, implicitHeight)
                         iconOnly: true
                         icon: center.notificationState.presentation ? "󰍺" : "󰍹"
                         title: center.notificationState.presentation ? "Exit presentation mode" : "Presentation mode"
@@ -355,13 +368,14 @@ FocusScope {
                         onActivated: center.notificationState.togglePresentation()
                     }
                     ShellAction {
+                        id: historyAction
                         runtime: center.runtime
                         theme: center.theme
                         motion: center.motion
                         compact: true
                         active: center.notificationState.historyEnabled
-                        width: center.theme.minActionTarget
-                        height: center.theme.minActionTarget
+                        width: Math.max(center.theme.minActionTarget, implicitWidth)
+                        height: Math.max(center.theme.minActionTarget, implicitHeight)
                         iconOnly: true
                         icon: center.notificationState.historyEnabled ? "󰋚" : "󰗨"
                         title: center.notificationState.historyEnabled ? "Disable saved history" : "Enable saved history"
@@ -370,40 +384,41 @@ FocusScope {
                         onActivated: center.notificationState.toggleHistory()
                     }
                     ShellAction {
+                        id: clearAllAction
                         runtime: center.runtime
                         theme: center.theme
                         motion: center.motion
                         compact: true
                         enabled: center.notificationState.count > 0
-                        width: center.theme.minActionTarget
-                        height: center.theme.minActionTarget
+                        width: Math.max(center.theme.minActionTarget, implicitWidth)
+                        height: Math.max(center.theme.minActionTarget, implicitHeight)
                         iconOnly: true
                         icon: "󰆴"
                         title: "Clear all"
                         shortcut: center.runtime.shellHint("NotificationContent.clearAll")
                         iconHint: true
-                        onActivated: center.notificationState.clearAll()
+                        onActivated: {
+                            center.notificationState.clearAll();
+                            center.selectedIndex = 0;
+                            center.selectedMemberIndex = 0;
+                        }
                     }
                 }
             }
-        }
-
-        Text {
-            anchors {
-                top: header.bottom
-                horizontalCenter: parent.horizontalCenter
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: "Couldn't save notification history"
+                color: center.theme.readableRoleColor("critical")
+                visible: center.notificationState.persistenceError.length > 0
+                Accessible.role: Accessible.AlertMessage
+                Accessible.name: text
             }
-            text: "Couldn't save notification history"
-            color: center.theme.readableRoleColor("critical")
-            visible: center.notificationState.persistenceError.length > 0
-            Accessible.role: Accessible.AlertMessage
-            Accessible.name: text
         }
 
         ShellSurface {
-            anchors.centerIn: list
-            width: list.width
-            height: 148
+            id: emptyState
+            anchors.fill: list
+            implicitHeight: Math.max(center.theme.fontSize(148), emptyContents.implicitHeight + center.theme.spacing4 * 2)
             visible: center.groups.length === 0
             theme: center.theme
             motion: center.motion
@@ -411,6 +426,7 @@ FocusScope {
             cornerRadius: center.theme.radiusLarge
 
             Column {
+                id: emptyContents
                 anchors.centerIn: parent
                 spacing: center.theme.spacing3
                 Text {
@@ -695,19 +711,23 @@ FocusScope {
                     center.navigate(1);
                     event.accepted = true;
                 } else if (event.key === center.runtime.shellKeyCode("activity", "H") && (center.runtime.shellModifier("activity", "Shift", event.modifiers))) {
-                    center.notificationState.toggleHistory();
+                    if (!event.isAutoRepeat)
+                        historyAction.trigger();
                     event.accepted = true;
                 } else if (center.runtime.shellNavigates("activity", "left", event.key) || center.runtime.shellNavigates("activity", "right", event.key)) {
                     center.selectGroup((center.runtime.shellNavigates("activity", "left", event.key)) ? -1 : 1);
                     event.accepted = true;
                 } else if (event.key === center.runtime.shellKeyCode("activity", "P")) {
-                    center.notificationState.togglePresentation();
+                    if (!event.isAutoRepeat)
+                        presentationAction.trigger();
                     event.accepted = true;
                 } else if (event.key === center.runtime.shellKeyCode("activity", "M") && (center.runtime.shellModifier("activity", "Shift", event.modifiers))) {
-                    center.notificationState.markAllRead();
+                    if (!event.isAutoRepeat)
+                        markAllReadAction.trigger();
                     event.accepted = true;
                 } else if (event.key === center.runtime.shellKeyCode("activity", "N") && (center.runtime.shellModifier("activity", "Shift", event.modifiers))) {
-                    center.notificationState.markAllUnread();
+                    if (!event.isAutoRepeat)
+                        markAllUnreadAction.trigger();
                     event.accepted = true;
                 } else if (event.key === center.runtime.shellKeyCode("activity", "M")) {
                     center.notificationState.toggleRead(center.selectedNotification());
@@ -731,12 +751,12 @@ FocusScope {
                     center.dismissSelected();
                     event.accepted = true;
                 } else if (event.key === center.runtime.shellKeyCode("activity", "S")) {
-                    center.notificationState.toggleSilent();
+                    if (!event.isAutoRepeat)
+                        silentAction.trigger();
                     event.accepted = true;
                 } else if (event.key === center.runtime.shellKeyCode("activity", "C")) {
-                    center.notificationState.clearAll();
-                    center.selectedIndex = 0;
-                    center.selectedMemberIndex = 0;
+                    if (!event.isAutoRepeat)
+                        clearAllAction.trigger();
                     event.accepted = true;
                 }
             }

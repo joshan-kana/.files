@@ -246,3 +246,35 @@ test("expanded history keeps app policy in a separate keyboard-accessible disclo
   );
   assert.match(center, /onSelectedMemberIndexChanged: \{\s*policyOpen = false/);
 });
+
+test("Activity reserves the measured empty state and toolbar size", () => {
+  const content = qml("NotificationContent.qml");
+  assert.match(content, /groups.length === 0 \? emptyState.implicitHeight/);
+  assert.match(
+    content,
+    /id: emptyState\s+anchors.fill: list\s+implicitHeight: Math.max/,
+  );
+  assert.match(
+    content,
+    /height: Math.max\(center.theme.minActionTarget, implicitHeight\)/,
+  );
+  assert.match(content, /Flow \{\s+id: actions/);
+});
+
+test("Activity toolbar shortcuts activate their owning buttons only once per key press", () => {
+  const content = qml("NotificationContent.qml");
+  for (const action of [
+    "history",
+    "presentation",
+    "markAllRead",
+    "markAllUnread",
+    "silent",
+    "clearAll",
+  ])
+    assert.match(
+      content,
+      new RegExp(
+        "if \\(!event.isAutoRepeat\\)\\s+" + action + "Action.trigger\\(\\)",
+      ),
+    );
+});
