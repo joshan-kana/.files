@@ -6,12 +6,12 @@ import fcntl
 import hashlib
 import json
 import os
-from pathlib import Path
 import re
 import subprocess
 import sys
 import tempfile
 import time
+from pathlib import Path
 
 CONFIG = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))) / "hypr/monitors.lua"
 RUNTIME = Path(os.environ["XDG_RUNTIME_DIR"])
@@ -89,8 +89,7 @@ def same_mode(left, right):
 
 def build_rule(rule, mode, scale, transform, x, y):
     """Edit only the mode, scale, orientation and position fields."""
-    for key, value in (("mode", mode.removesuffix("Hz")), ("scale", scale),
-                       ("transform", transform), ("position", f"{x}x{y}")):
+    for key, value in (("mode", mode.removesuffix("Hz")), ("scale", scale), ("transform", transform), ("position", f"{x}x{y}")):
         rule = rule_field(rule, key, value)
     return rule
 
@@ -102,7 +101,8 @@ def matches(monitor, target):
         and same_mode(mode_value(monitor), target["mode"])
         and abs(monitor["scale"] - target["scale"]) < 0.01
         and monitor["transform"] == target["transform"]
-        and monitor["x"] == target["x"] and monitor["y"] == target["y"]
+        and monitor["x"] == target["x"]
+        and monitor["y"] == target["y"]
     )
 
 
@@ -169,8 +169,10 @@ def status():
     monitors = read_monitors()
     for monitor in monitors:
         monitor["editable"] = (
-            monitor["name"] in rules and not monitor.get("disabled", False)
-            and monitor.get("mirrorOf", "none") == "none" and monitor.get("transform", 0) <= 3
+            monitor["name"] in rules
+            and not monitor.get("disabled", False)
+            and monitor.get("mirrorOf", "none") == "none"
+            and monitor.get("transform", 0) <= 3
         )
         if monitor["editable"]:
             monitor["currentMode"] = mode_value(monitor)
@@ -203,13 +205,21 @@ def preview(args):
     scale, transform, x, y = float(raw_scale), int(raw_transform), int(raw_x), int(raw_y)
     if not 0.75 <= scale <= 3 or not 0 <= transform <= 3 or abs(x) > 32768 or abs(y) > 32768:
         raise ValueError("Invalid display geometry")
-    if not any(same_mode(mode, candidate) for candidate in [mode_value(current), *current.get("availableModes", [])] if MODE.fullmatch(candidate)):
+    if not any(
+        same_mode(mode, candidate) for candidate in [mode_value(current), *current.get("availableModes", [])] if MODE.fullmatch(candidate)
+    ):
         raise ValueError("Mode is not advertised by this output")
     original = build_rule(rule, mode_value(current), current["scale"], current["transform"], current["x"], current["y"])
     replacement = build_rule(rule, mode, scale, transform, x, y)
     target = {"mode": mode, "scale": scale, "transform": transform, "x": x, "y": y}
-    transaction = {"name": name, "digest": digest(text), "original": original,
-                   "replacement": replacement, "target": target, "deadline": time.time() + 20}
+    transaction = {
+        "name": name,
+        "digest": digest(text),
+        "original": original,
+        "replacement": replacement,
+        "target": target,
+        "deadline": time.time() + 20,
+    }
     atomic_write(PENDING, json.dumps(transaction))
     try:
         command("systemctl", "--user", "restart", TIMER)

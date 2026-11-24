@@ -48,8 +48,12 @@ Column {
     }
     Process {
         id: worker
-        stdout: StdioCollector { id: response }
-        stderr: StdioCollector { id: errors }
+        stdout: StdioCollector {
+            id: response
+        }
+        stderr: StdioCollector {
+            id: errors
+        }
         onExited: (code, status) => {
             if (code === 0) {
                 try {
@@ -238,9 +242,27 @@ Column {
         columnSpacing: panel.theme.spacing2
         Repeater {
             model: [
-                {title: panel.mode || "Mode unavailable", key: "mode", action: "DisplaySettings.mode", alternate: "DisplaySettings.previousMode", description: "Resolution / refresh"},
-                {title: panel.scaleValue.toFixed(2) + "×", key: "scale", action: "DisplaySettings.scale", alternate: "DisplaySettings.previousScale", description: "Scale"},
-                {title: ["Normal", "90°", "180°", "270°"][panel.orientation] || "Other", key: "orientation", action: "DisplaySettings.orientation", alternate: "", description: "Orientation"}
+                {
+                    title: panel.mode || "Mode unavailable",
+                    key: "mode",
+                    action: "DisplaySettings.mode",
+                    alternate: "DisplaySettings.previousMode",
+                    description: "Resolution / refresh"
+                },
+                {
+                    title: panel.scaleValue.toFixed(2) + "×",
+                    key: "scale",
+                    action: "DisplaySettings.scale",
+                    alternate: "DisplaySettings.previousScale",
+                    description: "Scale"
+                },
+                {
+                    title: ["Normal", "90°", "180°", "270°"][panel.orientation] || "Other",
+                    key: "orientation",
+                    action: "DisplaySettings.orientation",
+                    alternate: "",
+                    description: "Orientation"
+                }
             ]
             delegate: Column {
                 id: field
@@ -303,7 +325,28 @@ Column {
         height: 40
         spacing: panel.theme.spacing2
         Repeater {
-            model: [{key: "moveLeft", action: "DisplaySettings.moveLeft", title: "← 100"}, {key: "moveDown", action: "DisplaySettings.moveDown", title: "↓ 100"}, {key: "moveUp", action: "DisplaySettings.moveUp", title: "↑ 100"}, {key: "moveRight", action: "DisplaySettings.moveRight", title: "→ 100"}]
+            model: [
+                {
+                    key: "moveLeft",
+                    action: "DisplaySettings.moveLeft",
+                    title: "← 100"
+                },
+                {
+                    key: "moveDown",
+                    action: "DisplaySettings.moveDown",
+                    title: "↓ 100"
+                },
+                {
+                    key: "moveUp",
+                    action: "DisplaySettings.moveUp",
+                    title: "↑ 100"
+                },
+                {
+                    key: "moveRight",
+                    action: "DisplaySettings.moveRight",
+                    title: "→ 100"
+                }
+            ]
             delegate: ShellAction {
                 id: moveAction
                 required property var modelData
@@ -318,10 +361,14 @@ Column {
                 shortcut: panel.runtime.shellHint(moveAction.modelData.action)
                 enabled: panel.editable && panel.monitors.length > 1
                 onActivated: {
-                    if (moveAction.modelData.key === "moveLeft") panel.positionX = Math.max(-32768, panel.positionX - 100);
-                    else if (moveAction.modelData.key === "moveRight") panel.positionX = Math.min(32768, panel.positionX + 100);
-                    else if (moveAction.modelData.key === "moveUp") panel.positionY = Math.max(-32768, panel.positionY - 100);
-                    else panel.positionY = Math.min(32768, panel.positionY + 100);
+                    if (moveAction.modelData.key === "moveLeft")
+                        panel.positionX = Math.max(-32768, panel.positionX - 100);
+                    else if (moveAction.modelData.key === "moveRight")
+                        panel.positionX = Math.min(32768, panel.positionX + 100);
+                    else if (moveAction.modelData.key === "moveUp")
+                        panel.positionY = Math.max(-32768, panel.positionY - 100);
+                    else
+                        panel.positionY = Math.min(32768, panel.positionY + 100);
                 }
             }
         }

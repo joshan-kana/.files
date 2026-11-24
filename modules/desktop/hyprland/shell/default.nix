@@ -1148,7 +1148,11 @@ in
 
       displayControl = pkgs.writeShellApplication {
         name = "desktop-shell-display-control";
-        runtimeInputs = [ pkgs.python3 pkgs.systemd osConfig.programs.hyprland.package ];
+        runtimeInputs = [
+          pkgs.python3
+          pkgs.systemd
+          osConfig.programs.hyprland.package
+        ];
         text = ''
           exec python3 ${../../../../scripts/desktop-shell/display-settings.py} "$@"
         '';
