@@ -56,6 +56,10 @@ in
     home.sessionVariables = sessionVariables;
   };
 
+  terminfo = _: {
+    environment.enableAllTerminfo = true;
+  };
+
   systemCommands =
     _:
     let
