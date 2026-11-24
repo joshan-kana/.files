@@ -10,10 +10,13 @@ Item {
     required property Motion motion
     property string title: ""
     property string icon: ""
-    property string shortcut: ""
-    property string detailShortcut: ""
+    property string actionId: ""
+    property string shortcut: actionId.length > 0 ? runtime.shellHint(actionId) : ""
+    property string detailActionId: ""
+    property string detailShortcut: detailActionId.length > 0 ? runtime.shellHint(detailActionId) : ""
     property string detailName: "Open details"
     signal detailsRequested
+    property bool primaryAvailable: true
     property bool active: false
     property color activeColor: theme.accent
 
@@ -21,6 +24,24 @@ Item {
     property color foregroundColor: theme.accent
 
     signal activated
+
+    function trigger(): void {
+        if (!enabled || !primaryAvailable)
+            return;
+        if (detailShortcut.length > 0)
+            quickAction.trigger();
+        else {
+            press.playPressFeedback(width / 2, height / 2);
+            activated();
+        }
+    }
+
+    function triggerDetails(): void {
+        if (!enabled)
+            return;
+        press.playPressFeedback(width / 2, height / 2);
+        detailsRequested();
+    }
 
     implicitWidth: Math.max(140 * theme.textScale, labelMetrics.advanceWidth + theme.spacing2 * 2, primaryHint.implicitWidth + detailHint.implicitWidth + theme.spacing4 * 2 + theme.iconLarge)
     implicitHeight: Math.max(72, tileContent.implicitHeight + theme.spacing3 + 3 + theme.spacing2)
@@ -107,6 +128,7 @@ Item {
             runtime: chip.runtime
             motion: chip.motion
             theme: chip.theme
+            available: chip.primaryAvailable
             emphasized: chip.active
             emphasisColor: chip.activeColor
         }
@@ -151,6 +173,7 @@ Item {
         shortcut: chip.detailShortcut.length > 0 ? chip.shortcut : ""
         actionName: "Activate " + chip.title
         selected: chip.active
+        available: chip.primaryAvailable
         emphasisColor: chip.activeColor
         onActivated: chip.activated()
     }

@@ -14,8 +14,10 @@ Item {
     property string detail: ""
     property string status: ""
     property string glyph: ""
-    property string shortcut: ""
-    property string detailShortcut: ""
+    property string actionId: ""
+    property string shortcut: actionId.length > 0 ? runtime.shellHint(actionId) : ""
+    property string detailActionId: ""
+    property string detailShortcut: detailActionId.length > 0 ? runtime.shellHint(detailActionId) : ""
     signal detailsRequested
     property bool connected: false
     property bool pending: false
@@ -32,6 +34,24 @@ Item {
     property color foregroundColor: theme.accent
 
     signal activated
+
+    function trigger(): void {
+        if (!enabled || !primaryAvailable || pending)
+            return;
+        if (detailShortcut.length > 0)
+            quickAction.trigger();
+        else {
+            interaction.playPressFeedback(width / 2, height / 2);
+            activated();
+        }
+    }
+
+    function triggerDetails(): void {
+        if (!enabled)
+            return;
+        interaction.playPressFeedback(width / 2, height / 2);
+        detailsRequested();
+    }
 
     implicitHeight: 92
     Accessible.role: Accessible.Grouping

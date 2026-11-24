@@ -289,13 +289,43 @@ test("semantic action bindings change their handler and hint without changing a 
     path.join(qmlDir, "SystemContent.qml"),
     "utf8",
   );
-  for (const action of Object.keys(actionAssignments))
-    assert.ok(
-      controls.includes(
-        `shellMatchesHint("${action}", event.key, event.modifiers)`,
-      ),
-      action,
-    );
+  const body = controls
+    .split("function findDashboardAction(key: int, modifiers: int): var {")[1]
+    .split("\n    }")[0];
+  const sections = Object.fromEntries(
+    ["controlsHeading", "connectionTiles", "actionTiles", "visualTiles"].map(
+      (name) => [name, { children: [] }],
+    ),
+  );
+  for (const match of controls.matchAll(
+    /(?:detailActionId|actionId): "([^"]+)"/g,
+  )) {
+    assert.ok(hints[match[1]] || actionAssignments[match[1]], match[1]);
+  }
+  const frame = {
+    actionId: "SystemContent.frame",
+    detailActionId: "SystemContent.frameDetails",
+  };
+  sections.visualTiles.children.push(frame);
+  const lookup = new Function(
+    "key",
+    "modifiers",
+    "runtime",
+    ...Object.keys(sections),
+    body,
+  );
+  const runtime = {
+    shellMatchesHint: (action, key, modifiers) =>
+      f.matchesHint(custom, action, key, modifiers, Qt),
+  };
+  assert.equal(
+    lookup(90, Qt.AltModifier, runtime, ...Object.values(sections)).item,
+    frame,
+  );
+  assert.equal(
+    lookup(90, Qt.ShiftModifier, runtime, ...Object.values(sections)),
+    null,
+  );
 });
 
 test("power, notifications and preset choices use positional shifted letters", () => {

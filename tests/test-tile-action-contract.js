@@ -91,28 +91,11 @@ test("primary and detail keyboard actions dispatch directly without prior select
     "SystemContent.bluetoothDetails",
   ];
   for (const action of actions)
-    assert.ok(
-      controls.includes(
-        'shellMatchesHint("' + action + '", event.key, event.modifiers)',
-      ),
-      action,
-    );
-  assert.match(
-    controls,
-    /shortcut: root\.runtime\.shellHint\("SystemContent\.vhsToggle"\)/,
-  );
-  assert.match(
-    controls,
-    /detailShortcut: root\.runtime\.shellHint\("SystemContent\.vhsTune"\)/,
-  );
-  assert.match(
-    controls,
-    /detailShortcut: root\.runtime\.shellHint\("SystemContent\.networkDetails"\)/,
-  );
-  assert.match(
-    controls,
-    /detailShortcut: root\.runtime\.shellHint\("SystemContent\.bluetoothDetails"\)/,
-  );
+    assert.ok(controls.includes('"' + action + '"'), action);
+  assert.match(controls, /actionId: "SystemContent\.vhsToggle"/);
+  assert.match(controls, /detailActionId: "SystemContent\.vhsTune"/);
+  assert.match(controls, /detailActionId: "SystemContent\.networkDetails"/);
+  assert.match(controls, /detailActionId: "SystemContent\.bluetoothDetails"/);
   for (const [action, key] of [
     ["vhsToggle", "SHIFT+Z"],
     ["vhsTune", "SHIFT+P"],
@@ -197,20 +180,13 @@ test("dashboard destination-only tiles advertise a right-corner detail action wi
       entry.includes(`"SystemContent.${name}"`),
     );
     assert.ok(tile, name);
-    assert.ok(
-      tile.includes(
-        `detailShortcut: root.runtime.shellHint("SystemContent.${name}")`,
-      ),
-    );
-    assert.doesNotMatch(tile, /\bshortcut:|onActivated:/);
+    assert.ok(tile.includes(`detailActionId: "SystemContent.${name}"`));
+    assert.doesNotMatch(tile, /\bactionId:|onActivated:/);
     assert.match(tile, /onDetailsRequested: root\.open/);
   }
   const reset = tiles.find((entry) => entry.includes('"SystemContent.reset"'));
-  assert.match(
-    reset,
-    /shortcut: root.runtime.shellHint\("SystemContent.reset"\)/,
-  );
-  assert.doesNotMatch(reset, /detailShortcut:/);
+  assert.match(reset, /actionId: "SystemContent.reset"/);
+  assert.doesNotMatch(reset, /detailActionId:/);
   const chip = qml("QuickSettingChip");
   assert.match(
     chip,

@@ -95,7 +95,7 @@ test("split tile hit targets keep quick and detail actions independently keyboar
   ]) {
     assert.match(
       controls,
-      new RegExp('shellMatchesHint\\("SystemContent\\.' + key),
+      new RegExp('detailActionId: "SystemContent\\.' + key),
     );
   }
 });
@@ -163,7 +163,7 @@ test("System Status consumes its refresh shortcut before Controls actions", () =
   const controls = qml("SystemContent.qml");
   const input = controls.slice(controls.indexOf("id: keyboardFocus"));
   const localStatus = input.indexOf("if (root.statusOpen)");
-  const resourcesAction = input.lastIndexOf("root.openResources()");
+  const resourcesAction = input.indexOf("root.findDashboardAction(");
   const statusKeys = input.slice(
     localStatus,
     input.indexOf("if (root.mixerOpen)", localStatus),

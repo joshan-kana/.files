@@ -148,14 +148,8 @@ test("Night Light keeps instant toggling in its compact tile and parameter editi
     controls,
     /title: root\.nightLight\.supported \? "Night " \+ root\.nightLight\.temperature/,
   );
-  assert.match(
-    controls,
-    /shortcut: root\.runtime\.shellHint\("SystemContent\.nightLight"\)/,
-  );
-  assert.match(
-    controls,
-    /detailShortcut: root\.runtime\.shellHint\("SystemContent\.nightLightDetails"\)/,
-  );
+  assert.match(controls, /actionId: "SystemContent\.nightLight"/);
+  assert.match(controls, /detailActionId: "SystemContent\.nightLightDetails"/);
   assert.match(
     controls,
     /onDetailsRequested: root\.openSetting\("nightLight"\)/,
@@ -446,20 +440,17 @@ test("Dashboard controls retain direct keys and no additional focus navigation m
   const controls = read("SystemContent.qml");
   assert.match(
     controls,
-    /shortcut: root\.runtime\.shellHint\("SystemContent.themes"\)[\s\S]*?onActivated: root.openTheme\(\)/,
+    /actionId: "SystemContent.themes"[\s\S]*?onActivated: root.openTheme\(\)/,
   );
   assert.match(
     controls,
-    /shortcut: root\.runtime\.shellHint\("SystemContent.session"\)\s+onActivated: root.openSession\(\)/,
+    /actionId: "SystemContent.session"\s+onActivated: root.openSession\(\)/,
   );
   assert.match(
     controls,
-    /root\.runtime\.shellMatchesHint\("SystemContent\.themes", event\.key, event\.modifiers\)\)\s*\{\s*root.openTheme\(\)/,
+    /root.findDashboardAction\(event.key, event.modifiers\)/,
   );
-  assert.match(
-    controls,
-    /root\.runtime\.shellMatchesHint\("SystemContent\.session", event\.key, event\.modifiers\)\)\s*\{\s*root.openSession\(\)/,
-  );
+  assert.match(controls, /dashboardAction.item.trigger\(\)/);
   assert.doesNotMatch(controls, /toggleControlsLayout|moveFocusGroup|Shift\+I/);
   assert.match(controls, /audioDeck.deviceChooserOpen/);
 });
@@ -694,7 +685,7 @@ test("Compact Audio and Media backgrounds open full views while child actions re
   assert.doesNotMatch(media, /id: fullPlayer|title: "Now Playing"/);
   assert.match(
     controls,
-    /shellMatchesHint\("AudioMixerContent\.open", event\.key, event\.modifiers\)\)\s*\{\s*root\.openMixer\(\)/,
+    /shellMatchesHint\("AudioMixerContent\.open", event\.key, event\.modifiers\)\)\s*\{\s*if \(!event\.isAutoRepeat\)\s*root\.openMixer\(\)/,
   );
   assert.doesNotMatch(
     controls.slice(
@@ -754,7 +745,7 @@ test("Quick Actions retain handlers and keep Restore Defaults last", () => {
   }
   assert.match(
     actions,
-    /onActivated: root.resetConfirmPending = !root.resetConfirmPending/,
+    /onActivated: \{\s*root.resetConfirmPending = true;\s*root.resetStatus = ""/,
   );
   assert.match(actions, /onDetailsRequested: root.openResources\(\)/);
   assert.match(actions, /onDetailsRequested: root.openRecordings\(\)/);

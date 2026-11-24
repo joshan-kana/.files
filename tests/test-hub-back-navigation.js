@@ -186,7 +186,7 @@ test("one-shot detail actions execute on initial key-down without auto-repeat", 
   assert.match(system, /Keys\.onPressed: event => \{/);
   assert.match(
     system,
-    /if \(event\.isAutoRepeat\) \{[\s\S]*?"SystemContent\.nightLightDetails"/,
+    /if \(dashboardAction && event\.isAutoRepeat\) \{\s*event.accepted = true;\s*return;/,
   );
   assert.match(
     system,

@@ -72,6 +72,24 @@ FocusScope {
         }
     }
 
+    function findDashboardAction(key: int, modifiers: int): var {
+        for (const section of [controlsHeading, connectionTiles, actionTiles, visualTiles]) {
+            for (const item of section.children) {
+                if (item.actionId && runtime.shellMatchesHint(item.actionId, key, modifiers))
+                    return {
+                        item: item,
+                        detail: false
+                    };
+                if (item.detailActionId && runtime.shellMatchesHint(item.detailActionId, key, modifiers))
+                    return {
+                        item: item,
+                        detail: true
+                    };
+            }
+        }
+        return null;
+    }
+
     function startDefaultReset(): void {
         if (!resetConfirmPending || resetRunning)
             return;
@@ -943,7 +961,7 @@ FocusScope {
                     icon: DesktopIcons.glyphFor("theme")
                     iconColor: root.theme.roleColor("display")
                     title: "Themes"
-                    shortcut: root.runtime.shellHint("SystemContent.themes")
+                    actionId: "SystemContent.themes"
                     foregroundBusy: root.dashboardExposed && themePanel.foregroundBusy
                     foregroundColor: root.theme.roleColor("display")
                     onActivated: root.openTheme()
@@ -962,7 +980,7 @@ FocusScope {
                     icon: DesktopIcons.glyphFor("wallpaper")
                     iconColor: root.theme.roleColor("wallpaper")
                     title: "Wallpaper"
-                    shortcut: root.runtime.shellHint("SystemContent.wallpaper")
+                    actionId: "SystemContent.wallpaper"
                     foregroundBusy: root.dashboardExposed && wallpaperPanel.foregroundBusy
                     foregroundColor: root.theme.roleColor("wallpaper")
                     onActivated: root.openWallpaper()
@@ -981,7 +999,7 @@ FocusScope {
                     icon: DesktopIcons.glyphFor("session")
                     iconColor: root.theme.roleColor("resources")
                     title: "Session"
-                    shortcut: root.runtime.shellHint("SystemContent.session")
+                    actionId: "SystemContent.session"
                     onActivated: root.openSession()
                 }
             }
@@ -1083,10 +1101,10 @@ FocusScope {
                                 wifiConnected: root.system.wifiConnected,
                                 networkConnected: root.system.networkConnected
                             })
-                            shortcut: root.runtime.shellHint("SystemContent.network")
+                            actionId: "SystemContent.network"
                             foregroundBusy: root.dashboardExposed && networkPanel.foregroundBusy
                             foregroundColor: root.theme.roleColor("connectivity")
-                            detailShortcut: root.runtime.shellHint("SystemContent.networkDetails")
+                            detailActionId: "SystemContent.networkDetails"
                             connected: root.system.networkConnected
                             primaryAvailable: root.system.wifiAvailable
                             pending: networkPanel.open && (networkPanel.profileActionRunning || networkPanel.pendingNetwork !== null)
@@ -1111,10 +1129,10 @@ FocusScope {
                             glyph: DesktopIcons.capabilityGlyph("bluetooth", {
                                 active: root.system.bluetoothEnabled
                             })
-                            shortcut: root.runtime.shellHint("SystemContent.bluetooth")
+                            actionId: "SystemContent.bluetooth"
                             foregroundBusy: root.dashboardExposed && bluetoothPanel.foregroundBusy
                             foregroundColor: root.theme.roleColor("connectivity")
-                            detailShortcut: root.runtime.shellHint("SystemContent.bluetoothDetails")
+                            detailActionId: "SystemContent.bluetoothDetails"
                             connected: root.system.bluetoothEnabled
                             scanning: root.system.bluetoothDiscovering
                             pending: root.system.bluetoothDevices.some(device => device && device.pairing)
@@ -1160,8 +1178,8 @@ FocusScope {
                                 active: !root.notificationState.silent
                             })
                             title: root.notificationState.silent ? "Silent" : "Alerts"
-                            shortcut: root.runtime.shellHint("SystemContent.alerts")
-                            detailShortcut: root.runtime.shellHint("SystemContent.alertsDetails")
+                            actionId: "SystemContent.alerts"
+                            detailActionId: "SystemContent.alertsDetails"
                             onDetailsRequested: root.openSetting("alerts")
                             active: root.notificationState.silent
                             activeColor: root.notificationState.silent ? root.theme.roleColor("warning") : root.theme.roleColor("attention")
@@ -1178,8 +1196,8 @@ FocusScope {
                                 active: root.system.idleInhibited
                             })
                             title: root.system.idleInhibited ? "Stay awake" : "Idle allowed"
-                            shortcut: root.runtime.shellHint("SystemContent.stayAwake")
-                            detailShortcut: root.runtime.shellHint("SystemContent.stayDetails")
+                            actionId: "SystemContent.stayAwake"
+                            detailActionId: "SystemContent.stayDetails"
                             onDetailsRequested: root.openSetting("stay")
                             active: root.system.idleInhibited
                             activeColor: root.theme.roleColor("warmth")
@@ -1197,8 +1215,9 @@ FocusScope {
                                 batteryLevelIcon: root.system.batteryLevelIcon
                             })
                             title: (root.powerProfile.available ? root.powerProfile.label(root.powerProfile.current) : "Power") + (root.system.batteryAvailable ? " " + root.system.batteryPercent + "%" : "")
-                            shortcut: root.runtime.shellHint("SystemContent.powerProfile")
-                            detailShortcut: root.runtime.shellHint("SystemContent.powerDetails")
+                            actionId: "SystemContent.powerProfile"
+                            primaryAvailable: root.powerProfile.available
+                            detailActionId: "SystemContent.powerDetails"
                             onDetailsRequested: root.openSetting("power")
                             active: root.powerProfile.current === "power-saver"
                             activeColor: root.theme.powerProfileColor(root.powerProfile.current)
@@ -1213,7 +1232,7 @@ FocusScope {
                             motion: root.motion
                             icon: DesktopIcons.glyphFor("resources")
                             title: "Resources"
-                            detailShortcut: root.runtime.shellHint("SystemContent.resources")
+                            detailActionId: "SystemContent.resources"
                             activeColor: root.theme.roleColor("resources")
                             onDetailsRequested: root.openResources()
                         }
@@ -1226,7 +1245,7 @@ FocusScope {
                             motion: root.motion
                             icon: DesktopIcons.glyphFor("captures")
                             title: "Captures"
-                            detailShortcut: root.runtime.shellHint("SystemContent.captures")
+                            detailActionId: "SystemContent.captures"
                             foregroundBusy: root.dashboardExposed && recordingsPanel.foregroundBusy
                             foregroundColor: root.theme.roleColor("capture")
                             activeColor: root.theme.roleColor("capture")
@@ -1241,7 +1260,7 @@ FocusScope {
                             motion: root.motion
                             icon: DesktopIcons.glyphFor("displays")
                             title: "Displays"
-                            detailShortcut: root.runtime.shellHint("SystemContent.displays")
+                            detailActionId: "SystemContent.displays"
                             foregroundBusy: root.dashboardExposed && root.displayBusy
                             foregroundColor: root.theme.roleColor("display")
                             activeColor: root.theme.roleColor("display")
@@ -1257,7 +1276,7 @@ FocusScope {
                             motion: root.motion
                             icon: DesktopIcons.glyphFor("status")
                             title: "Status"
-                            detailShortcut: root.runtime.shellHint("SystemContent.statusInspection")
+                            detailActionId: "SystemContent.statusInspection"
                             activeColor: root.theme.roleColor("resources")
                             onDetailsRequested: root.openStatus()
                         }
@@ -1270,13 +1289,16 @@ FocusScope {
                             motion: root.motion
                             icon: DesktopIcons.actionGlyph("reset")
                             title: root.resetRunning ? "Restoring…" : "Restore defaults"
-                            shortcut: root.runtime.shellHint("SystemContent.reset")
+                            actionId: "SystemContent.reset"
                             foregroundBusy: root.dashboardExposed && root.resetRunning
                             foregroundColor: root.theme.roleColor("warning")
                             active: root.resetConfirmPending
                             enabled: !root.resetRunning
                             activeColor: root.theme.roleColor("warning")
-                            onActivated: root.resetConfirmPending = !root.resetConfirmPending
+                            onActivated: {
+                                root.resetConfirmPending = true;
+                                root.resetStatus = "";
+                            }
                         }
                     }
 
@@ -1357,8 +1379,8 @@ FocusScope {
                             motion: root.motion
                             icon: DesktopIcons.glyphFor("spectrum")
                             title: root.wallpaperSpectrumEnabled ? "Wallpaper spectrum" : "Spectrum off"
-                            shortcut: root.runtime.shellHint("SystemContent.wallpaperSpectrum")
-                            detailShortcut: root.runtime.shellHint("SystemContent.wallpaperSpectrumDetails")
+                            actionId: "SystemContent.wallpaperSpectrum"
+                            detailActionId: "SystemContent.wallpaperSpectrumDetails"
                             detailName: "Wallpaper spectrum tuning"
                             onDetailsRequested: root.openSetting("spectrum")
                             active: root.wallpaperSpectrumEnabled
@@ -1374,8 +1396,8 @@ FocusScope {
                             motion: root.motion
                             icon: DesktopIcons.glyphFor("audioMixer")
                             title: root.musicReactiveEnabled ? "Audio reactive" : "Reactive off"
-                            shortcut: root.runtime.shellHint("SystemContent.musicReactive")
-                            detailShortcut: root.runtime.shellHint("SystemContent.musicReactiveDetails")
+                            actionId: "SystemContent.musicReactive"
+                            detailActionId: "SystemContent.musicReactiveDetails"
                             detailName: "Reactive audio tuning"
                             onDetailsRequested: root.openSetting("reactive")
                             active: root.musicReactiveEnabled
@@ -1391,8 +1413,8 @@ FocusScope {
                             motion: root.motion
                             icon: DesktopIcons.glyphFor("windows")
                             title: "Windows " + Math.round(root.appearance.windowOpacity * 100) + "%"
-                            shortcut: root.runtime.shellHint("SystemContent.windowTransparency")
-                            detailShortcut: root.runtime.shellHint("SystemContent.windowsDetails")
+                            actionId: "SystemContent.windowTransparency"
+                            detailActionId: "SystemContent.windowsDetails"
                             detailName: "Window transparency details"
                             active: root.windowTransparencyEnabled
                             activeColor: root.theme.roleColor("display")
@@ -1408,8 +1430,8 @@ FocusScope {
                             motion: root.motion
                             icon: DesktopIcons.glyphFor("glass")
                             title: "Glass " + Math.round(root.appearance.glassOpacity * 100) + "%"
-                            shortcut: root.runtime.shellHint("SystemContent.shellGlass")
-                            detailShortcut: root.runtime.shellHint("SystemContent.glassDetails")
+                            actionId: "SystemContent.shellGlass"
+                            detailActionId: "SystemContent.glassDetails"
                             detailName: "Frosted glass details"
                             active: root.shellGlassEnabled
                             activeColor: root.theme.roleColor("connectivity")
@@ -1425,8 +1447,8 @@ FocusScope {
                             motion: root.motion
                             icon: DesktopIcons.glyphFor("vhs")
                             title: "VHS " + Math.round(root.appearance.vhsIntensity * 100) + "%"
-                            shortcut: root.runtime.shellHint("SystemContent.vhsToggle")
-                            detailShortcut: root.runtime.shellHint("SystemContent.vhsTune")
+                            actionId: "SystemContent.vhsToggle"
+                            detailActionId: "SystemContent.vhsTune"
                             detailName: "VHS tuning"
                             active: root.appearance.vhsEnabled
                             activeColor: root.theme.roleColor("display")
@@ -1442,8 +1464,8 @@ FocusScope {
                             motion: root.motion
                             icon: DesktopIcons.glyphFor("bar")
                             title: root.barVisible ? "Bar visible" : "Bar hidden"
-                            shortcut: root.runtime.shellHint("SystemContent.bar")
-                            detailShortcut: root.runtime.shellHint("SystemContent.barDetails")
+                            actionId: "SystemContent.bar"
+                            detailActionId: "SystemContent.barDetails"
                             detailName: "Bar settings"
                             onDetailsRequested: root.openSetting("bar")
                             active: root.barVisible
@@ -1460,8 +1482,8 @@ FocusScope {
                                 active: root.frameVisible
                             })
                             title: root.frameVisible ? "Frame visible" : "Frame hidden"
-                            shortcut: root.runtime.shellHint("SystemContent.frame")
-                            detailShortcut: root.runtime.shellHint("SystemContent.frameDetails")
+                            actionId: "SystemContent.frame"
+                            detailActionId: "SystemContent.frameDetails"
                             detailName: "Frame settings"
                             onDetailsRequested: root.openSetting("frame")
                             active: root.frameVisible
@@ -1479,8 +1501,8 @@ FocusScope {
                                 active: root.motion.enabled
                             })
                             title: root.motion.enabled ? "Animations" : "Reduced motion"
-                            shortcut: root.runtime.shellHint("SystemContent.motion")
-                            detailShortcut: root.runtime.shellHint("SystemContent.motionDetails")
+                            actionId: "SystemContent.motion"
+                            detailActionId: "SystemContent.motionDetails"
                             detailName: "Motion settings"
                             onDetailsRequested: root.openSetting("motion")
                             active: root.motion.enabled
@@ -1498,10 +1520,11 @@ FocusScope {
                                 active: root.nightLight.active
                             })
                             title: root.nightLight.supported ? "Night " + root.nightLight.temperature + " K" : "Night unavailable"
-                            shortcut: root.runtime.shellHint("SystemContent.nightLight")
+                            actionId: "SystemContent.nightLight"
+                            primaryAvailable: root.nightLight.supported && !root.nightLight.busy
                             foregroundBusy: root.dashboardExposed && root.nightLightBusy
                             foregroundColor: root.theme.roleColor("display")
-                            detailShortcut: root.runtime.shellHint("SystemContent.nightLightDetails")
+                            detailActionId: "SystemContent.nightLightDetails"
                             detailName: "Night Light details"
                             active: root.nightLight.active
                             activeColor: root.theme.roleColor("warmth")
@@ -2395,18 +2418,13 @@ FocusScope {
                     return;
                 }
 
-                // One-shot actions run on physical key-down only. Holding a
-                // key must not alternately enable/disable a capability, while
-                // repeat of local navigation or range adjustment stays useful.
-                if (event.isAutoRepeat) {
-                    const oneShot = ["SystemContent.alerts", "SystemContent.stayAwake", "SystemContent.powerProfile", "SystemContent.nightLight", "SystemContent.windowTransparency", "SystemContent.shellGlass", "SystemContent.vhsToggle", "SystemContent.vhsTune", "SystemContent.networkDetails", "SystemContent.bluetoothDetails", "SystemContent.windowsDetails", "SystemContent.glassDetails", "SystemContent.nightLightDetails", "SystemContent.alertsDetails", "SystemContent.stayDetails", "SystemContent.powerDetails", "SystemContent.musicReactive", "SystemContent.wallpaperSpectrum", "SystemContent.musicReactiveDetails", "SystemContent.wallpaperSpectrumDetails", "SystemContent.bar", "SystemContent.frame", "SystemContent.motion", "SystemContent.barDetails", "SystemContent.frameDetails", "SystemContent.motionDetails", "SystemContent.network", "SystemContent.bluetooth", "SystemContent.themes", "SystemContent.wallpaper", "SystemContent.session", "SystemContent.resources", "SystemContent.captures", "SystemContent.displays", "SystemContent.statusInspection", "SystemContent.reset", "AudioMixerContent.open", "ControlsMediaCard.open"].some(name => root.runtime.shellMatchesHint(name, event.key, event.modifiers));
-                    if (oneShot) {
-                        event.accepted = true;
-                        return;
-                    }
+                const dashboardAction = root.findDashboardAction(event.key, event.modifiers);
+                if (dashboardAction && event.isAutoRepeat) {
+                    event.accepted = true;
+                    return;
                 }
                 const shifted = !!(root.runtime.shellModifier("controls", "Shift", event.modifiers));
-                if (event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))
+                if (!dashboardAction && event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))
                     return;
                 // Shift release/press is not a command. Previously pressing
                 // Shift by itself cleared selectedSlider, so the next Backtab
@@ -2443,57 +2461,16 @@ FocusScope {
                         return;
                     }
                 }
-                if (root.runtime.shellMatchesHint("SystemContent.brightnessFocus", event.key, event.modifiers) && root.brightness.supported) {
+                if (dashboardAction) {
+                    if (dashboardAction.detail)
+                        dashboardAction.item.triggerDetails();
+                    else
+                        dashboardAction.item.trigger();
+                } else if (root.runtime.shellMatchesHint("SystemContent.brightnessFocus", event.key, event.modifiers) && root.brightness.supported) {
                     root.selectSlider("brightness");
-                } else if (root.runtime.shellMatchesHint("SystemContent.musicReactiveDetails", event.key, event.modifiers)) {
-                    root.openSetting("reactive");
-                } else if (root.runtime.shellMatchesHint("SystemContent.wallpaperSpectrumDetails", event.key, event.modifiers)) {
-                    root.openSetting("spectrum");
-                } else if (root.runtime.shellMatchesHint("SystemContent.windowsDetails", event.key, event.modifiers)) {
-                    root.openSetting("windows");
-                } else if (root.runtime.shellMatchesHint("SystemContent.glassDetails", event.key, event.modifiers)) {
-                    root.openSetting("glass");
-                } else if (root.runtime.shellMatchesHint("SystemContent.nightLightDetails", event.key, event.modifiers)) {
-                    root.openSetting("nightLight");
-                } else if (root.runtime.shellMatchesHint("SystemContent.alertsDetails", event.key, event.modifiers)) {
-                    root.openSetting("alerts");
-                } else if (root.runtime.shellMatchesHint("SystemContent.stayDetails", event.key, event.modifiers)) {
-                    root.openSetting("stay");
-                } else if (root.runtime.shellMatchesHint("SystemContent.powerDetails", event.key, event.modifiers)) {
-                    root.openSetting("power");
-                } else if (root.runtime.shellMatchesHint("SystemContent.vhsTune", event.key, event.modifiers)) {
-                    root.openVhs();
-                } else if (root.runtime.shellMatchesHint("SystemContent.vhsToggle", event.key, event.modifiers)) {
-                    root.appearance.toggleVhs();
-                } else if (root.runtime.shellMatchesHint("SystemContent.networkDetails", event.key, event.modifiers)) {
-                    root.openNetwork();
-                } else if (root.runtime.shellMatchesHint("SystemContent.bluetoothDetails", event.key, event.modifiers)) {
-                    root.openBluetooth();
-                } else if (root.runtime.shellMatchesHint("SystemContent.reset", event.key, event.modifiers)) {
-                    root.resetConfirmPending = true;
-                    root.resetStatus = "";
-                } else if (root.runtime.shellMatchesHint("SystemContent.wallpaperSpectrum", event.key, event.modifiers)) {
-                    root.wallpaperSpectrumToggleRequested();
-                } else if (root.runtime.shellMatchesHint("SystemContent.musicReactive", event.key, event.modifiers)) {
-                    root.musicReactiveToggleRequested();
-                } else if (root.runtime.shellMatchesHint("SystemContent.windowTransparency", event.key, event.modifiers)) {
-                    root.windowTransparencyToggleRequested();
-                } else if (root.runtime.shellMatchesHint("SystemContent.shellGlass", event.key, event.modifiers)) {
-                    root.shellGlassToggleRequested();
-                } else if (root.runtime.shellMatchesHint("SystemContent.barDetails", event.key, event.modifiers)) {
-                    root.openSetting("bar");
-                } else if (root.runtime.shellMatchesHint("SystemContent.bar", event.key, event.modifiers)) {
-                    root.barToggleRequested();
-                } else if (root.runtime.shellMatchesHint("SystemContent.frameDetails", event.key, event.modifiers)) {
-                    root.openSetting("frame");
-                } else if (root.runtime.shellMatchesHint("SystemContent.frame", event.key, event.modifiers)) {
-                    root.frameToggleRequested();
-                } else if (root.runtime.shellMatchesHint("SystemContent.motionDetails", event.key, event.modifiers)) {
-                    root.openSetting("motion");
-                } else if (root.runtime.shellMatchesHint("SystemContent.motion", event.key, event.modifiers)) {
-                    root.motion.toggle();
                 } else if (root.runtime.shellMatchesHint("AudioMixerContent.open", event.key, event.modifiers)) {
-                    root.openMixer();
+                    if (!event.isAutoRepeat)
+                        root.openMixer();
                 } else if (root.runtime.shellMatchesHint("MediaTransport.backCompact", event.key, event.modifiers)) {
                     mediaCard.triggerTransport("back", event.isAutoRepeat);
                 } else if (root.runtime.shellMatchesHint("MediaTransport.forwardCompact", event.key, event.modifiers)) {
@@ -2506,32 +2483,6 @@ FocusScope {
                     root.moveAudioSelection(-1);
                 } else if (event.modifiers === Qt.NoModifier && (root.runtime.shellNavigates("controls", "down", event.key))) {
                     root.moveAudioSelection(1);
-                } else if (root.runtime.shellMatchesHint("SystemContent.themes", event.key, event.modifiers)) {
-                    root.openTheme();
-                } else if (root.runtime.shellMatchesHint("SystemContent.wallpaper", event.key, event.modifiers)) {
-                    root.openWallpaper();
-                } else if (root.runtime.shellMatchesHint("SystemContent.session", event.key, event.modifiers)) {
-                    root.openSession();
-                } else if (root.runtime.shellMatchesHint("SystemContent.resources", event.key, event.modifiers)) {
-                    root.openResources();
-                } else if (root.runtime.shellMatchesHint("SystemContent.statusInspection", event.key, event.modifiers)) {
-                    root.openStatus();
-                } else if (root.runtime.shellMatchesHint("SystemContent.displays", event.key, event.modifiers)) {
-                    root.openSetting("displays");
-                } else if (root.runtime.shellMatchesHint("SystemContent.network", event.key, event.modifiers)) {
-                    if (root.system.wifiAvailable)
-                        root.system.setWifiEnabled(!root.system.wifiEnabled);
-                } else if (root.runtime.shellMatchesHint("SystemContent.bluetooth", event.key, event.modifiers)) {
-                    if (root.system.bluetoothAvailable)
-                        root.system.setBluetoothEnabled(!root.system.bluetoothEnabled);
-                } else if (root.runtime.shellMatchesHint("SystemContent.alerts", event.key, event.modifiers)) {
-                    root.notificationState.toggleSilent();
-                } else if (root.runtime.shellMatchesHint("SystemContent.stayAwake", event.key, event.modifiers)) {
-                    root.system.toggleIdleInhibited();
-                } else if (root.runtime.shellMatchesHint("SystemContent.captures", event.key, event.modifiers)) {
-                    root.openRecordings();
-                } else if (root.runtime.shellMatchesHint("SystemContent.powerProfile", event.key, event.modifiers) && root.powerProfile.available) {
-                    root.powerProfile.cycle();
                 } else if (root.runtime.shellMatchesHint("MediaTransport.playCompact", event.key, event.modifiers)) {
                     mediaCard.triggerTransport("play", event.isAutoRepeat);
                 } else if (root.runtime.shellMatchesHint("MediaTransport.previousCompact", event.key, event.modifiers)) {
@@ -2539,7 +2490,8 @@ FocusScope {
                 } else if (root.runtime.shellMatchesHint("MediaTransport.nextCompact", event.key, event.modifiers)) {
                     mediaCard.triggerTransport("next", event.isAutoRepeat);
                 } else if (root.runtime.shellMatchesHint("ControlsMediaCard.open", event.key, event.modifiers)) {
-                    root.mediaRequested();
+                    if (!event.isAutoRepeat)
+                        root.mediaRequested();
                 } else if (root.runtime.shellMatchesHint("AudioDeviceControl.mute", event.key, event.modifiers)) {
                     root.muteSelectedAudio();
                 } else if (root.runtime.shellMatchesHint("ControlsMediaCard.shuffle", event.key, event.modifiers)) {
@@ -2552,8 +2504,6 @@ FocusScope {
                     root.system.toggleMicrophoneMute();
                 } else if (root.runtime.shellMatchesHint("AudioDeviceControl.chooser", event.key, event.modifiers)) {
                     root.toggleSelectedAudioDeviceChooser();
-                } else if (root.runtime.shellMatchesHint("SystemContent.nightLight", event.key, event.modifiers)) {
-                    root.nightLight.toggle();
                 } else if (event.key === root.runtime.shellKeyCode("controls", "BracketLeft") && root.system.trayCount > 0) {
                     root.trayIndex = (root.trayIndex - 1 + root.system.trayCount) % root.system.trayCount;
                 } else if (event.key === root.runtime.shellKeyCode("controls", "BracketRight") && root.system.trayCount > 0) {

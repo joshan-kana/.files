@@ -12,7 +12,8 @@ Item {
     property string subtitle: ""
     property string icon: ""
     property string iconName: ""
-    property string shortcut: ""
+    property string actionId: ""
+    property string shortcut: actionId.length > 0 ? runtime.shellHint(actionId) : ""
     property bool active: false
     property color activeColor: theme.accent
     property bool prominentAction: false

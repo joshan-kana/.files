@@ -18,6 +18,13 @@ Item {
     property color emphasisColor: theme.accent
     signal activated
 
+    function trigger(): void {
+        if (!available || !visible)
+            return;
+        interaction.playPressFeedback(width / 2, height / 2);
+        activated();
+    }
+
     visible: shortcut.length > 0
     width: Math.max(36, hint.implicitWidth + theme.spacing1 * 2)
     height: Math.max(36, hint.implicitHeight + theme.spacing1 * 2)

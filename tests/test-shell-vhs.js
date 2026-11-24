@@ -253,10 +253,7 @@ test("VHS tuning exposes correct keyboard focus, pointer and navigation paths", 
     assert.match(preferences, new RegExp("property real " + key));
     assert.ok(panel.includes('key: "' + key + '"'));
   }
-  assert.match(
-    controls,
-    /detailShortcut: root\.runtime\.shellHint\("SystemContent\.vhsTune"\)/,
-  );
+  assert.match(controls, /detailActionId: "SystemContent\.vhsTune"/);
   assert.match(controls, /onDetailsRequested: root\.openVhs\(\)/);
   assert.match(controls, /function openVhs\(\)/);
   assert.match(controls, /requestedView === "vhs"/);
@@ -264,10 +261,7 @@ test("VHS tuning exposes correct keyboard focus, pointer and navigation paths", 
     controls,
     /vhsPanel\.invoke\("handleKey", event\.key, event\.modifiers, event\.isAutoRepeat\)/,
   );
-  assert.match(
-    controls,
-    /shellMatchesHint\("SystemContent\.vhsTune", event\.key, event\.modifiers\)/,
-  );
+  assert.match(controls, /detailActionId: "SystemContent\.vhsTune"/);
   assert.match(controls, /vhsPanel\.open \? vhsPanel : statusOpen/);
   assert.match(
     controls,
