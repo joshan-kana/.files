@@ -20,7 +20,17 @@ Item {
     readonly property string libraryRoot: Quickshell.env("HOME") + "/wallpapers/"
     readonly property var collections: ["", ...new Set(entries.map(path => path.startsWith(libraryRoot) ? path.slice(libraryRoot.length, path.lastIndexOf("/")) : "").filter(value => value.length > 0))].sort()
     property bool policyView: false
-    property var policy: ({mode: "off", target: "all", intervalMinutes: 60, favoritesOnly: false, collection: "", dayStart: 420, nightStart: 1140, dayWallpaper: "", nightWallpaper: ""})
+    property var policy: ({
+            mode: "off",
+            target: "all",
+            intervalMinutes: 60,
+            favoritesOnly: false,
+            collection: "",
+            dayStart: 420,
+            nightStart: 1140,
+            dayWallpaper: "",
+            nightWallpaper: ""
+        })
     property bool policyKnown: false
     property string policyError: ""
     property double nextDue: 0
@@ -30,8 +40,12 @@ Item {
     property bool refreshPolicyPending: false
 
     property Process policyProcess: Process {
-        stdout: StdioCollector { id: policyOutput }
-        stderr: StdioCollector { id: policyErrors }
+        stdout: StdioCollector {
+            id: policyOutput
+        }
+        stderr: StdioCollector {
+            id: policyErrors
+        }
         onExited: (code, status) => {
             if (code === 0) {
                 try {
@@ -101,26 +115,84 @@ Item {
         keyboardRequested();
     }
     readonly property var galleryPolicyActions: [
-        {action: "WallpaperPanel.favorite", title: favoritePaths.includes(selectedPath()) ? "Remove favourite" : "Favourite", enabled: policyKnown && !policyBusy && selectedPath() !== ""},
-        {action: "WallpaperPanel.favorites", title: favoritesOnly ? "Favourites only" : "All wallpapers", enabled: true},
-        {action: "WallpaperPanel.collection", title: collectionFilter || "All folders", enabled: collections.length > 1},
-        {action: "WallpaperPanel.rotation", title: "Rotation · " + (policy.mode === "dayNight" ? "Day/night" : policy.mode === "interval" ? "Interval" : "Off"), enabled: !!runtime.wallpaperPolicy}
+        {
+            action: "WallpaperPanel.favorite",
+            title: favoritePaths.includes(selectedPath()) ? "Remove favourite" : "Favourite",
+            enabled: policyKnown && !policyBusy && selectedPath() !== ""
+        },
+        {
+            action: "WallpaperPanel.favorites",
+            title: favoritesOnly ? "Favourites only" : "All wallpapers",
+            enabled: true
+        },
+        {
+            action: "WallpaperPanel.collection",
+            title: collectionFilter || "All folders",
+            enabled: collections.length > 1
+        },
+        {
+            action: "WallpaperPanel.rotation",
+            title: "Rotation · " + (policy.mode === "dayNight" ? "Day/night" : policy.mode === "interval" ? "Interval" : "Off"),
+            enabled: !!runtime.wallpaperPolicy
+        }
     ]
     readonly property var scheduleActions: [
-        {action: "WallpaperPolicy.mode", title: policy.mode === "dayNight" ? "Day/night" : policy.mode === "interval" ? "Interval" : "Off"},
-        {action: "WallpaperPolicy.target", title: "Target · " + policy.target},
-        {action: "WallpaperPolicy.period", title: policy.intervalMinutes + " min"},
-        {action: "WallpaperPolicy.favorites", title: policy.favoritesOnly ? "Favourites" : "Entire library"},
-        {action: "WallpaperPolicy.collection", title: policy.collection || "All folders"},
-        {action: "WallpaperPolicy.day", title: "Use selection for day"},
-        {action: "WallpaperPolicy.night", title: "Use selection for night"},
-        {action: "WallpaperPolicy.dayEarlier", title: "Day −30 min"},
-        {action: "WallpaperPolicy.dayLater", title: "Day +30 min"},
-        {action: "WallpaperPolicy.nightEarlier", title: "Night −30 min"},
-        {action: "WallpaperPolicy.nightLater", title: "Night +30 min"},
-        {action: "WallpaperPolicy.next", title: "Rotate now"},
-        {action: "WallpaperPolicy.defaults", title: "Restore policy defaults"},
-        {action: "WallpaperPanel.rotation", title: "Back to wallpapers"}
+        {
+            action: "WallpaperPolicy.mode",
+            title: policy.mode === "dayNight" ? "Day/night" : policy.mode === "interval" ? "Interval" : "Off"
+        },
+        {
+            action: "WallpaperPolicy.target",
+            title: "Target · " + policy.target
+        },
+        {
+            action: "WallpaperPolicy.period",
+            title: policy.intervalMinutes + " min"
+        },
+        {
+            action: "WallpaperPolicy.favorites",
+            title: policy.favoritesOnly ? "Favourites" : "Entire library"
+        },
+        {
+            action: "WallpaperPolicy.collection",
+            title: policy.collection || "All folders"
+        },
+        {
+            action: "WallpaperPolicy.day",
+            title: "Use selection for day"
+        },
+        {
+            action: "WallpaperPolicy.night",
+            title: "Use selection for night"
+        },
+        {
+            action: "WallpaperPolicy.dayEarlier",
+            title: "Day −30 min"
+        },
+        {
+            action: "WallpaperPolicy.dayLater",
+            title: "Day +30 min"
+        },
+        {
+            action: "WallpaperPolicy.nightEarlier",
+            title: "Night −30 min"
+        },
+        {
+            action: "WallpaperPolicy.nightLater",
+            title: "Night +30 min"
+        },
+        {
+            action: "WallpaperPolicy.next",
+            title: "Rotate now"
+        },
+        {
+            action: "WallpaperPolicy.defaults",
+            title: "Restore policy defaults"
+        },
+        {
+            action: "WallpaperPanel.rotation",
+            title: "Back to wallpapers"
+        }
     ]
     function policyActionEnabled(action: string): bool {
         if (action === "WallpaperPanel.rotation")
@@ -153,27 +225,51 @@ Item {
         if (!policyActionEnabled(action))
             return;
         switch (action) {
-        case "WallpaperPolicy.mode": {
-            const modes = ["off", "interval", "dayNight"];
-            setPolicy("mode", modes[(modes.indexOf(policy.mode) + 1) % modes.length]);
+        case "WallpaperPolicy.mode":
+            {
+                const modes = ["off", "interval", "dayNight"];
+                setPolicy("mode", modes[(modes.indexOf(policy.mode) + 1) % modes.length]);
+                break;
+            }
+        case "WallpaperPolicy.target":
+            setPolicy("target", outputName);
             break;
-        }
-        case "WallpaperPolicy.target": setPolicy("target", outputName); break;
-        case "WallpaperPolicy.period": {
-            const choices = [5, 15, 30, 60, 120];
-            setPolicy("intervalMinutes", choices[(choices.indexOf(policy.intervalMinutes) + 1) % choices.length]);
+        case "WallpaperPolicy.period":
+            {
+                const choices = [5, 15, 30, 60, 120];
+                setPolicy("intervalMinutes", choices[(choices.indexOf(policy.intervalMinutes) + 1) % choices.length]);
+                break;
+            }
+        case "WallpaperPolicy.favorites":
+            setPolicy("favoritesOnly", !policy.favoritesOnly);
             break;
-        }
-        case "WallpaperPolicy.favorites": setPolicy("favoritesOnly", !policy.favoritesOnly); break;
-        case "WallpaperPolicy.collection": setPolicy("collection", collections[(collections.indexOf(policy.collection) + 1) % collections.length]); break;
-        case "WallpaperPolicy.day": setPolicy("dayWallpaper", scheduleCandidate); break;
-        case "WallpaperPolicy.night": setPolicy("nightWallpaper", scheduleCandidate); break;
-        case "WallpaperPolicy.dayEarlier": setPolicy("dayStart", (policy.dayStart + 1410) % 1440); break;
-        case "WallpaperPolicy.dayLater": setPolicy("dayStart", (policy.dayStart + 30) % 1440); break;
-        case "WallpaperPolicy.nightEarlier": setPolicy("nightStart", (policy.nightStart + 1410) % 1440); break;
-        case "WallpaperPolicy.nightLater": setPolicy("nightStart", (policy.nightStart + 30) % 1440); break;
-        case "WallpaperPolicy.next": runPolicy("next"); break;
-        case "WallpaperPolicy.defaults": runPolicy("reset"); break;
+        case "WallpaperPolicy.collection":
+            setPolicy("collection", collections[(collections.indexOf(policy.collection) + 1) % collections.length]);
+            break;
+        case "WallpaperPolicy.day":
+            setPolicy("dayWallpaper", scheduleCandidate);
+            break;
+        case "WallpaperPolicy.night":
+            setPolicy("nightWallpaper", scheduleCandidate);
+            break;
+        case "WallpaperPolicy.dayEarlier":
+            setPolicy("dayStart", (policy.dayStart + 1410) % 1440);
+            break;
+        case "WallpaperPolicy.dayLater":
+            setPolicy("dayStart", (policy.dayStart + 30) % 1440);
+            break;
+        case "WallpaperPolicy.nightEarlier":
+            setPolicy("nightStart", (policy.nightStart + 1410) % 1440);
+            break;
+        case "WallpaperPolicy.nightLater":
+            setPolicy("nightStart", (policy.nightStart + 30) % 1440);
+            break;
+        case "WallpaperPolicy.next":
+            runPolicy("next");
+            break;
+        case "WallpaperPolicy.defaults":
+            runPolicy("reset");
+            break;
         }
     }
     function handlePolicyKey(key: int, modifiers: int, autoRepeat: bool): bool {
@@ -963,5 +1059,4 @@ Item {
             color: panel.theme.textMuted
         }
     }
-
 }

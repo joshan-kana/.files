@@ -23,17 +23,19 @@ Item {
     property int polarityFilter: 0
     property bool favoritesOnly: false
     property Settings preferences: Settings {
+        id: savedGallery
         location: "file://" + (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/desktop-shell/preferences.ini"
         category: "ThemeGallery"
         property var favorites: []
     }
+    readonly property var favoriteNames: savedGallery.favorites
     function toggleFavorite(): void {
         const selected = selectedTheme();
         if (!selected)
             return;
         const name = selected.name;
-        preferences.favorites = preferences.favorites.includes(name) ? preferences.favorites.filter(value => value !== name) : [...preferences.favorites, name];
-        preferences.sync();
+        savedGallery.favorites = savedGallery.favorites.includes(name) ? savedGallery.favorites.filter(value => value !== name) : [...savedGallery.favorites, name];
+        savedGallery.sync();
     }
     function handleGalleryKey(key: int, modifiers: int, repeat: bool): bool {
         for (const action of ["ThemePanel.favorite", "ThemePanel.favorites", "ThemePanel.polarity", "ThemePanel.previous"]) {
@@ -47,14 +49,22 @@ Item {
     }
     function galleryAction(action: string): void {
         switch (action) {
-        case "ThemePanel.favorite": toggleFavorite(); break;
-        case "ThemePanel.favorites": favoritesOnly = !favoritesOnly; break;
-        case "ThemePanel.polarity": polarityFilter = (polarityFilter + 1) % 3; break;
-        case "ThemePanel.previous": activateTheme(previousTheme); break;
+        case "ThemePanel.favorite":
+            toggleFavorite();
+            break;
+        case "ThemePanel.favorites":
+            favoritesOnly = !favoritesOnly;
+            break;
+        case "ThemePanel.polarity":
+            polarityFilter = (polarityFilter + 1) % 3;
+            break;
+        case "ThemePanel.previous":
+            activateTheme(previousTheme);
+            break;
         }
     }
     property string searchText: ""
-    readonly property var filteredThemes: themes.filter(entry => ((entry.label || entry.name).toLowerCase().includes(searchText.toLowerCase()) || entry.name.toLowerCase().includes(searchText.toLowerCase())) && (!favoritesOnly || preferences.favorites.includes(entry.name)) && (polarityFilter === 0 || entry.polarity === (polarityFilter === 1 ? "dark" : "light")))
+    readonly property var filteredThemes: themes.filter(entry => ((entry.label || entry.name).toLowerCase().includes(searchText.toLowerCase()) || entry.name.toLowerCase().includes(searchText.toLowerCase())) && (!favoritesOnly || savedGallery.favorites.includes(entry.name)) && (polarityFilter === 0 || entry.polarity === (polarityFilter === 1 ? "dark" : "light")))
     readonly property bool searching: searchField.activeFocus
     onSearchTextChanged: {
         selectionTouched = true;
@@ -727,7 +737,7 @@ Item {
                         }
                         Text {
                             id: status
-                            text: themeCard.modelData.name === panel.currentTheme ? "ACTIVE" : panel.preferences.favorites.includes(themeCard.modelData.name) ? "♥" : ""
+                            text: themeCard.modelData.name === panel.currentTheme ? "ACTIVE" : panel.favoriteNames.includes(themeCard.modelData.name) ? "♥" : ""
                             color: panel.theme.positive
                             font.family: panel.runtime.fontSans
                             font.pixelSize: panel.theme.fontSize(9)
@@ -766,10 +776,26 @@ Item {
             spacing: panel.theme.spacing2
             Repeater {
                 model: [
-                    {action: "ThemePanel.favorite", title: panel.selectedTheme() && panel.preferences.favorites.includes(panel.selectedTheme().name) ? "Remove favourite" : "Favourite", enabled: !!panel.selectedTheme()},
-                    {action: "ThemePanel.favorites", title: panel.favoritesOnly ? "Favourites only" : "All themes", enabled: true},
-                    {action: "ThemePanel.polarity", title: ["Any polarity", "Dark", "Light"][panel.polarityFilter], enabled: true},
-                    {action: "ThemePanel.previous", title: panel.previousTheme ? "Restore " + panel.themeLabel(panel.previousTheme) : "No previous theme", enabled: !!panel.previousTheme && !panel.operationRunning && panel.previousTheme !== panel.currentTheme}
+                    {
+                        action: "ThemePanel.favorite",
+                        title: panel.selectedTheme() && panel.favoriteNames.includes(panel.selectedTheme().name) ? "Remove favourite" : "Favourite",
+                        enabled: !!panel.selectedTheme()
+                    },
+                    {
+                        action: "ThemePanel.favorites",
+                        title: panel.favoritesOnly ? "Favourites only" : "All themes",
+                        enabled: true
+                    },
+                    {
+                        action: "ThemePanel.polarity",
+                        title: ["Any polarity", "Dark", "Light"][panel.polarityFilter],
+                        enabled: true
+                    },
+                    {
+                        action: "ThemePanel.previous",
+                        title: panel.previousTheme ? "Restore " + panel.themeLabel(panel.previousTheme) : "No previous theme",
+                        enabled: !!panel.previousTheme && !panel.operationRunning && panel.previousTheme !== panel.currentTheme
+                    }
                 ]
                 delegate: ShellAction {
                     required property var modelData

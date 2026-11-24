@@ -522,15 +522,52 @@ in
   scopeOptions.wallpaperRotation = lib.mkOption {
     type = lib.types.submodule {
       options = {
-        mode = lib.mkOption { type = lib.types.enum [ "off" "interval" "dayNight" ]; default = "off"; };
-        target = lib.mkOption { type = lib.types.str; default = "all"; };
-        intervalMinutes = lib.mkOption { type = lib.types.enum [ 5 15 30 60 120 ]; default = 60; };
-        favoritesOnly = lib.mkOption { type = lib.types.bool; default = false; };
-        collection = lib.mkOption { type = lib.types.str; default = ""; };
-        dayStart = lib.mkOption { type = lib.types.ints.between 0 1439; default = 420; };
-        nightStart = lib.mkOption { type = lib.types.ints.between 0 1439; default = 1140; };
-        dayWallpaper = lib.mkOption { type = lib.types.str; default = ""; };
-        nightWallpaper = lib.mkOption { type = lib.types.str; default = ""; };
+        mode = lib.mkOption {
+          type = lib.types.enum [
+            "off"
+            "interval"
+            "dayNight"
+          ];
+          default = "off";
+        };
+        target = lib.mkOption {
+          type = lib.types.str;
+          default = "all";
+        };
+        intervalMinutes = lib.mkOption {
+          type = lib.types.enum [
+            5
+            15
+            30
+            60
+            120
+          ];
+          default = 60;
+        };
+        favoritesOnly = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+        };
+        collection = lib.mkOption {
+          type = lib.types.str;
+          default = "";
+        };
+        dayStart = lib.mkOption {
+          type = lib.types.ints.between 0 1439;
+          default = 420;
+        };
+        nightStart = lib.mkOption {
+          type = lib.types.ints.between 0 1439;
+          default = 1140;
+        };
+        dayWallpaper = lib.mkOption {
+          type = lib.types.str;
+          default = "";
+        };
+        nightWallpaper = lib.mkOption {
+          type = lib.types.str;
+          default = "";
+        };
       };
     };
     default = { };
@@ -878,7 +915,10 @@ in
 
       wallpaperPolicy = pkgs.writeShellApplication {
         name = "desktop-shell-wallpaper-policy";
-        runtimeInputs = [ pkgs.python3 pkgs.systemd ];
+        runtimeInputs = [
+          pkgs.python3
+          pkgs.systemd
+        ];
         text = ''
           export DESKTOP_WALLPAPER_LIBRARY=${lib.escapeShellArg (lib.getExe wallpaperLibrary)}
           export DESKTOP_WALLPAPER_POLICY_DEFAULTS=${lib.escapeShellArg (builtins.toJSON scopeConfig.wallpaperRotation)}

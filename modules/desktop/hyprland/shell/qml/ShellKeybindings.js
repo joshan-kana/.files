@@ -241,18 +241,32 @@ function matchesHint(registry, action, key, modifiers, qt) {
   const entry = registry?.hints?.[action];
   // A single action may use a named key or a directional slot as well as
   // a letter. Multi-action legends are display-only.
-  if (!entry || !/^(?:(?:SHIFT|ALT|CTRL|SUPER)\+)*(?:[A-Z0-9]|ENTER|NUMENTER|ESC|BACKSPACE|SPACE|TAB|DEL|PGUP|PGDN|NAV_KEY_(?:UP|DOWN|LEFT|RIGHT)_(?:PRIMARY(?:_SHIFT)?|ARROW))$/.test(entry.template))
+  if (
+    !entry ||
+    !/^(?:(?:SHIFT|ALT|CTRL|SUPER)\+)*(?:[A-Z0-9]|ENTER|NUMENTER|ESC|BACKSPACE|SPACE|TAB|DEL|PGUP|PGDN|NAV_KEY_(?:UP|DOWN|LEFT|RIGHT)_(?:PRIMARY(?:_SHIFT)?|ARROW))$/.test(
+      entry.template,
+    )
+  )
     return false;
   const parts = hint(registry, action).toUpperCase().split("+");
   const assignedKey = parts.pop();
   const modifiersByName = {
-    SHIFT: qt.ShiftModifier, ALT: qt.AltModifier,
-    CTRL: qt.ControlModifier, SUPER: qt.MetaModifier,
+    SHIFT: qt.ShiftModifier,
+    ALT: qt.AltModifier,
+    CTRL: qt.ControlModifier,
+    SUPER: qt.MetaModifier,
   };
-  if (codeFor(assignedKey, qt) !== key || parts.some(name => !(name in modifiersByName)))
+  if (
+    codeFor(assignedKey, qt) !== key ||
+    parts.some((name) => !(name in modifiersByName))
+  )
     return false;
-  const expected = parts.reduce((mask, name) => mask | modifiersByName[name], 0);
-  const bits = qt.ShiftModifier | qt.AltModifier | qt.ControlModifier | qt.MetaModifier;
+  const expected = parts.reduce(
+    (mask, name) => mask | modifiersByName[name],
+    0,
+  );
+  const bits =
+    qt.ShiftModifier | qt.AltModifier | qt.ControlModifier | qt.MetaModifier;
   return (modifiers & bits) === expected;
 }
 

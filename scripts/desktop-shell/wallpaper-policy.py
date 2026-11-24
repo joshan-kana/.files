@@ -5,13 +5,13 @@ import contextlib
 import fcntl
 import json
 import os
-from pathlib import Path
 import random
 import re
 import subprocess
 import sys
 import tempfile
 import time
+from pathlib import Path
 
 ROOT = Path.home() / "wallpapers"
 STATE_DIR = Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local/state"))) / "desktop-shell/wallpapers"
@@ -19,9 +19,15 @@ STATE = STATE_DIR / "policy.json"
 PROGRESS = STATE_DIR / "rotation.json"
 TIMER = "desktop-shell-wallpaper-rotation.timer"
 DEFAULTS = {
-    "mode": "off", "target": "all", "intervalMinutes": 60,
-    "favoritesOnly": False, "collection": "", "dayStart": 420, "nightStart": 1140,
-    "dayWallpaper": "", "nightWallpaper": "",
+    "mode": "off",
+    "target": "all",
+    "intervalMinutes": 60,
+    "favoritesOnly": False,
+    "collection": "",
+    "dayStart": 420,
+    "nightStart": 1140,
+    "dayWallpaper": "",
+    "nightWallpaper": "",
 }
 DEFAULTS.update(json.loads(os.environ.get("DESKTOP_WALLPAPER_POLICY_DEFAULTS", "{}")))
 
@@ -127,15 +133,18 @@ def candidates(config, state, all_entries):
     """Filter rotation sources without including unlisted or missing files."""
     allowed = set(favorites(state)) if config["favoritesOnly"] else None
     folder = config["collection"]
-    return [item for item in all_entries if (allowed is None or item in allowed)
-            and (not folder or item.startswith(folder + "/"))]
+    return [item for item in all_entries if (allowed is None or item in allowed) and (not folder or item.startswith(folder + "/"))]
 
 
 def status(state, progress):
     """Expose confirmed policy state and the last observed outcome."""
-    return {"policy": resolved(state), "favorites": [str(ROOT / path) for path in favorites(state)],
-            "nextDue": progress.get("nextDue", 0), "error": progress.get("error", ""),
-            "phase": progress.get("phase", "")}
+    return {
+        "policy": resolved(state),
+        "favorites": [str(ROOT / path) for path in favorites(state)],
+        "nextDue": progress.get("nextDue", 0),
+        "error": progress.get("error", ""),
+        "phase": progress.get("phase", ""),
+    }
 
 
 def apply(state, progress, force=False):
@@ -154,8 +163,7 @@ def apply(state, progress, force=False):
     try:
         current = library("current", target)
         if progress.get("signature") != signature:
-            progress = {"signature": signature, "nextDue": now + config["intervalMinutes"] * 60,
-                        "lastPath": current}
+            progress = {"signature": signature, "nextDue": now + config["intervalMinutes"] * 60, "lastPath": current}
         if mode == "interval":
             if current != progress.get("lastPath") and not force:
                 # Manual selection starts a new interval instead of fighting

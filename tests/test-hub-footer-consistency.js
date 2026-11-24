@@ -209,7 +209,10 @@ test("detail navigation has one global Escape hint and locally owned movement hi
 
 test("wallpaper detail height follows its content, without an empty band before hub navigation", () => {
   const wallpaper = source("WallpaperPanel.qml");
-  assert.match(wallpaper, /implicitHeight: policyView \? policyLayout\.implicitHeight : galleryLayout\.implicitHeight/);
+  assert.match(
+    wallpaper,
+    /implicitHeight: policyView \? policyLayout\.implicitHeight : galleryLayout\.implicitHeight/,
+  );
   assert.match(
     wallpaper,
     /Column \{\s*id: galleryLayout\s*visible: !panel.policyView\s*anchors\.fill: parent/,

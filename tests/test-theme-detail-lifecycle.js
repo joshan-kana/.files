@@ -104,7 +104,9 @@ test("Theme search uses filtered gallery items and the shared search field", () 
   const filter = new Function(
     "themes",
     "searchText",
-    "return (" + source[1] + ");",
+    "const favoritesOnly = false, polarityFilter = 0, savedGallery = {favorites: []}; return (" +
+      source[1] +
+      ");",
   );
   const themes = [
     { name: "catppuccin-mocha", label: "Catppuccin Mocha" },

@@ -356,11 +356,38 @@ test("reactive detail chords dispatch their visible multi-modifier assignments",
 });
 
 test("named-key and directional action hints dispatch the same assigned key", () => {
-  assert.equal(f.matchesHint(registry, "DisplaySettings.apply", Qt.Key_Return, 0, Qt), true);
-  assert.equal(f.matchesHint(registry, "DisplaySettings.apply", Qt.Key_Return, Qt.ShiftModifier, Qt), false);
-  assert.equal(f.matchesHint(registry, "AudioMixerContent.balanceLeft", 72, Qt.ShiftModifier, Qt), true);
-  assert.equal(f.matchesHint(registry, "AudioMixerContent.balanceLeft", 72, 0, Qt), false);
-  const changed = {...registry, overrides: {controls: {Return: "Z"}}};
+  assert.equal(
+    f.matchesHint(registry, "DisplaySettings.apply", Qt.Key_Return, 0, Qt),
+    true,
+  );
+  assert.equal(
+    f.matchesHint(
+      registry,
+      "DisplaySettings.apply",
+      Qt.Key_Return,
+      Qt.ShiftModifier,
+      Qt,
+    ),
+    false,
+  );
+  assert.equal(
+    f.matchesHint(
+      registry,
+      "AudioMixerContent.balanceLeft",
+      72,
+      Qt.ShiftModifier,
+      Qt,
+    ),
+    true,
+  );
+  assert.equal(
+    f.matchesHint(registry, "AudioMixerContent.balanceLeft", 72, 0, Qt),
+    false,
+  );
+  const changed = { ...registry, overrides: { controls: { Return: "Z" } } };
   assert.equal(f.hint(changed, "DisplaySettings.apply"), "Z");
-  assert.equal(f.matchesHint(changed, "DisplaySettings.apply", 90, 0, Qt), true);
+  assert.equal(
+    f.matchesHint(changed, "DisplaySettings.apply", 90, 0, Qt),
+    true,
+  );
 });

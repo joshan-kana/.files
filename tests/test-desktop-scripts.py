@@ -145,10 +145,16 @@ esac
         with mock.patch.dict(os.environ, self.env):
             spec.loader.exec_module(rotation)
         root = self.home / "wallpapers"
-        state = {"overrides": {"mode": "interval", "intervalMinutes": 5, "favoritesOnly": True, "collection": "nature"}, "favorites": ["nature/a.png", "nature/b.png", "other/c.png"]}
+        state = {
+            "overrides": {"mode": "interval", "intervalMinutes": 5, "favoritesOnly": True, "collection": "nature"},
+            "favorites": ["nature/a.png", "nature/b.png", "other/c.png"],
+        }
         self.assertEqual(rotation.phase_at(60, 1200, 360), "day")
         self.assertEqual(rotation.phase_at(500, 1200, 360), "night")
-        self.assertEqual(rotation.candidates(rotation.resolved(state), state, ["nature/a.png", "nature/b.png", "other/c.png"]), ["nature/a.png", "nature/b.png"])
+        self.assertEqual(
+            rotation.candidates(rotation.resolved(state), state, ["nature/a.png", "nature/b.png", "other/c.png"]),
+            ["nature/a.png", "nature/b.png"],
+        )
         current = str(root / "nature/a.png")
 
         def library(*args):
@@ -164,7 +170,13 @@ esac
                 current = args[3]
             return ""
 
-        with mock.patch.object(rotation, "ROOT", root), mock.patch.object(rotation, "PROGRESS", self.state / "rotation.json"), mock.patch.object(rotation, "command"), mock.patch.object(rotation, "library", side_effect=library), mock.patch.object(rotation.time, "time", return_value=1000):
+        with (
+            mock.patch.object(rotation, "ROOT", root),
+            mock.patch.object(rotation, "PROGRESS", self.state / "rotation.json"),
+            mock.patch.object(rotation, "command"),
+            mock.patch.object(rotation, "library", side_effect=library),
+            mock.patch.object(rotation.time, "time", return_value=1000),
+        ):
             progress = rotation.apply(state, {}, force=True)
             self.assertEqual(current, str(root / "nature/b.png"))
             self.assertEqual(progress["nextDue"], 1300)
