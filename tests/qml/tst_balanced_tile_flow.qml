@@ -34,7 +34,8 @@ TestCase {
         const added = [];
         for (let index = 0; index < count; index++)
             added.push(tileComponent.createObject(tiles));
-        wait(5);
+        compare(tiles.children.length, count);
+        tiles.forceLayout();
         const columns = tiles.columns;
         const rows = tiles.rows;
         const widerRows = count % rows;
@@ -49,8 +50,8 @@ TestCase {
                 const tile = added[first + column];
                 verify(tile !== null);
                 tryCompare(tile, "width", cell);
-                fuzzyCompare(tile.x, column * (cell + tiles.spacing), 0.01);
-                fuzzyCompare(tile.y, expectedY, 0.01);
+                tryCompare(tile, "x", column * (cell + tiles.spacing));
+                tryCompare(tile, "y", expectedY);
             }
             const last = added[first + size - 1];
             verify(panel - (last.x + last.width) < size + 0.01);
@@ -58,12 +59,11 @@ TestCase {
             expectedY += 72 + tiles.spacing;
         }
         compare(first, count);
-        verify(tiles.height >= expectedY - tiles.spacing && tiles.height <= expectedY, "Flow height must contain every tile without extra rows");
+        tryVerify(() => tiles.height >= expectedY - tiles.spacing && tiles.height <= expectedY, 5000, "Flow height must contain every tile without extra rows");
 
         for (const tile of added)
             tile.destroy();
-        wait(5);
-        compare(tiles.children.length, 0);
+        tryVerify(() => tiles.children.length === 0);
     }
 
     function test_dynamicRows(): void {
