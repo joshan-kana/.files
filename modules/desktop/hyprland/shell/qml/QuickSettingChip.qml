@@ -30,17 +30,14 @@ Item {
             return;
         if (detailShortcut.length > 0)
             quickAction.trigger();
-        else {
-            press.playPressFeedback(width / 2, height / 2);
-            activated();
-        }
+        else
+            press.trigger();
     }
 
     function triggerDetails(): void {
         if (!enabled)
             return;
-        press.playPressFeedback(width / 2, height / 2);
-        detailsRequested();
+        press.trigger();
     }
 
     implicitWidth: Math.max(140 * theme.textScale, labelMetrics.advanceWidth + theme.spacing2 * 2, primaryHint.implicitWidth + detailHint.implicitWidth + theme.spacing4 * 2 + theme.iconLarge)
@@ -152,11 +149,12 @@ Item {
         theme: chip.theme
         motion: chip.motion
         selected: chip.active
+        disabled: chip.detailShortcut.length === 0 && !chip.primaryAvailable
         manualPress: quickAction.visible && quickAction.visualPressed
         manualHover: quickAction.visible && quickAction.pointerHovered
         Accessible.role: Accessible.Button
         Accessible.name: chip.detailShortcut.length > 0 ? chip.detailName + " · " + chip.title : chip.title
-        Accessible.onPressAction: chip.detailShortcut.length > 0 ? chip.detailsRequested() : chip.activated()
+        Accessible.onPressAction: press.trigger()
         stateColor: chip.theme.textStrong
         hoverOpacity: 0.05
         pressOpacity: 0.11

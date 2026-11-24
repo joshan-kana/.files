@@ -40,17 +40,14 @@ Item {
             return;
         if (detailShortcut.length > 0)
             quickAction.trigger();
-        else {
-            interaction.playPressFeedback(width / 2, height / 2);
-            activated();
-        }
+        else
+            interaction.trigger();
     }
 
     function triggerDetails(): void {
         if (!enabled)
             return;
-        interaction.playPressFeedback(width / 2, height / 2);
-        detailsRequested();
+        interaction.trigger();
     }
 
     implicitHeight: 92
@@ -174,7 +171,7 @@ Item {
         manualPress: quickAction.visualPressed
         manualHover: quickAction.pointerHovered
         Accessible.role: Accessible.Button
-        Accessible.onPressAction: tile.detailsRequested()
+        Accessible.onPressAction: interaction.trigger()
         stateColor: tile.signalColor
         cornerRadius: tile.theme.radiusLarge
         Accessible.name: "Open " + tile.title + " details"

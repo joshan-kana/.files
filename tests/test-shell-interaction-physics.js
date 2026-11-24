@@ -186,3 +186,16 @@ test("direct shortcuts and accessibility use the shared feedback dispatch", () =
   assert.match(mixer, /inputDevice\.triggerMute\(\)/);
   assert.match(mixer, /row\.control\.triggerMute\(\)/);
 });
+
+test("tile primitives delegate programmatic feedback and activation to StateLayer", () => {
+  for (const name of [
+    "ShellAction.qml",
+    "TileQuickAction.qml",
+    "QuickSettingChip.qml",
+    "ConnectivityTile.qml",
+  ]) {
+    const src = qml(name);
+    assert.doesNotMatch(src, /\.playPressFeedback\(/);
+    assert.match(src, /(?:interaction|press)\.trigger\(\)/);
+  }
+});

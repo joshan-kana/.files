@@ -21,8 +21,7 @@ Item {
     function trigger(): void {
         if (!available || !visible)
             return;
-        interaction.playPressFeedback(width / 2, height / 2);
-        activated();
+        interaction.trigger();
     }
 
     visible: shortcut.length > 0
@@ -62,8 +61,7 @@ Item {
         disabled: !action.available
         Accessible.role: Accessible.Button
         Accessible.name: action.available ? action.actionName : action.actionName + " unavailable"
-        Accessible.onPressAction: if (action.available)
-            action.activated()
+        Accessible.onPressAction: action.trigger()
         onActivated: if (action.available)
             action.activated()
     }
