@@ -45,6 +45,7 @@ in
           };
         });
       })
+      (import ./temporary.nix)
     ];
   }
   // lib.optionalAttrs isLinux {

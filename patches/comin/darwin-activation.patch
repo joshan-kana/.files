@@ -1,0 +1,82 @@
+diff --git a/internal/executor/utils.go b/internal/executor/utils.go
+index 3514fa2..8c4d596 100644
+--- a/internal/executor/utils.go
++++ b/internal/executor/utils.go
+@@ -273,12 +273,15 @@ func switchToConfigurationDarwin(operation string, outPath string, dryRun bool,
+ 		return nil
+ 	}
+ 
+-	logrus.Infof("nix: activating user environment: '%s'", activateUserExe)
+-	userCmd := exec.Command(activateUserExe)
+-	userCmd.Stdout = stdout
+-	userCmd.Stderr = stderr
+-	if err := userCmd.Run(); err != nil {
+-		return fmt.Errorf("user activation command %s fails with %s", activateUserExe, err)
++	// nix-darwin no longer builds activate-user since nix-darwin/nix-darwin#1825.
++	if isStorePathExist(activateUserExe) {
++		logrus.Infof("nix: activating user environment: '%s'", activateUserExe)
++		userCmd := exec.Command(activateUserExe)
++		userCmd.Stdout = stdout
++		userCmd.Stderr = stderr
++		if err := userCmd.Run(); err != nil {
++			return fmt.Errorf("user activation command %s fails with %s", activateUserExe, err)
++		}
+ 	}
+ 
+ 	logrus.Infof("nix: activating system environment: '%s'", activateExe)
+diff --git a/internal/executor/utils_test.go b/internal/executor/utils_test.go
+index 66d9756..b80ceec 100644
+--- a/internal/executor/utils_test.go
++++ b/internal/executor/utils_test.go
+@@ -3,6 +3,7 @@ package executor
+ import (
+ 	"bytes"
+ 	"context"
++	"fmt"
+ 	"os"
+ 	"path/filepath"
+ 	"testing"
+@@ -234,6 +235,43 @@ func TestSwitchToConfiguration(t *testing.T) {
+ 	}
+ }
+ 
++func TestSwitchToConfigurationDarwinActivation(t *testing.T) {
++	tests := []struct {
++		name     string
++		scripts  []string
++		expected string
++	}{
++		{
++			name:     "without activate-user",
++			scripts:  []string{"activate"},
++			expected: "activate\n",
++		},
++		{
++			name:     "with activate-user",
++			scripts:  []string{"activate-user", "activate"},
++			expected: "activate-user\nactivate\n",
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			outPath := t.TempDir()
++			ran := filepath.Join(t.TempDir(), "ran")
++			for _, script := range tt.scripts {
++				content := fmt.Sprintf("#!/bin/sh\necho %s >> %s\n", script, ran)
++				assert.NoError(t, os.WriteFile(filepath.Join(outPath, script), []byte(content), 0755))
++			}
++
++			err := switchToConfigurationDarwin("switch", outPath, false, os.Stdout, os.Stderr)
++			assert.NoError(t, err)
++
++			content, err := os.ReadFile(ran)
++			assert.NoError(t, err)
++			assert.Equal(t, tt.expected, string(content))
++		})
++	}
++}
++
+ func TestDeployFunctions(t *testing.T) {
+ 	tests := []struct {
+ 		name             string
