@@ -108,7 +108,7 @@ PanelWindow {
     readonly property bool helpVisible: systemContent ? systemContent.helpOpen : (mediaContent ? mediaContent.helpOpen : otherHelpOpen)
     readonly property bool tabShortcutsEnabled: expansionState.hasCurrent && !helpVisible && !(systemContent && (systemContent.resetConfirmPending || systemContent.sessionConfirmationPending || systemContent.networkPasswordPending || systemContent.recordingDeletePending || systemContent.detailSearchFocused || systemContent.audioChooserOpen)) && !(activityContent && activityContent.replyEditing)
     readonly property bool confirmationPending: !!systemContent && (systemContent.resetConfirmPending || systemContent.sessionConfirmationPending || systemContent.networkPasswordPending || systemContent.recordingDeletePending)
-    readonly property string escapeHintLabel: confirmationPending ? "Cancel" : (systemContent && systemContent.detailSearchFocused) ? "Exit search" : helpVisible || detailVisible || (systemContent && (systemContent.audioChooserOpen || systemContent.selectedSlider.length > 0)) || (activityContent && activityContent.replyEditing) ? "Back" : "Close"
+    readonly property string escapeHintLabel: confirmationPending ? "Cancel" : (systemContent && systemContent.detailSearchFocused) ? "Exit search" : helpVisible || detailVisible || (systemContent && (systemContent.audioChooserOpen || systemContent.selectedSlider.length > 0)) || (activityContent && (activityContent.replyEditing || activityContent.policyOpen || activityContent.expandedGroupKey.length > 0)) ? "Back" : "Close"
     // Hub scrolling is a fallback only for views without their own paging
     // owner. Calendar, Activity, and open details consume PageUp/Down locally.
     readonly property bool hostPageShortcutsEnabled: expansionState.hasCurrent && !helpVisible && (expansionState.currentName === "weather" || expansionState.currentName === "media" || (expansionState.currentName === "system" && !detailVisible))
@@ -127,6 +127,36 @@ PanelWindow {
             key: host.runtime.shellHint("ShellExpansionHost.legend.expand_group_or_open_selected_notification"),
             action: "Expand group or open selected notification"
         },
+        {
+            key: host.runtime.shellHint("NotificationCard.policy"),
+            action: "Open / close app notification policy"
+        },
+        ...(activityContent && activityContent.policyOpen ? [
+                {
+                    key: host.runtime.shellHint("NotificationCard.popup"),
+                    action: "Toggle app popups"
+                },
+                {
+                    key: host.runtime.shellHint("NotificationCard.history"),
+                    action: "Toggle app history"
+                },
+                {
+                    key: host.runtime.shellHint("NotificationCard.silent"),
+                    action: "Toggle quiet app"
+                },
+                {
+                    key: host.runtime.shellHint("NotificationCard.criticalOnly"),
+                    action: "Toggle critical-only alerts"
+                },
+                {
+                    key: host.runtime.shellHint("NotificationCard.privatePreview"),
+                    action: "Toggle private preview"
+                },
+                {
+                    key: host.runtime.shellHint("NotificationCard.defaults"),
+                    action: "Restore app defaults"
+                }
+            ] : []),
         {
             key: host.runtime.shellHint("ShellExpansionHost.legend.toggle_read_mark_all_read"),
             action: "Toggle read / mark all read"
