@@ -220,35 +220,22 @@ test("bounded stroke uses local coordinates without changing the traced path", (
   assert.ok(segments > 30);
 });
 
-test("frame-off loading trace follows sampled squircle corners and closes smoothly", () => {
-  const squircle = {
-    cornerRadius: 62,
-    exponent: 4.5,
-    cornerProgress(value) {
-      const exponent = this.exponent / 2;
-      const first = value ** exponent;
-      return first / (first + (1 - value) ** exponent);
-    },
-  };
-  const width = 760,
-    height = 510,
-    inset = 4;
-  const contour = trace.contour(width, height, inset, squircle);
-  assert.ok(contour.length >= 50, "all four rounded corners need samples");
+test("loading trace follows the owner's actual cubic contour", () => {
+  const path =
+    "M 20 4 L 80 4 C 95 4 96 5 96 20 L 96 40 C 96 55 95 56 80 56 L 20 56 C 5 56 4 55 4 40 L 4 20 C 4 5 5 4 20 4 Z";
+  const contour = trace.contour(path);
+  assert.ok(contour.length >= 50);
   assert.deepEqual(
     [contour[0].x, contour[0].y],
     [contour.at(-1).x, contour.at(-1).y],
-    "the final trace position must connect to its first vertex",
   );
-  const perimeter = contour.at(-1).at;
-  assert.ok(perimeter > 2 * (width + height) * 0.78);
-  const nearCorner = contour.filter((p) => p.x > width - 63 && p.y < 63);
+  // All sampled points stay inside the exact owner's inset.
   assert.ok(
-    nearCorner.length >= 10,
-    "top-right quarter must not be cut diagonally",
+    contour.every((p) => p.x >= 4 && p.x <= 96 && p.y >= 4 && p.y <= 56),
   );
-  const strokes = trace.traceSamples(contour, perimeter, 0.43, 0.12);
-  assert.ok(strokes.samples.length > 25);
+  assert.ok(contour.some((p) => p.x > 90 && p.y < 10));
+  const strokes = trace.traceSamples(contour, contour.at(-1).at, 0.43, 0.12);
+  assert.ok(strokes.samples.length > 1);
   assert.ok(
     strokes.samples.every(
       (v, i) =>
@@ -258,26 +245,6 @@ test("frame-off loading trace follows sampled squircle corners and closes smooth
           v.y - strokes.samples[i - 1].y,
         ) <= 9,
     ),
-    "highlight cannot jump between corners or wrap across the frame",
   );
-});
-
-test("frame-off loading geometry handles small and unmeasured surfaces", () => {
-  const surface = {
-    cornerRadius: 62,
-    exponent: 4.5,
-    cornerProgress(x) {
-      return x;
-    },
-  };
-  assert.equal(trace.contour(0, 500, 5, surface).length, 0);
-  assert.equal(trace.contour(100, 0, 5, surface).length, 0);
-  const contour = trace.contour(64, 64, 3, surface);
-  assert.ok(contour.length > 40);
-  assert.ok(
-    contour.every(
-      (p) =>
-        Number.isFinite(p.x) && Number.isFinite(p.y) && Number.isFinite(p.at),
-    ),
-  );
+  assert.equal(trace.contour("").length, 0);
 });

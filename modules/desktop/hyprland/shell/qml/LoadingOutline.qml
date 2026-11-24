@@ -20,7 +20,8 @@ Item {
     readonly property real inset: lineWidth * 1.3 + 0.5
     // Geometry is updated only when the actual surface changes, not on every
     // paint tick; the moving segment uses the same contour as its owner.
-    readonly property var contour: OutlineTrace.contour(width, height, inset, surface)
+    readonly property string contourPath: surface.buildPath(inset)
+    readonly property var contour: OutlineTrace.contour(contourPath)
     readonly property real perimeter: contour.length > 1 ? contour[contour.length - 1].at : 1
 
     visible: active
@@ -47,7 +48,7 @@ Item {
             strokeWidth: outline.lineWidth
             joinStyle: ShapePath.RoundJoin
             PathSvg {
-                path: outline.surface.buildPath(outline.inset) || "M 0 0 L 0.01 0 L 0 0.01 Z"
+                path: outline.contourPath || "M 0 0 L 0.01 0 L 0 0.01 Z"
             }
         }
     }
@@ -55,7 +56,7 @@ Item {
     OutlinePulse {
         anchors.fill: parent
         active: outline.active && !outline.motionEnabled
-        contourPath: outline.surface.buildPath(outline.inset)
+        contourPath: outline.contourPath
         highlightColor: outline.highlightColor
         lineWidth: outline.lineWidth
     }

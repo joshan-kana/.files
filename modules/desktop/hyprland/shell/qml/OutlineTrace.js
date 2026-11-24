@@ -1,58 +1,57 @@
 // Geometry-only helpers for the shared busy indicator. Track the actual
-// native squircle vertices so a moving highlight stays visible at every corner.
-function contour(width, height, inset, surface) {
+// owner's painted cubic path so the highlight stays on the actual outline.
+function contour(path) {
+  const tokens = path.match(/[MLCZ]|[-+]?(?:\d*\.)?\d+(?:e[-+]?\d+)?/gi) || [];
   const points = [];
-  const left = inset;
-  const top = inset;
-  const right = width - inset;
-  const bottom = height - inset;
-  const radius = Math.min(
-    Math.max(0, surface.cornerRadius - inset),
-    (right - left) / 2,
-    (bottom - top) / 2,
-  );
-  if (!Number.isFinite(radius) || radius <= 0) return points;
-  // SquircleSurface supplies cornerProgress(), not cornerSamples. Derive
-  // tessellation from the actual radius so every quarter is traced instead
-  // of jumping over its curved corner.
-  const samples = Math.max(12, Math.min(32, Math.ceil(radius * 0.4)));
-
+  let i = 0;
   function add(x, y) {
-    const previous = points.length > 0 ? points[points.length - 1] : null;
-    const at = previous
-      ? previous.at + Math.hypot(x - previous.x, y - previous.y)
-      : 0;
-    points.push({ x: x, y: y, at: at });
+    const previous = points[points.length - 1];
+    points.push({
+      x,
+      y,
+      at: previous
+        ? previous.at + Math.hypot(x - previous.x, y - previous.y)
+        : 0,
+    });
   }
-  function corner(cx, cy, start, end) {
-    for (let i = 1; i <= samples; ++i) {
-      const t = start + (end - start) * surface.cornerProgress(i / samples);
-      add(
-        cx +
-          radius *
-            Math.sign(Math.cos(t)) *
-            Math.abs(Math.cos(t)) ** (2 / surface.exponent),
-        cy +
-          radius *
-            Math.sign(Math.sin(t)) *
-            Math.abs(Math.sin(t)) ** (2 / surface.exponent),
-      );
+  while (i < tokens.length) {
+    const command = tokens[i++];
+    if (command === "M" || command === "L") {
+      add(Number(tokens[i++]), Number(tokens[i++]));
+    } else if (command === "C" && points.length) {
+      const start = points[points.length - 1];
+      const x1 = Number(tokens[i++]),
+        y1 = Number(tokens[i++]);
+      const x2 = Number(tokens[i++]),
+        y2 = Number(tokens[i++]);
+      const x3 = Number(tokens[i++]),
+        y3 = Number(tokens[i++]);
+      const length =
+        Math.hypot(x1 - start.x, y1 - start.y) +
+        Math.hypot(x2 - x1, y2 - y1) +
+        Math.hypot(x3 - x2, y3 - y2);
+      const steps = Math.max(12, Math.ceil(length / 2));
+      for (let step = 1; step <= steps; step++) {
+        const t = step / steps,
+          u = 1 - t;
+        add(
+          u * u * u * start.x +
+            3 * u * u * t * x1 +
+            3 * u * t * t * x2 +
+            t * t * t * x3,
+          u * u * u * start.y +
+            3 * u * u * t * y1 +
+            3 * u * t * t * y2 +
+            t * t * t * y3,
+        );
+      }
+    } else if (command === "Z" && points.length) {
+      add(points[0].x, points[0].y);
+    } else {
+      return [];
     }
   }
-
-  add(left + radius, top);
-  add(right - radius, top);
-  corner(right - radius, top + radius, -Math.PI / 2, 0);
-  add(right, bottom - radius);
-  corner(right - radius, bottom - radius, 0, Math.PI / 2);
-  add(left + radius, bottom);
-  corner(left + radius, bottom - radius, Math.PI / 2, Math.PI);
-  add(left, top + radius);
-  corner(left + radius, top + radius, Math.PI, Math.PI * 1.5);
-  // Close the distance table across the final edge. The head and tail must
-  // agree on the whole loop length, including the last corner-to-start hop.
-  add(points[0].x, points[0].y);
-  return points;
+  return points.every((p) => Number.isFinite(p.at)) ? points : [];
 }
 
 function atDistance(points, length, distance) {

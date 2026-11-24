@@ -30,7 +30,8 @@ SquircleSurface {
     property color foregroundColor: theme.accent
 
     Loader {
-        anchors.fill: parent
+        parent: root
+        anchors.fill: root
         z: 100
         active: root.visible && root.foregroundBusy
         sourceComponent: Component {

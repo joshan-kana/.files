@@ -1018,7 +1018,7 @@ test("reduced-motion loading softly pulses the full contour without moving geome
   );
   assert.match(
     outline,
-    /contourPath: outline\.surface\.buildPath\(outline\.inset\)/,
+    /contourPath: outline\.contourPath/,
   );
   assert.match(pulse, /property real intensity: 0\.22/);
   assert.match(pulse, /SequentialAnimation on intensity/);
