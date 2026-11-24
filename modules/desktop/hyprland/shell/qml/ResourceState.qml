@@ -35,6 +35,10 @@ QtObject {
     property real gpuPercent: -1
     property real cpuTemperature: -1
     property real gpuTemperature: -1
+    property real fanRpm: -1
+    property real cpuPressure: -1
+    property real memoryPressure: -1
+    property real ioPressure: -1
     property Settings preferences: Settings {
         id: saved
         location: "file://" + (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/desktop-shell/preferences.ini"
@@ -293,10 +297,18 @@ QtObject {
                 root.gpuPercent = typeof result.gpuPercent === "number" ? Math.max(0, Math.min(100, result.gpuPercent)) : -1;
                 root.cpuTemperature = typeof result.cpuMilliC === "number" ? result.cpuMilliC / 1000 : -1;
                 root.gpuTemperature = typeof result.gpuMilliC === "number" ? result.gpuMilliC / 1000 : -1;
+                root.fanRpm = typeof result.fanRpm === "number" ? result.fanRpm : -1;
+                root.cpuPressure = typeof result.cpuPressure === "number" ? result.cpuPressure : -1;
+                root.memoryPressure = typeof result.memoryPressure === "number" ? result.memoryPressure : -1;
+                root.ioPressure = typeof result.ioPressure === "number" ? result.ioPressure : -1;
             } catch (error) {
                 root.gpuPercent = -1;
                 root.cpuTemperature = -1;
                 root.gpuTemperature = -1;
+                root.fanRpm = -1;
+                root.cpuPressure = -1;
+                root.memoryPressure = -1;
+                root.ioPressure = -1;
             }
         }
     }

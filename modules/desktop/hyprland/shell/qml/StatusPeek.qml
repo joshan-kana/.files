@@ -100,6 +100,10 @@ PanelWindow {
             if (event.key === peek.runtime.shellKeyCode("status", "Escape") || event.key === peek.runtime.shellKeyCode("status", "Return") || event.key === peek.runtime.shellKeyCode("status", "Enter")) {
                 peek.closeRequested();
                 event.accepted = true;
+            } else if (peek.runtime.shellMatchesHint("StatusContent.copy", event.key, event.modifiers)) {
+                if (!event.isAutoRepeat)
+                    statusContent.copyStatus();
+                event.accepted = true;
             } else if (event.key === peek.runtime.shellKeyCode("status", "R")) {
                 statusContent.refreshRequested();
                 event.accepted = true;

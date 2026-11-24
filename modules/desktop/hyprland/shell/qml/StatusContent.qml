@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import Quickshell.Io
 import "FeedbackSemantics.js" as FeedbackSemantics
 
 Item {
@@ -14,73 +15,7 @@ Item {
     property string modeName: "Normal"
     signal refreshRequested
 
-    implicitWidth: Math.max(340, theme.controlsDetailWidth - theme.spacing4 * 2)
-    implicitHeight: heading.implicitHeight + stateGrid.implicitHeight + theme.spacing4 * 3
-
-    Column {
-        anchors {
-            fill: parent
-            margins: content.theme.spacing4
-        }
-        spacing: content.theme.spacing4
-
-        Row {
-            id: heading
-            width: parent.width
-            spacing: content.theme.spacing3
-            Text {
-                text: "󰋽"
-                color: content.theme.roleColor("connectivity")
-                font.family: "Symbols Nerd Font"
-                font.pixelSize: content.theme.fontSize(23)
-            }
-            Column {
-                width: Math.max(1, heading.width - content.theme.fontSize(23) - 44 - heading.spacing * 2)
-                spacing: content.theme.spacing1
-                Text {
-                    width: parent.width
-                    elide: Text.ElideRight
-                    text: "System status"
-                    color: content.theme.textStrong
-                    font.family: content.runtime.fontSans
-                    font.pixelSize: content.theme.fontSize(18)
-                    font.weight: Font.Bold
-                }
-                Text {
-                    width: parent.width
-                    elide: Text.ElideRight
-                    text: content.keyboard.pending ? "Reading keyboard state…" : content.keyboard.stale ? "Keyboard state unavailable or stale" : content.keyboard.deviceName + " · Current device and interaction state"
-                    color: content.theme.textMuted
-                    font.family: content.runtime.fontSans
-                    font.pixelSize: content.theme.fontSize(10)
-                }
-            }
-            ShellAction {
-                width: 44
-                height: 40
-                anchors.verticalCenter: parent.verticalCenter
-                runtime: content.runtime
-                theme: content.theme
-                motion: content.motion
-                iconOnly: true
-                iconHint: true
-                inlineIconHint: true
-                shortcut: content.runtime.shellHint("StatusContent.refresh")
-                icon: "󰑐"
-                title: "Refresh current status"
-                onActivated: content.refreshRequested()
-            }
-        }
-
-        Grid {
-            id: stateGrid
-            width: parent.width
-            columns: width > 430 ? 2 : 1
-            columnSpacing: content.theme.spacing2
-            rowSpacing: content.theme.spacing2
-            readonly property real tileWidth: (width - (columns - 1) * columnSpacing) / columns
-            Repeater {
-                model: [
+    readonly property var statusEntries: [
                     {
                         label: "Caps Lock",
                         glyph: FeedbackSemantics.symbol("keyboard", false, 0, content.keyboard.stale ? "unknown" : content.keyboard.capsState),
@@ -122,6 +57,105 @@ Item {
                         value: content.recording.capturing ? "Recording" : content.recording.finalising ? "Finalising" : "Inactive"
                     }
                 ]
+    property bool copied: false
+    function copyStatus(): void {
+        if (!runtime.copyText)
+            return;
+        if (!copyProcess.running)
+            copyProcess.exec([runtime.copyText, statusEntries.map(entry => entry.label + ": " + entry.value).join("\n")]);
+    }
+    Process {
+        id: copyProcess
+        onExited: (code, status) => {
+            content.copied = code === 0;
+            copyFeedback.restart();
+        }
+    }
+    Timer { id: copyFeedback; interval: 1800; onTriggered: content.copied = false }
+
+    implicitWidth: Math.max(340, theme.controlsDetailWidth - theme.spacing4 * 2)
+    implicitHeight: heading.implicitHeight + stateGrid.implicitHeight + theme.spacing4 * 3
+
+    Column {
+        anchors {
+            fill: parent
+            margins: content.theme.spacing4
+        }
+        spacing: content.theme.spacing4
+
+        Row {
+            id: heading
+            width: parent.width
+            spacing: content.theme.spacing3
+            Text {
+                text: "󰋽"
+                color: content.theme.roleColor("connectivity")
+                font.family: "Symbols Nerd Font"
+                font.pixelSize: content.theme.fontSize(23)
+            }
+            Column {
+                width: Math.max(1, heading.width - content.theme.fontSize(23) - 88 - heading.spacing * 3)
+                spacing: content.theme.spacing1
+                Text {
+                    width: parent.width
+                    elide: Text.ElideRight
+                    text: "System status"
+                    color: content.theme.textStrong
+                    font.family: content.runtime.fontSans
+                    font.pixelSize: content.theme.fontSize(18)
+                    font.weight: Font.Bold
+                }
+                Text {
+                    width: parent.width
+                    elide: Text.ElideRight
+                    text: content.keyboard.pending ? "Reading keyboard state…" : content.keyboard.stale ? "Keyboard state unavailable or stale" : content.keyboard.deviceName + " · Current device and interaction state"
+                    color: content.theme.textMuted
+                    font.family: content.runtime.fontSans
+                    font.pixelSize: content.theme.fontSize(10)
+                }
+            }
+            ShellAction {
+                width: 44
+                height: 40
+                anchors.verticalCenter: parent.verticalCenter
+                runtime: content.runtime
+                theme: content.theme
+                motion: content.motion
+                iconOnly: true
+                iconHint: true
+                inlineIconHint: true
+                shortcut: content.runtime.shellHint("StatusContent.copy")
+                icon: content.copied ? "󰄬" : "󰆏"
+                title: content.copied ? "Copied" : "Copy status"
+                enabled: !!content.runtime.copyText
+                onActivated: content.copyStatus()
+            }
+            ShellAction {
+                width: 44
+                height: 40
+                anchors.verticalCenter: parent.verticalCenter
+                runtime: content.runtime
+                theme: content.theme
+                motion: content.motion
+                iconOnly: true
+                iconHint: true
+                inlineIconHint: true
+                shortcut: content.runtime.shellHint("StatusContent.refresh")
+                icon: "󰑐"
+                title: "Refresh current status"
+                onActivated: content.refreshRequested()
+            }
+        }
+
+        Grid {
+            id: stateGrid
+            width: parent.width
+            columns: width > 430 ? 2 : 1
+            columnSpacing: content.theme.spacing2
+            rowSpacing: content.theme.spacing2
+            readonly property real tileWidth: (width - (columns - 1) * columnSpacing) / columns
+            Repeater {
+                model: content.statusEntries
                 delegate: ShellSurface {
                     id: statusTile
                     required property var modelData

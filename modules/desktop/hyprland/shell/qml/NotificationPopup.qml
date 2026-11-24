@@ -148,8 +148,8 @@ PanelWindow {
         ShellSurface {
             id: toast
             Accessible.role: Accessible.AlertMessage
-            Accessible.name: notification ? (notification.appName || "SYSTEM") + ": " + (notification.summary || "") : "Notification"
-            Accessible.description: notification ? (notification.body || "") : ""
+            Accessible.name: notification ? (notification.appName || "SYSTEM") + ": " + (privatePreview ? "Content hidden" : (notification.summary || "")) : "Notification"
+            Accessible.description: notification && !privatePreview ? (notification.body || "") : ""
             required property var notification
             required property string phase
             required property int index
@@ -189,7 +189,8 @@ PanelWindow {
             }
             readonly property color urgencyColor: notification && notification.urgency === NotificationUrgency.Critical ? qmlPopup.theme.critical : notification && notification.urgency === NotificationUrgency.Low ? qmlPopup.theme.textMuted : qmlPopup.theme.roleColor("notifications")
             readonly property bool pointerPressed: toastPress.visualPressed
-            readonly property var explicitActions: qmlPopup.notificationState.explicitActions(notification)
+            readonly property bool privatePreview: qmlPopup.notificationState.applicationPreferences(notification).privatePreview === true
+            readonly property var explicitActions: privatePreview ? [] : qmlPopup.notificationState.explicitActions(notification)
             hovered: toastPress.pointerHovered && phase === "visible"
             onHoveredChanged: {
                 qmlPopup.contourEpoch++;
@@ -273,7 +274,7 @@ PanelWindow {
                         qmlPopup.notificationState.dismiss(toast.notification);
                     } else {
                         qmlPopup.notificationState.hidePopup(toast.notification);
-                        if (!qmlPopup.notificationState.invokeDefault(toast.notification))
+                        if (toast.privatePreview || !qmlPopup.notificationState.invokeDefault(toast.notification))
                             qmlPopup.centerRequested();
                     }
                 }
@@ -360,7 +361,7 @@ PanelWindow {
 
                     MarqueeText {
                         width: Math.max(1, parent.width - (preview.visible ? preview.width + qmlPopup.theme.spacing2 : 0))
-                        text: toast.notification ? toast.notification.summary : ""
+                        text: toast.privatePreview ? "Content hidden · open Activity" : toast.notification ? toast.notification.summary : ""
                         textFormat: Text.PlainText
                         color: qmlPopup.theme.textStrong
                         font.family: qmlPopup.runtime.fontSans
@@ -371,7 +372,7 @@ PanelWindow {
                     Text {
                         width: Math.max(1, parent.width - (preview.visible ? preview.width + qmlPopup.theme.spacing2 : 0))
                         maximumLineCount: toast.explicitActions.length > 0 ? 2 : 3
-                        text: qmlPopup.notificationState.bodyMarkup(toast.notification)
+                        text: toast.privatePreview ? "" : qmlPopup.notificationState.bodyMarkup(toast.notification)
                         textFormat: Text.StyledText
                         onLinkActivated: link => qmlPopup.notificationState.openBodyLink(link)
                         visible: text.length > 0
@@ -388,7 +389,7 @@ PanelWindow {
                     id: preview
                     notification: toast.notification
                     preview: true
-                    visible: !!toast.notification && !!toast.notification.image
+                    visible: !toast.privatePreview && !!toast.notification && !!toast.notification.image
                     width: 96
                     height: 70
                     anchors {
@@ -405,7 +406,7 @@ PanelWindow {
                         bottom: parent.bottom
                     }
                     spacing: qmlPopup.theme.spacing1
-                    visible: toast.explicitActions.length > 0 || (toast.notification && toast.notification.hasInlineReply)
+                    visible: !toast.privatePreview && (toast.explicitActions.length > 0 || (toast.notification && toast.notification.hasInlineReply))
 
                     Repeater {
                         model: toast.explicitActions.slice(0, 2)

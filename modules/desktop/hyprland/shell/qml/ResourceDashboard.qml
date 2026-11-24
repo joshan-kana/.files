@@ -280,6 +280,15 @@ Item {
             }
         }
 
+        ShellText {
+            width: parent.width
+            runtime: panel.runtime
+            theme: panel.theme
+            text: "Pressure (10s) · CPU " + (panel.resourceState.cpuPressure >= 0 ? panel.resourceState.cpuPressure.toFixed(2) + "%" : "N/A") + " · Memory " + (panel.resourceState.memoryPressure >= 0 ? panel.resourceState.memoryPressure.toFixed(2) + "%" : "N/A") + " · I/O " + (panel.resourceState.ioPressure >= 0 ? panel.resourceState.ioPressure.toFixed(2) + "%" : "N/A") + " · Fan " + (panel.resourceState.fanRpm >= 0 ? panel.resourceState.fanRpm + " RPM" : "N/A")
+            color: panel.theme.textMuted
+            wrapMode: Text.WordWrap
+        }
+
         ShellSurface {
             width: parent.width
             height: 237
@@ -300,7 +309,7 @@ Item {
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         width: Math.max(1, parent.width - viewToggle.width - parent.spacing)
-                        text: panel.showProcesses ? (panel.resourceState.sortByMemory ? "TOP PROCESSES · MEMORY" : "TOP PROCESSES · CPU") : panel.showCores ? "LOGICAL CORES · " + panel.resourceState.coreUsage.length + " ACTIVE COUNTERS" : "RESOURCE HISTORY · LAST " + panel.resourceState.historySeconds + "s"
+                        text: panel.showProcesses ? (panel.resourceState.sortByMemory ? "TOP PROCESSES · MEMORY" : "TOP PROCESSES · LIFETIME CPU") : panel.showCores ? "LOGICAL CORES · " + panel.resourceState.coreUsage.length + " ACTIVE COUNTERS" : "RESOURCE HISTORY · LAST " + panel.resourceState.historySeconds + "s"
                         color: panel.theme.textStrong
                         font.family: panel.runtime.fontSans
                         font.pixelSize: panel.theme.fontSize(10)
@@ -355,7 +364,7 @@ Item {
                         width: parent.width
                         runtime: panel.runtime
                         theme: panel.theme
-                        text: "PID         PROCESS                                      CPU         MEM"
+                        text: "PID         PROCESS                                      CPU AVG     MEM"
                         color: panel.theme.textMuted
                     }
                     Repeater {

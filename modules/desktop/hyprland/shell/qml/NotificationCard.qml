@@ -357,6 +357,40 @@ SquircleSurface {
                 width: Math.min(parent.width, Math.max(142, implicitWidth))
                 onActivated: card.notificationState.setApplicationPreference(card.notification, "silent", applicationOptions.preferences.silent !== true)
             }
+            ShellAction {
+                runtime: card.runtime
+                theme: card.theme
+                motion: card.motion
+                compact: true
+                horizontalCompact: true
+                title: applicationOptions.preferences.criticalOnly ? "All urgencies" : "Critical only"
+                shortcut: card.selected ? card.runtime.shellHint("NotificationCard.criticalOnly") : ""
+                width: Math.min(parent.width, Math.max(142, implicitWidth))
+                onActivated: card.notificationState.setApplicationPreference(card.notification, "criticalOnly", !applicationOptions.preferences.criticalOnly)
+            }
+            ShellAction {
+                runtime: card.runtime
+                theme: card.theme
+                motion: card.motion
+                compact: true
+                horizontalCompact: true
+                title: applicationOptions.preferences.privatePreview ? "Show preview" : "Hide preview"
+                shortcut: card.selected ? card.runtime.shellHint("NotificationCard.privatePreview") : ""
+                width: Math.min(parent.width, Math.max(142, implicitWidth))
+                onActivated: card.notificationState.setApplicationPreference(card.notification, "privatePreview", !applicationOptions.preferences.privatePreview)
+            }
+            ShellAction {
+                runtime: card.runtime
+                theme: card.theme
+                motion: card.motion
+                compact: true
+                horizontalCompact: true
+                title: "App defaults"
+                shortcut: card.selected ? card.runtime.shellHint("NotificationCard.defaults") : ""
+                width: Math.min(parent.width, Math.max(142, implicitWidth))
+                onActivated: card.notificationState.resetApplicationPreferences(card.notification)
+            }
+
         }
 
         Row {

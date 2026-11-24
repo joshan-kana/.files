@@ -23,6 +23,7 @@ QtObject {
     readonly property string cliphist: root.configData.tools.cliphist
     readonly property string emojiTest: root.configData.tools.emojiTest
     readonly property string resourceProbe: root.configData.tools.resourceProbe
+    readonly property string copyText: root.configData.tools.copyText
     readonly property string clipboardCopy: root.configData.tools.clipboardCopy
     readonly property string clipboardPreview: root.configData.tools.clipboardPreview
     readonly property string clipboardOperations: root.configData.tools.clipboardOperations
@@ -95,6 +96,7 @@ QtObject {
     readonly property bool notificationSilent: root.configData.notifications.silent
     readonly property bool notificationPresentation: root.configData.notifications.presentation
     readonly property bool notificationHistoryEnabled: root.configData.notifications.historyEnabled
+    readonly property var notificationApplications: root.configData.notifications.applications
     readonly property var notificationQuietHours: root.configData.notifications.quietHours
     readonly property var powerPolicy: root.configData.powerPolicy
     readonly property string weatherUnits: root.configData.weather.units
@@ -316,6 +318,7 @@ QtObject {
                 property bool silent: false
                 property bool presentation: false
                 property bool historyEnabled: true
+                property var applications: ({})
                 property JsonObject quietHours: JsonObject {
                     property bool enabled: false
                     property int startMinute: 1320
@@ -344,6 +347,7 @@ QtObject {
                 property string cliphist: ""
                 property string emojiTest: ""
                 property string resourceProbe: ""
+                property string copyText: ""
                 property string clipboardCopy: ""
                 property string clipboardPreview: ""
                 property string clipboardOperations: ""

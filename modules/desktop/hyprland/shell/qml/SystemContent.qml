@@ -1958,6 +1958,10 @@ FocusScope {
                     if (event.key === root.runtime.shellKeyCode("controls", "Backspace")) {
                         root.backFromDetail();
                         event.accepted = true;
+                    } else if (root.runtime.shellMatchesHint("StatusContent.copy", event.key, event.modifiers)) {
+                        if (!event.isAutoRepeat)
+                            statusContent.copyStatus();
+                        event.accepted = true;
                     } else if (root.runtime.shellMatchesHint("StatusContent.refresh", event.key, event.modifiers)) {
                         root.refreshStatus();
                         event.accepted = true;

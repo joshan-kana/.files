@@ -191,6 +191,15 @@ QtObject {
         settings.sync();
     }
 
+    function resetQuietField(key: string): void {
+        const next = Object.assign({}, quietOverrides);
+        delete next[key];
+        settings.quietOverridesJson = JSON.stringify(next);
+        quietPauseUntil = 0;
+        clockMs = Date.now();
+        settings.sync();
+    }
+
     function resetQuietHours(): void {
         settings.quietOverridesJson = "{}";
         quietPauseUntil = 0;
@@ -214,14 +223,24 @@ QtObject {
         const key = NotificationSemantics.groupKey(notification);
         try {
             const all = JSON.parse(settings.appsJson || "{}");
-            return all[key] || {};
+            return Object.assign({}, runtime.notificationApplications[key] || {}, all[key] || {});
         } catch (_) {
-            return {};
+            return runtime.notificationApplications[key] || {};
         }
     }
 
+    function resetApplicationPreferences(notification): void {
+        let all = {};
+        try { all = JSON.parse(settings.appsJson || "{}"); } catch (_) {}
+        const key = NotificationSemantics.groupKey(notification);
+        delete all[key];
+        settings.appsJson = JSON.stringify(all);
+        settings.sync();
+        hideApplicationPopups(key);
+    }
+
     function setApplicationPreference(notification, field: string, value: bool): void {
-        if (!["popups", "history", "silent"].includes(field))
+        if (!["popups", "history", "silent", "criticalOnly", "privatePreview"].includes(field))
             return;
         let all = {};
         try {
@@ -234,6 +253,8 @@ QtObject {
         settings.appsJson = JSON.stringify(all);
         settings.sync();
         if ((field === "popups" || field === "silent") && (field === "popups" ? !value : value))
+            hideApplicationPopups(key);
+        if ((field === "criticalOnly" || field === "privatePreview") && value)
             hideApplicationPopups(key);
         if (field === "history" && !value) {
             applyJournal(journal.filter(record => NotificationSemantics.groupKey(record) !== key));
@@ -404,7 +425,7 @@ QtObject {
         notification.closed.connect(reason => closeRecord(notification, reason));
 
         const critical = notification.urgency === NotificationUrgency.Critical;
-        const show = !notification.lastGeneration && policy.popups !== false && policy.silent !== true && Policy.mayShowToast(locked, presentation, outputFullscreen, silent, critical);
+        const show = !notification.lastGeneration && policy.popups !== false && policy.silent !== true && (!policy.criticalOnly || critical) && Policy.mayShowToast(locked, presentation, outputFullscreen, silent, critical);
         if (show)
             showPopup(notification);
         else if (isTransient || !historyEnabled || policy.history === false)

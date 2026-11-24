@@ -656,6 +656,20 @@ in
     description = "Capture encoding and recording defaults; user capture preferences override individual fields.";
   };
 
+  scopeOptions.notificationApplications = lib.mkOption {
+    type = lib.types.attrsOf (lib.types.submodule {
+      options = {
+        popups = lib.mkOption { type = lib.types.bool; default = true; description = "Allow application popups."; };
+        history = lib.mkOption { type = lib.types.bool; default = true; description = "Retain application notification history."; };
+        silent = lib.mkOption { type = lib.types.bool; default = false; description = "Suppress application popups."; };
+        criticalOnly = lib.mkOption { type = lib.types.bool; default = false; description = "Show only critical popups."; };
+        privatePreview = lib.mkOption { type = lib.types.bool; default = false; description = "Conceal notification content in popups."; };
+      };
+    });
+    default = { };
+    description = "Application notification defaults keyed by desktop:<desktop-entry> or name:<application-name>, in lowercase.";
+  };
+
   scopeOptions.notificationsSilent = lib.mkOption {
     type = lib.types.bool;
     default = false;
@@ -1102,6 +1116,7 @@ in
           presentation = scopeConfig.notificationsPresentation;
           historyEnabled = scopeConfig.notificationsHistoryEnabled;
           quietHours = scopeConfig.notificationQuietHours;
+          applications = scopeConfig.notificationApplications;
         };
         inherit (scopeConfig) powerPolicy;
         weather.location = scopeConfig.weatherLocation;
@@ -1138,6 +1153,7 @@ in
           emojiTest = "${pkgs.unicode-emoji}/share/unicode/emoji/emoji-test.txt";
           resourceProbe = lib.getExe resourceProbe;
           clipboardCopy = lib.getExe clipboardCopy;
+          copyText = lib.getExe' pkgs.wl-clipboard "wl-copy";
           clipboardPreview = lib.getExe clipboardPreview;
           clipboardOperations = lib.getExe clipboardOperations;
           lockSession = lib.getExe lockCommand;

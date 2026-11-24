@@ -386,6 +386,27 @@ Item {
         }
     }
 
+    function resetParameter(): void {
+        if (!parameters.length)
+            return;
+        const key = parameters[selectedIndex].key;
+        if (kind === "nightLight") {
+            nightLight.change("reset-field", ({temperature: "temperature", nightStart: "startMinute", nightEnd: "endMinute", nightTransition: "transitionMinutes"})[key]);
+        } else if (kind === "alerts") {
+            notifications.resetQuietField(key === "quietStart" ? "startMinute" : "endMinute");
+        } else if (key === "motionDuration") {
+            motion.resetDurationMultiplier();
+        } else {
+            appearance.clearOverride(key);
+            if (key === "windowOpacity")
+                appearance.applyWindowTransparency();
+            else if (key === "glassOpacity")
+                appearance.applyShellGlass();
+            else if (key === "blurSize")
+                appearance.applyBlurSize();
+        }
+    }
+
     function resetAppearance(): void {
         if (kind === "bar" || kind === "frame") {
             appearance.clearOverride(kind === "bar" ? "barIslandHeight" : "frameThickness");
@@ -510,7 +531,7 @@ Item {
         if (kind === "displays")
             return displayDetails.handleKey(key, modifiers, autoRepeat);
         if (autoRepeat) {
-            const repeatedAction = ["SettingsDetail.toggle", "SettingsDetail.blur", "SettingsDetail.reset", "SettingsDetail.presentation", "SettingsDetail.history", "SettingsDetail.quietHours", "SettingsDetail.nightResume", "SettingsDetail.nightPauseUntil", "SettingsDetail.powerAutomatic"].some(name => runtime.shellMatchesHint(name, key, modifiers));
+            const repeatedAction = ["SettingsDetail.toggle", "SettingsDetail.blur", "SettingsDetail.reset", "SettingsDetail.resetParameter", "SettingsDetail.presentation", "SettingsDetail.history", "SettingsDetail.quietHours", "SettingsDetail.nightResume", "SettingsDetail.nightPauseUntil", "SettingsDetail.powerAutomatic"].some(name => runtime.shellMatchesHint(name, key, modifiers));
             const choice = (kind === "nightLight" || kind === "power") ? runtime.shellNumberIndex("controls", key, 9) : reactiveTuning ? runtime.shellNumberIndex("controls", key, 7) : kind === "alerts" ? runtime.shellNumberIndex("controls", key, 6) : kind === "power" || kind === "stay" ? runtime.shellNumberIndex("controls", key, 5) : -1;
             if (repeatedAction || choice >= 0)
                 return true;
@@ -522,6 +543,10 @@ Item {
         }
         if (runtime.shellMatchesHint("SettingsDetail.blur", key, modifiers) && hasBlur) {
             appearance.toggleBlur();
+            return true;
+        }
+        if (runtime.shellMatchesHint("SettingsDetail.resetParameter", key, modifiers) && parameters.length > 0) {
+            resetParameter();
             return true;
         }
         if (runtime.shellMatchesHint("SettingsDetail.reset", key, modifiers) && hasReset) {
@@ -801,6 +826,20 @@ Item {
                 shortcut: panel.runtime.shellHint("SettingsDetail.reset")
                 onActivated: panel.resetAppearance()
             }
+        }
+
+        ShellAction {
+            visible: panel.parameters.length > 1
+            width: parent.width
+            height: visible ? 36 : 0
+            runtime: panel.runtime
+            theme: panel.theme
+            motion: panel.motion
+            compact: true
+            horizontalCompact: true
+            title: "Restore selected parameter · " + (panel.parameters[panel.selectedIndex]?.title || "")
+            shortcut: panel.runtime.shellHint("SettingsDetail.resetParameter")
+            onActivated: panel.resetParameter()
         }
 
         Grid {

@@ -629,12 +629,19 @@ FocusScope {
             focus: center.engaged
 
             Keys.onPressed: event => {
-                if ((center.runtime.shellModifier("activity", "Alt", event.modifiers)) && [center.runtime.shellKeyCode("activity", "P"), center.runtime.shellKeyCode("activity", "H"), center.runtime.shellKeyCode("activity", "S")].includes(event.key)) {
+                const appActions = {"NotificationCard.popup": "popups", "NotificationCard.history": "history", "NotificationCard.silent": "silent", "NotificationCard.criticalOnly": "criticalOnly", "NotificationCard.privatePreview": "privatePreview", "NotificationCard.defaults": "defaults"};
+                const appAction = Object.keys(appActions).find(action => center.runtime.shellMatchesHint(action, event.key, event.modifiers));
+                if (appAction) {
                     const notification = center.selectedNotification();
                     if (notification && center.expandedGroupKey === center.selectedGroup().key) {
-                        const name = event.key === center.runtime.shellKeyCode("activity", "P") ? "popups" : event.key === center.runtime.shellKeyCode("activity", "H") ? "history" : "silent";
-                        const prefs = center.notificationState.applicationPreferences(notification);
-                        center.notificationState.setApplicationPreference(notification, name, name === "silent" ? prefs.silent !== true : prefs[name] === false);
+                        if (!event.isAutoRepeat) {
+                            const name = appActions[appAction];
+                            const prefs = center.notificationState.applicationPreferences(notification);
+                            if (name === "defaults")
+                                center.notificationState.resetApplicationPreferences(notification);
+                            else
+                                center.notificationState.setApplicationPreference(notification, name, ["popups", "history"].includes(name) ? prefs[name] === false : prefs[name] !== true);
+                        }
                         event.accepted = true;
                     }
                 } else if (event.key === center.runtime.shellKeyCode("activity", "Escape")) {

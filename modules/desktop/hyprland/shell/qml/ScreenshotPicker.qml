@@ -21,6 +21,16 @@ Item {
     property bool annotateAfterCapture: false
     property string selectionMode: "image"
     property var encodingOverrides: parseEncoding(qmlCapturePreferences.encodingOverrides)
+    readonly property var encodingPresets: selectionMode === "record" ? [
+        {name: "Quality", values: {videoFormat: "mp4", codec: "libx264", frameRate: 60, videoQuality: 18}},
+        {name: "Compact", values: {videoFormat: "mkv", codec: "libx265", frameRate: 30, videoQuality: 28}},
+        {name: "Fast", values: {videoFormat: "mp4", codec: "libx264", frameRate: 30, videoQuality: 23}}
+    ] : [
+        {name: "Quality", values: {imageFormat: "png", jpegQuality: 95}},
+        {name: "Compact", values: {imageFormat: "jpg", jpegQuality: 75}},
+        {name: "Balanced", values: {imageFormat: "jpg", jpegQuality: 95}}
+    ]
+    readonly property int presetIndex: encodingPresets.findIndex(preset => Object.keys(preset.values).every(key => encoding(key) === preset.values[key]))
     readonly property string audioMode: String(encoding("audio"))
     property int remaining: 0
     readonly property bool countingDown: remaining > 0
@@ -80,6 +90,7 @@ Item {
             }
         ];
         return fields.concat([
+            {key: "preset", action: "ScreenshotPicker.preset", title: presetIndex >= 0 ? encodingPresets[presetIndex].name.toUpperCase() : "PRESET", values: []},
             {
                 key: "",
                 action: "ScreenshotPicker.resetEncoding",
@@ -110,7 +121,13 @@ Item {
     function cycleEncoding(field: var): void {
         if (countingDown || exporting || (selectionMode !== "record" && (copying || annotateAfterCapture) && ["imageFormat", "jpegQuality"].includes(field.key)))
             return;
-        if (field.key === "") {
+        if (field.key === "preset") {
+            if (selectionMode !== "record" && (copying || annotateAfterCapture))
+                return;
+            const preset = encodingPresets[(presetIndex + 1) % encodingPresets.length];
+            qmlCapturePreferences.encodingOverrides = JSON.stringify(Object.assign({}, encodingOverrides, preset.values));
+            qmlCapturePreferences.sync();
+        } else if (field.key === "") {
             qmlCapturePreferences.encodingOverrides = "{}";
             qmlCapturePreferences.sync();
         } else {
@@ -743,7 +760,7 @@ Item {
                         horizontalCompact: true
                         title: modelData.title
                         shortcut: picker.runtime.shellHint(modelData.action)
-                        enabled: !picker.countingDown && !picker.exporting && !(picker.selectionMode !== "record" && (picker.copying || picker.annotateAfterCapture) && ["imageFormat", "jpegQuality"].includes(modelData.key))
+                        enabled: !picker.countingDown && !picker.exporting && !(picker.selectionMode !== "record" && (picker.copying || picker.annotateAfterCapture) && ["imageFormat", "jpegQuality", "preset"].includes(modelData.key))
                         onActivated: picker.cycleEncoding(modelData)
                     }
                 }

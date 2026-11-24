@@ -250,6 +250,10 @@ def main(argv):
         config = {**DEFAULTS, **{key: value for key, value in saved.items() if key in DEFAULTS}}
         if command == "reset":
             saved = {}
+        elif command == "reset-field":
+            if argv[1] not in ("temperature", "startMinute", "endMinute", "transitionMinutes"):
+                raise ValueError("Invalid Night Light parameter")
+            saved.pop(argv[1], None)
         elif command == "mode":
             value = validated("mode", argv[1])
             if value == "solar" and not solar_available(config):

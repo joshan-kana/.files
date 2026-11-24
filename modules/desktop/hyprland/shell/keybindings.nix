@@ -115,6 +115,9 @@
           "NotificationCard.reply" = "R";
           "NotificationCard.silent" = "ALT+S";
           "NotificationCard.submit" = "ENTER";
+          "NotificationCard.criticalOnly" = "ALT+U";
+          "NotificationCard.privatePreview" = "ALT+V";
+          "NotificationCard.defaults" = "ALT+R";
           "NotificationContent.clearAll" = "C";
           "NotificationContent.expand" = "E";
           "NotificationContent.groups" = "NAV_HORIZONTAL";
@@ -152,6 +155,7 @@
           "ScreenshotPicker.countdown" = "D";
           "ScreenshotPicker.cursor" = "C";
           "ScreenshotPicker.resetEncoding" = "X";
+          "ScreenshotPicker.preset" = "V";
         };
         clipboard = {
           "ClipboardPanel.actionMenu" = "ALT+ENTER";
@@ -238,6 +242,7 @@
           "SettingsDetail.toggle" = "T";
           "SettingsDetail.blur" = "B";
           "SettingsDetail.reset" = "R";
+          "SettingsDetail.resetParameter" = "SHIFT+R";
           "SettingsDetail.adjust" = "NAV_HORIZONTAL";
           "SettingsDetail.presentation" = "P";
           "SettingsDetail.history" = "Y";
@@ -533,6 +538,7 @@
         status = {
           "StatusContent.close" = "ESC";
           "StatusContent.refresh" = "R";
+          "StatusContent.copy" = "C";
         };
         weather = {
           "WeatherContent.calendar" = "C";

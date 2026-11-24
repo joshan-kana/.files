@@ -262,7 +262,7 @@ test("QML runtime defaults match the native Nix shell option declarations", () =
   const qml = read("qml/RuntimeConfig.qml");
   const appearanceNix = nix
     .split("  scopeOptions.appearance = lib.mkOption {")[1]
-    .split("  scopeOptions.captureFreezeEnabled")[0];
+    .split("  scopeOptions.wallpaperRotation")[0];
   const appearanceQml = qml
     .split("            property JsonObject appearance: JsonObject {")[1]
     .split("            property JsonObject capture: JsonObject {")[0];
