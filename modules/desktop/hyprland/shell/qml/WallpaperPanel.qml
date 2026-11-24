@@ -906,8 +906,9 @@ Item {
                                 }
                                 Text {
                                     id: favoriteMark
-                                    visible: panel.favoritePaths.includes(entry.modelData)
-                                    width: visible ? implicitWidth : 0
+                                    readonly property bool marked: panel.favoritePaths.includes(entry.modelData)
+                                    visible: marked
+                                    width: marked ? panel.theme.iconSmall + panel.theme.spacing1 : 0
                                     anchors.verticalCenter: parent.verticalCenter
                                     text: "󰋑"
                                     color: panel.theme.readableRoleColor("wallpaper")

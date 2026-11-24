@@ -674,8 +674,9 @@ Item {
                         }
                         Text {
                             id: pinnedMark
-                            visible: !!item.modelData && !panel.actionMode && item.modelData.pinned
-                            width: visible ? implicitWidth : 0
+                            readonly property bool marked: !!item.modelData && !panel.actionMode && item.modelData.pinned
+                            visible: marked
+                            width: marked ? panel.theme.iconSmall + panel.theme.spacing1 : 0
                             anchors.verticalCenter: parent.verticalCenter
                             text: "󰐃"
                             color: panel.theme.readableRoleColor("clipboard")

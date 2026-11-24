@@ -801,7 +801,7 @@ Item {
                         width: parent.width
                         spacing: panel.theme.spacing2
                         Text {
-                            width: parent.width - status.width - favoriteMark.width - parent.spacing * 2
+                            width: Math.max(1, parent.width - status.width - favoriteMark.width - parent.spacing * 2)
                             text: themeCard.modelData.label || themeCard.modelData.name
                             color: panel.theme.textStrong
                             font.family: panel.runtime.fontSans
@@ -818,8 +818,9 @@ Item {
                         }
                         Text {
                             id: favoriteMark
-                            visible: panel.favoriteNames.includes(themeCard.modelData.name)
-                            width: visible ? implicitWidth : 0
+                            readonly property bool marked: panel.favoriteNames.includes(themeCard.modelData.name)
+                            visible: marked
+                            width: marked ? panel.theme.iconSmall + panel.theme.spacing1 : 0
                             text: "󰋑"
                             color: panel.theme.readableRoleColor("theme")
                             font.family: "Symbols Nerd Font"
