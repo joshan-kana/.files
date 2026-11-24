@@ -10,7 +10,10 @@ QtObject {
     property bool supported: runtime.nightLightControl.length > 0
     property bool active: false
     property bool busy: false
-    readonly property bool foregroundBusy: busy || queuedTemperature >= 0 || Object.keys(queuedSchedule).length > 0
+    property bool resetPending: false
+    property bool resetting: false
+    signal resetFinished(bool success, string reason)
+    readonly property bool foregroundBusy: busy || resetPending || resetting || queuedTemperature >= 0 || Object.keys(queuedSchedule).length > 0
     property string mode: runtime.configData.nightLight.mode
     property int temperature: runtime.configData.nightLight.temperature
     property int effectiveTemperature: 6500
@@ -66,10 +69,15 @@ QtObject {
 
     property StdioCollector stateOutput: StdioCollector {}
     property StdioCollector stateError: StdioCollector {}
+    property bool refreshPending: false
     property Process stateProcess: Process {
         stdout: root.stateOutput
         stderr: root.stateError
         onExited: (code, status) => {
+            if (root.refreshPending) {
+                root.refreshPending = false;
+                Qt.callLater(() => root.refresh());
+            }
             if (code !== 0) {
                 root.supported = false;
                 root.error = "Night Light backend unavailable";
@@ -107,24 +115,59 @@ QtObject {
             root.busy = false;
             root.error = code === 0 ? "" : (root.actionError.text.trim() || "Night Light could not apply");
             root.refresh();
+            if (root.resetting) {
+                root.resetting = false;
+                root.resetFinished(code === 0, root.error);
+            }
+            if (root.resetPending) {
+                root.applyReset();
+                return;
+            }
             if (root.queuedTemperature >= 0 || Object.keys(root.queuedSchedule).length > 0)
                 root.temperatureDebounce.restart();
         }
     }
     Component.onCompleted: refresh()
     function refresh(): void {
-        if (runtime.nightLightControl.length > 0 && !stateProcess.running)
+        if (!runtime.nightLightControl)
+            return;
+        if (stateProcess.running)
+            refreshPending = true;
+        else
             stateProcess.exec([runtime.nightLightControl, "state"]);
     }
     function change(action: string, argument: string): void {
-        if (!supported || busy || actionProcess.running)
+        if (!supported || busy || resetPending || resetting || actionProcess.running)
             return;
         busy = true;
         error = "";
         actionProcess.exec(argument.length > 0 ? [runtime.nightLightControl, action, argument] : [runtime.nightLightControl, action]);
     }
+    function resetToDeclared(): void {
+        temperatureDebounce.stop();
+        queuedTemperature = -1;
+        queuedSchedule = {};
+        if (resetting || resetPending)
+            return;
+        if (!runtime.nightLightControl) {
+            resetFinished(false, "Night Light backend unavailable");
+            return;
+        }
+        resetPending = true;
+        if (!actionProcess.running)
+            applyReset();
+    }
+
+    function applyReset(): void {
+        resetPending = false;
+        resetting = true;
+        busy = true;
+        error = "";
+        actionProcess.exec([runtime.nightLightControl, "reset"]);
+    }
+
     function setScheduleField(field: string, value: real): void {
-        if (!supported || !isFinite(value))
+        if (!supported || resetting || resetPending || !isFinite(value))
             return;
         if (field === "start") {
             startMinute = Math.round(runtime.bounded("nightLight", field === "start" ? "startMinute" : "endMinute", value));
@@ -154,7 +197,7 @@ QtObject {
         change("toggle", "");
     }
     function adjustTemperature(delta: int): void {
-        if (!supported)
+        if (!supported || resetting || resetPending)
             return;
         const target = runtime.bounded("nightLight", "temperature", temperature + delta);
         if (target === temperature)

@@ -56,19 +56,30 @@ FocusScope {
     property bool resetConfirmPending: false
     property bool resetRunning: false
     property string resetStatus: ""
-    property var resetOutputs: []
+    property var resetSteps: []
+    property var resetErrors: []
     property int resetIndex: 0
+    property bool waitingForNightLightReset: false
 
     Process {
-        id: wallpaperReset
+        id: preferenceReset
         onExited: (code, status) => {
-            if (code !== 0) {
-                root.resetRunning = false;
-                root.resetStatus = "Wallpaper reset failed. Other preferences were restored.";
-                return;
-            }
+            if (code !== 0)
+                root.resetErrors = [...root.resetErrors, root.resetSteps[root.resetIndex].label];
             root.resetIndex++;
-            root.resetNextWallpaper();
+            root.resetNextPreference();
+        }
+    }
+
+    Connections {
+        target: root.nightLight
+        function onResetFinished(success, reason) {
+            if (!root.waitingForNightLightReset)
+                return;
+            root.waitingForNightLightReset = false;
+            if (!success)
+                root.resetErrors = [...root.resetErrors, "Night Light"];
+            root.resetNextPreference();
         }
     }
 
@@ -99,23 +110,44 @@ FocusScope {
         restoreDefaultsRequested();
         sessionPanel.invoke("resetToDeclared");
         notificationState.resetToDeclared();
-        resetOutputs = Quickshell.screens.map(screen => screen.name).filter(name => !!name).concat(["all"]);
+        resourceState.resetSampling();
+        resetErrors = [];
+        resetSteps = [];
+        if (runtime.captureLocations)
+            resetSteps.push({
+                label: "Capture locations",
+                command: [runtime.captureLocations, "reset"]
+            });
+        if (runtime.wallpaperLibrary) {
+            for (const output of Quickshell.screens.map(screen => screen.name).filter(name => !!name).concat(["all"]))
+                resetSteps.push({
+                    label: "Wallpaper (" + output + ")",
+                    command: [runtime.wallpaperLibrary, "reset", output]
+                });
+        } else {
+            resetErrors.push("Wallpaper library unavailable");
+        }
+        if (runtime.wallpaperPolicy)
+            resetSteps.push({
+                label: "Wallpaper schedule",
+                command: [runtime.wallpaperPolicy, "reset"]
+            });
         resetIndex = 0;
-        resetNextWallpaper();
+        if (runtime.nightLightControl) {
+            waitingForNightLightReset = true;
+            nightLight.resetToDeclared();
+        } else {
+            resetNextPreference();
+        }
     }
 
-    function resetNextWallpaper(): void {
-        if (resetIndex >= resetOutputs.length) {
+    function resetNextPreference(): void {
+        if (resetIndex >= resetSteps.length) {
             resetRunning = false;
-            resetStatus = "Declared desktop defaults restored";
+            resetStatus = resetErrors.length > 0 ? "Could not restore: " + resetErrors.join(", ") + ". Other defaults restored." : "Declared desktop defaults restored";
             return;
         }
-        if (!runtime.wallpaperLibrary) {
-            resetRunning = false;
-            resetStatus = "Wallpaper reset unavailable. Other preferences were restored.";
-            return;
-        }
-        wallpaperReset.exec([runtime.wallpaperLibrary, "reset", resetOutputs[resetIndex]]);
+        preferenceReset.exec(resetSteps[resetIndex].command);
     }
 
     property string requestedView: ""
@@ -1320,7 +1352,7 @@ FocusScope {
                             Text {
                                 width: parent.width
                                 wrapMode: Text.WordWrap
-                                text: root.resetConfirmPending ? "Restore Nix defaults for appearance, motion, notifications, captures and wallpapers? Personal files and the active system generation stay intact." : root.resetStatus
+                                text: root.resetConfirmPending ? "Restore declared desktop preferences, including Night Light, weather, capture locations and wallpaper schedules? Personal files, favourites, history and the active system generation stay intact." : root.resetStatus
                                 color: root.resetConfirmPending ? root.theme.textStrong : root.theme.textMuted
                                 font.family: root.runtime.fontSans
                                 font.pixelSize: root.theme.fontSize(11)

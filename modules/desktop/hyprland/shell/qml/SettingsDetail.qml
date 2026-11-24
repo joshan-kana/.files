@@ -442,7 +442,7 @@ Item {
             return;
         }
         if (kind === "nightLight") {
-            nightLight.change("reset", "");
+            nightLight.resetToDeclared();
             return;
         }
         if (kind === "alerts") {

@@ -147,6 +147,27 @@ test("navigation cannot clear ongoing operation state", () => {
   }
   assert.match(
     source("NightLightState.qml"),
-    /foregroundBusy: busy \|\| queuedTemperature >= 0/,
+    /foregroundBusy: busy \|\| resetPending \|\| resetting \|\| queuedTemperature >= 0/,
   );
+});
+
+test("global and detail reset share the serialized Night Light reset operation", () => {
+  const state = source("NightLightState.qml");
+  const controls = source("SystemContent.qml");
+  const detail = source("SettingsDetail.qml");
+  assert.match(
+    state,
+    /function resetToDeclared\(\): void \{\s*temperatureDebounce.stop\(\);\s*queuedTemperature = -1;\s*queuedSchedule = \{\}/,
+  );
+  assert.match(state, /if \(root.resetPending\) \{\s*root.applyReset\(\)/);
+  assert.match(
+    state,
+    /actionProcess.exec\(\[runtime.nightLightControl, "reset"\]\)/,
+  );
+  assert.match(
+    controls,
+    /waitingForNightLightReset = true;\s*nightLight.resetToDeclared\(\)/,
+  );
+  assert.match(controls, /function onResetFinished\(success, reason\)/);
+  assert.match(detail, /nightLight.resetToDeclared\(\)/);
 });

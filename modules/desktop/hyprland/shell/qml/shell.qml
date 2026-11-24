@@ -195,6 +195,8 @@ ShellRoot {
                 qmlAppearance.resetToDeclared();
                 qmlMotion.resetToDeclared();
                 screenshotPicker.resetToDeclared();
+                weather.resetLocation();
+                weather.resetUnits();
             }
             requestedView: qmlExpansionState.currentView
             returnToControls: qmlExpansionState.backDestination === "controls"
