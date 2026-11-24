@@ -15,6 +15,7 @@ Item {
     property string shortcut: ""
     property bool active: false
     property color activeColor: theme.accent
+    property color iconColor: active ? activeColor : theme.textStrong
     property bool compact: false
     property bool horizontalCompact: false
     property bool headerEntry: false
@@ -108,7 +109,7 @@ Item {
                 visible: !root.iconOnly && root.icon.length > 0
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: root.icon
-                color: root.active ? root.activeColor : root.theme.textStrong
+                color: root.iconColor
                 font.family: "Symbols Nerd Font"
                 font.pixelSize: root.theme.fontSize(root.compact ? 15 : 19)
             }
@@ -169,7 +170,7 @@ Item {
                 visible: root.iconName.length === 0
                 anchors.verticalCenter: parent.verticalCenter
                 text: root.icon
-                color: root.active ? root.activeColor : root.theme.textStrong
+                color: root.iconColor
                 font.family: "Symbols Nerd Font"
                 font.pixelSize: root.theme.fontSize(15)
             }
@@ -209,7 +210,7 @@ Item {
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             text: root.icon
-            color: root.active ? root.activeColor : root.theme.textStrong
+            color: root.iconColor
             font.family: "Symbols Nerd Font"
             font.pixelSize: root.theme.fontSize(17)
         }
@@ -222,7 +223,7 @@ Item {
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: root.icon
-                color: root.active ? root.activeColor : root.theme.textStrong
+                color: root.iconColor
                 font.family: "Symbols Nerd Font"
                 font.pixelSize: root.theme.fontSize(16)
             }

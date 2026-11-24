@@ -180,3 +180,33 @@ test("capability and contextual enable/disable actions share recognizable state 
     /icon: DesktopIcons\.toggleGlyph\(controls\.appearance\.musicReactiveEnabled\)/,
   );
 });
+
+test("Controls header destination glyphs use their detail semantic colours without selecting the action", () => {
+  const controls = qml("SystemContent.qml");
+  const action = qml("ShellAction.qml");
+  for (const [destination, role, detail] of [
+    ["theme", "display", "ThemePanel.qml"],
+    ["wallpaper", "wallpaper", "WallpaperPanel.qml"],
+    ["session", "resources", "SessionPanel.qml"],
+  ]) {
+    assert.ok(
+      controls.includes(
+        `icon: DesktopIcons.glyphFor("${destination}")\n                    iconColor: root.theme.roleColor("${role}")`,
+      ),
+    );
+    assert.ok(qml(detail).includes(`panel.theme.roleColor("${role}")`));
+  }
+  assert.match(
+    action,
+    /property color iconColor: active \? activeColor : theme.textStrong/,
+  );
+  assert.equal(
+    [...action.matchAll(/text: root.icon\s+color: root.iconColor/g)].length,
+    4,
+  );
+  assert.match(
+    action,
+    /text: root.title[\s\S]*?color: root.active \? root.activeColor :/,
+  );
+  assert.match(action, /selected: root.active/);
+});

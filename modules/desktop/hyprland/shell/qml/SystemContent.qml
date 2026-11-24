@@ -898,10 +898,11 @@ FocusScope {
                     compact: true
                     horizontalCompact: true
                     icon: DesktopIcons.glyphFor("theme")
+                    iconColor: root.theme.roleColor("display")
                     title: "Themes"
                     shortcut: root.runtime.shellHint("SystemContent.themes")
                     foregroundBusy: root.dashboardExposed && themePanel.foregroundBusy
-                    foregroundColor: root.theme.roleColor("theme")
+                    foregroundColor: root.theme.roleColor("display")
                     onActivated: root.openTheme()
                 }
                 ShellAction {
@@ -916,6 +917,7 @@ FocusScope {
                     compact: true
                     horizontalCompact: true
                     icon: DesktopIcons.glyphFor("wallpaper")
+                    iconColor: root.theme.roleColor("wallpaper")
                     title: "Wallpaper"
                     shortcut: root.runtime.shellHint("SystemContent.wallpaper")
                     foregroundBusy: root.dashboardExposed && wallpaperPanel.foregroundBusy
@@ -934,6 +936,7 @@ FocusScope {
                     compact: true
                     horizontalCompact: true
                     icon: DesktopIcons.glyphFor("session")
+                    iconColor: root.theme.roleColor("resources")
                     title: "Session"
                     shortcut: root.runtime.shellHint("SystemContent.session")
                     onActivated: root.openSession()
