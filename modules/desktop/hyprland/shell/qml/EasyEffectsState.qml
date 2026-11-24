@@ -19,7 +19,10 @@ QtObject {
     property bool desiredBypass: false
     property string error: ""
     property var presets: []
-    property var activePresets: ({input: "", output: ""})
+    property var activePresets: ({
+            input: "",
+            output: ""
+        })
     property bool presetsKnown: false
     property bool presetBusy: false
     property string presetError: ""
@@ -27,8 +30,9 @@ QtObject {
     property int confirmationAttempts: 0
     readonly property string presetStatus: presetError || (presetBusy ? "Reading effects presets…" : !presetsKnown ? "Presets not checked" : "Input: " + (activePresets.input || "None") + " · Output: " + (activePresets.output || "None"))
     property Process presetListProcess: Process {
-        environment: ({LC_ALL: "C"})
-        stdout: StdioCollector { id: presetListOutput }
+        stdout: StdioCollector {
+            id: presetListOutput
+        }
         onExited: (code, status) => {
             const result = code === 0 ? Presets.parsePresets(presetListOutput.text) : null;
             if (result === null) {
@@ -38,12 +42,13 @@ QtObject {
                 return;
             }
             effects.presets = result;
-            effects.presetReadProcess.exec([effects.runtime.easyeffects, "--last-loaded-presets"]);
+            effects.presetReadProcess.exec([effects.runtime.easyeffectsCli, "--last-loaded-presets"]);
         }
     }
     property Process presetReadProcess: Process {
-        environment: ({LC_ALL: "C"})
-        stdout: StdioCollector { id: activePresetOutput }
+        stdout: StdioCollector {
+            id: activePresetOutput
+        }
         onExited: (code, status) => {
             const result = code === 0 ? Presets.parseActive(activePresetOutput.text) : null;
             if (result !== null) {
@@ -55,7 +60,7 @@ QtObject {
             if (effects.requestedPreset && !Presets.confirmed(effects.requestedPreset, result)) {
                 if (effects.confirmationAttempts < 3) {
                     effects.confirmationAttempts += 1;
-                    confirmationTimer.restart();
+                    effects.confirmationTimer.restart();
                     return;
                 }
                 effects.presetError = "Preset load not confirmed by EasyEffects";
@@ -67,8 +72,9 @@ QtObject {
         }
     }
     property Process presetActionProcess: Process {
-        environment: ({LC_ALL: "C"})
-        stderr: StdioCollector { id: presetActionError }
+        stderr: StdioCollector {
+            id: presetActionError
+        }
         onExited: (code, status) => {
             if (code !== 0) {
                 effects.presetError = presetActionError.text.trim() || "Could not load EasyEffects preset";
@@ -76,12 +82,12 @@ QtObject {
                 effects.presetBusy = false;
                 return;
             }
-            confirmationTimer.restart();
+            effects.confirmationTimer.restart();
         }
     }
     property Timer confirmationTimer: Timer {
         interval: 350
-        onTriggered: effects.presetReadProcess.exec([effects.runtime.easyeffects, "--last-loaded-presets"])
+        onTriggered: effects.presetReadProcess.exec([effects.runtime.easyeffectsCli, "--last-loaded-presets"])
     }
 
     function refreshPresets(): void {
@@ -90,7 +96,7 @@ QtObject {
         presetBusy = true;
         presetError = "";
         requestedPreset = null;
-        presetListProcess.exec([runtime.easyeffects, "--presets"]);
+        presetListProcess.exec([runtime.easyeffectsCli, "--presets"]);
     }
 
     function choosePreset(name: string): void {
@@ -101,7 +107,7 @@ QtObject {
         confirmationAttempts = 1;
         presetBusy = true;
         presetError = "";
-        presetActionProcess.exec([runtime.easyeffects, "--load-preset", name]);
+        presetActionProcess.exec([runtime.easyeffectsCli, "--load-preset", name]);
     }
 
     readonly property string statusLabel: !supported ? "EasyEffects unavailable" : busy ? "Applying…" : error.length > 0 ? error : !known ? "Status not checked" : bypassed ? "Effects bypassed" : "Processing enabled"

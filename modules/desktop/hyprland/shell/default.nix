@@ -942,6 +942,16 @@ in
           nmcli = lib.getExe' pkgs.networkmanager "nmcli";
           hyprctl = lib.getExe' osConfig.programs.hyprland.package "hyprctl";
           easyeffects = lib.getExe pkgs.easyeffects;
+          easyeffectsCli = lib.getExe (
+            pkgs.writeShellApplication {
+              name = "desktop-shell-easyeffects-cli";
+              runtimeInputs = [ pkgs.easyeffects ];
+              text = ''
+                export LC_ALL=C
+                exec easyeffects "$@"
+              '';
+            }
+          );
           vhsControl = lib.getExe vhsControl;
           sessionCommand = lib.getExe sessionCommand;
           urlOpen = lib.getExe' pkgs.xdg-utils "xdg-open";

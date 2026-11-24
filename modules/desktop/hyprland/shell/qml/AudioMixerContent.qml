@@ -556,7 +556,8 @@ FocusScope {
                 clip: true
                 model: effectsState.presets
                 currentIndex: mixer.presetIndex
-                onCurrentIndexChanged: if (currentIndex >= 0) positionViewAtIndex(currentIndex, ListView.Contain)
+                onCurrentIndexChanged: if (currentIndex >= 0)
+                    positionViewAtIndex(currentIndex, ListView.Contain)
                 delegate: ShellAction {
                     required property int index
                     required property var modelData

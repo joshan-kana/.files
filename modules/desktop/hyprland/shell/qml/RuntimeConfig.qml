@@ -31,6 +31,7 @@ QtObject {
     readonly property string pwMetadata: root.configData.tools.pwMetadata
     readonly property string nmcli: root.configData.tools.nmcli
     readonly property string hyprctl: root.configData.tools.hyprctl
+    readonly property string easyeffectsCli: root.configData.tools.easyeffectsCli
     readonly property string easyeffects: root.configData.tools.easyeffects
     readonly property string vhsControl: root.configData.tools.vhsControl
     readonly property string sessionCommand: Quickshell.env("DESKTOP_SHELL_SESSION_COMMAND") || root.configData.tools.sessionCommand
@@ -324,6 +325,7 @@ QtObject {
                 property string pwMetadata: ""
                 property string nmcli: ""
                 property string hyprctl: ""
+                property string easyeffectsCli: ""
                 property string easyeffects: ""
                 property string vhsControl: ""
                 property string sessionCommand: ""

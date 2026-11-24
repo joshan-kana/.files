@@ -19,11 +19,13 @@ function parsePresets(text) {
     if (!entry || !pipeline) continue;
     const name = entry[1].trim();
     if (!name) continue;
-    const preset = byName.get(name) || {name, input: false, output: false};
+    const preset = byName.get(name) || { name, input: false, output: false };
     preset[pipeline] = true;
     byName.set(name, preset);
   }
-  return seen.size === 2 ? Array.from(byName.values()).sort((a, b) => a.name.localeCompare(b.name)) : null;
+  return seen.size === 2
+    ? Array.from(byName.values()).sort((a, b) => a.name.localeCompare(b.name))
+    : null;
 }
 
 function parseActive(text) {
@@ -32,10 +34,16 @@ function parseActive(text) {
     const match = /^(input|output):\s*(.*)$/i.exec(line);
     if (match) result[match[1].toLowerCase()] = match[2].trim();
   }
-  return Object.hasOwn(result, "input") && Object.hasOwn(result, "output") ? result : null;
+  return Object.prototype.hasOwnProperty.call(result, "input") &&
+    Object.prototype.hasOwnProperty.call(result, "output")
+    ? result
+    : null;
 }
 
 function confirmed(preset, active) {
-  return !!active && (!preset.input || active.input === preset.name) &&
-    (!preset.output || active.output === preset.name);
+  return (
+    !!active &&
+    (!preset.input || active.input === preset.name) &&
+    (!preset.output || active.output === preset.name)
+  );
 }
