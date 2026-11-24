@@ -17,8 +17,8 @@ in
     plugins = [
       (pkgs.fetchurl {
         name = "gerrit-oauth-provider.jar";
-        url = "https://gerrit-ci.gerritforge.com/job/plugin-oauth-bazel-stable-3.14/1/artifact/bazel-bin/plugins/oauth/oauth.jar";
-        hash = "sha256-R6IahUTXS294nnxXB1WI4gREg5sqUn6sahtKfvaNfZI=";
+        url = "https://github.com/davido/gerrit-oauth-provider/releases/download/v3.15.0/oauth-github.jar";
+        hash = "sha256-tMkBgD486aHnFkWvQh4SmCnVUCJpKDARNaW++4RuTII=";
       })
     ];
     serverId = "dec01ec9-55a7-4fed-bb8b-08278d06cf51";
