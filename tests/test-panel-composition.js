@@ -138,3 +138,21 @@ test("overflowing static detail editors retain the hub scroll path", () => {
   for (const name of ["SettingsDetail.qml", "VhsPanel.qml"])
     assert.match(qml(name), /revealSelection\(top, top \+ card.height\)/);
 });
+
+test("forecast rows are read-only and retain accessible weather details without duplicate footer actions", () => {
+  const content = qml("WeatherContent.qml");
+  const day = qml("WeatherDay.qml");
+  const bindings = fs.readFileSync(
+    path.join(root, "../keybindings.nix"),
+    "utf8",
+  );
+  assert.doesNotMatch(
+    content,
+    /selectedDay|calendarRequested|KeyHintStrip|chance of precipitation/,
+  );
+  assert.doesNotMatch(bindings, /WeatherContent\.(calendar|days)/);
+  assert.doesNotMatch(day, /StateLayer|signal activated/);
+  assert.match(day, /Accessible\.role: Accessible\.StaticText/);
+  assert.match(day, /weather\.conditionFor\(day.code\)/);
+  assert.match(content, /panel\.weather\.updatedAt/);
+});

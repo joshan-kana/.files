@@ -554,8 +554,6 @@
           "StatusContent.copy" = "C";
         };
         weather = {
-          "WeatherContent.calendar" = "C";
-          "WeatherContent.days" = "NAV_ALL";
           "WeatherContent.refresh" = "R";
           "WeatherContent.location" = "F";
           "WeatherContent.applyLocation" = "ENTER";

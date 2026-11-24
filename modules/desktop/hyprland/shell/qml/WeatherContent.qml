@@ -13,7 +13,6 @@ FocusScope {
     readonly property bool foregroundBusy: weather.loading && weather.foregroundLoading
     readonly property string foregroundRole: "weather"
     property bool engaged: false
-    property int selectedDay: 0
     property bool locationEditing: false
     function editLocation(): void {
         locationEditing = true;
@@ -36,7 +35,6 @@ FocusScope {
     }
 
     signal closeRequested
-    signal calendarRequested
 
     SystemClock {
         id: clock
@@ -49,7 +47,6 @@ FocusScope {
 
     onEngagedChanged: {
         if (engaged) {
-            selectedDay = 0;
             Qt.callLater(() => keys.forceActiveFocus());
         } else {
             locationEditing = false;
@@ -80,15 +77,6 @@ FocusScope {
             } else if (panel.runtime.shellMatchesHint("WeatherContent.refresh", event.key, event.modifiers)) {
                 if (!event.isAutoRepeat)
                     refreshButton.trigger();
-                event.accepted = true;
-            } else if (event.key === panel.runtime.shellKeyCode("weather", "C") || event.key === panel.runtime.shellKeyCode("weather", "Backspace")) {
-                panel.calendarRequested();
-                event.accepted = true;
-            } else if (panel.runtime.shellNavigates("weather", "down", event.key) || panel.runtime.shellNavigates("weather", "right", event.key)) {
-                panel.selectedDay = Math.min(6, panel.selectedDay + 1);
-                event.accepted = true;
-            } else if (panel.runtime.shellNavigates("weather", "up", event.key) || panel.runtime.shellNavigates("weather", "left", event.key)) {
-                panel.selectedDay = Math.max(0, panel.selectedDay - 1);
                 event.accepted = true;
             }
         }
@@ -388,19 +376,8 @@ FocusScope {
                     day: modelData
                     lowBound: Math.min(...panel.weather.forecast.map(item => item.low))
                     highBound: Math.max(...panel.weather.forecast.map(item => item.high))
-                    active: panel.selectedDay === index
-                    onActivated: panel.selectedDay = index
                 }
             }
-        }
-
-        ShellText {
-            width: parent.width
-            runtime: panel.runtime
-            theme: panel.theme
-            text: panel.weather.forecast[panel.selectedDay] ? Qt.formatDate(new Date(panel.weather.forecast[panel.selectedDay].date + "T12:00:00"), "dddd, d MMMM") + " · " + panel.weather.conditionFor(panel.weather.forecast[panel.selectedDay].code) + " · " + Math.round(panel.weather.forecast[panel.selectedDay].rain ?? 0) + "% chance of precipitation" : "No forecast for selected day"
-            color: panel.theme.textMuted
-            wrapMode: Text.WordWrap
         }
 
         Text {
@@ -408,22 +385,6 @@ FocusScope {
             color: panel.theme.textMuted
             font.family: panel.runtime.fontSans
             font.pixelSize: panel.theme.fontSize(11)
-        }
-
-        KeyHintStrip {
-            width: parent.width
-            runtime: panel.runtime
-            theme: panel.theme
-            hints: [
-                {
-                    shortcut: panel.runtime.shellHint("WeatherContent.days"),
-                    label: "Days"
-                },
-                {
-                    shortcut: panel.runtime.shellHint("WeatherContent.calendar"),
-                    label: "Calendar"
-                }
-            ]
         }
     }
 }

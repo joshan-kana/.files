@@ -7,26 +7,17 @@ ShellSurface {
     required property WeatherState weather
     required property var day
     required property int index
-    property bool active: false
     property real lowBound: day.low
     property real highBound: day.high
     readonly property real span: Math.max(1, highBound - lowBound)
 
-    signal activated
-
     implicitWidth: 74
     implicitHeight: Math.max(38, theme.fontSize(42))
     surfaceLayer: ShellSurface.Control
-    cornerRadius: motion.enabled && press.visualPressed ? theme.radiusSmall : theme.radiusMedium
-    Behavior on cornerRadius {
-        enabled: dayCard.motion.enabled
-        Anim {
-            motion: dayCard.motion
-            type: Anim.FastSpatial
-        }
-    }
-    fillColor: active ? theme.blend(theme.controlBase, theme.roleColor("weather"), theme.dark ? 0.09 : 0.05) : theme.layer2
-    outlined: active
+    fillColor: index === 0 ? theme.blend(theme.controlBase, theme.roleColor("weather"), theme.dark ? 0.09 : 0.05) : theme.layer2
+
+    Accessible.role: Accessible.StaticText
+    Accessible.name: Qt.formatDate(new Date(day.date + "T12:00:00"), "dddd, d MMMM") + ", " + weather.conditionFor(day.code) + ", " + Math.round(day.rain ?? 0) + "% chance of precipitation, " + weather.temperatureText(day.low) + " to " + weather.temperatureText(day.high)
 
     Row {
         anchors.fill: parent
@@ -102,14 +93,5 @@ ShellSurface {
             font.pixelSize: dayCard.theme.fontAction
             font.weight: Font.DemiBold
         }
-    }
-
-    StateLayer {
-        id: press
-        theme: dayCard.theme
-        motion: dayCard.motion
-        selected: dayCard.active
-        cornerRadius: dayCard.cornerRadius
-        onActivated: dayCard.activated()
     }
 }

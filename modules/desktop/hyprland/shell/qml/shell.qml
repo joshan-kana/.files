@@ -148,7 +148,6 @@ ShellRoot {
             motion: root.motionRef
             weather: root.weatherRef
             engaged: qmlExpansionState.currentName === "weather"
-            onCalendarRequested: actions.toggleCalendar(qmlExpansionState.screen)
             onCloseRequested: qmlExpansionState.back()
         }
     }

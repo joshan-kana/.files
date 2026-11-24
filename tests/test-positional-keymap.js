@@ -152,7 +152,6 @@ test("all directional widgets delegate keys to the shared navigation mapping", (
     "ResizeOverlay.qml",
     "OverviewPanel.qml",
     "CalendarContent.qml",
-    "WeatherContent.qml",
     "MediaContent.qml",
     "NotificationContent.qml",
     "AudioMixerContent.qml",
