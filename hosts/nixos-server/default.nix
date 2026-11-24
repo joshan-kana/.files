@@ -31,6 +31,16 @@ lib.recursiveUpdate (import ../../profiles/minimal.nix { inherit lib moduleRegis
   };
 
   system = editScope moduleRegistry.system {
+    privilegeSshAgent = { lib, ... }: {
+      systemd.tmpfiles.rules = [
+        "f+ /etc/elevation-authorized-key 0444 root root - ${
+          lib.concatStringsSep "\\n" [
+            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIjtOri4c/7Nw3CMsv+ADMgepdVBTvtBlrTSJR+w5r7s joshan@nixos-server-sudo"
+            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH2MhLVRuFAl9pssk8T3uxTr332TGoZMqjSoOLGudXpO Joshan's iPhone"
+          ]
+        }\\n"
+      ];
+    };
     boot.loader = { lib, ... }: {
       boot.loader = {
         timeout = lib.mkDefault 1;
@@ -119,6 +129,13 @@ lib.recursiveUpdate (import ../../profiles/minimal.nix { inherit lib moduleRegis
   networking =
     extendScope
       (editScope moduleRegistry.networking {
+        ssh = { config, ... }: {
+          users.users.${config.dotfiles.users.primary.name}.openssh.authorizedKeys.keys = [
+            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGMZdbT05P/naiv07J32DxHDOR5A1z8F9jijeBrDkXWV joshankana@gmail.com"
+            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG4kCJGHE5VF6YL3Y2almpG/0cl7+h2mMrSRONRXIhZr Shortcuts on Joshan’s iPhone"
+            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH2MhLVRuFAl9pssk8T3uxTr332TGoZMqjSoOLGudXpO Joshan's iPhone"
+          ];
+        };
         networkManager =
           { config, lib, ... }:
           let
@@ -661,7 +678,6 @@ lib.recursiveUpdate (import ../../profiles/minimal.nix { inherit lib moduleRegis
   access =
     {
       config,
-      lib,
       ...
     }:
 
@@ -676,21 +692,6 @@ lib.recursiveUpdate (import ../../profiles/minimal.nix { inherit lib moduleRegis
           };
         };
       };
-
-      users.users.${config.dotfiles.users.primary.name}.openssh.authorizedKeys.keys = [
-        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGMZdbT05P/naiv07J32DxHDOR5A1z8F9jijeBrDkXWV joshankana@gmail.com"
-        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG4kCJGHE5VF6YL3Y2almpG/0cl7+h2mMrSRONRXIhZr Shortcuts on Joshan’s iPhone"
-        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH2MhLVRuFAl9pssk8T3uxTr332TGoZMqjSoOLGudXpO Joshan's iPhone"
-      ];
-
-      systemd.tmpfiles.rules = [
-        "f+ /etc/elevation-authorized-key 0444 root root - ${
-          lib.concatStringsSep "\\n" [
-            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIjtOri4c/7Nw3CMsv+ADMgepdVBTvtBlrTSJR+w5r7s joshan@nixos-server-sudo"
-            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH2MhLVRuFAl9pssk8T3uxTr332TGoZMqjSoOLGudXpO Joshan's iPhone"
-          ]
-        }\\n"
-      ];
     };
 
 }
