@@ -83,20 +83,19 @@ resolve_source() {
 }
 
 mapfile -t sources < <(jq -r 'map(.source) | unique[]' <<<"$targets")
-active=0
+pids=()
 failed=false
 for index in "${!sources[@]}"; do
   resolve_source "$index" "${sources[$index]}" &
-  active=$((active + 1))
-  if ((active == 4)); then
-    wait -n || failed=true
-    active=$((active - 1))
+  pids+=("$!")
+  if ((${#pids[@]} == 4)); then
+    wait "${pids[0]}" || failed=true
+    pids=("${pids[@]:1}")
     [[ $failed == false ]] || break
   fi
 done
-while ((active)); do
-  wait -n || failed=true
-  active=$((active - 1))
+for pid in "${pids[@]}"; do
+  wait "$pid" || failed=true
 done
 [[ $failed == false ]] || exit 1
 
