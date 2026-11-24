@@ -2088,18 +2088,6 @@ FocusScope {
                     } else if (event.key === root.runtime.shellKeyCode("controls", "U") || event.key === root.runtime.shellKeyCode("controls", "PageUp") || event.key === root.runtime.shellKeyCode("controls", "D") || event.key === root.runtime.shellKeyCode("controls", "PageDown")) {
                         wallpaperPanel.invoke("moveHalfPage", (event.key === root.runtime.shellKeyCode("controls", "U") || event.key === root.runtime.shellKeyCode("controls", "PageUp")) ? -1 : 1);
                         event.accepted = true;
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "M")) {
-                        if (!event.isAutoRepeat)
-                            wallpaperPanel.invoke("cycleOutput");
-                        event.accepted = true;
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "F")) {
-                        if (!event.isAutoRepeat)
-                            wallpaperPanel.invoke("toggleFit");
-                        event.accepted = true;
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "R")) {
-                        if (!event.isAutoRepeat)
-                            wallpaperPanel.invoke("resetWallpaper");
-                        event.accepted = true;
                     } else if (event.key === root.runtime.shellKeyCode("controls", "Return") || event.key === root.runtime.shellKeyCode("controls", "Enter")) {
                         if (!event.isAutoRepeat)
                             wallpaperPanel.invoke("applySelected");

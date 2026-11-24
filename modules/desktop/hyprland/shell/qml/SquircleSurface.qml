@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Shapes
+import QtQuick.Effects
 import DesktopShell.Visuals 1.0
 
 Item {
@@ -13,6 +14,7 @@ Item {
     // Other surfaces default to their ordinary live width and height.
     property real contentLayoutWidth: width
     property real contentLayoutHeight: height
+    property bool clipContentToShape: false
 
     property color fillColor: "transparent"
     property real fillOpacity: 1
@@ -228,8 +230,34 @@ Item {
             }
         }
     }
+    Loader {
+        id: contentMask
+        anchors.fill: parent
+        active: root.clipContentToShape
+        visible: false
+        sourceComponent: Shape {
+            layer.enabled: true
+            antialiasing: true
+            preferredRendererType: Shape.CurveRenderer
+            ShapePath {
+                fillColor: "white"
+                strokeColor: "transparent"
+                strokeWidth: 0
+                PathSvg {
+                    path: root.fillPathData
+                }
+            }
+        }
+    }
     Item {
         id: content
+        layer.enabled: root.clipContentToShape
+        layer.smooth: true
+        layer.effect: MultiEffect {
+            maskEnabled: true
+            maskSource: contentMask.item
+            autoPaddingEnabled: false
+        }
         width: root.contentLayoutWidth
         height: root.contentLayoutHeight
         x: (root.width - width) / 2

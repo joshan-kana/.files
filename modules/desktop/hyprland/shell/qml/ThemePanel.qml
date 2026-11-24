@@ -465,7 +465,7 @@ Item {
         }
     }
 
-    CenteredActionFlow {
+    GalleryActionBar {
         id: galleryButtons
         anchors {
             top: searchSurface.bottom
@@ -473,30 +473,12 @@ Item {
             right: parent.right
             topMargin: panel.theme.spacing2
         }
-        spacing: panel.theme.spacing2
-        Repeater {
-            model: panel.galleryActions
-            delegate: ShellAction {
-                required property var modelData
-                width: Math.min(galleryButtons.width, implicitWidth)
-                height: Math.max(42, implicitHeight)
-                runtime: panel.runtime
-                theme: panel.theme
-                motion: panel.motion
-                compact: true
-                horizontalCompact: true
-                title: modelData.title
-                icon: modelData.glyph || ""
-                iconOnly: !!modelData.iconOnly
-                inlineIconHint: iconOnly
-                quietAction: iconOnly
-                active: !!modelData.active
-                activeColor: panel.theme.roleColor("display")
-                enabled: modelData.enabled
-                shortcut: panel.runtime.shellHint(modelData.action)
-                onActivated: panel.galleryAction(modelData.action)
-            }
-        }
+        runtime: panel.runtime
+        theme: panel.theme
+        motion: panel.motion
+        entries: panel.galleryActions
+        accentRole: "display"
+        onActionRequested: action => panel.galleryAction(action)
     }
 
     PanelStatus {

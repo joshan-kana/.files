@@ -141,11 +141,29 @@ Item {
             enabled: collections.length > 1
         },
         {
+            action: "WallpaperPanel.display",
+            glyph: panel.outputName === "all" ? "󰍺" : "󰍹",
+            title: panel.outputLabel,
+            enabled: !panel.busy && (panel.outputChoices.length > 1 || !panel.outputAvailable)
+        },
+        {
+            action: "WallpaperPanel.fit",
+            glyph: panel.resizeMode === "fit" ? "󰩨" : "󰊓",
+            title: panel.resizeMode === "fit" ? "Fit" : "Fill",
+            enabled: !panel.busy
+        },
+        {
             action: "WallpaperPanel.rotation",
             glyph: "󰥔",
             active: policy.mode !== "off",
-            title: "Rotation · " + (policy.mode === "dayNight" ? "Day/night" : policy.mode === "interval" ? "Interval" : "Off"),
+            title: "Schedule · " + (policy.mode === "dayNight" ? "Day/night" : policy.mode === "interval" ? "Interval" : "Off"),
             enabled: !!runtime.wallpaperPolicy
+        },
+        {
+            action: "WallpaperPanel.default",
+            glyph: DesktopIcons.actionGlyph("reset"),
+            title: "Default wallpaper",
+            enabled: !panel.busy
         }
     ]
     readonly property var scheduleActions: [
@@ -157,7 +175,8 @@ Item {
         {
             action: "WallpaperPolicy.target",
             activeOnly: true,
-            title: "Target · " + policy.target
+            glyph: "󰍺",
+            title: "Schedule target · " + policy.target
         },
         {
             action: "WallpaperPolicy.period",
@@ -216,8 +235,7 @@ Item {
         },
         {
             action: "WallpaperPanel.rotation",
-            glyph: "󰥔",
-            active: policy.mode !== "off",
+            glyph: "󰁍",
             title: "Back to wallpapers"
         }
     ].filter(entry => (!entry.intervalOnly || policy.mode === "interval") && (!entry.dayNightOnly || policy.mode === "dayNight") && (!entry.activeOnly || policy.mode !== "off"))
@@ -240,7 +258,13 @@ Item {
             return;
         }
         if (!policyView) {
-            if (action === "WallpaperPanel.favorite" && policyKnown && selectedPath() !== "")
+            if (action === "WallpaperPanel.display")
+                cycleOutput();
+            else if (action === "WallpaperPanel.fit")
+                toggleFit();
+            else if (action === "WallpaperPanel.default")
+                resetWallpaper();
+            else if (action === "WallpaperPanel.favorite" && policyKnown && selectedPath() !== "")
                 runPolicy("favorite", [selectedPath()]);
             else if (action === "WallpaperPanel.favorites") {
                 favoritesOnly = !favoritesOnly;
@@ -303,7 +327,7 @@ Item {
         const actions = policyView ? scheduleActions : galleryPolicyActions;
         for (const entry of actions) {
             if (runtime.shellMatchesHint(entry.action, key, modifiers)) {
-                if (!autoRepeat)
+                if (!autoRepeat && entry.enabled !== false && (!policyView || policyActionEnabled(entry.action)))
                     invokePolicyAction(entry.action);
                 return true;
             }
@@ -585,7 +609,7 @@ Item {
                 anchors {
                     fill: parent
                     leftMargin: panel.theme.spacing3
-                    rightMargin: outputButton.width + panel.theme.spacing3 * 2
+                    rightMargin: panel.theme.spacing3
                 }
                 verticalAlignment: TextInput.AlignVCenter
                 text: panel.searchText
@@ -607,34 +631,13 @@ Item {
                 }
             }
 
-            ShellAction {
-                id: outputButton
-                anchors {
-                    right: parent.right
-                    verticalCenter: parent.verticalCenter
-                    rightMargin: panel.theme.spacing1
-                }
-                width: Math.min(parent.width * 0.5, implicitWidth)
-                height: parent.height - panel.theme.spacing1 * 2
-                runtime: panel.runtime
-                theme: panel.theme
-                motion: panel.motion
-                compact: true
-                horizontalCompact: true
-                icon: panel.outputName === "all" ? "󰍺" : "󰍹"
-                title: panel.outputLabel
-                shortcut: panel.runtime.shellHint("WallpaperPanel.display")
-                enabled: !panel.busy && (panel.outputChoices.length > 1 || !panel.outputAvailable)
-                onActivated: panel.cycleOutput()
-            }
-
             Text {
                 anchors {
                     left: parent.left
                     leftMargin: panel.theme.spacing3
                     verticalCenter: parent.verticalCenter
                 }
-                width: Math.max(1, parent.width - outputButton.width - panel.theme.spacing4 * 2)
+                width: Math.max(1, parent.width - panel.theme.spacing3 * 2)
                 elide: Text.ElideRight
                 visible: searchField.text.length === 0 && !searchField.activeFocus
                 text: "Search wallpapers"
@@ -644,62 +647,15 @@ Item {
             }
         }
 
-        CenteredActionFlow {
+        GalleryActionBar {
             id: galleryButtons
             width: parent.width
-            spacing: panel.theme.spacing2
-            ShellAction {
-                width: Math.min(galleryButtons.width, implicitWidth)
-                height: implicitHeight
-                runtime: panel.runtime
-                theme: panel.theme
-                motion: panel.motion
-                compact: true
-                icon: panel.resizeMode === "fit" ? "󰩨" : "󰊓"
-                title: panel.resizeMode === "fit" ? "Fit" : "Fill"
-                shortcut: panel.runtime.shellHint("WallpaperPanel.fit")
-                horizontalCompact: true
-                onActivated: panel.toggleFit()
-            }
-
-            ShellAction {
-                width: Math.min(galleryButtons.width, implicitWidth)
-                height: implicitHeight
-                runtime: panel.runtime
-                theme: panel.theme
-                motion: panel.motion
-                compact: true
-                title: "Default wallpaper"
-                icon: DesktopIcons.actionGlyph("reset")
-                shortcut: panel.runtime.shellHint("WallpaperPanel.default")
-                horizontalCompact: true
-                enabled: !panel.busy
-                onActivated: panel.resetWallpaper()
-            }
-            Repeater {
-                model: panel.galleryPolicyActions
-                delegate: ShellAction {
-                    id: galleryAction
-                    required property var modelData
-                    width: Math.min(galleryButtons.width, implicitWidth)
-                    height: Math.max(40, implicitHeight)
-                    runtime: panel.runtime
-                    theme: panel.theme
-                    motion: panel.motion
-                    compact: true
-                    horizontalCompact: true
-                    title: modelData.title
-                    icon: modelData.glyph || ""
-                    iconOnly: !!modelData.iconOnly
-                    inlineIconHint: iconOnly
-                    quietAction: iconOnly
-                    active: !!modelData.active
-                    activeColor: panel.theme.roleColor("wallpaper")
-                    shortcut: panel.runtime.shellHint(modelData.action)
-                    enabled: modelData.enabled
-                    onActivated: panel.invokePolicyAction(galleryAction.modelData.action)
-                }
-            }
+            runtime: panel.runtime
+            theme: panel.theme
+            motion: panel.motion
+            entries: panel.galleryPolicyActions
+            accentRole: "wallpaper"
+            onActionRequested: action => panel.invokePolicyAction(action)
         }
 
         PanelStatus {
@@ -731,7 +687,7 @@ Item {
                 boundsBehavior: Flickable.StopAtBounds
                 readonly property int columnCount: panel.theme.textScale >= 1.5 || width < 580 ? 1 : width < 950 ? 2 : 3
                 cellWidth: width / columnCount
-                cellHeight: 215
+                cellHeight: Math.max(210, panel.theme.fontSize(210))
                 model: panel.filteredEntries
                 currentIndex: panel.selectedIndex
                 highlightMoveDuration: 0
@@ -819,7 +775,7 @@ Item {
                         surfaceLayer: ShellSurface.Control
                         cornerRadius: panel.theme.radiusMedium
                         selected: entry.current
-                        clip: true
+                        clipContentToShape: true
 
                         Image {
                             anchors {
@@ -955,7 +911,7 @@ Item {
                 motion: panel.motion
                 surfaceLayer: ShellSurface.Group
                 cornerRadius: panel.theme.radiusLarge
-                clip: true
+                clipContentToShape: true
 
                 Image {
                     anchors.fill: parent
@@ -1040,117 +996,360 @@ Item {
             glyph: DesktopIcons.glyphFor("wallpaper")
             glyphFont: "Symbols Nerd Font"
             glyphColor: panel.theme.roleColor("wallpaper")
-            eyebrow: "Wallpaper library / rotation"
-            title: "Wallpaper rotation"
+            eyebrow: "Wallpaper library"
+            title: "Wallpaper schedule"
             detail: "One session schedule · selected target " + panel.outputLabel
         }
-        ShellText {
+        ShellSurface {
             width: parent.width
-            runtime: panel.runtime
-            theme: panel.theme
-            text: panel.policyError || (panel.policyBusy ? "Applying policy…" : panel.policy.mode === "off" ? "Automatic wallpaper changes disabled" : panel.policy.mode === "interval" ? "Next rotation · " + (panel.nextDue > 0 ? Qt.formatDate(new Date(panel.nextDue * 1000), "ddd") + ", " + ClockFormatting.wallClock(new Date(panel.nextDue * 1000)) : "Not scheduled") : "Current phase · " + (panel.policyPhase || "Waiting for valid selections"))
-            color: panel.policyError ? panel.theme.warning : panel.theme.textMuted
-            wrapMode: Text.WordWrap
-        }
-        ShellText {
-            width: parent.width
-            runtime: panel.runtime
-            theme: panel.theme
-            text: "Selected wallpaper · " + (panel.scheduleCandidate ? panel.scheduleCandidate.slice(panel.scheduleCandidate.lastIndexOf("/") + 1) : "None")
-            elide: Text.ElideRight
-        }
-        ScheduleBand {
-            visible: panel.policy.mode === "dayNight"
-            width: parent.width
-            height: visible ? implicitHeight : 0
-            runtime: panel.runtime
+            height: modeRow.implicitHeight + panel.theme.spacing3 * 2
             theme: panel.theme
             motion: panel.motion
-            label: "Night wallpaper phase"
-            startMinute: panel.policy.nightStart
-            endMinute: panel.policy.dayStart
-            phaseColor: panel.theme.roleColor("night")
-        }
-        Flow {
-            visible: panel.policy.mode === "dayNight"
-            width: parent.width
-            spacing: panel.theme.spacing2
-            Repeater {
-                model: [
-                    {
-                        name: "Day",
-                        path: panel.policy.dayWallpaper,
-                        role: "daylight"
-                    },
-                    {
-                        name: "Night",
-                        path: panel.policy.nightWallpaper,
-                        role: "night"
+            surfaceLayer: ShellSurface.Group
+            cornerRadius: panel.theme.radiusMedium
+            Row {
+                id: modeRow
+                width: parent.width - panel.theme.spacing3 * 2
+                anchors.centerIn: parent
+                spacing: panel.theme.spacing2
+                Column {
+                    width: Math.max(1, modeRow.width - modeAction.width - modeRow.spacing)
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: panel.theme.spacing1
+                    ShellText {
+                        width: parent.width
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        text: "Schedule mode"
+                        textRole: ShellText.Section
+                        wrapMode: Text.WordWrap
                     }
-                ]
-                delegate: ShellSurface {
-                    id: phase
-                    required property var modelData
-                    width: (panel.width - panel.theme.spacing2) / 2
-                    height: phaseInfo.implicitHeight + panel.theme.spacing3 * 2
-                    theme: panel.theme
-                    motion: panel.motion
-                    surfaceLayer: ShellSurface.Group
-                    cornerRadius: panel.theme.radiusMedium
-                    Column {
-                        id: phaseInfo
-                        width: parent.width - panel.theme.spacing3 * 2
-                        anchors.centerIn: parent
-                        spacing: panel.theme.spacing2
-                        ShellText {
-                            runtime: panel.runtime
-                            theme: panel.theme
-                            text: phase.modelData.name
-                            textRole: ShellText.Section
-                            color: panel.theme.readableRoleColor(phase.modelData.role)
-                        }
-                        ShellText {
-                            width: parent.width
-                            runtime: panel.runtime
-                            theme: panel.theme
-                            text: phase.modelData.path ? phase.modelData.path.split("/").pop() : "Not selected"
-                            wrapMode: Text.Wrap
-                        }
+                    ShellText {
+                        width: parent.width
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        text: !panel.policyKnown ? "Reading schedule…" : panel.policy.mode === "off" ? "Manual wallpaper selection" : panel.policy.mode === "interval" ? "Change after a fixed interval" : "Change at daily boundaries"
+                        textRole: ShellText.Supporting
+                        wrapMode: Text.WordWrap
                     }
                 }
-            }
-        }
-        CenteredActionFlow {
-            id: scheduleGrid
-            width: parent.width
-            spacing: panel.theme.spacing2
-            Repeater {
-                model: panel.scheduleActions
-                delegate: ShellAction {
-                    id: scheduleAction
-                    required property var modelData
-                    width: Math.min(scheduleGrid.width, implicitWidth)
+                ShellAction {
+                    id: modeAction
+                    width: Math.min(modeRow.width * 0.48, implicitWidth)
                     height: implicitHeight
+                    anchors.verticalCenter: parent.verticalCenter
                     runtime: panel.runtime
                     theme: panel.theme
                     motion: panel.motion
                     compact: true
                     horizontalCompact: true
-                    title: modelData.title
-                    icon: modelData.glyph || ""
-                    active: !!modelData.active
+                    icon: panel.policy.mode === "dayNight" ? "󰖔" : panel.policy.mode === "interval" ? "󰥔" : "󰜺"
+                    title: panel.policy.mode === "dayNight" ? "Day / night" : panel.policy.mode === "interval" ? "Interval" : "Off"
+                    shortcut: panel.runtime.shellHint("WallpaperPolicy.mode")
+                    active: panel.policy.mode !== "off"
                     activeColor: panel.theme.roleColor("wallpaper")
-                    shortcut: panel.runtime.shellHint(modelData.action)
-                    enabled: panel.policyActionEnabled(modelData.action)
-                    onActivated: panel.invokePolicyAction(scheduleAction.modelData.action)
+                    enabled: panel.policyActionEnabled("WallpaperPolicy.mode")
+                    onActivated: panel.invokePolicyAction("WallpaperPolicy.mode")
                 }
             }
         }
-        ShellText {
+        PanelStatus {
             width: parent.width
             runtime: panel.runtime
             theme: panel.theme
-            text: "Manual wallpaper selections remain in effect until the next scheduled interval or day/night boundary. All-display rotation intentionally replaces output-specific selections."
+            message: panel.policyError || (panel.policyBusy && panel.activePolicyCommand !== "status" ? "Applying schedule…" : "")
+            motion: panel.motion
+            phase: panel.policyError.length > 0 ? "error" : "busy"
+            visible: message.length > 0
+            height: visible ? implicitHeight : 0
+        }
+        ShellSurface {
+            id: intervalCard
+            visible: panel.policyKnown && panel.policy.mode === "interval"
+            width: parent.width
+            height: intervalContent.implicitHeight + panel.theme.spacing3 * 2
+            theme: panel.theme
+            motion: panel.motion
+            surfaceLayer: ShellSurface.Group
+            cornerRadius: panel.theme.radiusLarge
+            property double clockSeconds: Date.now() / 1000
+            Timer {
+                running: panel.open && panel.policyView && intervalCard.visible
+                interval: 1000
+                repeat: true
+                triggeredOnStart: true
+                onTriggered: intervalCard.clockSeconds = Date.now() / 1000
+            }
+            Column {
+                id: intervalContent
+                width: parent.width - panel.theme.spacing3 * 2
+                anchors.centerIn: parent
+                spacing: panel.theme.spacing3
+                Row {
+                    width: parent.width
+                    spacing: panel.theme.spacing2
+                    Column {
+                        width: Math.max(1, parent.width - intervalButton.width - parent.spacing)
+                        anchors.verticalCenter: parent.verticalCenter
+                        ShellText {
+                            runtime: panel.runtime
+                            theme: panel.theme
+                            text: panel.nextDue > 0 ? Math.max(0, Math.ceil((panel.nextDue - intervalCard.clockSeconds) / 60)) + " min" : "Not scheduled"
+                            textRole: ShellText.Display
+                            color: panel.theme.readableRoleColor("wallpaper")
+                        }
+                        ShellText {
+                            runtime: panel.runtime
+                            theme: panel.theme
+                            text: panel.nextDue > 0 ? "Next change · " + ClockFormatting.wallClock(new Date(panel.nextDue * 1000)) : "No next change reported"
+                            textRole: ShellText.Supporting
+                        }
+                    }
+                    ShellAction {
+                        id: intervalButton
+                        width: implicitWidth
+                        height: implicitHeight
+                        anchors.verticalCenter: parent.verticalCenter
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        motion: panel.motion
+                        compact: true
+                        horizontalCompact: true
+                        title: panel.policy.intervalMinutes + " min interval"
+                        icon: "󰥔"
+                        shortcut: panel.runtime.shellHint("WallpaperPolicy.period")
+                        enabled: panel.policyActionEnabled("WallpaperPolicy.period")
+                        onActivated: panel.invokePolicyAction("WallpaperPolicy.period")
+                    }
+                }
+                LevelTrack {
+                    width: parent.width
+                    theme: panel.theme
+                    motion: panel.motion
+                    known: panel.nextDue > 0
+                    fraction: Math.max(0, Math.min(1, (panel.nextDue - intervalCard.clockSeconds) / (panel.policy.intervalMinutes * 60)))
+                    accentColor: panel.theme.roleColor("wallpaper")
+                }
+                Row {
+                    width: parent.width
+                    spacing: panel.theme.spacing2
+                    ShellText {
+                        width: Math.max(1, parent.width - favoriteSwitch.width - parent.spacing)
+                        anchors.verticalCenter: parent.verticalCenter
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        text: "Favourites only"
+                        textRole: ShellText.Action
+                        wrapMode: Text.WordWrap
+                    }
+                    ShellAction {
+                        id: favoriteSwitch
+                        width: implicitWidth
+                        height: implicitHeight
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        motion: panel.motion
+                        title: "Schedule favourite wallpapers only"
+                        iconOnly: true
+                        switchControl: true
+                        compact: true
+                        active: panel.policy.favoritesOnly
+                        activeColor: panel.theme.roleColor("wallpaper")
+                        shortcut: panel.runtime.shellHint("WallpaperPolicy.favorites")
+                        enabled: panel.policyActionEnabled("WallpaperPolicy.favorites")
+                        onActivated: panel.invokePolicyAction("WallpaperPolicy.favorites")
+                    }
+                }
+                GalleryActionBar {
+                    width: parent.width
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    motion: panel.motion
+                    accentRole: "wallpaper"
+                    entries: panel.scheduleActions.filter(entry => ["WallpaperPolicy.collection", "WallpaperPolicy.next"].includes(entry.action)).map(entry => Object.assign({}, entry, {
+                            enabled: panel.policyActionEnabled(entry.action)
+                        }))
+                    onActionRequested: action => panel.invokePolicyAction(action)
+                }
+            }
+        }
+
+        ShellSurface {
+            visible: panel.policyKnown && panel.policy.mode === "dayNight"
+            width: parent.width
+            height: dailyContent.implicitHeight + panel.theme.spacing3 * 2
+            theme: panel.theme
+            motion: panel.motion
+            surfaceLayer: ShellSurface.Group
+            cornerRadius: panel.theme.radiusLarge
+            Column {
+                id: dailyContent
+                width: parent.width - panel.theme.spacing3 * 2
+                anchors.centerIn: parent
+                spacing: panel.theme.spacing3
+                ShellText {
+                    width: parent.width
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    text: panel.policyPhase ? "Current phase · " + panel.policyPhase : "Daily schedule"
+                    textRole: ShellText.Section
+                    wrapMode: Text.WordWrap
+                }
+                ScheduleBand {
+                    width: parent.width
+                    height: implicitHeight
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    motion: panel.motion
+                    label: "Night wallpaper phase"
+                    startMinute: panel.policy.nightStart
+                    endMinute: panel.policy.dayStart
+                    phaseColor: panel.theme.roleColor("night")
+                }
+                Flow {
+                    id: phaseFlow
+                    width: parent.width
+                    spacing: panel.theme.spacing2
+                    readonly property int columns: width >= panel.theme.fontSize(480) ? 2 : 1
+                    Repeater {
+                        model: panel.open && panel.policyView && panel.policy.mode === "dayNight" ? 2 : 0
+                        delegate: ShellSurface {
+                            id: phase
+                            required property int index
+                            readonly property bool night: index === 1
+                            readonly property string path: night ? panel.policy.nightWallpaper : panel.policy.dayWallpaper
+                            readonly property string role: night ? "night" : "daylight"
+                            readonly property string actionPrefix: night ? "WallpaperPolicy.night" : "WallpaperPolicy.day"
+                            property string posterPath: ""
+                            property string requestedPath: ""
+                            width: (phaseFlow.width - (phaseFlow.columns - 1) * phaseFlow.spacing) / phaseFlow.columns
+                            height: phaseInfo.implicitHeight + panel.theme.spacing3 * 2
+                            theme: panel.theme
+                            motion: panel.motion
+                            surfaceLayer: ShellSurface.Control
+                            cornerRadius: panel.theme.radiusMedium
+                            function refreshPoster(): void {
+                                if (posterProbe.running)
+                                    return;
+                                posterPath = "";
+                                requestedPath = path;
+                                if (path && panel.runtime.wallpaperLibrary)
+                                    posterProbe.exec([panel.runtime.wallpaperLibrary, "thumbnail", path]);
+                            }
+                            onPathChanged: refreshPoster()
+                            Component.onCompleted: refreshPoster()
+                            Process {
+                                id: posterProbe
+                                stdout: StdioCollector {
+                                    id: phasePosterOutput
+                                }
+                                onExited: (code, status) => {
+                                    if (phase.requestedPath !== phase.path)
+                                        phase.refreshPoster();
+                                    else if (code === 0)
+                                        phase.posterPath = phasePosterOutput.text.trim();
+                                }
+                            }
+                            Column {
+                                id: phaseInfo
+                                width: parent.width - panel.theme.spacing3 * 2
+                                anchors.centerIn: parent
+                                spacing: panel.theme.spacing2
+                                ShellText {
+                                    runtime: panel.runtime
+                                    theme: panel.theme
+                                    text: phase.night ? "Night" : "Day"
+                                    textRole: ShellText.Section
+                                    color: panel.theme.readableRoleColor(phase.role)
+                                }
+                                ShellSurface {
+                                    width: parent.width
+                                    height: Math.min(panel.theme.fontSize(150), width * 0.56)
+                                    theme: panel.theme
+                                    motion: panel.motion
+                                    cornerRadius: panel.theme.radiusSmall
+                                    clipContentToShape: true
+                                    Image {
+                                        anchors.fill: parent
+                                        source: phase.posterPath ? "file://" + phase.posterPath : ""
+                                        fillMode: Image.PreserveAspectCrop
+                                        asynchronous: true
+                                        sourceSize: Qt.size(480, 300)
+                                    }
+                                    ShellText {
+                                        anchors.centerIn: parent
+                                        visible: !phase.posterPath
+                                        runtime: panel.runtime
+                                        theme: panel.theme
+                                        text: phase.path ? "Preview unavailable" : "Not selected"
+                                        textRole: ShellText.Supporting
+                                    }
+                                }
+                                MarqueeText {
+                                    width: parent.width
+                                    text: phase.path ? phase.path.split("/").pop() : "No wallpaper selected"
+                                    font.family: panel.runtime.fontSans
+                                    font.pixelSize: panel.theme.fontSupporting
+                                    color: panel.theme.textMuted
+                                }
+                                ShellStepper {
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    runtime: panel.runtime
+                                    theme: panel.theme
+                                    motion: panel.motion
+                                    title: "Start time"
+                                    readback: panel.timeLabel(phase.night ? panel.policy.nightStart : panel.policy.dayStart)
+                                    decreaseShortcut: panel.runtime.shellHint(phase.actionPrefix + "Earlier")
+                                    increaseShortcut: panel.runtime.shellHint(phase.actionPrefix + "Later")
+                                    canDecrease: panel.policyActionEnabled(phase.actionPrefix + "Earlier")
+                                    canIncrease: panel.policyActionEnabled(phase.actionPrefix + "Later")
+                                    onDecreased: panel.invokePolicyAction(phase.actionPrefix + "Earlier")
+                                    onIncreased: panel.invokePolicyAction(phase.actionPrefix + "Later")
+                                }
+                                ShellAction {
+                                    width: parent.width
+                                    height: implicitHeight
+                                    runtime: panel.runtime
+                                    theme: panel.theme
+                                    motion: panel.motion
+                                    compact: true
+                                    horizontalCompact: true
+                                    icon: "󰋩"
+                                    title: "Use selection"
+                                    shortcut: panel.runtime.shellHint(phase.actionPrefix)
+                                    enabled: panel.policyActionEnabled(phase.actionPrefix)
+                                    onActivated: panel.invokePolicyAction(phase.actionPrefix)
+                                }
+                            }
+                        }
+                    }
+                }
+                MarqueeText {
+                    width: parent.width
+                    text: "Selected wallpaper · " + (panel.scheduleCandidate ? panel.scheduleCandidate.split("/").pop() : "None")
+                    color: panel.theme.textMuted
+                    font.family: panel.runtime.fontSans
+                    font.pixelSize: panel.theme.fontSupporting
+                }
+            }
+        }
+        GalleryActionBar {
+            width: parent.width
+            runtime: panel.runtime
+            theme: panel.theme
+            motion: panel.motion
+            accentRole: "wallpaper"
+            entries: panel.scheduleActions.filter(entry => ["WallpaperPolicy.target", "WallpaperPolicy.defaults", "WallpaperPanel.rotation"].includes(entry.action)).map(entry => Object.assign({}, entry, {
+                    enabled: panel.policyActionEnabled(entry.action)
+                }))
+            onActionRequested: action => panel.invokePolicyAction(action)
+        }
+        ShellText {
+            visible: panel.policy.mode !== "off"
+            width: parent.width
+            runtime: panel.runtime
+            theme: panel.theme
+            text: "Manual selections last until the next scheduled change."
             wrapMode: Text.WordWrap
             color: panel.theme.textMuted
         }
