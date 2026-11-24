@@ -26,6 +26,6 @@ Follow [file ownership](repository-structure.md#file-ownership-and-placement) fo
 - Declare inputs at the command interface and keep private implementations within their owning scope.
 - Declare executable runtime dependencies and interpreter requirements rather than depending on an interactive user's shell or `$PATH`.
 - Prefer supported native tools and protocols before writing glue. Keep operations safe to repeat; separate dry-run/reporting paths from destructive actions where appropriate.
-- Preserve observable CLI behavior and help text when refactoring command implementation.
+- Preserve observable CLI behavior and help text when refactoring command implementation. Distinguish intentional cancellation or empty results from discovery and execution failures.
 
 Test commands in the environments in which they run.
