@@ -217,6 +217,14 @@ FocusScope {
         }
     }
 
+    function triggerOpen(): void {
+        mixerHit.trigger();
+    }
+
+    function triggerMicrophoneMute(): void {
+        inputDevice.triggerMute();
+    }
+
     function toggleSelectedMute(): void {
         const target = selectedTarget;
         if (target?.kind === "output")
@@ -367,7 +375,7 @@ FocusScope {
         cornerRadius: mixer.theme.radiusLarge
         Accessible.role: Accessible.Button
         Accessible.name: "Open audio mixer"
-        Accessible.onPressAction: mixer.expandRequested()
+        Accessible.onPressAction: mixer.triggerOpen()
         onActivated: mixer.expandRequested()
     }
 

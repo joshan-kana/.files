@@ -116,7 +116,7 @@ test("compact and expanded audio handling retain the complete keyboard contract"
   assert.match(controls, /if \(audioDeck\.deviceChooserOpen\) \{/);
   assert.match(
     controls,
-    /audioDeck\.handleKey\(event\.key, event\.modifiers\)/,
+    /audioDeck\.handleKey\(event\.key, event\.modifiers, event\.isAutoRepeat\)/,
   );
   assert.match(controls, /root\.muteSelectedAudio\(\)/);
 });

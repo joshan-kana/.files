@@ -29,6 +29,10 @@ Item {
         repeatButton.trigger();
     }
 
+    function triggerOpen(): void {
+        cardHit.trigger();
+    }
+
     signal fullRequested
 
     SpectrumScale {
@@ -56,7 +60,7 @@ Item {
         cornerRadius: card.theme.radiusLarge
         Accessible.role: Accessible.Button
         Accessible.name: "Open Now Playing"
-        Accessible.onPressAction: card.fullRequested()
+        Accessible.onPressAction: card.triggerOpen()
         onActivated: card.fullRequested()
     }
 

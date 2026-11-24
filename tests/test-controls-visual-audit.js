@@ -685,7 +685,7 @@ test("Compact Audio and Media backgrounds open full views while child actions re
   assert.doesNotMatch(media, /id: fullPlayer|title: "Now Playing"/);
   assert.match(
     controls,
-    /shellMatchesHint\("AudioMixerContent\.open", event\.key, event\.modifiers\)\)\s*\{\s*if \(!event\.isAutoRepeat\)\s*root\.openMixer\(\)/,
+    /shellMatchesHint\("AudioMixerContent\.open", event\.key, event\.modifiers\)\)\s*\{\s*if \(!event\.isAutoRepeat\)\s*audioDeck\.triggerOpen\(\)/,
   );
   assert.doesNotMatch(
     controls.slice(

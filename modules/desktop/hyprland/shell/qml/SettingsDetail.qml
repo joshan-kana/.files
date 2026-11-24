@@ -476,57 +476,36 @@ Item {
     }
 
     function activateNumber(number: int): bool {
+        let repeater = null;
+        let index = number - 1;
         if (kind === "nightLight") {
-            if (number >= 1 && number <= 4) {
-                const mode = ["off", "manual", "custom", "solar"][number - 1];
-                if (mode !== "solar" || nightLight.solarAvailable)
-                    nightLight.setMode(mode);
-                return true;
+            if (number <= 4)
+                repeater = nightModes;
+            else if (number <= 7 && nightLight.mode === "custom") {
+                repeater = nightDays;
+                index -= 4;
+            } else if (number >= 8 && nightLight.mode !== "off") {
+                repeater = nightPauses;
+                index -= 7;
             }
-            if (number >= 5 && number <= 7 && nightLight.mode === "custom") {
-                nightLight.change("days", String([127, 62, 65][number - 5]));
-                return true;
-            }
-            if ((number === 8 || number === 9) && nightLight.mode !== "off") {
-                nightLight.change("pause", number === 8 ? "30" : "60");
-                return true;
-            }
+        } else if (kind === "alerts") {
+            repeater = number <= 3 ? alertPauses : quietDays;
+            if (number > 3)
+                index -= 3;
+        } else if (reactiveTuning) {
+            repeater = number <= 3 ? reactivePresets : reactiveEmphases;
+            if (number > 3)
+                index -= 3;
+        } else if (kind === "power") {
+            repeater = powerProfiles;
+        } else if (kind === "stay") {
+            repeater = stayDurations;
         }
-        if (kind === "alerts") {
-            if (number >= 1 && number <= 3) {
-                notifications.silenceFor([15, 30, 60][number - 1]);
-                return true;
-            }
-            if (number >= 4 && number <= 6) {
-                notifications.setQuietPreference("days", [127, 62, 65][number - 4]);
-                return true;
-            }
-        }
-        if (reactiveTuning) {
-            if (number >= 1 && number <= 3) {
-                appearance.applyReactivePreset(["Subtle", "Default", "Energetic"][number - 1]);
-                return true;
-            }
-            if (number >= 4 && number <= 7) {
-                appearance.setReactiveEmphasis(["balanced", "bass", "mid", "treble"][number - 4]);
-                return true;
-            }
-        }
-        if (kind === "power") {
-            const profiles = powerProfile.profiles;
-            if (number <= profiles.length) {
-                powerProfile.setProfile(profiles[number - 1]);
-                return true;
-            }
-        }
-        if (kind === "stay") {
-            const durations = [15, 30, 60, 120, 0];
-            if (number <= durations.length) {
-                system.setIdleInhibitMinutes(durations[number - 1]);
-                return true;
-            }
-        }
-        return false;
+        const button = repeater ? repeater.itemAt(index) : null;
+        if (!button)
+            return false;
+        button.trigger();
+        return true;
     }
 
     onParametersChanged: selectedIndex = Math.max(0, Math.min(selectedIndex, parameters.length - 1))
@@ -557,43 +536,41 @@ Item {
                 return true;
         }
         if (runtime.shellMatchesHint("SettingsDetail.toggle", key, modifiers) && hasMaster) {
-            if (masterAvailable)
-                toggleMaster();
+            masterAction.trigger();
             return true;
         }
         if (runtime.shellMatchesHint("SettingsDetail.blur", key, modifiers) && hasBlur) {
-            appearance.toggleBlur();
+            blurSwitch.trigger();
             return true;
         }
         if (runtime.shellMatchesHint("SettingsDetail.resetParameter", key, modifiers) && parameters.length > 1) {
-            resetParameter();
+            parameterRepeater.itemAt(selectedIndex)?.triggerReset();
             return true;
         }
         if (runtime.shellMatchesHint("SettingsDetail.reset", key, modifiers) && hasReset) {
-            resetAppearance();
+            appearanceReset.trigger();
             return true;
         }
         if (kind === "nightLight" && runtime.shellMatchesHint("SettingsDetail.nightResume", key, modifiers)) {
-            if (nightLight.temporaryOverride.length > 0)
-                nightLight.change("resume", "");
+            resumeAction.trigger();
             return true;
         }
         if (kind === "nightLight" && runtime.shellMatchesHint("SettingsDetail.nightPauseUntil", key, modifiers)) {
-            if (nightLight.mode === "custom" || nightLight.mode === "solar")
-                nightLight.change("pause", "0");
+            if (pauseUntilAction.visible)
+                pauseUntilAction.trigger();
             return true;
         }
         if (kind === "alerts") {
             if (runtime.shellMatchesHint("SettingsDetail.quietHours", key, modifiers)) {
-                notifications.setQuietPreference("enabled", !notifications.quietEnabled);
+                quietHoursSwitch.trigger();
                 return true;
             }
             if (runtime.shellMatchesHint("SettingsDetail.presentation", key, modifiers)) {
-                notifications.togglePresentation();
+                presentationSwitch.trigger();
                 return true;
             }
             if (runtime.shellMatchesHint("SettingsDetail.history", key, modifiers)) {
-                notifications.toggleHistory();
+                historySwitch.trigger();
                 return true;
             }
         }
@@ -860,6 +837,7 @@ Item {
                 height: visible ? 44 : 0
                 spacing: panel.theme.spacing2
                 Repeater {
+                    id: reactivePresets
                     model: ["Subtle", "Default", "Energetic"]
                     delegate: ShellAction {
                         required property int index
@@ -896,6 +874,7 @@ Item {
                 height: visible ? 44 : 0
                 spacing: panel.theme.spacing2
                 Repeater {
+                    id: reactiveEmphases
                     model: ["balanced", "bass", "mid", "treble"]
                     delegate: ShellAction {
                         required property int index
@@ -992,6 +971,7 @@ Item {
                 height: 40
                 spacing: panel.theme.spacing2
                 Repeater {
+                    id: nightModes
                     model: [
                         {
                             id: "off",
@@ -1046,6 +1026,7 @@ Item {
                 height: visible ? 40 : 0
                 spacing: panel.theme.spacing2
                 Repeater {
+                    id: nightDays
                     model: [
                         {
                             title: "Every day",
@@ -1085,6 +1066,7 @@ Item {
                 height: 40
                 spacing: panel.theme.spacing2
                 Repeater {
+                    id: nightPauses
                     model: [30, 60]
                     delegate: ShellAction {
                         required property int index
@@ -1103,6 +1085,7 @@ Item {
                     }
                 }
                 ShellAction {
+                    id: resumeAction
                     width: (panel.width - panel.theme.spacing2 * 2) / 3
                     height: 40
                     runtime: panel.runtime
@@ -1117,6 +1100,7 @@ Item {
                 }
             }
             ShellAction {
+                id: pauseUntilAction
                 visible: panel.nightLight.mode === "custom" || panel.nightLight.mode === "solar"
                 width: implicitWidth
                 height: visible ? implicitHeight : 0
@@ -1230,6 +1214,7 @@ Item {
                 spacing: panel.theme.spacing2
                 readonly property int columns: width >= panel.theme.fontSize(360) ? Math.max(1, panel.powerProfile.profiles.length) : 1
                 Repeater {
+                    id: powerProfiles
                     model: panel.powerProfile.profiles
                     delegate: ShellAction {
                         required property int index
@@ -1341,6 +1326,7 @@ Item {
                     readonly property int columns: width >= panel.theme.fontSize(480) ? 4 : 2
                     spacing: panel.theme.spacing2
                     Repeater {
+                        id: stayDurations
                         model: [15, 30, 60, 120, 0]
                         delegate: ShellAction {
                             required property int index
@@ -1384,6 +1370,7 @@ Item {
                     height: 40
                     spacing: panel.theme.spacing2
                     Repeater {
+                        id: alertPauses
                         model: [15, 30, 60]
                         delegate: ShellAction {
                             required property int index
@@ -1442,6 +1429,7 @@ Item {
                     height: 40
                     spacing: panel.theme.spacing2
                     Repeater {
+                        id: quietDays
                         model: [
                             {
                                 title: "Every day",

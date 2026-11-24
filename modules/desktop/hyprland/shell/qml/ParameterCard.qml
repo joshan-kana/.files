@@ -21,6 +21,9 @@ ShellSurface {
     signal selectedRequested
     signal valueRequested(real next)
     signal resetRequested
+    function triggerReset(): void {
+        resetAction.trigger();
+    }
     function beginKeyboardAdjustment(): void {
         parameterSlider.beginKeyboardAdjustment();
     }

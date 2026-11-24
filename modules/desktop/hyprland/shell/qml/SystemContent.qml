@@ -2117,7 +2117,7 @@ FocusScope {
                 }
 
                 if (audioDeck.deviceChooserOpen) {
-                    if (audioDeck.handleKey(event.key, event.modifiers))
+                    if (audioDeck.handleKey(event.key, event.modifiers, event.isAutoRepeat))
                         event.accepted = true;
                     return;
                 }
@@ -2502,7 +2502,7 @@ FocusScope {
                     root.selectSlider("brightness");
                 } else if (root.runtime.shellMatchesHint("AudioMixerContent.open", event.key, event.modifiers)) {
                     if (!event.isAutoRepeat)
-                        root.openMixer();
+                        audioDeck.triggerOpen();
                 } else if (root.runtime.shellMatchesHint("MediaTransport.backCompact", event.key, event.modifiers)) {
                     mediaCard.triggerTransport("back", event.isAutoRepeat);
                 } else if (root.runtime.shellMatchesHint("MediaTransport.forwardCompact", event.key, event.modifiers)) {
@@ -2523,9 +2523,10 @@ FocusScope {
                     mediaCard.triggerTransport("next", event.isAutoRepeat);
                 } else if (root.runtime.shellMatchesHint("ControlsMediaCard.open", event.key, event.modifiers)) {
                     if (!event.isAutoRepeat)
-                        root.mediaRequested();
+                        mediaCard.triggerOpen();
                 } else if (root.runtime.shellMatchesHint("AudioDeviceControl.mute", event.key, event.modifiers)) {
-                    root.muteSelectedAudio();
+                    if (!event.isAutoRepeat)
+                        root.muteSelectedAudio();
                 } else if (root.runtime.shellMatchesHint("ControlsMediaCard.shuffle", event.key, event.modifiers)) {
                     if (!event.isAutoRepeat)
                         mediaCard.triggerShuffle();
@@ -2533,9 +2534,11 @@ FocusScope {
                     if (!event.isAutoRepeat)
                         mediaCard.triggerRepeat();
                 } else if (root.runtime.shellMatchesHint("AudioDeviceControl.muteMicrophone", event.key, event.modifiers)) {
-                    root.system.toggleMicrophoneMute();
+                    if (!event.isAutoRepeat)
+                        audioDeck.triggerMicrophoneMute();
                 } else if (root.runtime.shellMatchesHint("AudioDeviceControl.chooser", event.key, event.modifiers)) {
-                    root.toggleSelectedAudioDeviceChooser();
+                    if (!event.isAutoRepeat)
+                        root.toggleSelectedAudioDeviceChooser();
                 } else if (event.key === root.runtime.shellKeyCode("controls", "BracketLeft") && root.system.trayCount > 0) {
                     root.trayIndex = (root.trayIndex - 1 + root.system.trayCount) % root.system.trayCount;
                 } else if (event.key === root.runtime.shellKeyCode("controls", "BracketRight") && root.system.trayCount > 0) {

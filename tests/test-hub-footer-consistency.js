@@ -68,7 +68,7 @@ test("Escape label follows the actual focus owner", () => {
   );
   assert.match(
     controls,
-    /if \(audioDeck\.deviceChooserOpen\) \{[\s\S]*?audioDeck\.handleKey\(event\.key, event\.modifiers\)/,
+    /if \(audioDeck\.deviceChooserOpen\) \{[\s\S]*?audioDeck\.handleKey\(event\.key, event\.modifiers, event\.isAutoRepeat\)/,
   );
 });
 

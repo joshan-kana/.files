@@ -258,13 +258,13 @@ test("Compact Media advertises the direct Now Playing key and shares its destina
   const card = qml("ControlsMediaCard.qml");
   assert.match(
     controls,
-    /shellMatchesHint\("ControlsMediaCard\.open", event\.key, event\.modifiers\)\)\s*\{\s*if \(!event\.isAutoRepeat\)\s*root\.mediaRequested\(\)/,
+    /shellMatchesHint\("ControlsMediaCard\.open", event\.key, event\.modifiers\)\)\s*\{\s*if \(!event\.isAutoRepeat\)\s*mediaCard\.triggerOpen\(\)/,
   );
   assert.match(card, /onActivated: card.fullRequested\(\)/);
   assert.match(controls, /onFullRequested: root.mediaRequested\(\)/);
   assert.match(
     controls,
-    /shellMatchesHint\("ControlsMediaCard\.open", event\.key, event\.modifiers\)\)\s*\{\s*if \(!event\.isAutoRepeat\)\s*root\.mediaRequested\(\)/,
+    /shellMatchesHint\("ControlsMediaCard\.open", event\.key, event\.modifiers\)\)\s*\{\s*if \(!event\.isAutoRepeat\)\s*mediaCard\.triggerOpen\(\)/,
   );
 });
 
@@ -274,7 +274,7 @@ test("mixer and device hints match the shared Controls keyboard dispatcher", () 
   const controls = qml("SystemContent.qml");
   assert.match(
     controls,
-    /shellMatchesHint\("AudioMixerContent\.open", event\.key, event\.modifiers\)\)\s*\{\s*if \(!event\.isAutoRepeat\)\s*root\.openMixer\(\)/,
+    /shellMatchesHint\("AudioMixerContent\.open", event\.key, event\.modifiers\)\)\s*\{\s*if \(!event\.isAutoRepeat\)\s*audioDeck\.triggerOpen\(\)/,
   );
   assert.match(mixer, /onActivated: mixer.expandRequested\(\)/);
   assert.doesNotMatch(mixer, /id: expandAction/);
@@ -287,11 +287,11 @@ test("mixer and device hints match the shared Controls keyboard dispatcher", () 
   assert.doesNotMatch(device, /shortcut:[^\n]*: "⌄"/);
   assert.match(
     controls,
-    /shellMatchesHint\("AudioMixerContent\.open", event\.key, event\.modifiers\)\)\s*\{\s*if \(!event\.isAutoRepeat\)\s*root\.openMixer\(\)/,
+    /shellMatchesHint\("AudioMixerContent\.open", event\.key, event\.modifiers\)\)\s*\{\s*if \(!event\.isAutoRepeat\)\s*audioDeck\.triggerOpen\(\)/,
   );
   assert.match(
     controls,
-    /root\.runtime\.shellMatchesHint\("AudioDeviceControl\.chooser", event\.key, event\.modifiers\)\)\s*\{\s*root\.toggleSelectedAudioDeviceChooser\(\)/,
+    /root\.runtime\.shellMatchesHint\("AudioDeviceControl\.chooser", event\.key, event\.modifiers\)\)\s*\{\s*if \(!event\.isAutoRepeat\)\s*root\.toggleSelectedAudioDeviceChooser\(\)/,
   );
   assert.match(controls, /if \(audioDeck\.deviceChooserOpen\) \{/);
 });
