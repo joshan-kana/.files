@@ -14,6 +14,48 @@ Item {
     signal keyboardRequested
 
     property bool open: false
+    property bool deviceDetail: false
+    property bool renaming: false
+    property string detailAddress: ""
+    readonly property var detailDevice: devices.find(device => device.address === detailAddress) || null
+
+    function toggleDeviceDetail(): void {
+        if (deviceDetail) {
+            renaming = false;
+            deviceDetail = false;
+            detailAddress = "";
+        } else {
+            const device = selectedDevice();
+            if (!device)
+                return;
+            detailAddress = device.address;
+            deviceDetail = true;
+        }
+        clearTransientState();
+        keyboardRequested();
+    }
+
+    function renameDevice(): void {
+        if (!detailDevice || !detailDevice.paired)
+            return;
+        renaming = true;
+        nameInput.text = detailDevice.name;
+        nameInput.forceActiveFocus();
+        nameInput.selectAll();
+    }
+
+    function finishRename(save: bool): void {
+        if (save && detailDevice && detailDevice.paired && nameInput.text.trim().length > 0)
+            detailDevice.name = nameInput.text.trim();
+        renaming = false;
+        keyboardRequested();
+    }
+
+    function toggleWake(): void {
+        if (detailDevice && detailDevice.paired)
+            detailDevice.wakeAllowed = !detailDevice.wakeAllowed;
+    }
+
     property int selectedIndex: 0
     property bool startedDiscovery: false
     property string forgetAddress: ""
@@ -24,7 +66,7 @@ Item {
     readonly property var devices: system.bluetoothAdapterDevices || []
     readonly property bool adapterAvailable: system.bluetoothAvailable
 
-    readonly property real bodyHeight: adapterAvailable && adapter.enabled ? Math.min(440, Math.max(196, devices.length * 100)) : emptyState.implicitHeight + panel.theme.spacing3 + panel.theme.spacing4
+    readonly property real bodyHeight: deviceDetail ? 310 : adapterAvailable && adapter.enabled ? Math.min(440, Math.max(196, devices.length * 100)) : emptyState.implicitHeight + panel.theme.spacing3 + panel.theme.spacing4
     implicitHeight: header.height + statusBanner.implicitHeight + panel.theme.spacing4 * 2 + bodyHeight + panel.theme.spacing3 + footer.implicitHeight
     visible: open
 
@@ -95,6 +137,9 @@ Item {
 
         startedDiscovery = false;
         clearTransientState();
+        deviceDetail = false;
+        renaming = false;
+        detailAddress = "";
         open = false;
         keyboardRequested();
     }
@@ -232,7 +277,7 @@ Item {
         glyphFont: "Symbols Nerd Font"
         glyphColor: panel.system.bluetoothEnabled ? panel.theme.positive : panel.theme.textMuted
         eyebrow: "Connectivity / Bluetooth"
-        title: "Bluetooth"
+        title: panel.deviceDetail ? "Device settings" : "Bluetooth"
         detail: !panel.adapterAvailable ? "No adapter available" : panel.system.bluetoothEnabled ? panel.system.bluetoothConnectedCount + " connected · " + (panel.system.bluetoothDiscovering ? "Scanning…" : "Scan idle") : "Radio disabled"
     }
 
@@ -262,11 +307,96 @@ Item {
             bottomMargin: panel.theme.spacing3
         }
 
+        Column {
+            anchors.fill: parent
+            spacing: panel.theme.spacing2
+            visible: panel.deviceDetail && panel.detailDevice !== null
+            Text {
+                width: parent.width
+                text: panel.detailDevice ? panel.displayName(panel.detailDevice) + " · " + panel.detailDevice.address : ""
+                font.family: panel.runtime.fontSans
+                font.pixelSize: panel.theme.fontSize(15)
+                color: panel.theme.textStrong
+                elide: Text.ElideRight
+            }
+            Text {
+                width: parent.width
+                text: panel.detailDevice ? "Adapter: " + (panel.adapter?.name || "Unknown") + " · " + (panel.detailDevice.deviceName || "Unnamed") + " · " + (panel.detailDevice.bonded ? "Bonded" : "Not bonded") + (panel.detailDevice.blocked ? " · Blocked" : "") : ""
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(10)
+                color: panel.theme.textMuted
+                wrapMode: Text.Wrap
+            }
+            ShellAction {
+                width: parent.width
+                height: 48
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                title: "Rename device"
+                shortcut: panel.runtime.shellHint("BluetoothPanel.rename")
+                horizontalCompact: true
+                enabled: !!panel.detailDevice?.paired
+                visible: !panel.renaming
+                onActivated: panel.renameDevice()
+            }
+            ShellSurface {
+                width: parent.width
+                height: 50
+                theme: panel.theme
+                motion: panel.motion
+                surfaceLayer: ShellSurface.Control
+                cornerRadius: panel.theme.radiusMedium
+                visible: panel.renaming
+                TextInput {
+                    id: nameInput
+                    anchors.fill: parent
+                    anchors.margins: panel.theme.spacing3
+                    color: panel.theme.textStrong
+                    font.family: panel.runtime.fontSans
+                    font.pixelSize: panel.theme.fontSize(13)
+                    maximumLength: 248
+                    verticalAlignment: TextInput.AlignVCenter
+                    clip: true
+                    Keys.onPressed: event => {
+                        if (event.key === panel.runtime.shellKeyCode("controls", "Escape")) {
+                            panel.finishRename(false);
+                            event.accepted = true;
+                        } else if (event.key === panel.runtime.shellKeyCode("controls", "Return") || event.key === panel.runtime.shellKeyCode("controls", "Enter")) {
+                            panel.finishRename(true);
+                            event.accepted = true;
+                        }
+                    }
+                }
+            }
+            ShellAction {
+                width: parent.width
+                height: 48
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                title: "Allow device to wake computer"
+                shortcut: panel.runtime.shellHint("BluetoothPanel.wake")
+                horizontalCompact: true
+                active: !!panel.detailDevice?.wakeAllowed
+                enabled: !!panel.detailDevice?.paired
+                visible: !panel.renaming
+                onActivated: panel.toggleWake()
+            }
+            Text {
+                width: parent.width
+                text: panel.detailDevice?.batteryAvailable ? "Battery: " + Math.round(panel.detailDevice.battery * 100) + "%" : "Battery level unavailable"
+                font.family: panel.runtime.fontSans
+                font.pixelSize: panel.theme.fontSize(11)
+                color: panel.theme.textMuted
+            }
+        }
+
         ListView {
             id: deviceList
 
             anchors.fill: parent
-            visible: panel.adapterAvailable && panel.adapter.enabled
+            visible: !panel.deviceDetail && panel.adapterAvailable && panel.adapter.enabled
             model: panel.devices
             spacing: panel.theme.spacing2
             clip: true
@@ -449,7 +579,22 @@ Item {
         }
         spacing: panel.theme.spacing2
 
+        ShellAction {
+            width: parent.width
+            height: 40
+            runtime: panel.runtime
+            theme: panel.theme
+            motion: panel.motion
+            compact: true
+            horizontalCompact: true
+            visible: panel.deviceDetail || (panel.adapterAvailable && panel.devices.length > 0)
+            title: panel.deviceDetail ? "Back to devices" : "Device settings"
+            shortcut: panel.runtime.shellHint("BluetoothPanel.detail")
+            onActivated: panel.toggleDeviceDetail()
+        }
+
         KeyHintStrip {
+            visible: !panel.deviceDetail
             width: parent.width
             runtime: panel.runtime
             theme: panel.theme

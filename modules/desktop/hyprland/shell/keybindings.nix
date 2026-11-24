@@ -159,6 +159,9 @@
           "AudioDeviceControl.muteMicrophone" = "X";
           "AudioMixerContent.open" = "SHIFT+M";
           "BluetoothPanel.activate" = "ENTER";
+          "BluetoothPanel.detail" = "V";
+          "BluetoothPanel.rename" = "E";
+          "BluetoothPanel.wake" = "W";
           "BluetoothPanel.forget" = "F";
           "BluetoothPanel.pair" = "P";
           "BluetoothPanel.radio" = "B";

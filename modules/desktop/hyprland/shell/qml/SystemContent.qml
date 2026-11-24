@@ -531,6 +531,10 @@ FocusScope {
             recordingsPanel.invoke("cancelDelete");
         } else if (sessionPanel.open && sessionPanel.armedAction.length > 0) {
             sessionPanel.invoke("cancelConfirmation");
+        } else if (bluetoothPanel.open && bluetoothPanel.panel && bluetoothPanel.panel.renaming) {
+            bluetoothPanel.invoke("finishRename", false);
+        } else if (bluetoothPanel.open && bluetoothPanel.panel && bluetoothPanel.panel.deviceDetail) {
+            bluetoothPanel.invoke("toggleDeviceDetail");
         } else if (bluetoothPanel.open && bluetoothPanel.panel && bluetoothPanel.panel.forgetAddress.length > 0) {
             bluetoothPanel.invoke("clearTransientState");
         } else if (networkPanel.open && networkPanel.detailView) {
@@ -2066,6 +2070,29 @@ FocusScope {
                 }
 
                 if (bluetoothPanel.open) {
+                    if (bluetoothPanel.panel && bluetoothPanel.panel.renaming)
+                        return;
+                    if (root.runtime.shellMatchesHint("BluetoothPanel.detail", event.key, event.modifiers)) {
+                        if (!event.isAutoRepeat)
+                            bluetoothPanel.invoke("toggleDeviceDetail");
+                        event.accepted = true;
+                        return;
+                    }
+                    if (bluetoothPanel.panel && bluetoothPanel.panel.deviceDetail) {
+                        if (root.runtime.shellMatchesHint("BluetoothPanel.rename", event.key, event.modifiers)) {
+                            if (!event.isAutoRepeat)
+                                bluetoothPanel.invoke("renameDevice");
+                        } else if (root.runtime.shellMatchesHint("BluetoothPanel.wake", event.key, event.modifiers)) {
+                            if (!event.isAutoRepeat)
+                                bluetoothPanel.invoke("toggleWake");
+                        } else if (event.key === root.runtime.shellKeyCode("controls", "Backspace")) {
+                            bluetoothPanel.invoke("toggleDeviceDetail");
+                        } else {
+                            return;
+                        }
+                        event.accepted = true;
+                        return;
+                    }
                     if (event.key === root.runtime.shellKeyCode("controls", "Backspace")) {
                         root.navigateBack();
                         event.accepted = true;
