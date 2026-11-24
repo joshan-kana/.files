@@ -184,7 +184,10 @@ test("new notification groups do not move the selected action or steal reply foc
     /NotificationSemantics\.findNotification\(groups, selectedNotificationAnchor\)/,
   );
   assert.match(center, /engaged && !replyEditing/);
-  assert.match(center, /onSelectedIndexChanged: rememberSelection\(\)/);
+  assert.match(
+    center,
+    /onSelectedIndexChanged: \{[\s\S]*?rememberSelection\(\)/,
+  );
 });
 
 test("reply draft and focus follow the notification across incoming alerts", () => {
@@ -230,4 +233,16 @@ test("expanded notification rows are flat and keep group/member identities", () 
   assert.equal(expanded[86].memberIndex, 84);
   assert.match(qml("NotificationContent.qml"), /model: center.rows/);
   assert.doesNotMatch(qml("NotificationContent.qml"), /id: members/);
+});
+
+test("expanded history keeps app policy in a separate keyboard-accessible disclosure", () => {
+  const card = qml("NotificationCard.qml");
+  const center = qml("NotificationContent.qml");
+  assert.match(card, /visible: card.expanded && card.policyOpen/);
+  assert.match(card, /shellHint\("NotificationCard.policy"\)/);
+  assert.match(
+    center,
+    /shellMatchesHint\("NotificationCard.policy", event.key, event.modifiers\)/,
+  );
+  assert.match(center, /onSelectedMemberIndexChanged: \{\s*policyOpen = false/);
 });

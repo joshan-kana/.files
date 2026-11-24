@@ -19,6 +19,7 @@ FocusScope {
     property int selectedIndex: 0
     property int selectedMemberIndex: 0
     property string expandedGroupKey: ""
+    property bool policyOpen: false
 
     readonly property var items: [...(notificationState.history || [])].reverse()
     // Like end-4's grouped history, but backed by the single Quickshell notification server.
@@ -119,7 +120,10 @@ FocusScope {
         }
     }
 
-    onSelectedIndexChanged: rememberSelection()
+    onSelectedIndexChanged: {
+        policyOpen = false;
+        rememberSelection();
+    }
 
     function replyDraftFor(notification): string {
         return replyDrafts.get(notification) || "";
@@ -141,6 +145,9 @@ FocusScope {
         if (replyEditing) {
             replyOwner = null;
             replyEditing = false;
+            focusKeyboard();
+        } else if (policyOpen) {
+            policyOpen = false;
             focusKeyboard();
         } else if (expandedGroupKey.length > 0) {
             expandedGroupKey = "";
@@ -164,10 +171,14 @@ FocusScope {
     }
 
     onSelectedMemberIndexChanged: {
+        policyOpen = false;
         rememberSelection();
         Qt.callLater(ensureSelectedVisible);
     }
-    onExpandedGroupKeyChanged: Qt.callLater(ensureSelectedVisible)
+    onExpandedGroupKeyChanged: {
+        policyOpen = false;
+        Qt.callLater(ensureSelectedVisible);
+    }
 
     function rememberSelection(): void {
         if (!restoringSelection)
@@ -578,6 +589,8 @@ FocusScope {
                             groupCount: !groupItem || !groupItem.modelData ? 1 : groupItem.expanded ? 1 : groupItem.group.notifications.length
                             selected: !!groupItem && center.selectedIndex === groupItem.modelData.groupIndex && center.selectedMemberIndex === member.index
                             expanded: !!groupItem && groupItem.expanded && selected
+                            policyOpen: center.policyOpen && selected
+                            onPolicyRequested: center.policyOpen = !center.policyOpen
                             onActivated: {
                                 const sameSelection = center.selectedIndex === groupItem.modelData.groupIndex && center.selectedMemberIndex === member.index;
                                 center.selectedIndex = groupItem.modelData.groupIndex;
@@ -644,9 +657,17 @@ FocusScope {
                     "NotificationCard.defaults": "defaults"
                 };
                 const appAction = Object.keys(appActions).find(action => center.runtime.shellMatchesHint(action, event.key, event.modifiers));
-                if (appAction) {
+                if (center.runtime.shellMatchesHint("NotificationCard.policy", event.key, event.modifiers)) {
+                    if (!event.isAutoRepeat && center.selectedGroup()) {
+                        if (center.expandedGroupKey !== center.selectedGroup().key)
+                            center.expandedGroupKey = center.selectedGroup().key;
+                        center.policyOpen = !center.policyOpen;
+                        Qt.callLater(center.ensureSelectedVisible);
+                    }
+                    event.accepted = true;
+                } else if (appAction) {
                     const notification = center.selectedNotification();
-                    if (notification && center.expandedGroupKey === center.selectedGroup().key) {
+                    if (notification && center.expandedGroupKey === center.selectedGroup().key && center.policyOpen) {
                         if (!event.isAutoRepeat) {
                             const name = appActions[appAction];
                             const prefs = center.notificationState.applicationPreferences(notification);

@@ -124,6 +124,7 @@
           "NotificationCard.history" = "SHIFT+F";
           "NotificationCard.mark" = "M";
           "NotificationCard.popup" = "SHIFT+P";
+          "NotificationCard.policy" = "SHIFT+E";
           "NotificationCard.reply" = "R";
           "NotificationCard.silent" = "SHIFT+G";
           "NotificationCard.submit" = "ENTER";

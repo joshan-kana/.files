@@ -15,6 +15,7 @@ SquircleSurface {
     property bool selected: false
     property bool read: false
     property bool expanded: false
+    property bool policyOpen: false
     property int groupCount: 1
     property bool dismissing: false
     property string replyDraft: ""
@@ -25,6 +26,7 @@ SquircleSurface {
     Accessible.description: (notification ? (notification.body || "") : "") + (safeActions.length > 0 ? ", " + safeActions.length + " actions available" : "") + (notification && notification.hasInlineReply ? ", reply available" : "")
 
     signal activated
+    signal policyRequested
     signal defaultRequested
     signal actionRequested(int index)
     signal replyRequested(string message)
@@ -326,9 +328,26 @@ SquircleSurface {
             }
         }
 
+        ShellAction {
+            visible: card.expanded && !!card.notification
+            width: Math.min(parent.width, implicitWidth)
+            height: visible ? implicitHeight : 0
+            runtime: card.runtime
+            theme: card.theme
+            motion: card.motion
+            compact: true
+            horizontalCompact: true
+            icon: card.policyOpen ? "󰅃" : "󰒓"
+            title: "App notification policy"
+            shortcut: card.selected ? card.runtime.shellHint("NotificationCard.policy") : ""
+            active: card.policyOpen
+            activeColor: card.theme.roleColor("notifications")
+            onActivated: card.policyRequested()
+        }
+
         ShellSurface {
             id: applicationOptions
-            visible: card.expanded && !!card.notification
+            visible: card.expanded && card.policyOpen && !!card.notification
             width: parent.width
             height: visible ? policyContent.implicitHeight + card.theme.spacing3 * 2 : 0
             theme: card.theme
@@ -351,7 +370,7 @@ SquircleSurface {
                         anchors.verticalCenter: parent.verticalCenter
                         runtime: card.runtime
                         theme: card.theme
-                        text: "App notification policy"
+                        text: "Delivery and privacy"
                         textRole: ShellText.Section
                         wrapMode: Text.WordWrap
                     }
