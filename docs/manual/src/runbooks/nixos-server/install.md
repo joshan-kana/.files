@@ -10,7 +10,7 @@ shut down, connect the Vault HDDs, and boot the installed system.
 The built manual injects these values from `nixosConfigurations.nixos-server`. Load this generated environment once in the installer shell:
 
 ```sh
-{{#include ../../generated/server-env.sh}}
+{{#include ../../generated/hosts/nixos-server.sh}}
 ```
 
 Commands below that use these variables assume the block has been loaded in the current shell.
@@ -27,28 +27,31 @@ lsblk -o NAME,PATH,SIZE,FSTYPE,LABEL,MODEL,SERIAL,TRAN,MOUNTPOINTS
 ip -br link
 ```
 
-The commands below use `/dev/nvme0n1` as the system disk and destroy its existing
-partition table.
+Select the internal NVMe system disk after verifying its identity above. The next command destroys its existing partition table. Keep the data disks disconnected. The procedure uses the evaluated boot and root filesystem labels and assumes the configured VFAT/Btrfs layout.
 
 ```sh
-export DISK=/dev/nvme0n1
+read -r -p "Verified internal NVMe system disk: " DISK
+[[ "$DISK" =~ ^/dev/nvme[0-9]+n[0-9]+$ ]] && [[ "$(lsblk -dn -o TYPE "$DISK")" == disk ]] || exit 1
+[[ "$BOOT_DEVICE" == /dev/disk/by-label/* && "$ROOT_DEVICE" == /dev/disk/by-label/* ]] || exit 1
+[[ "$BOOT_FS" == vfat && "$ROOT_FS" == btrfs ]] || exit 1
 
 sudo parted --script "$DISK" -- \
   mklabel gpt \
   mkpart ESP fat32 1MiB 1025MiB \
   set 1 esp on \
-  mkpart ROOT btrfs 1025MiB 100%
+  mkpart ROOT btrfs 1025MiB 100% || exit 1
 
-sudo mkfs.fat -F 32 -n BOOT "${DISK}p1"
-sudo mkfs.btrfs -f -L ROOT "${DISK}p2"
+sudo udevadm settle
+sudo mkfs.fat -F 32 -n "${BOOT_DEVICE##*/}" "${DISK}p1"
+sudo mkfs.btrfs -f -L "${ROOT_DEVICE##*/}" "${DISK}p2"
 ```
 
 Mount the target and create the application-data subvolume:
 
 ```sh
-sudo mount /dev/disk/by-label/ROOT /mnt
+sudo mount "$ROOT_DEVICE" /mnt
 sudo mkdir -p /mnt/boot "$(dirname "/mnt$APP_DATA_ROOT")"
-sudo mount /dev/disk/by-label/BOOT /mnt/boot
+sudo mount "$BOOT_DEVICE" /mnt/boot
 sudo btrfs subvolume create "/mnt$APP_DATA_ROOT"
 
 findmnt -T /mnt
@@ -68,7 +71,7 @@ cd "/mnt$DOTFILES_REPO"
 
 nix_eval() {
   sudo nix --extra-experimental-features "nix-command flakes" eval --raw \
-    ".#nixosConfigurations.nixos-server.$1"
+    ".#nixosConfigurations.$HOST_NAME.$1"
 }
 
 export APPS_REPOSITORY="$(nix_eval config.services.restic.backups.apps.repository)"
@@ -110,12 +113,12 @@ cd "/mnt$DOTFILES_REPO"
 
 substituters="$(
   sudo nix --extra-experimental-features "nix-command flakes" eval --raw \
-    .#nixosConfigurations.nixos-server \
+    ".#nixosConfigurations.$HOST_NAME" \
     --apply 'cfg: builtins.concatStringsSep " " (cfg.pkgs.lib.unique cfg.config.nix.settings.substituters)'
 )"
 trusted_public_keys="$(
   sudo nix --extra-experimental-features "nix-command flakes" eval --raw \
-    .#nixosConfigurations.nixos-server \
+    ".#nixosConfigurations.$HOST_NAME" \
     --apply 'cfg: builtins.concatStringsSep " " (cfg.pkgs.lib.unique cfg.config.nix.settings.trusted-public-keys)'
 )"
 ```
@@ -127,7 +130,7 @@ sudo nixos-install \
   --option extra-experimental-features "nix-command flakes" \
   --option extra-substituters "$substituters" \
   --option extra-trusted-public-keys "$trusted_public_keys" \
-  --flake .#nixos-server
+  --flake ".#$HOST_NAME"
 ```
 
 {{#include ../_shared/finalize-bare-install.inc}}
@@ -141,7 +144,7 @@ mount automatically during normal boot.
 In the new shell, reload the generated environment:
 
 ```sh
-{{#include ../../generated/server-env.sh}}
+{{#include ../../generated/hosts/nixos-server.sh}}
 ```
 
 Verify the installed filesystems, Vault pool, network, restored backups, and
@@ -156,7 +159,7 @@ zfs list -r "$VAULT_POOL"
 findmnt -T "$VAULT_ROOT"
 lsblk -f
 ip -br addr
-sudo restic-apps snapshots --latest 1
+run0 restic-apps snapshots --latest 1
 systemctl is-system-running || true
 systemctl --failed --no-pager
 ```

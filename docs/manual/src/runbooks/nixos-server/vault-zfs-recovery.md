@@ -7,7 +7,7 @@ Current filesystem, Vault, pool, snapshot, and retention state is in [Storage](.
 Load the generated server environment once in the shell used for the recovery procedure:
 
 ```sh
-{{#include ../../generated/server-env.sh}}
+{{#include ../../generated/hosts/nixos-server.sh}}
 ```
 
 ## Physical setup and safety
@@ -157,12 +157,12 @@ Prefer file copies or a temporary clone whenever they can solve the problem.
 After rebuilding the internal system disk, reconnect the existing Vault drives only after the base NixOS system is healthy. In the rebuilt system's shell, reload the generated environment before applying the current configuration and inspecting/importing the existing pool:
 
 ```sh
-{{#include ../../generated/server-env.sh}}
+{{#include ../../generated/hosts/nixos-server.sh}}
 ```
 
 ```sh
 cd "$DOTFILES_REPO"
-run0 nixos-rebuild switch --flake ".#nixos-server"
+run0 nixos-rebuild switch --flake ".#$HOST_NAME"
 
 run0 zpool import
 run0 zpool import "$VAULT_POOL"
