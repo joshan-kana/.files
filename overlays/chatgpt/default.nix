@@ -6,12 +6,12 @@ _: {
         inherit (prev) lib;
         system = prev.stdenv.hostPlatform.system;
         release = {
-          version = "26.1117.41037";
-          hash = "sha256-vApC0Bqb3t4cHCuHYVGoGFYNax6vH0WuQC09IinDQiA=";
+          version = "26.1120.41243";
+          hash = "sha256-74qtMUCeLuOZOp50DPPpTnni1yGeUPSK3qIhfUrPedQ=";
         };
         linuxHashes = {
-          x86_64 = "sha256-vhzfMdQRG8Iz8jexFnC8qOQVytB+wJbAudg1KeNerrA=";
-          aarch64 = "sha256-/O/dr2zLx6hL4BkwzVw+IVGpNzt9iph0UcxI6aWwEYo=";
+          x86_64 = "sha256-QwzJzQwRRpN57CpdGDmqJwaE/XHLlMnlmdrWcZcS2TU=";
+          aarch64 = "sha256-eO9LHme3Bzc9pqQcTZPbg0k5aOlGP5goQdG9BvdHOrk=";
         };
         inherit (release) version;
         isDarwin = prev.stdenv.hostPlatform.isDarwin;
