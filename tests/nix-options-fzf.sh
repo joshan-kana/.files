@@ -46,6 +46,59 @@ assert_eq() {
   [ "$actual" = "$expected" ] || fail "$context (expected: $expected, actual: $actual)"
 }
 
+# Use a small independent repository and a deterministic evaluator to exercise
+# host-cache invalidation without changing the real fleet or its cache.
+(
+  fixture="$test_cache/host-discovery"
+  mkdir -p "$fixture/repo"
+  cd "$fixture/repo"
+  git init -q
+  printf '%s\n' '["first","second"]' >hosts.json
+  git add hosts.json
+  git -c user.name=Test -c user.email=test@example.invalid commit -qm initial
+  export NIX_BIN="$fixture/nix"
+  export NF_HOST_CALLS="$fixture/calls"
+  export NIX_OPTIONS_FZF_DEFAULT_HOST_FILE="$fixture/default-host"
+  cat >"$NIX_BIN" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+case "$*" in
+*--expr*)
+  echo eval >>"$NF_HOST_CALLS"
+  cat hosts.json
+  ;;
+*--file*) printf '%s\n' '[]' ;;
+*) exit 1 ;;
+esac
+EOF
+  chmod +x "$NIX_BIN"
+
+  assert_contains "$(run_nf --hosts)" first "cold host inventory"
+  assert_contains "$(run_nf --hosts)" second "warm host inventory"
+  assert_eq "$(wc -l <"$NF_HOST_CALLS" | tr -d ' ')" 1 "warm host cache"
+  printf '%s\n' first >"$NIX_OPTIONS_FZF_DEFAULT_HOST_FILE"
+  printf '%s\n' '["second","third"]' >hosts.json
+  changed="$(run_nf --hosts)"
+  assert_contains "$changed" third "dirty host inventory"
+  assert_not_contains "$changed" first "removed host inventory"
+  if stale="$(run_nf --list 2>&1)"; then
+    fail "removed remembered host unexpectedly accepted"
+  fi
+  assert_contains "$stale" "remembered host no longer exists" "removed remembered host diagnostic"
+  git add hosts.json
+  git -c user.name=Test -c user.email=test@example.invalid commit -qm changed
+  run_nf --refresh-all >/dev/null
+  assert_eq "$(wc -l <"$NF_HOST_CALLS" | tr -d ' ')" 3 "committed host cache invalidation"
+  key="$(printf '%s\0' "$(git rev-parse --show-toplevel)" | sha256sum | awk '{print substr($1, 1, 16)}')"
+  [ -f "$XDG_CACHE_HOME/dotfiles-options/$key/option-scopes-v3-third.json" ] || fail "refresh-all omitted new host"
+  [ ! -f "$XDG_CACHE_HOME/dotfiles-options/$key/option-scopes-v3-first.json" ] || fail "refresh-all included removed host"
+)
+
+if [ "${1:-}" = --host-cache-only ]; then
+  echo "Host discovery cache tests passed."
+  exit 0
+fi
+
 repo_cache_key="$(printf '%s\0' "$repo" | sha256sum | awk '{print substr($1, 1, 16)}')"
 cache_root="$test_cache/dotfiles-options/$repo_cache_key"
 mkdir -p "$cache_root/values-v2"
