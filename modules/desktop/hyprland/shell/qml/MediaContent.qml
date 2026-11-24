@@ -56,6 +56,12 @@ FocusScope {
             key: content.runtime.shellHint("MediaContent.player"),
             action: "Cycle connected media players"
         },
+        ...(media.rateAvailable ? [
+                {
+                    key: [content.runtime.shellHint("MediaContent.rateDown"), content.runtime.shellHint("MediaContent.rateUp")].join(" / "),
+                    action: "Adjust selected player's playback speed"
+                }
+            ] : []),
         {
             key: content.runtime.shellHint("MediaContent.close"),
             action: content.returnToControls ? "Back to Controls" : "Close now playing"
@@ -168,7 +174,7 @@ FocusScope {
                 motion: content.motion
                 surfaceLayer: ShellSurface.Group
                 cornerRadius: theme.radiusLarge
-                clip: true
+                clipContentToShape: true
 
                 Image {
                     anchors.fill: parent
@@ -525,8 +531,8 @@ FocusScope {
                 topMargin: content.theme.spacing2
             }
             spacing: content.theme.spacing2
-            Flow {
-                width: Math.min(parent.width, children.reduce((total, item) => total + item.implicitWidth, 0) + Math.max(0, children.length - 1) * spacing)
+            CenteredActionFlow {
+                width: parent.width
                 anchors.horizontalCenter: parent.horizontalCenter
                 spacing: content.theme.spacing2
 
@@ -538,6 +544,7 @@ FocusScope {
                     motion: content.motion
                     compact: true
                     horizontalCompact: true
+                    icon: content.visualizerMode === "bars" ? "󰕰" : "󰘮"
                     title: content.visualizerMode === "bars" ? "Bars" : "Curve"
                     shortcut: content.runtime.shellHint("MediaContent.visualizer")
                     active: true
@@ -552,6 +559,7 @@ FocusScope {
                     motion: content.motion
                     compact: true
                     horizontalCompact: true
+                    icon: content.lyricsVisible ? "󰨖" : "󰨕"
                     title: "Lyrics"
                     shortcut: content.runtime.shellHint("MediaContent.lyrics")
                     active: content.lyricsVisible
@@ -573,8 +581,8 @@ FocusScope {
                     onIncreased: content.media.adjustSeekStep(1)
                 }
             }
-            Flow {
-                width: Math.min(parent.width, children.reduce((total, item) => total + item.implicitWidth, 0) + Math.max(0, children.length - 1) * spacing)
+            CenteredActionFlow {
+                width: parent.width
                 anchors.horizontalCenter: parent.horizontalCenter
                 spacing: content.theme.spacing2
                 ShellAction {
@@ -620,22 +628,21 @@ FocusScope {
                     width: Math.min(180, implicitWidth)
                     elide: Text.ElideRight
                 }
-            }
-            ShellStepper {
-                id: speedStepper
-                visible: content.media.rateAvailable
-                anchors.horizontalCenter: parent.horizontalCenter
-                runtime: content.runtime
-                theme: content.theme
-                motion: content.motion
-                title: "Playback speed"
-                readback: content.media.rate.toFixed(2) + "×"
-                decreaseShortcut: content.runtime.shellHint("MediaContent.rateDown")
-                increaseShortcut: content.runtime.shellHint("MediaContent.rateUp")
-                canDecrease: content.media.rateAvailable && content.media.rate > content.media.player.minRate
-                canIncrease: content.media.rateAvailable && content.media.rate < content.media.player.maxRate
-                onDecreased: content.media.adjustRate(-0.25)
-                onIncreased: content.media.adjustRate(0.25)
+                ShellStepper {
+                    id: speedStepper
+                    visible: content.media.rateAvailable
+                    runtime: content.runtime
+                    theme: content.theme
+                    motion: content.motion
+                    title: "Playback speed"
+                    readback: content.media.rate.toFixed(2) + "×"
+                    decreaseShortcut: content.runtime.shellHint("MediaContent.rateDown")
+                    increaseShortcut: content.runtime.shellHint("MediaContent.rateUp")
+                    canDecrease: content.media.rateAvailable && content.media.rate > content.media.player.minRate
+                    canIncrease: content.media.rateAvailable && content.media.rate < content.media.player.maxRate
+                    onDecreased: content.media.adjustRate(-0.25)
+                    onIncreased: content.media.adjustRate(0.25)
+                }
             }
         }
 
