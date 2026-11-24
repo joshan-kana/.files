@@ -14,7 +14,7 @@ Keep scheduling and dependency supervision in the native service manager when av
 
 ## State and permissions
 
-Prefer declarative service users/groups, systemd-managed directories, and tmpfiles to repeated imperative startup repairs. Use named service identities for persistent data rather than hard-coded numeric IDs. Account for persistent identity databases in recovery when identities depend on them.
+Prefer declarative service users/groups, systemd-managed directories, and tmpfiles to repeated imperative startup repairs. Use named service identities for persistent host data. Retain numeric IDs where required by an external runtime or image. Account for persistent identity databases in recovery when identities depend on them.
 
 Reuse configurable values where several service settings must agree. Retain independent upstream defaults.
 

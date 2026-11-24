@@ -17,7 +17,7 @@ For containers, distinguish the host-published binding from the container's inte
 - A missing mandatory credential must produce an explicit runtime failure; an optional credential only gates the feature requiring it.
 - Give each service the narrowest identities, file permissions, and privileged operations it needs.
 - Keep privilege boundaries separate from network reachability and service access. A general service interface must not grant access to restricted operations.
-- Keep sensitive values out of logs, errors, command lines, and commit metadata.
+- Keep sensitive values out of logs, errors, and commit metadata. Use file or credential mechanisms instead of command-line arguments when supported.
 
 Use the platform's configured privilege mechanism; on NixOS, use `run0` with Polkit rather than alternative privilege-elevation tools. Verify access from intended and unintended network paths when exposure changes.
 

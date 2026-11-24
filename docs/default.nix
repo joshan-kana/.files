@@ -387,6 +387,8 @@ let
   semanticScopesMarkdown = ''
     # Semantic scopes
 
+    Checkmarks indicate resolved scope selection. Platform conditions may leave a selected scope with no applicable configuration; consult the evaluated package and service references for actual host contents.
+
     ${scopeTableHeader}
     ${lib.concatStringsSep "\n" scopeTableRows}
   '';
@@ -481,7 +483,7 @@ let
 
       ## Enabled scopes
 
-      ${toString (builtins.length facts.enabledScopes)} scopes are enabled. Top-level scopes:
+      ${toString (builtins.length facts.enabledScopes)} scopes are selected, subject to platform conditions. Top-level scopes:
 
       ${bulletList facts.topLevelScopes}
 
