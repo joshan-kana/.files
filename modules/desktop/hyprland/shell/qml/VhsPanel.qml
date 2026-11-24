@@ -18,24 +18,87 @@ Item {
     implicitHeight: content.implicitHeight
 
     readonly property var parameters: [
-        { key: "vhsIntensity", title: "Intensity", description: "Overall signal degradation", minimum: 0, maximum: 1, step: 0.05, unit: "%" },
-        { key: "vhsTracking", title: "Tracking", description: "Rolling tears and horizontal instability", minimum: 0, maximum: 1, step: 0.05, unit: "%" },
-        { key: "vhsChroma", title: "Colour bleed", description: "Red and blue channel separation", minimum: 0, maximum: 1, step: 0.05, unit: "%" },
-        { key: "vhsNoise", title: "Tape noise", description: "Moving grain and brightness flicker", minimum: 0, maximum: 1, step: 0.05, unit: "%" },
-        { key: "vhsScanlines", title: "Scanlines", description: "Alternating horizontal line darkness", minimum: 0, maximum: 1, step: 0.05, unit: "%" },
-        { key: "vhsDropouts", title: "Dropouts", description: "Irregular dark horizontal tape streaks", minimum: 0, maximum: 1, step: 0.05, unit: "%" },
-        { key: "vhsSpeed", title: "Tape speed", description: "Rate of animated tracking and noise", minimum: 0.25, maximum: 2.5, step: 0.05, unit: "×" }
+        {
+            key: "vhsIntensity",
+            title: "Intensity",
+            description: "Overall signal degradation",
+            minimum: 0,
+            maximum: 1,
+            step: 0.05,
+            unit: "%"
+        },
+        {
+            key: "vhsTracking",
+            title: "Tracking",
+            description: "Rolling tears and horizontal instability",
+            minimum: 0,
+            maximum: 1,
+            step: 0.05,
+            unit: "%"
+        },
+        {
+            key: "vhsChroma",
+            title: "Colour bleed",
+            description: "Red and blue channel separation",
+            minimum: 0,
+            maximum: 1,
+            step: 0.05,
+            unit: "%"
+        },
+        {
+            key: "vhsNoise",
+            title: "Tape noise",
+            description: "Moving grain and brightness flicker",
+            minimum: 0,
+            maximum: 1,
+            step: 0.05,
+            unit: "%"
+        },
+        {
+            key: "vhsScanlines",
+            title: "Scanlines",
+            description: "Alternating horizontal line darkness",
+            minimum: 0,
+            maximum: 1,
+            step: 0.05,
+            unit: "%"
+        },
+        {
+            key: "vhsDropouts",
+            title: "Dropouts",
+            description: "Irregular dark horizontal tape streaks",
+            minimum: 0,
+            maximum: 1,
+            step: 0.05,
+            unit: "%"
+        },
+        {
+            key: "vhsSpeed",
+            title: "Tape speed",
+            description: "Rate of animated tracking and noise",
+            minimum: 0.25,
+            maximum: 2.5,
+            step: 0.05,
+            unit: "×"
+        }
     ]
 
     function parameterValue(key: string): real {
         switch (key) {
-        case "vhsIntensity": return appearance.vhsIntensity;
-        case "vhsTracking": return appearance.vhsTracking;
-        case "vhsChroma": return appearance.vhsChroma;
-        case "vhsNoise": return appearance.vhsNoise;
-        case "vhsDropouts": return appearance.vhsDropouts;
-        case "vhsScanlines": return appearance.vhsScanlines;
-        case "vhsSpeed": return appearance.vhsSpeed;
+        case "vhsIntensity":
+            return appearance.vhsIntensity;
+        case "vhsTracking":
+            return appearance.vhsTracking;
+        case "vhsChroma":
+            return appearance.vhsChroma;
+        case "vhsNoise":
+            return appearance.vhsNoise;
+        case "vhsDropouts":
+            return appearance.vhsDropouts;
+        case "vhsScanlines":
+            return appearance.vhsScanlines;
+        case "vhsSpeed":
+            return appearance.vhsSpeed;
         }
         return 0;
     }
@@ -184,7 +247,9 @@ Item {
                     fillColor: panel.theme.expressiveSurfaceStrong
                     hovered: rowHover.hovered
 
-                    HoverHandler { id: rowHover }
+                    HoverHandler {
+                        id: rowHover
+                    }
 
                     Column {
                         anchors {
@@ -273,8 +338,14 @@ Item {
             runtime: panel.runtime
             theme: panel.theme
             hints: [
-                { shortcut: panel.runtime.shellHint("VhsPanel.select"), label: "Select parameter" },
-                { shortcut: panel.runtime.shellHint("VhsPanel.adjust"), label: "Adjust" }
+                {
+                    shortcut: panel.runtime.shellHint("VhsPanel.select"),
+                    label: "Select parameter"
+                },
+                {
+                    shortcut: panel.runtime.shellHint("VhsPanel.adjust"),
+                    label: "Adjust"
+                }
             ]
         }
     }

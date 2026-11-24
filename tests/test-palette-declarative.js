@@ -287,9 +287,18 @@ test("QML runtime defaults match the native Nix shell option declarations", () =
     "Shell-owned appearance fields and the two compositor-owned blur adapters must be accounted for",
   );
 
-  assert.doesNotMatch(appearanceNix, /blurEnabled = lib\.mkOption|blurSize = lib\.mkOption/);
-  assert.match(nix, /blurEnabled = config\.wayland\.windowManager\.hyprland\.settings\.config\.decoration\.blur\.enabled/);
-  assert.match(nix, /blurSize = config\.wayland\.windowManager\.hyprland\.settings\.config\.decoration\.blur\.size/);
+  assert.doesNotMatch(
+    appearanceNix,
+    /blurEnabled = lib\.mkOption|blurSize = lib\.mkOption/,
+  );
+  assert.match(
+    nix,
+    /blurEnabled = config\.wayland\.windowManager\.hyprland\.settings\.config\.decoration\.blur\.enabled/,
+  );
+  assert.match(
+    nix,
+    /blurSize = config\.wayland\.windowManager\.hyprland\.settings\.config\.decoration\.blur\.size/,
+  );
 
   for (const [, name, definition] of declared) {
     const type = definition.match(

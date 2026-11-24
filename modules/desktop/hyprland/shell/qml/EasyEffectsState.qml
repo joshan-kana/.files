@@ -17,11 +17,7 @@ QtObject {
     property bool awaitingConfirmation: false
     property bool desiredBypass: false
     property string error: ""
-    readonly property string statusLabel: !supported ? "EasyEffects unavailable"
-        : busy ? "Applying…"
-        : error.length > 0 ? error
-        : !known ? "Status not checked"
-        : bypassed ? "Effects bypassed" : "Processing enabled"
+    readonly property string statusLabel: !supported ? "EasyEffects unavailable" : busy ? "Applying…" : error.length > 0 ? error : !known ? "Status not checked" : bypassed ? "Effects bypassed" : "Processing enabled"
 
     property StdioCollector queryOutput: StdioCollector {}
     property StdioCollector queryError: StdioCollector {}
@@ -33,8 +29,7 @@ QtObject {
             if (code === 0 && (result === "1" || result === "2")) {
                 effects.bypassed = result === "1";
                 effects.known = true;
-                effects.error = effects.awaitingConfirmation && effects.bypassed !== effects.desiredBypass
-                    ? "Processing change was not confirmed" : "";
+                effects.error = effects.awaitingConfirmation && effects.bypassed !== effects.desiredBypass ? "Processing change was not confirmed" : "";
             } else {
                 effects.known = false;
                 effects.error = "Cannot read EasyEffects status";

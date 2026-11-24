@@ -94,11 +94,23 @@ test("opacity and shared blur parameters live in focused details, not compact ti
   assert.doesNotMatch(controls, /OpacitySetting \{|AdjustableSetting \{/);
   assert.match(controls, /onDetailsRequested: root\.openSetting\("windows"\)/);
   assert.match(controls, /onDetailsRequested: root\.openSetting\("glass"\)/);
-  assert.match(controls, /shortcut: root\.runtime\.shellHint\("SystemContent\.windowTransparency"\)/);
-  assert.match(controls, /shortcut: root\.runtime\.shellHint\("SystemContent\.shellGlass"\)/);
-  assert.doesNotMatch(controls, /id: transparencyPanel|openTransparency|opacitySettingsButton|SHIFT\+O/);
+  assert.match(
+    controls,
+    /shortcut: root\.runtime\.shellHint\("SystemContent\.windowTransparency"\)/,
+  );
+  assert.match(
+    controls,
+    /shortcut: root\.runtime\.shellHint\("SystemContent\.shellGlass"\)/,
+  );
+  assert.doesNotMatch(
+    controls,
+    /id: transparencyPanel|openTransparency|opacitySettingsButton|SHIFT\+O/,
+  );
   assert.doesNotMatch(host, /systemContent\.transparencyOpen/);
-  assert.equal(fs.existsSync(path.join(qmlDir, "TransparencyPanel.qml")), false);
+  assert.equal(
+    fs.existsSync(path.join(qmlDir, "TransparencyPanel.qml")),
+    false,
+  );
 });
 
 test("bounds are inclusive and the displayed percentage is opacity, not transparency", () => {
