@@ -14,7 +14,7 @@ let
       pkgs.jq
       pkgs.libnotify
     ];
-    text = builtins.readFile ../../../scripts/desktop-shell/local-scratchpad.sh;
+    text = builtins.readFile ./shell/scripts/local-scratchpad.sh;
   };
 in
 {

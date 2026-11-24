@@ -8,7 +8,7 @@ const shell = path.join(__dirname, "../modules/desktop/hyprland/shell");
 const read = (file) => fs.readFileSync(path.join(shell, file), "utf8");
 const readScript = (file) =>
   fs.readFileSync(
-    path.join(__dirname, "../scripts/desktop-shell", file),
+    path.join(__dirname, "../modules/desktop/hyprland/shell/scripts", file),
     "utf8",
   );
 const utilities = vm.runInNewContext(

@@ -8,7 +8,10 @@ const path = require("node:path");
 const root = path.join(__dirname, "..");
 const shell = path.join(root, "modules/desktop/hyprland/shell");
 const shader = path.join(shell, "shaders/vhs.frag");
-const command = path.join(root, "scripts/desktop-shell/vhs.sh");
+const command = path.join(
+  root,
+  "modules/desktop/hyprland/shell/scripts/vhs.sh",
+);
 const read = (file) => fs.readFileSync(file, "utf8");
 
 test("animated VHS scales tracking distortion and grain with intensity", () => {

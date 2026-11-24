@@ -12,7 +12,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 def module(name, filename):
     """Load an executable calendar helper into the isolated test process."""
-    spec = importlib.util.spec_from_file_location(name, ROOT / "scripts/desktop-shell" / filename)
+    spec = importlib.util.spec_from_file_location(name, ROOT / "modules/desktop/hyprland/shell/scripts" / filename)
     loaded = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(loaded)
     return loaded

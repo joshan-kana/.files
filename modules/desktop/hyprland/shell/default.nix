@@ -10,7 +10,7 @@ let
 
   resourceProbe = pkgs.writeShellApplication {
     name = "desktop-shell-resource-probe";
-    text = builtins.readFile ../../../../scripts/desktop-shell/resource-probe.sh;
+    text = builtins.readFile ./scripts/resource-probe.sh;
   };
 
   palettePython = pkgs.python3.withPackages (packages: [ packages.watchdog ]);
@@ -22,7 +22,7 @@ let
       pkgs.glib
     ];
     text = ''
-      exec ${lib.getExe palettePython} ${../../../../scripts/desktop-shell/palette-search.py} "$@"
+      exec ${lib.getExe palettePython} ${./scripts/palette-search.py} "$@"
     '';
   };
 
@@ -936,8 +936,7 @@ in
           pkgs.util-linux
         ];
         text =
-          builtins.readFile ../../../../scripts/desktop-shell/wallpaper-common.sh
-          + builtins.readFile ../../../../scripts/desktop-shell/wallpaper-apply.sh;
+          builtins.readFile ./scripts/wallpaper-common.sh + builtins.readFile ./scripts/wallpaper-apply.sh;
       };
 
       wallpaperLibrary = pkgs.writeShellApplication {
@@ -952,8 +951,7 @@ in
           pkgs.util-linux
         ];
         text =
-          builtins.readFile ../../../../scripts/desktop-shell/wallpaper-common.sh
-          + builtins.readFile ../../../../scripts/desktop-shell/wallpaper-library.sh;
+          builtins.readFile ./scripts/wallpaper-common.sh + builtins.readFile ./scripts/wallpaper-library.sh;
       };
 
       wallpaperPolicy = pkgs.writeShellApplication {
@@ -965,7 +963,7 @@ in
         text = ''
           export DESKTOP_WALLPAPER_LIBRARY=${lib.escapeShellArg (lib.getExe wallpaperLibrary)}
           export DESKTOP_WALLPAPER_POLICY_DEFAULTS=${lib.escapeShellArg (builtins.toJSON scopeConfig.wallpaperRotation)}
-          exec python3 ${../../../../scripts/desktop-shell/wallpaper-policy.py} "$@"
+          exec python3 ${./scripts/wallpaper-policy.py} "$@"
         '';
       };
 
@@ -977,12 +975,12 @@ in
           pkgs.mpvpaper
           pkgs.coreutils
         ];
-        text = builtins.readFile ../../../../scripts/desktop-shell/wallpaper-video-from-state.sh;
+        text = builtins.readFile ./scripts/wallpaper-video-from-state.sh;
       };
 
       # The subscribed iCal URL is a runtime-only secret. Google Calendar
       # publishes a standard VCALENDAR feed; khal already owns local event UI.
-      agendaIcalSource = ../../../../scripts/desktop-shell/ical-sync.py;
+      agendaIcalSource = ./scripts/ical-sync.py;
 
       agendaIcalSync = pkgs.writeShellApplication {
         name = "desktop-shell-ical-sync";
@@ -998,10 +996,10 @@ in
       agendaSetup = pkgs.writeShellApplication {
         name = "desktop-shell-agenda-setup";
         runtimeInputs = [ pkgs.coreutils ];
-        text = builtins.readFile ../../../../scripts/desktop-shell/agenda-setup.sh;
+        text = builtins.readFile ./scripts/agenda-setup.sh;
       };
 
-      agendaQuerySource = ../../../../scripts/desktop-shell/agenda-query.py;
+      agendaQuerySource = ./scripts/agenda-query.py;
 
       agendaQuery = pkgs.writeShellApplication {
         name = "desktop-shell-agenda-query";
@@ -1022,7 +1020,7 @@ in
           pkgs.coreutils
           pkgs.imagemagick
         ];
-        text = builtins.readFile ../../../../scripts/desktop-shell/clipboard-preview.sh;
+        text = builtins.readFile ./scripts/clipboard-preview.sh;
       };
 
       clipboardCopy = pkgs.writeShellApplication {
@@ -1031,10 +1029,10 @@ in
           pkgs.cliphist
           pkgs.wl-clipboard
         ];
-        text = builtins.readFile ../../../../scripts/desktop-shell/clipboard-copy.sh;
+        text = builtins.readFile ./scripts/clipboard-copy.sh;
       };
 
-      clipboardOperationsSource = ../../../../scripts/desktop-shell/clipboard-operations.py;
+      clipboardOperationsSource = ./scripts/clipboard-operations.py;
 
       clipboardOperations = pkgs.writeShellApplication {
         name = "desktop-shell-clipboard-operations";
@@ -1111,7 +1109,7 @@ in
         ];
         text = ''
           export VHS_SHADER_SOURCE=${lib.escapeShellArg "${./shaders/vhs.frag}"}
-          ${builtins.readFile ../../../../scripts/desktop-shell/vhs.sh}
+          ${builtins.readFile ./scripts/vhs.sh}
         '';
       };
 
@@ -1257,7 +1255,7 @@ in
           pkgs.coreutils
           pkgs.systemd
         ];
-        text = builtins.readFile ../../../../scripts/desktop-shell/lock.sh;
+        text = builtins.readFile ./scripts/lock.sh;
       };
 
       displayControl = pkgs.writeShellApplication {
@@ -1268,7 +1266,7 @@ in
           osConfig.programs.hyprland.package
         ];
         text = ''
-          exec python3 ${../../../../scripts/desktop-shell/display-settings.py} "$@"
+          exec python3 ${./scripts/display-settings.py} "$@"
         '';
       };
 
@@ -1282,7 +1280,7 @@ in
         ];
         text = ''
           export DESKTOP_NIGHT_LIGHT_DEFAULTS=${lib.escapeShellArg (builtins.toJSON scopeConfig.nightLight)}
-          exec python3 ${../../../../scripts/desktop-shell/night-light.py} "$@"
+          exec python3 ${./scripts/night-light.py} "$@"
         '';
       };
 
@@ -1295,7 +1293,7 @@ in
           pkgs.libnotify
           pkgs.systemd
         ];
-        text = builtins.readFile ../../../../scripts/desktop-shell/pick-colour.sh;
+        text = builtins.readFile ./scripts/pick-colour.sh;
       };
 
       captureLocations = pkgs.writeShellApplication {
@@ -1312,7 +1310,7 @@ in
           ${lib.optionalString (scopeConfig.captureLocations.recordings != "")
             "export DESKTOP_SHELL_RECORDING_DIR=${lib.escapeShellArg scopeConfig.captureLocations.recordings}"
           }
-          exec python3 ${../../../../scripts/desktop-shell/capture-locations.py} "$@"
+          exec python3 ${./scripts/capture-locations.py} "$@"
         '';
       };
 
@@ -1325,7 +1323,7 @@ in
           pkgs.wf-recorder
           pkgs.pulseaudio
         ];
-        text = builtins.readFile ../../../../scripts/desktop-shell/record-region.sh;
+        text = builtins.readFile ./scripts/record-region.sh;
       };
 
       imageMarkup = pkgs.writeShellApplication {
@@ -1337,7 +1335,7 @@ in
           pkgs.satty
           pkgs.wl-clipboard
         ];
-        text = builtins.readFile ../../../../scripts/desktop-shell/markup.sh;
+        text = builtins.readFile ./scripts/markup.sh;
       };
 
       frozenCapture = pkgs.writeShellApplication {
@@ -1352,7 +1350,7 @@ in
           pkgs.systemd
           pkgs.satty
         ];
-        text = builtins.readFile ../../../../scripts/desktop-shell/frozen-capture.sh;
+        text = builtins.readFile ./scripts/frozen-capture.sh;
       };
 
       recordingToggle = pkgs.writeShellApplication {
@@ -1361,7 +1359,7 @@ in
           pkgs.systemd
           pkgs.coreutils
         ];
-        text = builtins.readFile ../../../../scripts/desktop-shell/recording-toggle.sh;
+        text = builtins.readFile ./scripts/recording-toggle.sh;
       };
 
       notificationOpen = pkgs.writeShellApplication {
@@ -1375,7 +1373,7 @@ in
         ];
         text = ''
           export DESKTOP_SHELL_SHELL_PATH=${lib.escapeShellArg "${productionShellPath}"}
-          ${builtins.readFile ../../../../scripts/desktop-shell/open-capture.sh}
+          ${builtins.readFile ./scripts/open-capture.sh}
         '';
       };
 
@@ -1387,7 +1385,7 @@ in
           pkgs.coreutils
           pkgs.libnotify
         ];
-        text = builtins.readFile ../../../../scripts/desktop-shell/capture-notify.sh;
+        text = builtins.readFile ./scripts/capture-notify.sh;
       };
 
       recordingLibrary = pkgs.writeShellApplication {
@@ -1406,7 +1404,7 @@ in
           pkgs.losslesscut
           pkgs.wl-clipboard
         ];
-        text = builtins.readFile ../../../../scripts/desktop-shell/recordings.sh;
+        text = builtins.readFile ./scripts/recordings.sh;
       };
 
       recordingFinalize = pkgs.writeShellApplication {
@@ -1418,7 +1416,7 @@ in
           pkgs.libnotify
           pkgs.systemd
         ];
-        text = builtins.readFile ../../../../scripts/desktop-shell/recording-finalize.sh;
+        text = builtins.readFile ./scripts/recording-finalize.sh;
       };
 
       sessionCommand = pkgs.writeShellApplication {
@@ -1430,7 +1428,7 @@ in
           pkgs.systemd
           pkgs.uwsm
         ];
-        text = builtins.readFile ../../../../scripts/desktop-shell/session.sh;
+        text = builtins.readFile ./scripts/session.sh;
       };
     in
     {

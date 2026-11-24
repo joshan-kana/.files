@@ -4,7 +4,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
-const root = path.join(__dirname, "../scripts/desktop-shell");
+const root = path.join(__dirname, "../modules/desktop/hyprland/shell/scripts");
 const linux = process.platform === "linux";
 
 function fixture(t) {

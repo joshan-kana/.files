@@ -233,7 +233,10 @@ test("local OCR exposes selectable text and highlighted original-image coordinat
   const library = qml("RecordingLibrary.qml");
   const controls = qml("SystemContent.qml");
   const script = fs.readFileSync(
-    path.join(__dirname, "../scripts/desktop-shell/recordings.sh"),
+    path.join(
+      __dirname,
+      "../modules/desktop/hyprland/shell/scripts/recordings.sh",
+    ),
     "utf8",
   );
   assert.match(library, /function showText\(\): void/);

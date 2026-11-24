@@ -11,7 +11,8 @@ const qml = (name) =>
     path.join(root, "modules/desktop/hyprland/shell/qml", name),
     "utf8",
   );
-const script = (name) => path.join(root, "scripts/desktop-shell", name);
+const script = (name) =>
+  path.join(root, "modules/desktop/hyprland/shell/scripts", name);
 
 test("service-backed event notifications share the freedesktop server, not island or popup code", () => {
   const events = qml("EventNotifications.qml");

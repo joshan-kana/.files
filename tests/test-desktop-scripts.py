@@ -13,8 +13,8 @@ from pathlib import Path
 from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPTS = ROOT / "scripts/desktop-shell"
-THEME = ROOT / "scripts/desktop-shell/theme-set.sh"
+SCRIPTS = ROOT / "modules/desktop/hyprland/shell/scripts"
+THEME = ROOT / "modules/theme/theme-set.sh"
 
 
 class DesktopScriptTests(unittest.TestCase):

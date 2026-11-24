@@ -502,7 +502,7 @@ in
                     operationDir="''${XDG_STATE_HOME:-$HOME/.local/state}/desktop-shell/theme-operation"
                     operationUnit=desktop-shell-theme-apply.service
                   ''
-                  + builtins.readFile ../../scripts/desktop-shell/theme-set.sh;
+                  + builtins.readFile ./theme-set.sh;
                 };
               in
               {

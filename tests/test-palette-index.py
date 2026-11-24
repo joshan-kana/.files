@@ -33,7 +33,7 @@ class PaletteIndexTests(unittest.TestCase):
         self.saved_env = {key: os.environ.get(key) for key in ("DESKTOP_SHELL_RUNTIME", "XDG_CONFIG_HOME")}
         os.environ["DESKTOP_SHELL_RUNTIME"] = str(self.runtime)
         self.addCleanup(self.restore_env)
-        source = Path(__file__).resolve().parents[1] / "scripts/desktop-shell/palette-search.py"
+        source = Path(__file__).resolve().parents[1] / "modules/desktop/hyprland/shell/scripts/palette-search.py"
         spec = importlib.util.spec_from_file_location("palette_search_under_test", source)
         self.palette = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(self.palette)

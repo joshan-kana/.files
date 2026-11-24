@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "scripts/desktop-shell/clipboard-operations.py"
+SCRIPT = ROOT / "modules/desktop/hyprland/shell/scripts/clipboard-operations.py"
 
 
 class ClipboardOperationsTests(unittest.TestCase):

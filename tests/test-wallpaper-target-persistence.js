@@ -5,7 +5,7 @@ const path = require("node:path");
 
 const script = (name) =>
   fs.readFileSync(
-    path.join(__dirname, "../scripts/desktop-shell", name),
+    path.join(__dirname, "../modules/desktop/hyprland/shell/scripts", name),
     "utf8",
   );
 const restoreWallpaper = () => script("wallpaper-apply.sh");
