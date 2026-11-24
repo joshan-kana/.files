@@ -94,7 +94,7 @@ Item {
             id: primaryMetrics
             width: parent.width
             spacing: panel.theme.spacing3
-            readonly property int columns: width >= panel.theme.fontSize(650) ? 3 : 1
+            readonly property int columns: Math.max(1, Math.min(3, Math.floor((width + spacing) / (panel.theme.fontSize(210) + spacing))))
             Repeater {
                 model: [
                     {
@@ -126,8 +126,9 @@ Item {
                 ]
                 delegate: ShellSurface {
                     id: metricTile
+                    required property int index
                     required property var modelData
-                    width: Math.floor((primaryMetrics.width - (primaryMetrics.columns - 1) * primaryMetrics.spacing) / primaryMetrics.columns)
+                    width: primaryMetrics.columns === 2 && index === 2 ? primaryMetrics.width : Math.floor((primaryMetrics.width - (primaryMetrics.columns - 1) * primaryMetrics.spacing) / primaryMetrics.columns)
                     height: metricContent.implicitHeight + panel.theme.spacing4 * 2
                     theme: panel.theme
                     motion: panel.motion
