@@ -134,7 +134,7 @@ current)
     default_video="$(jq -r '.wallpaperVideoDefault // empty' "$runtime")"
     if [ -n "$default_video" ] && [ -f "$default_video" ]; then
       printf '%s\n' "$default_video"
-    else
+    elif [ -f "$(dirname "$runtime")/theme.json" ]; then
       jq -er '.wallpaper' "$(dirname "$runtime")/theme.json"
     fi
   fi

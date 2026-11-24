@@ -1216,13 +1216,19 @@ in
         };
       };
 
+      shellEnvironment = ''
+        export DESKTOP_SHELL_RUNTIME="''${XDG_CONFIG_HOME:-$HOME/.config}/desktop-shell/runtime.json"
+        export QML_IMPORT_PATH="${pkgs.desktop-shell-visuals}/lib/qt-6/qml''${QML_IMPORT_PATH:+:$QML_IMPORT_PATH}"
+        ${lib.optionalString (
+          config.gtk.iconTheme != null
+        ) "export QS_ICON_THEME=${lib.escapeShellArg config.gtk.iconTheme.name}"}
+      '';
+
       launcher = pkgs.writeShellApplication {
         name = "desktop-shell";
         runtimeInputs = [ pkgs.quickshell ];
         text = ''
-          export DESKTOP_SHELL_RUNTIME="''${XDG_CONFIG_HOME:-$HOME/.config}/desktop-shell/runtime.json"
-          export QML_IMPORT_PATH="${pkgs.desktop-shell-visuals}/lib/qt-6/qml''${QML_IMPORT_PATH:+:$QML_IMPORT_PATH}"
-          export QS_ICON_THEME=${lib.escapeShellArg config.gtk.iconTheme.name}
+          ${shellEnvironment}
           exec qs --path "${productionShellPath}" "$@"
         '';
       };
@@ -1231,9 +1237,7 @@ in
         name = "desktop-shell-dev";
         runtimeInputs = [ pkgs.quickshell ];
         text = ''
-          export DESKTOP_SHELL_RUNTIME="''${XDG_CONFIG_HOME:-$HOME/.config}/desktop-shell/runtime.json"
-          export QML_IMPORT_PATH="${pkgs.desktop-shell-visuals}/lib/qt-6/qml''${QML_IMPORT_PATH:+:$QML_IMPORT_PATH}"
-          export QS_ICON_THEME=${lib.escapeShellArg config.gtk.iconTheme.name}
+          ${shellEnvironment}
           exec qs --path ${lib.escapeShellArg developmentShellPath} "$@"
         '';
       };
@@ -1242,9 +1246,7 @@ in
         name = "desktop-shell-lock-shell";
         runtimeInputs = [ pkgs.quickshell ];
         text = ''
-          export DESKTOP_SHELL_RUNTIME="''${XDG_CONFIG_HOME:-$HOME/.config}/desktop-shell/runtime.json"
-          export QML_IMPORT_PATH="${pkgs.desktop-shell-visuals}/lib/qt-6/qml''${QML_IMPORT_PATH:+:$QML_IMPORT_PATH}"
-          export QS_ICON_THEME=${lib.escapeShellArg config.gtk.iconTheme.name}
+          ${shellEnvironment}
           exec qs --no-duplicate --path "${productionShellPath}/lock.qml"
         '';
       };
@@ -1722,8 +1724,10 @@ in
             # so restart when either evaluated source changes.
             X-Restart-Triggers = [
               runtimeConfig
-              config.xdg.configFile."desktop-shell/theme.json".source
-            ];
+            ]
+            ++ lib.optional (
+              config.xdg.configFile ? "desktop-shell/theme.json"
+            ) config.xdg.configFile."desktop-shell/theme.json".source;
             PartOf = [ sessionTarget ];
             Wants = [ "desktop-shell-spectrum.service" ];
             After = [

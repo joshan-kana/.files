@@ -7,11 +7,14 @@ flock -n 9 || exit 0
 # independently of a custom default so video selections survive boot.
 theme="${XDG_CONFIG_HOME:-$HOME/.config}/desktop-shell/theme.json"
 runtime="${XDG_CONFIG_HOME:-$HOME/.config}/desktop-shell/runtime.json"
-wallpaper="$(jq -er '.wallpaper | select(type == "string" and length > 0)' "$theme")"
+wallpaper=""
+if [ -f "$theme" ]; then
+  wallpaper="$(jq -er '.wallpaper | select(type == "string" and length > 0)' "$theme")"
+fi
 default_video="$(jq -r '.wallpaperVideoDefault // empty' "$runtime" 2>/dev/null || true)"
 [ -f "$default_video" ] || default_video=""
 
-if [ ! -f "$wallpaper" ]; then
+if [ -n "$wallpaper" ] && [ ! -f "$wallpaper" ]; then
   printf 'Wallpaper does not exist: %s\n' "$wallpaper" >&2
   exit 1
 fi
@@ -33,7 +36,7 @@ for _ in {1..25}; do
       fi
       while IFS= read -r output; do
         [ -n "$output" ] || continue
-        if [ ! -f "$state_dir/$output.wall" ]; then
+        if [ -n "$default_still" ] && [ ! -f "$state_dir/$output.wall" ]; then
           if [ -n "$default_video" ]; then
             awww img --outputs "$output" --transition-type none "$default_still"
           else
