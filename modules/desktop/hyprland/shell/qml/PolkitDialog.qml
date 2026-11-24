@@ -254,7 +254,7 @@ Scope {
                         anchors.fill: parent
                         surface: credentialSurface
                         active: auth.submitting
-                        motionEnabled: auth.motion.enabled
+                        motion: auth.motion
                         highlightColor: auth.theme.warning
                         lineWidth: 2
                     }

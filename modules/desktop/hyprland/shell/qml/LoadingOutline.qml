@@ -10,11 +10,11 @@ Item {
 
     required property SquircleSurface surface
     property bool active: false
-    property bool motionEnabled: true
+    required property Motion motion
+    readonly property bool motionEnabled: motion.enabled
     required property color highlightColor
     property real lineWidth: 2.8
     property real segmentFraction: 0.12
-    property int lapDuration: 1900
     property real circuit: 0
 
     readonly property real inset: lineWidth * 1.3 + 0.5
@@ -31,9 +31,9 @@ Item {
     NumberAnimation on circuit {
         from: 0
         to: 1
-        duration: outline.lapDuration
+        duration: outline.motion.contourLap
         loops: Animation.Infinite
-        easing.type: Easing.Linear
+        easing.type: outline.motion.contourEasing
         running: outline.active && outline.motionEnabled
     }
 

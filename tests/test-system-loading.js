@@ -114,7 +114,7 @@ test("background operations show only on their owning visible dashboard tiles", 
   assert.match(surface, /active: root.visible && root.foregroundBusy/);
   assert.match(
     surface,
-    /LoadingOutline \{[\s\S]*?surface: root[\s\S]*?motionEnabled: root.motion.enabled/,
+    /LoadingOutline \{[\s\S]*?surface: root[\s\S]*?motion: root\.motion/,
   );
   assert.match(
     source("LoadingOutline.qml"),

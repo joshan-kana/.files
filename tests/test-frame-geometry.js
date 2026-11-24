@@ -1396,3 +1396,33 @@ test("island occlusion fades through the shared contour while hit regions close 
     /recordingStatusInHub|notificationStatusInHub|id: footerStatus/,
   );
 });
+
+test("local and connected loading outlines use the same eased lap", () => {
+  const root = path.join(__dirname, "../modules/desktop/hyprland/shell/qml");
+  const read = (name) =>
+    fs.readFileSync(path.join(root, name + ".qml"), "utf8");
+  assert.match(
+    read("Motion"),
+    /readonly property int contourEasing: Easing\.InOutSine/,
+  );
+  assert.match(
+    read("DesktopFrame"),
+    /duration: frame\.motion\.contourLap[\s\S]*?easing\.type: frame\.motion\.contourEasing/,
+  );
+  assert.match(
+    read("LoadingOutline"),
+    /duration: outline\.motion\.contourLap[\s\S]*?easing\.type: outline\.motion\.contourEasing/,
+  );
+  assert.doesNotMatch(read("LoadingOutline"), /Easing\.Linear|lapDuration:/);
+  for (const [name, owner] of [
+    ["ShellSurface", "root"],
+    ["ShellExpansionHost", "host"],
+    ["LockScreen", "lock"],
+    ["PolkitDialog", "auth"],
+  ]) {
+    assert.match(
+      read(name),
+      new RegExp("LoadingOutline \\{[\\s\\S]*?motion: " + owner + "\\.motion"),
+    );
+  }
+});

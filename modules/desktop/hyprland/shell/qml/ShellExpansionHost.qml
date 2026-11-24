@@ -1220,7 +1220,7 @@ PanelWindow {
         height: shellSurface.height
         surface: shellSurface
         active: !host.frameVisible && host.loadingOperationVisible
-        motionEnabled: host.motion.enabled
+        motion: host.motion
         highlightColor: host.loadingOperationColor
         lineWidth: 3
     }

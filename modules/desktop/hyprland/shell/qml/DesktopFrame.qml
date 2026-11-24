@@ -51,7 +51,7 @@ Variants {
         to: 1
         duration: frame.motion.contourLap
         loops: Animation.Infinite
-        easing.type: Easing.InOutSine
+        easing.type: frame.motion.contourEasing
     }
 
     model: Quickshell.screens

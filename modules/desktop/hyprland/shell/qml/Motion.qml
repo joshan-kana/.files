@@ -26,6 +26,7 @@ QtObject {
     readonly property int fast: enabled ? 100 : 0
     readonly property int normal: enabled ? 160 : 0
     readonly property int contourLap: enabled ? 1900 : 0
+    readonly property int contourEasing: Easing.InOutSine
     readonly property int spinnerCycle: enabled ? 1100 : 0
 
     readonly property int spatialFast: enabled ? Math.round(150 * durationMultiplier) : 0

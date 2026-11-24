@@ -427,7 +427,7 @@ WlSessionLock {
                                 anchors.fill: parent
                                 surface: passwordSurface
                                 active: lock.authenticating
-                                motionEnabled: lock.motion.enabled
+                                motion: lock.motion
                                 highlightColor: lock.theme.accent
                                 lineWidth: 2
                             }

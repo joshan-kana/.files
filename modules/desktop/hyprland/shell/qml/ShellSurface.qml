@@ -42,7 +42,7 @@ SquircleSurface {
             LoadingOutline {
                 surface: root
                 active: true
-                motionEnabled: root.motion.enabled
+                motion: root.motion
                 highlightColor: root.foregroundColor
                 lineWidth: 2
             }
