@@ -504,3 +504,43 @@ test("hybrid media transport keeps space and punctuation in both scopes", () => 
     true,
   );
 });
+
+test("compact and full seeking use their own scoped action assignments", () => {
+  const changed = {
+    ...registry,
+    overrides: { controls: { H: "A" }, media: { H: "C" } },
+  };
+  assert.equal(
+    f.matchesHint(
+      changed,
+      "MediaTransport.backCompact",
+      65,
+      Qt.ShiftModifier,
+      Qt,
+    ),
+    true,
+  );
+  assert.equal(f.matchesHint(changed, "MediaTransport.back", 67, 0, Qt), true);
+  assert.equal(
+    f.matchesHint(changed, "MediaTransport.backArrow", Qt.Key_Left, 0, Qt),
+    true,
+  );
+  const controls = fs.readFileSync(
+    path.join(qmlDir, "SystemContent.qml"),
+    "utf8",
+  );
+  const media = fs.readFileSync(path.join(qmlDir, "MediaContent.qml"), "utf8");
+  for (const action of ["back", "forward"]) {
+    assert.ok(
+      controls.includes(
+        `shellMatchesHint("MediaTransport.${action}Compact", event.key, event.modifiers)`,
+      ),
+    );
+    for (const suffix of ["", "Arrow"])
+      assert.ok(
+        media.includes(
+          `shellMatchesHint("MediaTransport.${action}${suffix}", event.key, event.modifiers)`,
+        ),
+      );
+  }
+});

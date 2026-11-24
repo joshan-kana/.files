@@ -445,7 +445,7 @@ FocusScope {
                             action: "Shuffle / repeat"
                         },
                         {
-                            key: root.runtime.shellHint("SystemContent.legend.seek_backward_forward"),
+                            key: [root.runtime.shellHint("MediaTransport.backCompact"), root.runtime.shellHint("MediaTransport.forwardCompact")].join(" / "),
                             action: "Seek backward / forward " + root.media.seekSeconds + " seconds"
                         },
                         {
@@ -2458,9 +2458,9 @@ FocusScope {
                     root.motion.toggle();
                 } else if (root.runtime.shellMatchesHint("AudioMixerContent.open", event.key, event.modifiers)) {
                     root.openMixer();
-                } else if (shifted && root.runtime.shellNavigates("controls", "left", event.key, "primary")) {
+                } else if (root.runtime.shellMatchesHint("MediaTransport.backCompact", event.key, event.modifiers)) {
                     mediaCard.triggerTransport("back", event.isAutoRepeat);
-                } else if (shifted && root.runtime.shellNavigates("controls", "right", event.key, "primary")) {
+                } else if (root.runtime.shellMatchesHint("MediaTransport.forwardCompact", event.key, event.modifiers)) {
                     mediaCard.triggerTransport("forward", event.isAutoRepeat);
                 } else if (event.modifiers === Qt.NoModifier && (root.runtime.shellNavigates("controls", "left", event.key))) {
                     root.adjustSelectedAudio(-0.05);

@@ -24,7 +24,7 @@ FocusScope {
             action: media.playing ? "Pause playback" : "Play"
         },
         {
-            key: content.runtime.shellHint("MediaContent.legend.seek"),
+            key: [content.runtime.shellHint("MediaTransport.back"), content.runtime.shellHint("MediaTransport.forward")].join(" / ") + " · " + [content.runtime.shellHint("MediaTransport.backArrow"), content.runtime.shellHint("MediaTransport.forwardArrow")].join(" / "),
             action: "Seek " + media.seekSeconds + " seconds"
         },
         {
@@ -761,11 +761,11 @@ FocusScope {
                 } else if (content.runtime.shellMatchesHint("MediaContent.longer", event.key, event.modifiers)) {
                     content.media.adjustSeekStep(1);
                     event.accepted = true;
-                } else if (event.modifiers === Qt.NoModifier && content.runtime.shellNavigates("media", "left", event.key)) {
+                } else if (content.runtime.shellMatchesHint("MediaTransport.back", event.key, event.modifiers) || content.runtime.shellMatchesHint("MediaTransport.backArrow", event.key, event.modifiers)) {
                     progressTrack.beginKeyboardAdjustment();
                     fullTransport.triggerAction("back", event.isAutoRepeat);
                     event.accepted = true;
-                } else if (event.modifiers === Qt.NoModifier && content.runtime.shellNavigates("media", "right", event.key)) {
+                } else if (content.runtime.shellMatchesHint("MediaTransport.forward", event.key, event.modifiers) || content.runtime.shellMatchesHint("MediaTransport.forwardArrow", event.key, event.modifiers)) {
                     progressTrack.beginKeyboardAdjustment();
                     fullTransport.triggerAction("forward", event.isAutoRepeat);
                     event.accepted = true;

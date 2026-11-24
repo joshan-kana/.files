@@ -194,6 +194,8 @@
           "BluetoothPanel.scan" = "SHIFT+D";
           "BluetoothPanel.select" = "NAV_VERTICAL";
           "BluetoothPanel.trust" = "T";
+          "MediaTransport.backCompact" = "NAV_KEY_LEFT_PRIMARY_SHIFT";
+          "MediaTransport.forwardCompact" = "NAV_KEY_RIGHT_PRIMARY_SHIFT";
           "MediaTransport.playCompact" = "SPACE";
           "MediaTransport.previousCompact" = ",";
           "MediaTransport.nextCompact" = ".";
@@ -324,7 +326,6 @@
           "SystemContent.legend.scroll_controls" = "U/D · PGUP/PGDN";
           "SystemContent.legend.search_themes" = "/";
           "SystemContent.legend.search_wallpapers" = "/";
-          "SystemContent.legend.seek_backward_forward" = "NAV_HORIZONTAL_PRIMARY_SHIFT";
           "SystemContent.legend.select_activate_tray_app" = "[ / ] · ENTER";
           "SystemContent.legend.select_clip_half_page" = "NAV_VERTICAL · U/⇧D · PGUP/PGDN";
           "SystemContent.legend.select_device" = "NAV_VERTICAL · U/D · PGUP/PGDN";
@@ -458,7 +459,6 @@
         };
         media = {
           "MediaContent.close" = "ESC";
-          "MediaContent.legend.seek" = "NAV_HORIZONTAL";
           "MediaContent.longer" = "+";
           "MediaContent.lyrics" = "Y";
           "MediaContent.player" = "P";
@@ -471,9 +471,9 @@
           "MediaContent.shuffle" = "S";
           "MediaContent.visualizer" = "V";
           "MediaTransport.back" = "NAV_KEY_LEFT_PRIMARY";
-          "MediaTransport.backCompact" = "NAV_KEY_LEFT_PRIMARY_SHIFT";
+          "MediaTransport.backArrow" = "NAV_KEY_LEFT_ARROW";
           "MediaTransport.forward" = "NAV_KEY_RIGHT_PRIMARY";
-          "MediaTransport.forwardCompact" = "NAV_KEY_RIGHT_PRIMARY_SHIFT";
+          "MediaTransport.forwardArrow" = "NAV_KEY_RIGHT_ARROW";
           "MediaTransport.next" = ".";
           "MediaTransport.play" = "SPACE";
           "MediaTransport.previous" = ",";
