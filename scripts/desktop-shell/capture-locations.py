@@ -3,20 +3,22 @@
 
 import json
 import os
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 HOME = Path.home()
 STATE = Path(os.environ.get("XDG_STATE_HOME", HOME / ".local/state")) / "desktop-shell/capture-locations.json"
 DEFAULTS = {
-    "screenshots": os.environ.get("DESKTOP_SHELL_SCREENSHOT_DIR") or str(Path(os.environ.get("XDG_PICTURES_DIR", HOME / "Pictures")) / "Screenshots"),
+    "screenshots": os.environ.get("DESKTOP_SHELL_SCREENSHOT_DIR")
+    or str(Path(os.environ.get("XDG_PICTURES_DIR", HOME / "Pictures")) / "Screenshots"),
     "recordings": os.environ.get("DESKTOP_SHELL_RECORDING_DIR") or str(HOME / "Videos/Screencasts"),
 }
 
 
 def read():
+    """Read stored destination overrides."""
     if not STATE.exists():
         return {}
     saved = json.loads(STATE.read_text())
@@ -26,6 +28,7 @@ def read():
 
 
 def validate(value, existing=False):
+    """Validate a capture directory without creating it."""
     path = Path(value)
     if not path.is_absolute() or "\n" in value or "\r" in value or "\x00" in value:
         raise ValueError("Choose an absolute directory")
@@ -35,10 +38,12 @@ def validate(value, existing=False):
 
 
 def effective(saved):
+    """Merge runtime overrides with native defaults."""
     return {key: validate(saved.get(key, default)) for key, default in DEFAULTS.items()}
 
 
 def write(saved):
+    """Persist destination overrides atomically."""
     STATE.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(mode="w", dir=STATE.parent, delete=False) as stream:
         temporary = Path(stream.name)
@@ -51,6 +56,7 @@ def write(saved):
 
 
 def main():
+    """Dispatch the destination command."""
     action = sys.argv[1]
     saved = read()
     if action == "get":
@@ -66,7 +72,12 @@ def main():
             if key not in DEFAULTS:
                 raise ValueError("Unknown capture type")
             if action == "choose":
-                result = subprocess.run(["kdialog", "--title", "Choose capture destination", "--getexistingdirectory", effective(saved)[key]], capture_output=True, text=True, check=False)
+                result = subprocess.run(
+                    ["kdialog", "--title", "Choose capture destination", "--getexistingdirectory", effective(saved)[key]],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
                 if result.returncode != 0:
                     print(json.dumps(effective(saved)))
                     return

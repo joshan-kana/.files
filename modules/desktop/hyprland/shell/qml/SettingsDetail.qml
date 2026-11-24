@@ -227,7 +227,15 @@ Item {
                     step: 5,
                     suffix: "%"
                 },
-                {key: "wallpaperSpectrumBars", title: "Bar density", description: "Number of spectrum bars", minimum: 24, maximum: 96, step: 8, suffix: " bars"}
+                {
+                    key: "wallpaperSpectrumBars",
+                    title: "Bar density",
+                    description: "Number of spectrum bars",
+                    minimum: 24,
+                    maximum: 96,
+                    step: 8,
+                    suffix: " bars"
+                }
             ];
         if (kind === "alerts")
             return [
@@ -836,7 +844,11 @@ Item {
                 motion: panel.motion
                 compact: true
                 horizontalCompact: true
-                title: "Tint target · " + ({all: "Frame and shell", frame: "Frame only", shell: "Detached shell surfaces"})[panel.appearance.musicReactiveTarget]
+                title: "Tint target · " + ({
+                        all: "Frame and shell",
+                        frame: "Frame only",
+                        shell: "Detached shell surfaces"
+                    })[panel.appearance.musicReactiveTarget]
                 shortcut: panel.runtime.shellHint("SettingsDetail.reactiveTarget")
                 onActivated: panel.appearance.cycleReactiveTarget()
             }

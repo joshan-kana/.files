@@ -399,7 +399,11 @@ in
           description = "Frequency region emphasized by the reactive visual response.";
         };
         musicReactiveTarget = lib.mkOption {
-          type = lib.types.enum [ "all" "frame" "shell" ];
+          type = lib.types.enum [
+            "all"
+            "frame"
+            "shell"
+          ];
           default = "all";
           description = "Apply the shared audio-reactive tint to the frame, detached shell surfaces, or both.";
         };
@@ -587,8 +591,16 @@ in
   scopeOptions.captureLocations = lib.mkOption {
     type = lib.types.submodule {
       options = {
-        screenshots = lib.mkOption { type = lib.types.str; default = ""; description = "Absolute screenshot directory; empty uses the XDG Pictures directory."; };
-        recordings = lib.mkOption { type = lib.types.str; default = ""; description = "Absolute recording directory; empty uses the native recording directory."; };
+        screenshots = lib.mkOption {
+          type = lib.types.str;
+          default = "";
+          description = "Absolute screenshot directory; empty uses the XDG Pictures directory.";
+        };
+        recordings = lib.mkOption {
+          type = lib.types.str;
+          default = "";
+          description = "Absolute recording directory; empty uses the native recording directory.";
+        };
       };
     };
     default = { };
@@ -1315,10 +1327,18 @@ in
 
       captureLocations = pkgs.writeShellApplication {
         name = "desktop-shell-capture-locations";
-        runtimeInputs = [ pkgs.python3 pkgs.systemd pkgs.kdePackages.kdialog ];
+        runtimeInputs = [
+          pkgs.python3
+          pkgs.systemd
+          pkgs.kdePackages.kdialog
+        ];
         text = ''
-          ${lib.optionalString (scopeConfig.captureLocations.screenshots != "") "export DESKTOP_SHELL_SCREENSHOT_DIR=${lib.escapeShellArg scopeConfig.captureLocations.screenshots}"}
-          ${lib.optionalString (scopeConfig.captureLocations.recordings != "") "export DESKTOP_SHELL_RECORDING_DIR=${lib.escapeShellArg scopeConfig.captureLocations.recordings}"}
+          ${lib.optionalString (scopeConfig.captureLocations.screenshots != "")
+            "export DESKTOP_SHELL_SCREENSHOT_DIR=${lib.escapeShellArg scopeConfig.captureLocations.screenshots}"
+          }
+          ${lib.optionalString (scopeConfig.captureLocations.recordings != "")
+            "export DESKTOP_SHELL_RECORDING_DIR=${lib.escapeShellArg scopeConfig.captureLocations.recordings}"
+          }
           exec python3 ${../../../../scripts/desktop-shell/capture-locations.py} "$@"
         '';
       };

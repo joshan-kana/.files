@@ -119,5 +119,8 @@ test("the connected frame uses the original five colour stops and keeps its clip
 });
 
 test("frame tint can be disabled without disabling shell energy", () => {
-  assert.deepEqual(colorAt(0.5, 1, 1, true, false, 0.7, "shell"), {...background, a: 1});
+  assert.deepEqual(colorAt(0.5, 1, 1, true, false, 0.7, "shell"), {
+    ...background,
+    a: 1,
+  });
 });

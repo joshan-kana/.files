@@ -33,7 +33,10 @@ Item {
     property string statusText: ""
     property bool statusError: false
     property bool editorRequestRunning: false
-    property var destinations: ({screenshots: "", recordings: ""})
+    property var destinations: ({
+            screenshots: "",
+            recordings: ""
+        })
     function locationAction(action: string, kind: string): void {
         if (!runtime.captureLocations || locationProcess.running)
             return;
@@ -41,8 +44,12 @@ Item {
     }
     Process {
         id: locationProcess
-        stdout: StdioCollector { id: locationsOutput }
-        stderr: StdioCollector { id: locationsError }
+        stdout: StdioCollector {
+            id: locationsOutput
+        }
+        stderr: StdioCollector {
+            id: locationsError
+        }
         onExited: (code, status) => {
             if (code === 0) {
                 try {
@@ -70,7 +77,11 @@ Item {
         }
     }
     function handleLocationKey(key: int, modifiers: int, repeat: bool): bool {
-        const actions = {"RecordingLibrary.imageDestination": "screenshots", "RecordingLibrary.videoDestination": "recordings", "RecordingLibrary.destinationDefaults": ""};
+        const actions = {
+            "RecordingLibrary.imageDestination": "screenshots",
+            "RecordingLibrary.videoDestination": "recordings",
+            "RecordingLibrary.destinationDefaults": ""
+        };
         const action = Object.keys(actions).find(name => runtime.shellMatchesHint(name, key, modifiers));
         if (!action)
             return false;
@@ -905,9 +916,21 @@ Item {
             spacing: library.theme.spacing2
             Repeater {
                 model: [
-                    {action: "RecordingLibrary.imageDestination", kind: "screenshots", title: "Images · " + (library.destinations.screenshots || "Unavailable")},
-                    {action: "RecordingLibrary.videoDestination", kind: "recordings", title: "Videos · " + (library.destinations.recordings || "Unavailable")},
-                    {action: "RecordingLibrary.destinationDefaults", kind: "", title: "Locations defaults"}
+                    {
+                        action: "RecordingLibrary.imageDestination",
+                        kind: "screenshots",
+                        title: "Images · " + (library.destinations.screenshots || "Unavailable")
+                    },
+                    {
+                        action: "RecordingLibrary.videoDestination",
+                        kind: "recordings",
+                        title: "Videos · " + (library.destinations.recordings || "Unavailable")
+                    },
+                    {
+                        action: "RecordingLibrary.destinationDefaults",
+                        kind: "",
+                        title: "Locations defaults"
+                    }
                 ]
                 delegate: ShellAction {
                     required property var modelData
