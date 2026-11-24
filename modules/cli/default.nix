@@ -52,6 +52,9 @@ let
   };
 in
 {
+  # SSH and privileged shells need Kitty terminfo even on headless hosts.
+  environment.systemPackages = [ pkgs.kitty.terminfo ];
+
   home = _: {
     home.sessionVariables = sessionVariables;
   };
