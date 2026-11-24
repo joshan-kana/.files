@@ -29,8 +29,16 @@ Item {
 
     signal activated
 
-    implicitWidth: iconOnly ? 44 : Math.max(96, content.implicitWidth + horizontalPadding * 2)
-    implicitHeight: iconOnly ? 40 : compact ? 40 : 58
+    readonly property real inlineGlyphWidth: iconName.length > 0 ? theme.fontSize(17) : icon.length > 0 ? inlineIcon.implicitWidth : 0
+    readonly property real inlineHintWidth: shortcut.length > 0 ? inlineHint.implicitWidth : 0
+    implicitWidth: iconOnly ? 44 : Math.max(96, horizontalPadding * 2 + (horizontalCompact ? actionLabelMetrics.advanceWidth + inlineGlyphWidth + inlineHintWidth + (inlineGlyphWidth > 0 ? theme.spacing2 : 0) + (inlineHintWidth > 0 ? theme.spacing2 : 0) : Math.max(stackedLabel.implicitWidth, stackedSubtitle.implicitWidth)))
+    implicitHeight: iconOnly ? 40 : horizontalCompact ? Math.max(40, inlineLabel.implicitHeight + theme.spacing2 * 2, inlineHint.implicitHeight + theme.spacing2 * 2) : Math.max(compact ? 40 : 58, content.implicitHeight + theme.spacing2 * 2)
+
+    TextMetrics {
+        id: actionLabelMetrics
+        text: root.title
+        font: inlineLabel.font
+    }
     Accessible.role: Accessible.Button
     Accessible.name: title
     // Assistive-technology press must use the same activation signal as
@@ -115,19 +123,21 @@ Item {
             }
 
             ShellText {
+                id: stackedLabel
                 visible: !root.iconOnly
                 width: Math.max(1, root.width - root.horizontalPadding * 2)
                 horizontalAlignment: root.icon.length > 0 ? Text.AlignHCenter : Text.AlignLeft
-                elide: Text.ElideRight
+                wrapMode: Text.WordWrap
                 runtime: root.runtime
                 theme: root.theme
                 text: root.title
                 color: root.active ? root.activeColor : theme.textStrong
-                font.pixelSize: theme.fontSize(root.compact ? 10 : 11)
+                font.pixelSize: root.compact ? theme.fontCompactAction : theme.fontAction
                 font.weight: Font.DemiBold
             }
 
             ShellText {
+                id: stackedSubtitle
                 visible: !root.iconOnly && root.subtitle.length > 0
                 width: Math.max(1, root.width - root.horizontalPadding * 2)
                 horizontalAlignment: root.icon.length > 0 ? Text.AlignHCenter : Text.AlignLeft
@@ -167,7 +177,7 @@ Item {
 
             Text {
                 id: inlineIcon
-                visible: root.iconName.length === 0
+                visible: root.iconName.length === 0 && root.icon.length > 0
                 anchors.verticalCenter: parent.verticalCenter
                 text: root.icon
                 color: root.iconColor
@@ -176,14 +186,15 @@ Item {
             }
 
             ShellText {
+                id: inlineLabel
                 anchors.verticalCenter: parent.verticalCenter
-                width: Math.max(1, inlineContent.width - (inlineThemeIcon.visible ? inlineThemeIcon.width : inlineIcon.implicitWidth) - inlineHint.implicitWidth - inlineContent.spacing * 2)
+                width: Math.max(1, inlineContent.width - root.inlineGlyphWidth - root.inlineHintWidth - (root.inlineGlyphWidth > 0 ? inlineContent.spacing : 0) - (root.inlineHintWidth > 0 ? inlineContent.spacing : 0))
                 text: root.title
-                elide: Text.ElideRight
+                wrapMode: Text.WordWrap
                 runtime: root.runtime
                 theme: root.theme
                 color: root.active ? root.activeColor : root.theme.textStrong
-                font.pixelSize: root.theme.fontSize(10)
+                font.pixelSize: root.compact ? root.theme.fontCompactAction : root.theme.fontAction
                 font.weight: Font.DemiBold
             }
 

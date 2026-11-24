@@ -17,7 +17,7 @@ ShellSurface {
     property string glyphFont: runtime.fontMono
     property color glyphColor: theme.accent
 
-    implicitHeight: quiet ? 66 : 126
+    implicitHeight: Math.max(quiet ? 66 : 126, heroCopy.implicitHeight + theme.spacing3 * 2)
     surfaceLayer: ShellSurface.Group
     luminous: !quiet
     luminousColor: hero.glyphColor
@@ -84,6 +84,7 @@ ShellSurface {
     }
 
     Column {
+        id: heroCopy
         anchors {
             left: hero.quiet ? quietGlyph.right : iconTile.right
             right: parent.right
@@ -111,9 +112,9 @@ ShellSurface {
             theme: hero.theme
             text: hero.title
             color: hero.theme.textStrong
-            font.pixelSize: hero.quiet ? hero.theme.fontSize(18) : hero.theme.fontSubpanelTitle
+            font.pixelSize: hero.quiet ? hero.theme.fontDetailTitle : hero.theme.fontSubpanelTitle
             font.weight: Font.DemiBold
-            elide: Text.ElideRight
+            wrapMode: Text.WordWrap
         }
 
         ShellText {
@@ -122,8 +123,8 @@ ShellSurface {
             theme: hero.theme
             text: hero.detail
             color: hero.theme.textMuted
-            font.pixelSize: hero.theme.fontSize(10)
-            elide: Text.ElideRight
+            font.pixelSize: hero.theme.fontSupporting
+            wrapMode: Text.WordWrap
         }
     }
 }

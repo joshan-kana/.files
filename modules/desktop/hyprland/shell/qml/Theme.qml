@@ -72,6 +72,9 @@ QtObject {
     // Reserve the largest Controls detail viewport once. Switching gallery
     // layouts must not resize the Wayland backing layer during its morph.
     readonly property int controlsDetailWidth: 1120
+    readonly property int compactDetailWidth: Math.min(controlsDetailWidth, fontSize(640))
+    readonly property int standardDetailWidth: Math.min(controlsDetailWidth, fontSize(800))
+    readonly property int richDetailWidth: Math.min(controlsDetailWidth, fontSize(960))
     readonly property int radiusLarge: 42
     readonly property int radiusPanel: 62
     // The visible islands are vertically centred inside the reserved bar.
@@ -150,6 +153,11 @@ QtObject {
     readonly property int keyHintGap: 8
     readonly property int keyHintGroupGap: 28
     readonly property int minActionTarget: 44
+    readonly property int fontAction: fontSize(13)
+    readonly property int fontCompactAction: fontSize(12)
+    readonly property int fontSupporting: fontSize(12)
+    readonly property int fontDetailTitle: fontSize(22)
+    readonly property int fontReadback: fontSize(15)
     readonly property int fontPanelEyebrow: fontSize(11)
     readonly property int fontPanelTitle: fontSize(27)
     readonly property int fontSubpanelEyebrow: fontSize(10)
