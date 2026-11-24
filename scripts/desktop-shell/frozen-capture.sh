@@ -6,7 +6,7 @@ ensure_snapshot() {
 }
 case "$mode" in
 snapshot)
-   { [ "$#" -eq 2 ] || [ "$#" -eq 3 ]; } && [ -n "$2" ] || exit 2
+  { [ "$#" -eq 2 ] || [ "$#" -eq 3 ]; } && [ -n "$2" ] || exit 2
   args=()
   case "${3:-no-cursor}" in cursor) args+=(-c) ;; no-cursor) ;; *) exit 2 ;; esac
   umask 077
@@ -21,7 +21,7 @@ clear)
   rm -f -- "$2"
   ;;
 copy | save | annotate)
-   { [ "$#" -eq 6 ] || [ "$#" -eq 8 ]; } && ensure_snapshot "$2" || exit 2
+  { [ "$#" -eq 6 ] || [ "$#" -eq 8 ]; } && ensure_snapshot "$2" || exit 2
   format="${7:-png}"
   quality="${8:-95}"
   case "$format" in png | jpg) ;; *) exit 2 ;; esac

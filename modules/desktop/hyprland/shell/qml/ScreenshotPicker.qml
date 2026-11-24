@@ -29,17 +29,64 @@ Item {
         const record = selectionMode === "record";
         const lossless = copying || annotateAfterCapture;
         const fields = record ? [
-            {key: "videoFormat", action: "ScreenshotPicker.format", title: String(encoding("videoFormat")).toUpperCase(), values: ["mp4", "mkv"]},
-            {key: "codec", action: "ScreenshotPicker.codec", title: encoding("codec") === "libx265" ? "HEVC" : "H.264", values: ["libx264", "libx265"]},
-            {key: "frameRate", action: "ScreenshotPicker.fps", title: encoding("frameRate") === 0 ? "AUTO FPS" : encoding("frameRate") + " FPS", values: [0, 30, 60, 120]},
-            {key: "videoQuality", action: "ScreenshotPicker.quality", title: "CRF " + encoding("videoQuality"), values: [18, 23, 28]},
-            {key: "countdown", action: "ScreenshotPicker.countdown", title: "DELAY " + encoding("countdown") + "s", values: [0, 3, 5, 10]}
+            {
+                key: "videoFormat",
+                action: "ScreenshotPicker.format",
+                title: String(encoding("videoFormat")).toUpperCase(),
+                values: ["mp4", "mkv"]
+            },
+            {
+                key: "codec",
+                action: "ScreenshotPicker.codec",
+                title: encoding("codec") === "libx265" ? "HEVC" : "H.264",
+                values: ["libx264", "libx265"]
+            },
+            {
+                key: "frameRate",
+                action: "ScreenshotPicker.fps",
+                title: encoding("frameRate") === 0 ? "AUTO FPS" : encoding("frameRate") + " FPS",
+                values: [0, 30, 60, 120]
+            },
+            {
+                key: "videoQuality",
+                action: "ScreenshotPicker.quality",
+                title: "CRF " + encoding("videoQuality"),
+                values: [18, 23, 28]
+            },
+            {
+                key: "countdown",
+                action: "ScreenshotPicker.countdown",
+                title: "DELAY " + encoding("countdown") + "s",
+                values: [0, 3, 5, 10]
+            }
         ] : [
-            {key: "imageFormat", action: "ScreenshotPicker.format", title: lossless ? "PNG EXPORT" : String(encoding("imageFormat")).toUpperCase(), values: ["png", "jpg"]},
-            {key: "jpegQuality", action: "ScreenshotPicker.quality", title: "JPEG " + encoding("jpegQuality") + "%", values: [75, 85, 95]},
-            {key: "cursor", action: "ScreenshotPicker.cursor", title: "CURSOR " + (encoding("cursor") ? "ON" : "OFF") + (frozenForCapture ? " · NEXT" : ""), values: [false, true]}
+            {
+                key: "imageFormat",
+                action: "ScreenshotPicker.format",
+                title: lossless ? "PNG EXPORT" : String(encoding("imageFormat")).toUpperCase(),
+                values: ["png", "jpg"]
+            },
+            {
+                key: "jpegQuality",
+                action: "ScreenshotPicker.quality",
+                title: "JPEG " + encoding("jpegQuality") + "%",
+                values: [75, 85, 95]
+            },
+            {
+                key: "cursor",
+                action: "ScreenshotPicker.cursor",
+                title: "CURSOR " + (encoding("cursor") ? "ON" : "OFF") + (frozenForCapture ? " · NEXT" : ""),
+                values: [false, true]
+            }
         ];
-        return fields.concat([{key: "", action: "ScreenshotPicker.resetEncoding", title: "DEFAULTS", values: []}]);
+        return fields.concat([
+            {
+                key: "",
+                action: "ScreenshotPicker.resetEncoding",
+                title: "DEFAULTS",
+                values: []
+            }
+        ]);
     }
     function parseEncoding(raw: string): var {
         try {
