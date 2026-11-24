@@ -111,3 +111,22 @@ test("gallery and capture palette commands delegate to the existing action owner
     /commandId === "captures\.library"\)\s*showCaptures\(\)/,
   );
 });
+
+test("capability headers and tiles share dynamic state and canonical static icons", () => {
+  const tile = qml("SystemContent.qml");
+  const detail = qml("SettingsDetail.qml");
+  assert.match(detail, /DesktopIcons\.capabilityGlyph\(kind,/);
+  assert.match(detail, /text: panel\.capabilityIcon/);
+  for (const kind of ["windows", "glass", "bar", "spectrum", "displays", "vhs", "status"])
+    assert.ok(tile.includes('DesktopIcons.glyphFor("' + kind + '")'));
+  for (const kind of ["alerts", "stay", "frame", "motion", "nightLight", "bluetooth"]) {
+    assert.ok(tile.includes('DesktopIcons.capabilityGlyph("' + kind + '"'));
+    assert.notEqual(context.capabilityGlyph(kind, {active: true}), context.capabilityGlyph(kind, {active: false}));
+  }
+  assert.equal(context.capabilityGlyph("power", {batteryAvailable: true, batteryLevelIcon: "battery"}), "battery");
+  assert.equal(context.capabilityGlyph("reactive", {}), context.glyphFor("audioMixer"));
+  assert.match(qml("NetworkPanel.qml"), /glyph: DesktopIcons\.capabilityGlyph\("network"/);
+  assert.match(qml("BluetoothPanel.qml"), /glyph: DesktopIcons\.capabilityGlyph\("bluetooth"/);
+  assert.match(qml("VhsPanel.qml"), /text: DesktopIcons\.glyphFor\("vhs"\)/);
+  assert.match(qml("StatusContent.qml"), /text: DesktopIcons\.glyphFor\("status"\)/);
+});

@@ -102,11 +102,11 @@ test("seek interval controls use shared action keycaps and include keyboard navi
   assert.match(page, /onActivated: content\.media\.adjustSeekStep\(-1\)/);
   assert.match(
     page,
-    /content\.runtime\.shellKeyCode\("media", "Minus"\) \|\| event\.key === content\.runtime\.shellKeyCode\("media", "Underscore"\)/,
+    /content\.runtime\.shellMatchesHint\("MediaContent\.shorter", event\.key, event\.modifiers\)/,
   );
   assert.match(
     page,
-    /content\.runtime\.shellKeyCode\("media", "Plus"\) \|\| event\.key === content\.runtime\.shellKeyCode\("media", "Equal"\)/,
+    /content\.runtime\.shellMatchesHint\("MediaContent\.longer", event\.key, event\.modifiers\)/,
   );
   assert.match(page, /Seek interval · " \+ media\.seekSeconds/);
 });

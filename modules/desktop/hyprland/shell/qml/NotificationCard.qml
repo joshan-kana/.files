@@ -310,7 +310,7 @@ SquircleSurface {
                     horizontalCompact: true
                     title: modelData.text || "Action"
                     iconName: card.notificationState.safeActionIcon(card.notification, modelData)
-                    shortcut: card.selected && index < 9 ? card.runtime.shellNumberHint("activity", index) : ""
+                    shortcut: card.selected && index < 9 ? card.runtime.shellChoiceHint(index) : ""
                     width: Math.min(actionButtons.width, Math.max(130, implicitWidth))
                     onActivated: card.actionRequested(index)
                 }

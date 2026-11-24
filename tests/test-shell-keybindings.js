@@ -41,7 +41,7 @@ Object.assign(Qt, {
 });
 const f = vm.runInNewContext(
   fs.readFileSync(path.join(qmlDir, "ShellKeybindings.js"), "utf8") +
-    "\n({assigned,keyCode,navigates,navigationHint,modifier,hint,sequence,matchesHint,numberIndex,numberHint})",
+    "\n({assigned,keyCode,navigates,navigationHint,modifier,hint,sequence,matchesHint,numberIndex,numberHint,widgetChoiceIndex,widgetChoiceHint})",
 );
 const files = fs.readdirSync(qmlDir).filter((name) => name.endsWith(".qml"));
 
@@ -250,14 +250,14 @@ test("numbered actions use the assigned key for each index, not a contiguous key
   assert.equal(f.numberIndex(remapped, "activity", 57, 9, Qt), 0);
   assert.equal(f.numberHint(remapped, "activity", 0), "9");
   assert.equal(f.numberHint(remapped, "activity", 8), "1");
-  for (const name of ["NotificationContent.qml", "OverviewPanel.qml"])
+  for (const name of ["OverviewPanel.qml"])
     assert.match(
       fs.readFileSync(path.join(qmlDir, name), "utf8"),
       /shellNumberIndex/,
     );
   assert.match(
     fs.readFileSync(path.join(qmlDir, "NotificationCard.qml"), "utf8"),
-    /shellNumberHint/,
+    /shellChoiceHint/,
   );
 });
 
@@ -297,21 +297,17 @@ test("semantic action bindings change their handler and hint without changing a 
     );
 });
 
-test("power and stay-awake numbered actions use positional control slots", () => {
-  const detail = fs.readFileSync(
-    path.join(qmlDir, "SettingsDetail.qml"),
-    "utf8",
-  );
-  assert.match(detail, /shellNumberIndex\("controls", key, 5\)/);
-  assert.match(detail, /shellNumberHint\("controls", index\)/);
-  assert.doesNotMatch(
-    detail,
-    /key >= runtime\.shellKeyCode\("controls", "1"\)/,
-  );
-  assert.doesNotMatch(detail, /shortcut: String\(index \+ 1\)/);
-  const remapped = { ...registry, overrides: { controls: { 1: "9", 9: "1" } } };
-  assert.equal(f.numberIndex(remapped, "controls", 57, 5, Qt), 0);
-  assert.equal(f.numberHint(remapped, "controls", 0), "9");
+test("power, notifications and preset choices use positional shifted letters", () => {
+  const detail = fs.readFileSync(path.join(qmlDir, "SettingsDetail.qml"), "utf8");
+  assert.match(detail, /shellChoiceIndex\(key, modifiers, 5\)/);
+  assert.match(detail, /shellChoiceHint\(index\)/);
+  assert.doesNotMatch(detail, /shellNumber(?:Index|Hint)/);
+  assert.equal(f.widgetChoiceHint(registry, 0), "SHIFT+Q");
+  assert.equal(f.widgetChoiceIndex(registry, 81, Qt.ShiftModifier, 9, Qt), 0);
+  assert.equal(f.widgetChoiceIndex(registry, 81, 0, 9, Qt), -1);
+  assert.equal(f.widgetChoiceIndex(registry, 81, Qt.ShiftModifier | Qt.AltModifier, 9, Qt), -1);
+  assert.equal(new Set(registry.widgetChoices).size, 9);
+  assert.match(fs.readFileSync(path.join(qmlDir, "NotificationContent.qml"), "utf8"), /shellChoiceIndex/);
 });
 
 test("compact detail open actions follow remapped keys in labels and dispatch", () => {
@@ -327,31 +323,24 @@ test("compact detail open actions follow remapped keys in labels and dispatch", 
   }
 });
 
-test("reactive detail chords dispatch their visible multi-modifier assignments", () => {
-  for (const [name, key] of [
-    ["musicReactiveDetails", "G"],
-    ["wallpaperSpectrumDetails", "F"],
-  ]) {
+test("reactive details have independent plain-letter assignments", () => {
+  for (const [name, key] of [["musicReactiveDetails", "U"], ["wallpaperSpectrumDetails", "Y"]]) {
     const id = "SystemContent." + name;
-    assert.equal(f.hint(registry, id), "ALT+SHIFT+" + key);
-    assert.equal(
-      f.matchesHint(
-        registry,
-        id,
-        key.charCodeAt(0),
-        Qt.AltModifier | Qt.ShiftModifier,
-        Qt,
-      ),
-      true,
-    );
-    assert.equal(
-      f.matchesHint(registry, id, key.charCodeAt(0), Qt.ShiftModifier, Qt),
-      false,
-    );
-    assert.equal(
-      f.matchesHint(registry, id, key.charCodeAt(0), Qt.AltModifier, Qt),
-      false,
-    );
+    assert.equal(f.hint(registry, id), key);
+    assert.equal(f.matchesHint(registry, id, key.charCodeAt(0), 0, Qt), true);
+    assert.equal(f.matchesHint(registry, id, key.charCodeAt(0), Qt.ShiftModifier, Qt), false);
+    assert.equal(f.matchesHint(registry, id, key.charCodeAt(0), Qt.AltModifier, Qt), false);
+  }
+});
+
+test("dashboard direct widget bindings are collision-free unmodified or shifted letters", () => {
+  const actions = ["bar", "frame", "nightLight", "shellGlass", "vhsTune", "vhsToggle", "networkDetails", "bluetoothDetails", "brightnessFocus", "alertsDetails", "stayDetails", "powerDetails", "windowsDetails", "glassDetails", "nightLightDetails", "wallpaperSpectrumDetails", "musicReactiveDetails", "barDetails", "frameDetails", "motionDetails", "alerts", "bluetooth", "captures", "displays", "motion", "musicReactive", "network", "powerProfile", "reset", "resources", "statusInspection", "stayAwake", "themes", "wallpaper", "wallpaperSpectrum", "windowTransparency"].map(name => "SystemContent." + name).concat(["AudioMixerContent.open", "AudioDeviceControl.chooser", "AudioDeviceControl.mute", "AudioDeviceControl.muteMicrophone", "ControlsMediaCard.open", "ControlsMediaCard.repeat", "ControlsMediaCard.shuffle"]);
+  const seen = new Map(["H", "J", "K", "L", "I", "O", "SHIFT+H", "SHIFT+L"].map(key => [key, "reserved navigation"]));
+  for (const action of actions) {
+    const key = f.hint(registry, action);
+    assert.match(key, /^(?:SHIFT\+)?[A-Z]$/, action);
+    assert.ok(!seen.has(key), action + " collides with " + seen.get(key));
+    seen.set(key, action);
   }
 });
 

@@ -110,7 +110,7 @@ test("notification direct actions own their canonical on-control keyhints", () =
   );
   assert.match(
     card,
-    /shortcut: card\.selected && index < 9 \? card\.runtime\.shellNumberHint\("activity", index\) : ""/,
+    /shortcut: card\.selected && index < 9 \? card\.runtime\.shellChoiceHint\(index\) : ""/,
   );
   assert.match(card, /onActivated: card\.replyFocusRequested\(\)/);
   assert.match(card, /visible: card\.safeActions\.length > 0/);

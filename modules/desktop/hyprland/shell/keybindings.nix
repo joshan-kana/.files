@@ -74,29 +74,31 @@
   # Optional scope-specific slot overrides. Keep unrelated panels independent.
   overrides = { };
 
+  widgetChoices = [ "SHIFT+Q" "SHIFT+W" "SHIFT+E" "SHIFT+A" "SHIFT+S" "SHIFT+D" "SHIFT+Z" "SHIFT+X" "SHIFT+C" ];
+
   # Action-specific assignments take precedence over shared slot defaults.
   # Changing an action must not silently remap every use of the same letter.
   actions = {
-    "SystemContent.bar" = "SHIFT+A";
-    "SystemContent.frame" = "SHIFT+S";
+    "SystemContent.bar" = "SHIFT+Q";
+    "SystemContent.frame" = "SHIFT+W";
     "SystemContent.nightLight" = "T";
     "SystemContent.shellGlass" = "SHIFT+R";
-    "SystemContent.vhsTune" = "SHIFT+V";
-    "SystemContent.vhsToggle" = "ALT+V";
-    "SystemContent.networkDetails" = "ALT+F";
-    "SystemContent.bluetoothDetails" = "ALT+G";
+    "SystemContent.vhsTune" = "SHIFT+P";
+    "SystemContent.vhsToggle" = "SHIFT+Z";
+    "SystemContent.networkDetails" = "SHIFT+F";
+    "SystemContent.bluetoothDetails" = "SHIFT+G";
     "SystemContent.brightnessFocus" = "SHIFT+B";
-    "SystemContent.alertsDetails" = "ALT+A";
-    "SystemContent.stayDetails" = "ALT+S";
-    "SystemContent.powerDetails" = "ALT+SHIFT+V";
-    "SystemContent.windowsDetails" = "ALT+SHIFT+D";
-    "SystemContent.glassDetails" = "ALT+SHIFT+R";
-    "SystemContent.nightLightDetails" = "ALT+T";
-    "SystemContent.wallpaperSpectrumDetails" = "ALT+SHIFT+F";
-    "SystemContent.musicReactiveDetails" = "ALT+SHIFT+G";
-    "SystemContent.barDetails" = "ALT+SHIFT+A";
-    "SystemContent.frameDetails" = "ALT+SHIFT+S";
-    "SystemContent.motionDetails" = "ALT+SHIFT+E";
+    "SystemContent.alertsDetails" = "SHIFT+A";
+    "SystemContent.stayDetails" = "SHIFT+S";
+    "SystemContent.powerDetails" = "SHIFT+V";
+    "SystemContent.windowsDetails" = "SHIFT+N";
+    "SystemContent.glassDetails" = "SHIFT+O";
+    "SystemContent.nightLightDetails" = "SHIFT+T";
+    "SystemContent.wallpaperSpectrumDetails" = "Y";
+    "SystemContent.musicReactiveDetails" = "U";
+    "SystemContent.barDetails" = "SHIFT+J";
+    "SystemContent.frameDetails" = "SHIFT+K";
+    "SystemContent.motionDetails" = "SHIFT+X";
 
   };
 
@@ -109,15 +111,15 @@
       byScope = {
         activity = {
           "NotificationCard.dismiss" = "DEL";
-          "NotificationCard.history" = "ALT+H";
+          "NotificationCard.history" = "SHIFT+F";
           "NotificationCard.mark" = "M";
-          "NotificationCard.popup" = "ALT+P";
+          "NotificationCard.popup" = "SHIFT+P";
           "NotificationCard.reply" = "R";
-          "NotificationCard.silent" = "ALT+S";
+          "NotificationCard.silent" = "SHIFT+G";
           "NotificationCard.submit" = "ENTER";
-          "NotificationCard.criticalOnly" = "ALT+U";
-          "NotificationCard.privatePreview" = "ALT+V";
-          "NotificationCard.defaults" = "ALT+R";
+          "NotificationCard.criticalOnly" = "SHIFT+U";
+          "NotificationCard.privatePreview" = "SHIFT+V";
+          "NotificationCard.defaults" = "SHIFT+R";
           "NotificationContent.clearAll" = "C";
           "NotificationContent.expand" = "E";
           "NotificationContent.groups" = "NAV_HORIZONTAL";
@@ -191,7 +193,7 @@
           "NetworkPanel.connectProfile" = "ENTER";
           "NetworkPanel.detail" = "V";
           "NetworkPanel.editProfile" = "E";
-          "NetworkPanel.saveProfile" = "CTRL+S";
+          "NetworkPanel.saveProfile" = "SHIFT+S";
           "NetworkPanel.listScroll" = "NAV_VERTICAL";
           "NetworkPanel.passwordCancel" = "ESC";
           "NetworkPanel.passwordSubmit" = "ENTER";
@@ -299,12 +301,12 @@
           "SystemContent.legend.mute_selected_output_input_or_stream" = "M / ENTER";
           "SystemContent.legend.mute_stream_mute_mic_choose_device" = "M / X / P";
           "SystemContent.legend.navigate_actions" = "NAV_ALL";
-          "SystemContent.legend.night_light_warmer_cooler" = "T / - (⇧T) / +";
+          "SystemContent.legend.night_light_warmer_cooler" = "T / SHIFT+T";
           "SystemContent.legend.open_corresponding_system_control" = "Q/W/E/F/G/R/C/D/I";
           "SystemContent.legend.open_selected_capture" = "ENTER / O";
           "SystemContent.legend.page_selection" = "U/D · PGUP/PGDN";
           "SystemContent.legend.pair_trust_forget" = "P / T / F";
-          "SystemContent.legend.play_pause_previous_next_media" = "SPACE / , / .";
+          "SystemContent.legend.play_pause_previous_next_media" = "N";
           "SystemContent.legend.refresh_captures" = "R";
           "SystemContent.legend.refresh_now" = "R";
           "SystemContent.legend.restore_defaults_then_confirm" = "SHIFT+C · ENTER";
@@ -320,13 +322,13 @@
           "SystemContent.legend.select_network" = "NAV_VERTICAL · U/D · PGUP/PGDN";
           "SystemContent.legend.select_output_input_or_stream_half_page" =
             "NAV_VERTICAL · TAB/SHIFT+TAB · U/D · PGUP/PGDN";
-          "SystemContent.legend.shuffle_repeat_choose_player" = "Z / B / SHIFT+P";
+          "SystemContent.legend.shuffle_repeat_choose_player" = "Z / B";
           "SystemContent.legend.slider_selection" = "NAV_VERTICAL · TAB/SHIFT+TAB";
-          "SystemContent.legend.spectrum_reactive_windows_glass_bar_frame_motion" = "SHIFT+F/G/D/R/A/S/E";
+          "SystemContent.legend.spectrum_reactive_windows_glass_bar_frame_motion" = "SHIFT+Y/U/D/R/Q/W/E";
           "SystemContent.legend.switch_between_sampled_resource_history_and_per_core_cpu_activity" = "C";
           "SystemContent.legend.toggle_wi_fi_saved_connections" = "W / P";
           "SystemContent.motion" = "SHIFT+E";
-          "SystemContent.musicReactive" = "SHIFT+G";
+          "SystemContent.musicReactive" = "SHIFT+U";
           "SystemContent.network" = "F";
           "SystemContent.powerProfile" = "V";
           "SystemContent.reset" = "SHIFT+C";
@@ -342,7 +344,7 @@
           "SystemContent.trayNavigate" = "[ / ]";
           "SystemContent.trayOpen" = "ENTER";
           "SystemContent.wallpaper" = "W";
-          "SystemContent.wallpaperSpectrum" = "SHIFT+F";
+          "SystemContent.wallpaperSpectrum" = "SHIFT+Y";
           "VhsPanel.adjust" = "NAV_HORIZONTAL";
           "VhsPanel.toggle" = "T";
           "VhsPanel.reset" = "R";
@@ -447,14 +449,14 @@
           "MediaContent.legend.cycle_connected_media_players" = "P";
           "MediaContent.legend.esc" = "ESC";
           "MediaContent.legend.overlay_local_synchronised_lyrics_lrc" = "Y";
-          "MediaContent.legend.previous_next_track" = ", / .";
+          "MediaContent.legend.previous_next_track" = "J / K";
           "MediaContent.legend.r" = "R";
           "MediaContent.legend.s" = "S";
           "MediaContent.legend.seek" = "NAV_HORIZONTAL";
-          "MediaContent.legend.seek_1" = "SPACE";
-          "MediaContent.legend.seek_interval" = "- / +";
+          "MediaContent.legend.seek_1" = "M";
+          "MediaContent.legend.seek_interval" = "SHIFT+H / SHIFT+L";
           "MediaContent.legend.switch_visualizer" = "V";
-          "MediaContent.longer" = "+";
+          "MediaContent.longer" = "SHIFT+L";
           "MediaContent.lyrics" = "Y";
           "MediaContent.player" = "P";
           "MediaContent.prefer" = "F";
@@ -462,16 +464,16 @@
           "MediaContent.rateDown" = "A";
           "MediaContent.rateUp" = "D";
           "MediaContent.repeat" = "R";
-          "MediaContent.shorter" = "-";
+          "MediaContent.shorter" = "SHIFT+H";
           "MediaContent.shuffle" = "S";
           "MediaContent.visualizer" = "V";
           "MediaTransport.back" = "NAV_KEY_LEFT_PRIMARY";
           "MediaTransport.backCompact" = "NAV_KEY_LEFT_PRIMARY_SHIFT";
           "MediaTransport.forward" = "NAV_KEY_RIGHT_PRIMARY";
           "MediaTransport.forwardCompact" = "NAV_KEY_RIGHT_PRIMARY_SHIFT";
-          "MediaTransport.next" = ".";
-          "MediaTransport.play" = "Space";
-          "MediaTransport.previous" = ",";
+          "MediaTransport.next" = "K";
+          "MediaTransport.play" = "M";
+          "MediaTransport.previous" = "J";
         };
         mixer = {
           "AudioMixerContent.effectsToggle" = "B";

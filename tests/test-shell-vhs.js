@@ -288,7 +288,7 @@ test("VHS tuning exposes correct keyboard focus, pointer and navigation paths", 
   assert.match(panel, /shellNavigates\("controls", "right", key\)/);
   assert.match(panel, /shellKeyCode\("controls", "Backtab"\)/);
   assert.match(panel, /shellMatchesHint\("VhsPanel\.toggle", key, modifiers\)/);
-  assert.match(keymap, /"SystemContent\.vhsTune" = "SHIFT\+V"/);
+  assert.match(keymap, /"SystemContent\.vhsTune" = "SHIFT\+P"/);
   assert.match(keymap, /"VhsPanel\.toggle" = "T"/);
   assert.match(keymap, /"VhsPanel\.adjust" = "NAV_HORIZONTAL"/);
   assert.match(keymap, /"VhsPanel\.select"/);

@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "DesktopIcons.js" as DesktopIcons
 
 // One capability at a time. Parameters and quick actions share their existing
 // authoritative service owners, including Nix-default/user-override semantics.
@@ -88,6 +89,11 @@ Item {
             return false;
         }
     }
+    readonly property string capabilityIcon: DesktopIcons.capabilityGlyph(kind, {
+        active: masterState,
+        batteryAvailable: system.batteryAvailable,
+        batteryLevelIcon: system.batteryLevelIcon
+    })
     readonly property bool masterAvailable: kind !== "nightLight" || nightLight.supported && !nightLight.busy
     readonly property var parameters: {
         if (kind === "bar")
@@ -550,7 +556,7 @@ Item {
             return displayDetails.handleKey(key, modifiers, autoRepeat);
         if (autoRepeat) {
             const repeatedAction = ["SettingsDetail.toggle", "SettingsDetail.blur", "SettingsDetail.reset", "SettingsDetail.resetParameter", "SettingsDetail.reactiveTarget", "SettingsDetail.presentation", "SettingsDetail.history", "SettingsDetail.quietHours", "SettingsDetail.nightResume", "SettingsDetail.nightPauseUntil", "SettingsDetail.powerAutomatic"].some(name => runtime.shellMatchesHint(name, key, modifiers));
-            const choice = (kind === "nightLight" || kind === "power") ? runtime.shellNumberIndex("controls", key, 9) : reactiveTuning ? runtime.shellNumberIndex("controls", key, 7) : kind === "alerts" ? runtime.shellNumberIndex("controls", key, 6) : kind === "power" || kind === "stay" ? runtime.shellNumberIndex("controls", key, 5) : -1;
+            const choice = (kind === "nightLight" || kind === "power") ? runtime.shellChoiceIndex(key, modifiers, 9) : reactiveTuning ? runtime.shellChoiceIndex(key, modifiers, 7) : kind === "alerts" ? runtime.shellChoiceIndex(key, modifiers, 6) : kind === "power" || kind === "stay" ? runtime.shellChoiceIndex(key, modifiers, 5) : -1;
             if (repeatedAction || choice >= 0)
                 return true;
         }
@@ -603,8 +609,8 @@ Item {
                 return true;
             }
         }
-        if ((kind === "power" || kind === "stay" || kind === "alerts" || kind === "nightLight" || reactiveTuning) && modifiers === Qt.NoModifier) {
-            const numberIndex = runtime.shellNumberIndex("controls", key, (kind === "nightLight" || kind === "power") ? 9 : reactiveTuning ? 7 : kind === "alerts" ? 6 : 5);
+        if (kind === "power" || kind === "stay" || kind === "alerts" || kind === "nightLight" || reactiveTuning) {
+            const numberIndex = runtime.shellChoiceIndex(key, modifiers, (kind === "nightLight" || kind === "power") ? 9 : reactiveTuning ? 7 : kind === "alerts" ? 6 : 5);
             if (numberIndex >= 0)
                 return activateNumber(numberIndex + 1);
         }
@@ -652,10 +658,21 @@ Item {
             height: Math.max(44, heading.implicitHeight)
             spacing: panel.theme.spacing3
 
+            Text {
+                id: capabilityGlyph
+                anchors.verticalCenter: parent.verticalCenter
+                width: panel.theme.fontSize(26)
+                text: panel.capabilityIcon
+                font.family: "Symbols Nerd Font"
+                font.pixelSize: panel.theme.fontSize(23)
+                color: panel.theme.accent
+                horizontalAlignment: Text.AlignHCenter
+            }
+
             Column {
                 id: heading
                 anchors.verticalCenter: parent.verticalCenter
-                width: panel.hasMaster ? Math.max(1, parent.width - masterAction.width - parent.spacing) : parent.width
+                width: Math.max(1, parent.width - capabilityGlyph.width - masterAction.width - (panel.hasMaster ? 2 : 1) * parent.spacing)
                 spacing: panel.theme.spacing1
 
                 ShellText {
@@ -792,7 +809,7 @@ Item {
                         theme: panel.theme
                         motion: panel.motion
                         title: modelData
-                        shortcut: panel.runtime.shellNumberHint("controls", index)
+                        shortcut: panel.runtime.shellChoiceHint(index)
                         compact: true
                         horizontalCompact: true
                         active: panel.appearance.musicReactivePreset === modelData
@@ -826,7 +843,7 @@ Item {
                         theme: panel.theme
                         motion: panel.motion
                         title: modelData.charAt(0).toUpperCase() + modelData.slice(1)
-                        shortcut: panel.runtime.shellNumberHint("controls", index + 3)
+                        shortcut: panel.runtime.shellChoiceHint(index + 3)
                         compact: true
                         horizontalCompact: true
                         active: panel.appearance.musicReactiveEmphasis === modelData
@@ -1027,7 +1044,7 @@ Item {
                         compact: true
                         horizontalCompact: true
                         title: modelData.title
-                        shortcut: panel.runtime.shellNumberHint("controls", index)
+                        shortcut: panel.runtime.shellChoiceHint(index)
                         active: panel.nightLight.mode === modelData.id
                         enabled: panel.masterAvailable && (modelData.id !== "solar" || panel.nightLight.solarAvailable)
                         onActivated: panel.nightLight.setMode(modelData.id)
@@ -1076,7 +1093,7 @@ Item {
                         horizontalCompact: true
                         title: modelData.title
                         active: panel.nightLight.days === modelData.days
-                        shortcut: panel.runtime.shellNumberHint("controls", index + 4)
+                        shortcut: panel.runtime.shellChoiceHint(index + 4)
                         enabled: panel.masterAvailable
                         onActivated: panel.nightLight.change("days", String(modelData.days))
                     }
@@ -1097,7 +1114,7 @@ Item {
                         theme: panel.theme
                         motion: panel.motion
                         title: "Pause " + modelData + " min"
-                        shortcut: panel.runtime.shellNumberHint("controls", index + 7)
+                        shortcut: panel.runtime.shellChoiceHint(index + 7)
                         compact: true
                         horizontalCompact: true
                         enabled: panel.masterAvailable && panel.nightLight.mode !== "off"
@@ -1193,7 +1210,7 @@ Item {
                     horizontalCompact: true
                     icon: "󰚥"
                     title: panel.powerProfile.label(modelData)
-                    shortcut: panel.runtime.shellNumberHint("controls", index)
+                    shortcut: panel.runtime.shellChoiceHint(index)
                     active: panel.powerProfile.current === modelData
                     enabled: panel.powerProfile.available && !panel.powerProfile.applying
                     onActivated: panel.powerProfile.setProfile(modelData)
@@ -1242,7 +1259,7 @@ Item {
                                 theme: panel.theme
                                 motion: panel.motion
                                 title: panel.powerProfile.label(modelData)
-                                shortcut: panel.runtime.shellNumberHint("controls", (sourceRow.index === 0 ? 3 : 6) + index)
+                                shortcut: panel.runtime.shellChoiceHint((sourceRow.index === 0 ? 3 : 6) + index)
                                 compact: true
                                 horizontalCompact: true
                                 active: (sourceRow.modelData === "acProfile" ? panel.powerProfile.acProfile : panel.powerProfile.batteryProfile) === modelData
@@ -1311,7 +1328,7 @@ Item {
                     compact: true
                     horizontalCompact: true
                     title: modelData === 0 ? "Until disabled" : modelData + " minutes"
-                    shortcut: panel.runtime.shellNumberHint("controls", index)
+                    shortcut: panel.runtime.shellChoiceHint(index)
                     active: panel.system.idleInhibited && panel.system.idleInhibitMinutes === modelData
                     onActivated: panel.system.setIdleInhibitMinutes(modelData)
                 }
@@ -1343,7 +1360,7 @@ Item {
                         theme: panel.theme
                         motion: panel.motion
                         title: modelData + " min"
-                        shortcut: panel.runtime.shellNumberHint("controls", index)
+                        shortcut: panel.runtime.shellChoiceHint(index)
                         compact: true
                         horizontalCompact: true
                         onActivated: panel.notifications.silenceFor(modelData)
@@ -1391,7 +1408,7 @@ Item {
                         theme: panel.theme
                         motion: panel.motion
                         title: modelData.title
-                        shortcut: panel.runtime.shellNumberHint("controls", index + 3)
+                        shortcut: panel.runtime.shellChoiceHint(index + 3)
                         compact: true
                         horizontalCompact: true
                         active: panel.notifications.quietDays === modelData.days

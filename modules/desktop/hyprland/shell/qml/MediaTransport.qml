@@ -91,6 +91,11 @@ Item {
     }
 
     function hint(action: string): string {
+        // The dashboard's two letter banks are fully occupied by direct
+        // tile actions. Full transport shortcuts belong to Now Playing;
+        // compact buttons remain focusable and clickable.
+        if (compact && action !== "back" && action !== "forward")
+            return "";
         switch (action) {
         case "previous":
             return runtime.shellHint("MediaTransport.previous");

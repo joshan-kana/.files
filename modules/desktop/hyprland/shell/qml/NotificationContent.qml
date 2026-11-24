@@ -651,6 +651,13 @@ FocusScope {
                         }
                         event.accepted = true;
                     }
+                } else if (center.runtime.shellChoiceIndex(event.key, event.modifiers, 9) >= 0) {
+                    const group = center.selectedGroup();
+                    const index = center.runtime.shellChoiceIndex(event.key, event.modifiers, 9);
+                    const actions = center.notificationState.explicitActions(center.selectedNotification());
+                    if (!event.isAutoRepeat && group && index < (center.expandedGroupKey === group.key ? actions.length : Math.min(2, actions.length)))
+                        center.notificationState.invokeAction(center.selectedNotification(), index);
+                    event.accepted = true;
                 } else if (event.key === center.runtime.shellKeyCode("activity", "Escape")) {
                     center.navigateBack();
                     event.accepted = true;
@@ -688,13 +695,6 @@ FocusScope {
                     event.accepted = true;
                 } else if (event.key === center.runtime.shellKeyCode("activity", "R")) {
                     center.focusReply();
-                    event.accepted = true;
-                } else if (center.runtime.shellNumberIndex("activity", event.key, 9) >= 0) {
-                    const group = center.selectedGroup();
-                    const index = center.runtime.shellNumberIndex("activity", event.key, 9);
-                    const actions = center.notificationState.explicitActions(center.selectedNotification());
-                    if (group && index < (center.expandedGroupKey === group.key ? actions.length : Math.min(2, actions.length)))
-                        center.notificationState.invokeAction(center.selectedNotification(), index);
                     event.accepted = true;
                 } else if (event.key === center.runtime.shellKeyCode("activity", "Return") || event.key === center.runtime.shellKeyCode("activity", "Enter")) {
                     if (!center.notificationState.invokeDefault(center.selectedNotification()))

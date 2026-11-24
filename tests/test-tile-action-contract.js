@@ -102,10 +102,10 @@ test("primary and detail keyboard actions dispatch directly without prior select
     /detailShortcut: root\.runtime\.shellHint\("SystemContent\.bluetoothDetails"\)/,
   );
   for (const [action, key] of [
-    ["vhsToggle", "ALT+V"],
-    ["vhsTune", "SHIFT+V"],
-    ["networkDetails", "ALT+F"],
-    ["bluetoothDetails", "ALT+G"],
+    ["vhsToggle", "SHIFT+Z"],
+    ["vhsTune", "SHIFT+P"],
+    ["networkDetails", "SHIFT+F"],
+    ["bluetoothDetails", "SHIFT+G"],
     ["network", "F"],
     ["bluetooth", "G"],
     ["powerProfile", "V"],

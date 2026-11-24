@@ -446,11 +446,11 @@ test("Dashboard controls retain direct keys and no additional focus navigation m
   );
   assert.match(
     controls,
-    /event\.key === root\.runtime\.shellKeyCode\("controls", "Q"\)\)\s*\{\s*root.openTheme\(\)/,
+    /root\.runtime\.shellMatchesHint\("SystemContent\.themes", event\.key, event\.modifiers\)\)\s*\{\s*root.openTheme\(\)/,
   );
   assert.match(
     controls,
-    /event\.key === root\.runtime\.shellKeyCode\("controls", "E"\)\)\s*\{\s*root.openSession\(\)/,
+    /root\.runtime\.shellMatchesHint\("SystemContent\.session", event\.key, event\.modifiers\)\)\s*\{\s*root.openSession\(\)/,
   );
   assert.doesNotMatch(controls, /toggleControlsLayout|moveFocusGroup|Shift\+I/);
   assert.match(controls, /audioDeck.deviceChooserOpen/);

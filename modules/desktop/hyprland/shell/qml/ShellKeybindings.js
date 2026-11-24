@@ -280,3 +280,18 @@ function numberIndex(registry, scope, key, count, qt) {
 function numberHint(registry, scope, index) {
   return assigned(registry, scope, String(index + 1));
 }
+
+function widgetChoiceHint(registry, index) {
+  return registry?.widgetChoices?.[index] || "";
+}
+
+function widgetChoiceIndex(registry, key, modifiers, count, qt) {
+  const bits = qt.ShiftModifier | qt.ControlModifier | qt.AltModifier | qt.MetaModifier;
+  for (let index = 0; index < count; ++index) {
+    const slot = widgetChoiceHint(registry, index);
+    if (!/^(?:SHIFT\+)?[A-Z]$/.test(slot)) continue;
+    const expected = slot.startsWith("SHIFT+") ? qt.ShiftModifier : 0;
+    if ((modifiers & bits) === expected && key === codeFor(slot.split("+").pop(), qt)) return index;
+  }
+  return -1;
+}

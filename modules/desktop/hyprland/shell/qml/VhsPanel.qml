@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "DesktopIcons.js" as DesktopIcons
 
 Item {
     id: panel
@@ -130,7 +131,7 @@ Item {
     }
 
     function handleKey(key: int, modifiers: int, autoRepeat: bool): bool {
-        const presetIndex = modifiers === Qt.NoModifier ? runtime.shellNumberIndex("controls", key, 4) : -1;
+        const presetIndex = runtime.shellChoiceIndex(key, modifiers, 4);
         if (presetIndex >= 0) {
             if (!autoRepeat)
                 appearance.applyVhsPreset(["Subtle", "Analog", "Degraded", "Default"][presetIndex]);
@@ -190,8 +191,19 @@ Item {
             height: 46
             spacing: panel.theme.spacing3
 
+            Text {
+                id: capabilityGlyph
+                anchors.verticalCenter: parent.verticalCenter
+                width: panel.theme.fontSize(26)
+                text: DesktopIcons.glyphFor("vhs")
+                color: panel.theme.accent
+                font.family: "Symbols Nerd Font"
+                font.pixelSize: panel.theme.fontSize(23)
+                horizontalAlignment: Text.AlignHCenter
+            }
+
             Column {
-                width: Math.max(1, parent.width - toggleButton.width - parent.spacing)
+                width: Math.max(1, parent.width - capabilityGlyph.width - toggleButton.width - 2 * parent.spacing)
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: panel.theme.spacing1
 
@@ -254,7 +266,7 @@ Item {
                     theme: panel.theme
                     motion: panel.motion
                     title: modelData
-                    shortcut: panel.runtime.shellNumberHint("controls", index)
+                    shortcut: panel.runtime.shellChoiceHint(index)
                     compact: true
                     horizontalCompact: true
                     active: panel.appearance.vhsPreset === modelData

@@ -698,7 +698,7 @@ FocusScope {
                 } else if (event.key === content.runtime.shellKeyCode("media", "Escape")) {
                     content.closeRequested();
                     event.accepted = true;
-                } else if (event.key === content.runtime.shellKeyCode("media", "Space")) {
+                } else if (content.runtime.shellMatchesHint("MediaTransport.play", event.key, event.modifiers)) {
                     fullTransport.triggerAction("play", event.isAutoRepeat);
                     event.accepted = true;
                 } else if (event.key === content.runtime.shellKeyCode("media", "V")) {
@@ -735,10 +735,10 @@ FocusScope {
                     if (!event.isAutoRepeat)
                         playerAction.trigger();
                     event.accepted = true;
-                } else if (event.key === content.runtime.shellKeyCode("media", "Minus") || event.key === content.runtime.shellKeyCode("media", "Underscore")) {
+                } else if (content.runtime.shellMatchesHint("MediaContent.shorter", event.key, event.modifiers)) {
                     content.media.adjustSeekStep(-1);
                     event.accepted = true;
-                } else if (event.key === content.runtime.shellKeyCode("media", "Plus") || event.key === content.runtime.shellKeyCode("media", "Equal")) {
+                } else if (content.runtime.shellMatchesHint("MediaContent.longer", event.key, event.modifiers)) {
                     content.media.adjustSeekStep(1);
                     event.accepted = true;
                 } else if ((content.runtime.shellNavigates("media", "left", event.key))) {
@@ -749,10 +749,10 @@ FocusScope {
                     progressTrack.pulseAdjustment();
                     fullTransport.triggerAction("forward", event.isAutoRepeat);
                     event.accepted = true;
-                } else if (event.key === content.runtime.shellKeyCode("media", "Comma")) {
+                } else if (content.runtime.shellMatchesHint("MediaTransport.previous", event.key, event.modifiers)) {
                     fullTransport.triggerAction("previous", event.isAutoRepeat);
                     event.accepted = true;
-                } else if (event.key === content.runtime.shellKeyCode("media", "Period")) {
+                } else if (content.runtime.shellMatchesHint("MediaTransport.next", event.key, event.modifiers)) {
                     fullTransport.triggerAction("next", event.isAutoRepeat);
                     event.accepted = true;
                 }

@@ -10,8 +10,31 @@ const destinations = Object.freeze({
   clipboard: "󰅌",
   shortcuts: "󰌌",
   audioMixer: "♫",
+  displays: "󰍹",
+  windows: "󰍹",
+  glass: "󰊠",
+  vhs: "󰨛",
+  bar: "󰀻",
+  spectrum: "󰸉",
+  status: "󰋽",
 });
 
 function glyphFor(destination) {
   return destinations[destination] || "";
+}
+
+// Shared state glyphs for both the compact capability and its expanded view.
+function capabilityGlyph(kind, state) {
+  switch (kind) {
+    case "reactive": return glyphFor("audioMixer");
+    case "network": return state.wifiConnected ? "󰤨" : state.networkConnected ? "󰈀" : "󰤭";
+    case "bluetooth": return state.active ? "󰂯" : "󰂲";
+    case "alerts": return state.active ? "󰂚" : "󰂛";
+    case "stay": return state.active ? "󰅶" : "󰒲";
+    case "power": return state.batteryAvailable ? state.batteryLevelIcon : glyphFor("session");
+    case "frame": return state.active ? "󰏗" : "󰏖";
+    case "motion": return state.active ? "󰐊" : "󰏤";
+    case "nightLight": return state.active ? "󰖔" : "󰖙";
+    default: return glyphFor(kind);
+  }
 }

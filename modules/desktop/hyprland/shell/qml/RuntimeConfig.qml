@@ -139,6 +139,14 @@ QtObject {
         return ShellKeybindings.matchesHint(shellBindings, action, key, modifiers, Qt);
     }
 
+    function shellChoiceIndex(key: int, modifiers: int, count: int): int {
+        return ShellKeybindings.widgetChoiceIndex(shellBindings, key, modifiers, count, Qt);
+    }
+
+    function shellChoiceHint(index: int): string {
+        return ShellKeybindings.widgetChoiceHint(shellBindings, index);
+    }
+
     function shellNumberIndex(scope: string, key: int, count: int): int {
         return ShellKeybindings.numberIndex(shellBindings, scope, key, count, Qt);
     }

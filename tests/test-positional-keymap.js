@@ -275,7 +275,7 @@ test("mixer and device hints match the shared Controls keyboard dispatcher", () 
   );
   assert.match(
     controls,
-    /event\.key === root\.runtime\.shellKeyCode\("controls", "P"\)\)\s*\{\s*root\.toggleSelectedAudioDeviceChooser\(\)/,
+    /root\.runtime\.shellMatchesHint\("AudioDeviceControl\.chooser", event\.key, event\.modifiers\)\)\s*\{\s*root\.toggleSelectedAudioDeviceChooser\(\)/,
   );
   assert.match(controls, /if \(audioDeck\.deviceChooserOpen\) \{/);
 });

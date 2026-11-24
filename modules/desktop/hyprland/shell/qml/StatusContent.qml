@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "DesktopIcons.js" as DesktopIcons
 import Quickshell.Io
 import "FeedbackSemantics.js" as FeedbackSemantics
 
@@ -92,7 +93,7 @@ Item {
             width: parent.width
             spacing: content.theme.spacing3
             Text {
-                text: "󰋽"
+                text: DesktopIcons.glyphFor("status")
                 color: content.theme.roleColor("connectivity")
                 font.family: "Symbols Nerd Font"
                 font.pixelSize: content.theme.fontSize(23)
