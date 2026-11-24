@@ -36,27 +36,27 @@ FocusScope {
             action: "Previous / next track"
         },
         {
-            key: content.runtime.shellHint("MediaContent.legend.switch_visualizer"),
+            key: content.runtime.shellHint("MediaContent.visualizer"),
             action: "Switch visualizer"
         },
         {
-            key: content.runtime.shellHint("MediaContent.legend.overlay_local_synchronised_lyrics_lrc"),
+            key: content.runtime.shellHint("MediaContent.lyrics"),
             action: "Overlay local synchronised lyrics (.lrc)"
         },
         {
-            key: content.runtime.shellHint("MediaContent.legend.s"),
+            key: content.runtime.shellHint("MediaContent.shuffle"),
             action: media.shuffleAvailable ? "Toggle shuffle" : "Shuffle unsupported by player"
         },
         {
-            key: content.runtime.shellHint("MediaContent.legend.r"),
+            key: content.runtime.shellHint("MediaContent.repeat"),
             action: media.repeatAvailable ? "Cycle repeat Off / All / One" : "Repeat unsupported by player"
         },
         {
-            key: content.runtime.shellHint("MediaContent.legend.cycle_connected_media_players"),
+            key: content.runtime.shellHint("MediaContent.player"),
             action: "Cycle connected media players"
         },
         {
-            key: content.runtime.shellHint("MediaContent.legend.esc"),
+            key: content.runtime.shellHint("MediaContent.close"),
             action: content.returnToControls ? "Back to Controls" : "Close now playing"
         }
     ]
@@ -713,7 +713,7 @@ FocusScope {
                 if (helpKey) {
                     content.helpOpen = true;
                     event.accepted = true;
-                } else if (event.key === content.runtime.shellKeyCode("media", "Escape")) {
+                } else if (content.runtime.shellMatchesHint("MediaContent.close", event.key, event.modifiers)) {
                     content.closeRequested();
                     event.accepted = true;
                 } else if (content.runtime.shellMatchesHint("MediaTransport.play", event.key, event.modifiers)) {

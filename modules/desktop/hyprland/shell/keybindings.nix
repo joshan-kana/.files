@@ -457,13 +457,8 @@
           "ShellExpansionHost.stopRecording" = "Shift+Q";
         };
         media = {
-          "MediaContent.legend.cycle_connected_media_players" = "P";
-          "MediaContent.legend.esc" = "ESC";
-          "MediaContent.legend.overlay_local_synchronised_lyrics_lrc" = "Y";
-          "MediaContent.legend.r" = "R";
-          "MediaContent.legend.s" = "S";
+          "MediaContent.close" = "ESC";
           "MediaContent.legend.seek" = "NAV_HORIZONTAL";
-          "MediaContent.legend.switch_visualizer" = "V";
           "MediaContent.longer" = "+";
           "MediaContent.lyrics" = "Y";
           "MediaContent.player" = "P";
