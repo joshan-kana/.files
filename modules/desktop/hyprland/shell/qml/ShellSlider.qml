@@ -15,6 +15,12 @@ Item {
     property color accentColor: theme.accent
     property real trackHeight: 10
     property real handleSize: 20
+    // Material Expressive uses a narrow, vertical pill that compresses on
+    // press. Keep its centre fixed so the pointer's requested value cannot
+    // jump when the thumb changes shape.
+    property real thumbTrackGap: 5
+    readonly property real thumbCenterX: handleSize / 2 + displayedValue * Math.max(1, width - handleSize)
+    readonly property bool thumbHovered: interaction.containsMouse && Math.abs(interaction.mouseX - thumbCenterX) <= handleSize * 0.85
     readonly property real normalizedValue: to === from ? 0 : Math.max(0, Math.min(1, (value - from) / (to - from)))
     property real displayedValue: normalizedValue
     Behavior on displayedValue {
@@ -43,38 +49,44 @@ Item {
         return from + fraction * (to - from);
     }
 
+    // Split the active and inactive tracks around the thumb instead of
+    // painting a fake gap with an opaque colour over frosted surfaces.
     Rectangle {
-        id: track
-        anchors {
-            left: parent.left
-            right: parent.right
-            verticalCenter: parent.verticalCenter
-            leftMargin: root.handleSize / 2
-            rightMargin: root.handleSize / 2
-        }
+        id: activeTrack
+        anchors.verticalCenter: parent.verticalCenter
+        x: root.handleSize / 2
+        width: Math.max(0, root.thumbCenterX - root.thumbTrackGap - x)
+        height: root.trackHeight
+        radius: height / 2
+        color: root.accentColor
+    }
+
+    Rectangle {
+        id: inactiveTrack
+        anchors.verticalCenter: parent.verticalCenter
+        x: root.thumbCenterX + root.thumbTrackGap
+        width: Math.max(0, root.width - root.handleSize / 2 - x)
         height: root.trackHeight
         radius: height / 2
         color: root.theme.layer3
-
-        Rectangle {
-            height: parent.height
-            width: parent.width * root.displayedValue
-            radius: parent.radius
-            color: root.accentColor
-        }
     }
 
     Rectangle {
         id: handle
-        width: root.handleSize
-        height: root.handleSize
+        width: Math.max(4, root.handleSize * (interaction.pressed ? 0.26 : root.thumbHovered ? 0.5 : 0.42))
+        height: Math.min(root.height, root.handleSize * (interaction.pressed ? 1.14 : 1))
         radius: width / 2
-        x: root.displayedValue * Math.max(1, root.width - width)
+        x: root.thumbCenterX - width / 2
         anchors.verticalCenter: parent.verticalCenter
         color: root.accentColor
-        scale: interaction.pressed ? 1.18 : 1
 
-        Behavior on scale {
+        Behavior on width {
+            Anim {
+                motion: root.motion
+                type: Anim.FastSpatial
+            }
+        }
+        Behavior on height {
             Anim {
                 motion: root.motion
                 type: Anim.FastSpatial
