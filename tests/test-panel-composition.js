@@ -93,10 +93,10 @@ test("all data and capability roles are declared in the theme adapter", () => {
 test("galleries share measured geometry through 200 percent text scale", () => {
   const theme = qml("Theme.qml");
   const columns = theme.match(
-    /function galleryColumns\(width: real\): int \{([\s\S]*?)\n    \}/,
+    /function galleryColumns\(width: real\): int \{([\s\S]*?)\n {4}\}/,
   )[1];
   const cellHeight = theme.match(
-    /function galleryCellHeight\(cellWidth: real\): int \{([\s\S]*?)\n    \}/,
+    /function galleryCellHeight\(cellWidth: real\): int \{([\s\S]*?)\n {4}\}/,
   )[1];
   for (const scale of [1, 1.25, 1.5, 2]) {
     const fontSize = (size) => Math.round(size * scale);
