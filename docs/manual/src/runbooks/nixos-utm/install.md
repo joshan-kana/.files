@@ -28,7 +28,9 @@ Load the generated target environment in the installer shell before using shared
 If needed, enable [installer SSH](../common/nixos-installer-ssh.md). On some UTM shared networks, the gateway's DNS forwarder may not resolve public names even when routing works. Verify with `resolvectl query github.com`; if necessary, temporarily specify public resolvers for the installer connection:
 
 ```sh
-sudo resolvectl dns enp0s1 1.1.1.1 8.8.8.8
+ip route show default
+# Set INTERFACE to the active installer network interface.
+sudo resolvectl dns "$INTERFACE" 1.1.1.1 8.8.8.8
 sudo resolvectl flush-caches
 ```
 
@@ -57,27 +59,29 @@ Identify the **new empty guest disk** before partitioning:
 lsblk -o NAME,PATH,SIZE,TYPE,FSTYPE,LABEL,MOUNTPOINTS
 ```
 
-The following commands assume the guest's VirtIO disk is `/dev/vda`, with no data that must be preserved. Replace device paths if UTM exposes a different disk. **The partitioning step erases the selected disk's partition table.**
+Select the empty VirtIO disk and its partition devices from the device listing. **The partitioning step erases the selected disk's partition table.**
 
 ```sh
-disk=/dev/vda
-sudo parted --script "$disk" \
+DISK=/dev/vda # Replace with the verified empty guest disk.
+sudo parted --script "$DISK" \
   mklabel gpt \
   mkpart ESP fat32 1MiB 1025MiB \
   set 1 esp on \
   mkpart ROOT 1025MiB 100%
 
-sudo mkfs.vfat -n BOOT /dev/vda1
-sudo mkfs.btrfs -f -L ROOT /dev/vda2
+lsblk -o NAME,PATH,SIZE,TYPE,FSTYPE,LABEL,MOUNTPOINTS "$DISK"
+# Set BOOT_PART and ROOT_PART to the verified new partitions.
+sudo mkfs.vfat -n "${BOOT_DEVICE##*/}" "$BOOT_PART"
+sudo mkfs.btrfs -f -L "${ROOT_DEVICE##*/}" "$ROOT_PART"
 
-sudo mount /dev/disk/by-label/ROOT /mnt
+sudo mount "$ROOT_DEVICE" /mnt
 sudo mkdir -p /mnt/boot
-sudo mount /dev/disk/by-label/BOOT /mnt/boot
+sudo mount "$BOOT_DEVICE" /mnt/boot
 ```
 
 {{#include ../_shared/restore-secrets-and-clone.inc}}
 
-## Install the test branch
+## Install
 
 The installer must use the target's evaluated binary caches, including Attic,
 instead of the installation image's defaults. Attic is readable without a
@@ -87,23 +91,17 @@ push token at `$USER_SECRETS_DIR/attic-token`. Stage it outside Git at
 `/mnt$USER_SECRETS_DIR/attic-token` with mode `0600` before first boot if
 publishing is enabled. The finalization step below corrects ownership.
 
-The host is intentionally maintained on an unmerged `.files` PR rather than `main`. The shared clone procedure above uses an authenticated Git SSH credential, including for the infrastructure-docs submodule. Fetch the public PR ref separately, then switch the installer checkout to it:
+For a pre-merge test, check out the intended reviewed revision before evaluating the target. Otherwise use the cloned default branch.
 
 ```sh
-cd "/mnt$DOTFILES_REPO"
-utm_host_pr=541
-sudo git fetch https://github.com/joshan-kana/.files.git \
-  "pull/$utm_host_pr/head:refs/heads/utm-test-host"
-sudo git switch utm-test-host
-
 substituters="$(
   sudo nix --extra-experimental-features "nix-command flakes" eval --raw \
-    .#nixosConfigurations.nixos-utm \
+    ".#nixosConfigurations.$HOST_NAME" \
     --apply 'cfg: builtins.concatStringsSep " " (cfg.pkgs.lib.unique cfg.config.nix.settings.substituters)'
 )"
 trusted_public_keys="$(
   sudo nix --extra-experimental-features "nix-command flakes" eval --raw \
-    .#nixosConfigurations.nixos-utm \
+    ".#nixosConfigurations.$HOST_NAME" \
     --apply 'cfg: builtins.concatStringsSep " " (cfg.pkgs.lib.unique cfg.config.nix.settings.trusted-public-keys)'
 )"
 
@@ -112,20 +110,24 @@ sudo nixos-install \
   --option extra-experimental-features "nix-command flakes" \
   --option extra-substituters "$substituters" \
   --option extra-trusted-public-keys "$trusted_public_keys" \
-  --flake ".#nixos-utm"
+  --flake ".#$HOST_NAME"
 ```
 
 {{#include ../_shared/finalize-bare-install.inc}}
 
-Detach the installer ISO and reboot. Verify the guest session, and replace the initial user password. Rebuild only from the checked-out review branch:
+Detach the installer ISO and reboot. Verify the guest session, and replace the initial user password. Reload the target environment before rebuilding from the intended checked-out revision:
+
+```sh
+{{#include ../../generated/hosts/nixos-utm.sh}}
+```
 
 ```sh
 cd ~/.files
 git status -sb
-run0 nixos-rebuild switch --flake .#nixos-utm
+run0 nixos-rebuild switch --flake ".#$HOST_NAME"
 ```
 
-Comin automatic deployments are disabled for this guest. To update the reviewed configuration, fetch and inspect the PR revision explicitly before rebuilding.
+Comin automatic deployments are disabled for this guest. To update the reviewed configuration, fetch and inspect the intended revision explicitly before rebuilding.
 
 ## Graphics validation
 
