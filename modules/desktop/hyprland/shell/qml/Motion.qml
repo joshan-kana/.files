@@ -14,23 +14,33 @@ QtObject {
         category: "Motion"
         property bool animationsEnabled: root.runtime.animationsEnabled
         property string preferenceSource: ""
+        property real durationOverride: 0
     }
     readonly property bool enabled: qmlPreferences.preferenceSource === "default" ? runtime.animationsEnabled : qmlPreferences.animationsEnabled
 
+    readonly property real durationMultiplier: qmlPreferences.durationOverride > 0 ? Math.max(0.75, Math.min(1.5, qmlPreferences.durationOverride)) : runtime.motionDurationMultiplier
+    function setDurationMultiplier(value: real): void {
+        qmlPreferences.durationOverride = Math.max(0.75, Math.min(1.5, value));
+        qmlPreferences.sync();
+    }
+    function resetDurationMultiplier(): void {
+        qmlPreferences.durationOverride = 0;
+        qmlPreferences.sync();
+    }
     readonly property int fast: enabled ? 100 : 0
     readonly property int normal: enabled ? 160 : 0
     readonly property int contourLap: enabled ? 1900 : 0
     readonly property int spinnerCycle: enabled ? 1100 : 0
 
-    readonly property int spatialFast: enabled ? 150 : 0
+    readonly property int spatialFast: enabled ? Math.round(150 * durationMultiplier) : 0
     // Geometry morphs settle after the shorter content transition.
-    readonly property int morph: enabled ? 240 : 0
-    readonly property int contentFade: enabled ? 115 : 0
-    readonly property int spatialNormal: enabled ? 220 : 0
-    readonly property int spatialSlow: enabled ? 320 : 0
-    readonly property int effectsFast: enabled ? 90 : 0
-    readonly property int effectsNormal: enabled ? 150 : 0
-    readonly property int effectsSlow: enabled ? 220 : 0
+    readonly property int morph: enabled ? Math.round(240 * durationMultiplier) : 0
+    readonly property int contentFade: enabled ? Math.round(115 * durationMultiplier) : 0
+    readonly property int spatialNormal: enabled ? Math.round(220 * durationMultiplier) : 0
+    readonly property int spatialSlow: enabled ? Math.round(320 * durationMultiplier) : 0
+    readonly property int effectsFast: enabled ? Math.round(90 * durationMultiplier) : 0
+    readonly property int effectsNormal: enabled ? Math.round(150 * durationMultiplier) : 0
+    readonly property int effectsSlow: enabled ? Math.round(220 * durationMultiplier) : 0
 
     // Low-amplitude press deformation: fast engagement, gently damped return.
     // Surface geometry and hit regions stay fixed while their visual item scales.
@@ -78,6 +88,7 @@ QtObject {
     }
 
     function resetToDeclared(): void {
+        resetDurationMultiplier();
         qmlPreferences.preferenceSource = "default";
         qmlPreferences.setValue("preferenceSource", "default");
         qmlPreferences.sync();

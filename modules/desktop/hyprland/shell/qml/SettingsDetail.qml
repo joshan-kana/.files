@@ -46,7 +46,7 @@ Item {
     readonly property bool hasBlur: ["windows", "glass"].includes(kind)
     readonly property bool reactiveTuning: kind === "reactive"
     readonly property bool spectrumTuning: kind === "spectrum"
-    readonly property bool hasReset: hasBlur || spectrumTuning || kind === "alerts" || kind === "nightLight" || kind === "power"
+    readonly property bool hasReset: hasBlur || spectrumTuning || kind === "alerts" || kind === "nightLight" || kind === "power" || ["bar", "frame", "motion"].includes(kind)
     readonly property string titleText: ({
             windows: "Window transparency",
             glass: "Frosted glass",
@@ -88,6 +88,12 @@ Item {
     }
     readonly property bool masterAvailable: kind !== "nightLight" || nightLight.supported && !nightLight.busy
     readonly property var parameters: {
+        if (kind === "bar")
+            return [{key: "barIslandHeight", title: "Island height", description: "Shared bar density", minimum: 44, maximum: 60, step: 2, suffix: " px"}];
+        if (kind === "frame")
+            return [{key: "frameThickness", title: "Frame thickness", description: "Shared edge geometry", minimum: 18, maximum: 36, step: 2, suffix: " px"}];
+        if (kind === "motion")
+            return [{key: "motionDuration", title: "Transition duration", description: "Shell transitions only; key-down remains immediate", minimum: 75, maximum: 150, step: 5, suffix: "%"}];
         if (kind === "windows")
             return [
                 {
@@ -257,6 +263,10 @@ Item {
     }
 
     function currentValue(key: string): real {
+        if (key === "barIslandHeight" || key === "frameThickness")
+            return appearance[key];
+        if (key === "motionDuration")
+            return Math.round(motion.durationMultiplier * 100);
         if (key.startsWith("musicReactive") || key === "wallpaperSpectrumOpacity")
             return Math.round(appearance[key] * 100);
         if (key === "windowOpacity")
@@ -281,7 +291,11 @@ Item {
     }
 
     function setValue(key: string, value: real): void {
-        if (key.startsWith("musicReactive") || key === "wallpaperSpectrumOpacity")
+        if (key === "barIslandHeight" || key === "frameThickness")
+            appearance.setGeometryPreference(key, value);
+        else if (key === "motionDuration")
+            motion.setDurationMultiplier(value / 100);
+        else if (key.startsWith("musicReactive") || key === "wallpaperSpectrumOpacity")
             appearance.setReactiveParameter(key, value / 100);
         else if (key === "windowOpacity")
             appearance.setWindowOpacity(value / 100);
@@ -341,6 +355,14 @@ Item {
     }
 
     function resetAppearance(): void {
+        if (kind === "bar" || kind === "frame") {
+            appearance.clearOverride(kind === "bar" ? "barIslandHeight" : "frameThickness");
+            return;
+        }
+        if (kind === "motion") {
+            motion.resetDurationMultiplier();
+            return;
+        }
         if (kind === "power") {
             powerProfile.resetPolicy();
             return;
@@ -585,6 +607,20 @@ Item {
                 enabled: panel.masterAvailable
                 onActivated: panel.toggleMaster()
             }
+        }
+
+        ShellAction {
+            visible: ["bar", "frame", "motion"].includes(panel.kind)
+            width: parent.width
+            height: visible ? 40 : 0
+            runtime: panel.runtime
+            theme: panel.theme
+            motion: panel.motion
+            compact: true
+            horizontalCompact: true
+            title: "Restore parameter default"
+            shortcut: panel.runtime.shellHint("SettingsDetail.reset")
+            onActivated: panel.resetAppearance()
         }
 
         Row {

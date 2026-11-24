@@ -24,6 +24,8 @@ QtObject {
         property real musicReactiveIntensity: appearance.runtime.appearanceDefaults.musicReactiveIntensity
         property string musicReactiveEmphasis: appearance.runtime.appearanceDefaults.musicReactiveEmphasis
         property real wallpaperSpectrumOpacity: appearance.runtime.appearanceDefaults.wallpaperSpectrumOpacity
+        property int barIslandHeight: appearance.runtime.appearanceDefaults.barIslandHeight
+        property int frameThickness: appearance.runtime.appearanceDefaults.frameThickness
         property bool barVisible: appearance.runtime.appearanceDefaults.barVisible
         property bool frameVisible: appearance.runtime.appearanceDefaults.frameVisible
         property bool windowTransparencyEnabled: appearance.runtime.appearanceDefaults.windowTransparencyEnabled
@@ -68,6 +70,15 @@ QtObject {
         if (Math.abs(musicReactiveSensitivity - 1.6) <= 0.005 && Math.abs(musicReactiveAttack - 1.6) <= 0.005 && Math.abs(musicReactiveRelease - 0.75) <= 0.005 && Math.abs(musicReactiveSmoothing - 0.2) <= 0.005 && Math.abs(musicReactiveIntensity - 1.5) <= 0.005 && musicReactiveEmphasis === "bass")
             return "Energetic";
         return "Custom";
+    }
+    readonly property int barIslandHeight: Math.max(44, Math.min(60, effective("barIslandHeight")))
+    readonly property int frameThickness: Math.max(18, Math.min(36, effective("frameThickness")))
+    function setGeometryPreference(key: string, value: real): void {
+        const bounds = key === "barIslandHeight" ? [44, 60] : key === "frameThickness" ? [18, 36] : null;
+        if (bounds && Number.isFinite(value)) {
+            storeOverride(key, Math.round(Math.max(bounds[0], Math.min(bounds[1], value))));
+            saved.sync();
+        }
     }
     readonly property bool barVisible: effective("barVisible")
     readonly property bool frameVisible: effective("frameVisible")

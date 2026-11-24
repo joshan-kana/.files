@@ -221,11 +221,11 @@ test("capture confirmation uses Enter, never Space", () => {
   const source = qml("ScreenshotPicker.qml");
   assert.match(
     source,
-    /event\.key === picker\.runtime\.shellKeyCode\("capture", "Return"\) \|\| event\.key === picker\.runtime\.shellKeyCode\("capture", "Enter"\)\)\s*\{\s*picker\.capture\(""/,
+    /event\.key === picker\.runtime\.shellKeyCode\("capture", "Return"\) \|\| event\.key === picker\.runtime\.shellKeyCode\("capture", "Enter"\)\)\s*\{\s*if \(!event\.isAutoRepeat\)\s*picker\.capture\(""/,
   );
   assert.doesNotMatch(
     source,
-    /event\.key === picker\.runtime\.shellKeyCode\("capture", "Space"\)\)\s*\{\s*picker\.capture\(""/,
+    /event\.key === picker\.runtime\.shellKeyCode\("capture", "Space"\)\)\s*\{\s*if \(!event\.isAutoRepeat\)\s*picker\.capture\(""/,
   );
   assert.match(
     source,

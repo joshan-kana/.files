@@ -75,11 +75,11 @@ QtObject {
     readonly property int radiusLarge: 42
     readonly property int radiusPanel: 62
     // The visible islands are vertically centred inside the reserved bar.
-    readonly property int barIslandHeight: 50
+    property int barIslandHeight: 50
     readonly property int barInsetTop: 16
     readonly property int barInsetBottom: barInsetTop
     readonly property int barHeight: barIslandHeight + barInsetTop + barInsetBottom
-    readonly property int frameThickness: 26
+    property int frameThickness: 26
     // Use the same large squircle family as the rest of the shell. The
     // bigger panel radius made the monitor outline look excessively bulbous.
     readonly property int frameRounding: radiusLarge

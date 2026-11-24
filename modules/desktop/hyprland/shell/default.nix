@@ -404,6 +404,16 @@ in
           description = "Opacity of the existing wallpaper spectrum bars.";
         };
 
+        barIslandHeight = lib.mkOption {
+          type = lib.types.ints.between 44 60;
+          default = 50;
+          description = "Height of the desktop bar islands in logical pixels.";
+        };
+        frameThickness = lib.mkOption {
+          type = lib.types.ints.between 18 36;
+          default = 26;
+          description = "Desktop frame thickness in logical pixels.";
+        };
         barVisible = lib.mkOption {
           type = lib.types.bool;
           default = true;
@@ -745,6 +755,29 @@ in
     description = "Enable motion and animated transitions in the Hyprland desktop shell.";
   };
 
+  scopeOptions.shellMotionSpeed = lib.mkOption {
+    type = lib.types.numbers.between 0.75 1.5;
+    default = 1.0;
+    description = "Duration multiplier for animated shell transitions, independent of compositor animation rules.";
+  };
+
+  scopeOptions.resourceSampling = lib.mkOption {
+    type = lib.types.submodule {
+      options = {
+        intervalSeconds = lib.mkOption {
+          type = lib.types.enum [ 1 2 5 ];
+          default = 2;
+        };
+        historyLength = lib.mkOption {
+          type = lib.types.enum [ 30 60 120 ];
+          default = 30;
+        };
+      };
+    };
+    default = { };
+    description = "Visible resource dashboard sampling interval and bounded history length.";
+  };
+
   scopeOptions.restoreWindowsOnExit = lib.mkOption {
     type = lib.types.bool;
     default = false;
@@ -972,6 +1005,8 @@ in
 
         accessibility.textScale = scopeConfig.textScale;
         motion.animationsEnabled = scopeConfig.animationsEnabled;
+        motion.durationMultiplier = scopeConfig.shellMotionSpeed;
+        resourceSampling = scopeConfig.resourceSampling;
         session.restoreWindowsOnExit = scopeConfig.restoreWindowsOnExit;
         palette = {
           inherit (scopeConfig) quicklinks;

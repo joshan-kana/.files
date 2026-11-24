@@ -571,7 +571,7 @@ FocusScope {
         if (!engaged)
             return;
 
-        if (["windows", "glass", "nightLight", "alerts", "stay", "power", "reactive", "spectrum"].includes(requestedView))
+        if (["windows", "glass", "nightLight", "alerts", "stay", "power", "reactive", "spectrum", "bar", "frame", "motion"].includes(requestedView))
             openSetting(requestedView);
         else if (requestedView === "vhs")
             openVhs();
@@ -1407,6 +1407,9 @@ FocusScope {
                             icon: "󰀻"
                             title: root.barVisible ? "Bar visible" : "Bar hidden"
                             shortcut: root.runtime.shellHint("SystemContent.bar")
+                            detailShortcut: root.runtime.shellHint("SystemContent.barDetails")
+                            detailName: "Bar settings"
+                            onDetailsRequested: root.openSetting("bar")
                             active: root.barVisible
                             activeColor: root.theme.roleColor("positive")
                             onActivated: root.barToggleRequested()
@@ -1420,6 +1423,9 @@ FocusScope {
                             icon: root.frameVisible ? "󰏗" : "󰏖"
                             title: root.frameVisible ? "Frame visible" : "Frame hidden"
                             shortcut: root.runtime.shellHint("SystemContent.frame")
+                            detailShortcut: root.runtime.shellHint("SystemContent.frameDetails")
+                            detailName: "Frame settings"
+                            onDetailsRequested: root.openSetting("frame")
                             active: root.frameVisible
                             activeColor: root.theme.roleColor("display")
                             onActivated: root.frameToggleRequested()
@@ -1434,6 +1440,9 @@ FocusScope {
                             icon: root.motion.enabled ? "󰐊" : "󰏤"
                             title: root.motion.enabled ? "Animations" : "Reduced motion"
                             shortcut: root.runtime.shellHint("SystemContent.motion")
+                            detailShortcut: root.runtime.shellHint("SystemContent.motionDetails")
+                            detailName: "Motion settings"
+                            onDetailsRequested: root.openSetting("motion")
                             active: root.motion.enabled
                             activeColor: root.theme.roleColor("display")
                             onActivated: root.motion.toggle()
@@ -2059,11 +2068,7 @@ FocusScope {
                     if (event.key === root.runtime.shellKeyCode("controls", "Backspace")) {
                         root.backFromDetail();
                         event.accepted = true;
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "C")) {
-                        resourcesPanel.invoke("toggleCoreView");
-                        event.accepted = true;
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "R")) {
-                        root.resourceState.refresh();
+                    } else if (resourcesPanel.invoke("handleKey", event.key, event.modifiers, event.isAutoRepeat)) {
                         event.accepted = true;
                     }
                     return;
@@ -2375,10 +2380,16 @@ FocusScope {
                     root.windowTransparencyToggleRequested();
                 } else if (root.runtime.shellMatchesHint("SystemContent.shellGlass", event.key, event.modifiers)) {
                     root.shellGlassToggleRequested();
+                } else if (root.runtime.shellMatchesHint("SystemContent.barDetails", event.key, event.modifiers)) {
+                    root.openSetting("bar");
                 } else if (root.runtime.shellMatchesHint("SystemContent.bar", event.key, event.modifiers)) {
                     root.barToggleRequested();
+                } else if (root.runtime.shellMatchesHint("SystemContent.frameDetails", event.key, event.modifiers)) {
+                    root.openSetting("frame");
                 } else if (root.runtime.shellMatchesHint("SystemContent.frame", event.key, event.modifiers)) {
                     root.frameToggleRequested();
+                } else if (root.runtime.shellMatchesHint("SystemContent.motionDetails", event.key, event.modifiers)) {
+                    root.openSetting("motion");
                 } else if (shifted && event.key === root.runtime.shellKeyCode("controls", "E")) {
                     root.motion.toggle();
                 } else if (root.runtime.shellMatchesHint("AudioMixerContent.open", event.key, event.modifiers)) {

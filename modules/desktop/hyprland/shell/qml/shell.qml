@@ -74,6 +74,8 @@ ShellRoot {
         musicReactiveEnabled: root.musicReactiveSurfaceVisible
         shellGlassEnabled: qmlAppearance.shellGlassEnabled
         glassOpacity: qmlAppearance.glassOpacity
+        barIslandHeight: qmlAppearance.barIslandHeight
+        frameThickness: qmlAppearance.frameThickness
         musicReactiveEnergy: reactive.sustain
         musicReactiveBeat: reactive.beatPulse
         musicReactiveIntensity: qmlAppearance.musicReactiveIntensity

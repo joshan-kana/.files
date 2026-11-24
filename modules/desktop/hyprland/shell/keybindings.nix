@@ -94,6 +94,9 @@
     "SystemContent.nightLightDetails" = "ALT+T";
     "SystemContent.wallpaperSpectrumDetails" = "ALT+SHIFT+F";
     "SystemContent.musicReactiveDetails" = "ALT+SHIFT+G";
+    "SystemContent.barDetails" = "ALT+SHIFT+A";
+    "SystemContent.frameDetails" = "ALT+SHIFT+S";
+    "SystemContent.motionDetails" = "ALT+SHIFT+E";
 
   };
 
@@ -204,6 +207,11 @@
           "RecordingLibrary.refresh" = "R";
           "RecordingLibrary.word" = "NAV_HORIZONTAL";
           "ResourceDashboard.refresh" = "R";
+          "ResourceDashboard.interval" = "I";
+          "ResourceDashboard.history" = "H";
+          "ResourceDashboard.processes" = "P";
+          "ResourceDashboard.sort" = "S";
+          "ResourceDashboard.defaults" = "D";
           "ResourceDashboard.toggleCores" = "C";
           "SessionPanel.confirm" = "ENTER";
           "SessionPanel.lock" = "Q";

@@ -73,6 +73,8 @@ QtObject {
     readonly property var roleColors: root.themeAdapter.roles
 
     readonly property real textScale: root.configData.accessibility.textScale
+    readonly property real motionDurationMultiplier: root.configData.motion.durationMultiplier
+    readonly property var resourceSampling: root.configData.resourceSampling
     readonly property bool animationsEnabled: root.configData.motion.animationsEnabled
     readonly property bool restoreWindowsOnExit: root.configData.session.restoreWindowsOnExit
     readonly property real panelOpacity: root.themeAdapter.visual.panelOpacity
@@ -239,6 +241,12 @@ QtObject {
 
             property JsonObject motion: JsonObject {
                 property bool animationsEnabled: true
+                property real durationMultiplier: 1.0
+            }
+
+            property JsonObject resourceSampling: JsonObject {
+                property int intervalSeconds: 2
+                property int historyLength: 30
             }
 
             property JsonObject session: JsonObject {
@@ -263,6 +271,8 @@ QtObject {
                 property real musicReactiveIntensity: 1.0
                 property string musicReactiveEmphasis: "balanced"
                 property real wallpaperSpectrumOpacity: 0.8
+                property int barIslandHeight: 50
+                property int frameThickness: 26
                 property bool barVisible: true
                 property bool frameVisible: true
                 property bool windowTransparencyEnabled: false

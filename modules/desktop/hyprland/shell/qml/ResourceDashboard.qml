@@ -11,14 +11,50 @@ Item {
 
     property bool open: false
     property bool showCores: false
+    property bool showProcesses: false
+    onShowProcessesChanged: resourceState.showProcesses = open && showProcesses
+    onOpenChanged: resourceState.showProcesses = open && showProcesses
     function toggleCoreView(): void {
+        showProcesses = false;
         showCores = !showCores;
     }
     visible: open
-    implicitHeight: 882
+    implicitHeight: layout.implicitHeight
 
     signal keyboardRequested
 
+    function activateAction(action: string): void {
+        switch (action) {
+        case "ResourceDashboard.refresh": resourceState.refresh(); break;
+        case "ResourceDashboard.interval": resourceState.cycleInterval(); break;
+        case "ResourceDashboard.history": resourceState.cycleHistory(); break;
+        case "ResourceDashboard.processes":
+            showCores = false;
+            showProcesses = !showProcesses;
+            break;
+        case "ResourceDashboard.sort":
+            if (showProcesses)
+                resourceState.sortByMemory = !resourceState.sortByMemory;
+            break;
+        case "ResourceDashboard.defaults": resourceState.resetSampling(); break;
+        }
+    }
+    function handleKey(key: int, modifiers: int, autoRepeat: bool): bool {
+        for (const action of ["refresh", "interval", "history", "processes", "sort", "defaults"]) {
+            const id = "ResourceDashboard." + action;
+            if (runtime.shellMatchesHint(id, key, modifiers)) {
+                if (!autoRepeat)
+                    activateAction(id);
+                return true;
+            }
+        }
+        if (runtime.shellMatchesHint("ResourceDashboard.toggleCores", key, modifiers)) {
+            if (!autoRepeat)
+                toggleCoreView();
+            return true;
+        }
+        return false;
+    }
     function openView(): void {
         open = true;
         keyboardRequested();
@@ -29,6 +65,7 @@ Item {
     }
 
     Column {
+        id: layout
         width: parent.width
         spacing: panel.theme.spacing3
 
@@ -42,7 +79,7 @@ Item {
             glyphColor: panel.theme.roleColor("resources")
             eyebrow: "Performance / live"
             title: "Resources"
-            detail: "CPU · Memory · GPU · Temperature · Network · Disk · Last " + panel.resourceState.historyLength * 2 + "s"
+            detail: "CPU · Memory · GPU · Temperature · Network · Disk · Last " + panel.resourceState.historySeconds + "s"
         }
 
         Row {
@@ -255,7 +292,7 @@ Item {
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         width: Math.max(1, parent.width - viewToggle.width - parent.spacing)
-                        text: panel.showCores ? "LOGICAL CORES · " + panel.resourceState.coreUsage.length + " ACTIVE COUNTERS" : "RESOURCE HISTORY · LAST " + panel.resourceState.historyLength * 2 + "s"
+                        text: panel.showProcesses ? (panel.resourceState.sortByMemory ? "TOP PROCESSES · MEMORY" : "TOP PROCESSES · CPU") : panel.showCores ? "LOGICAL CORES · " + panel.resourceState.coreUsage.length + " ACTIVE COUNTERS" : "RESOURCE HISTORY · LAST " + panel.resourceState.historySeconds + "s"
                         color: panel.theme.textStrong
                         font.family: panel.runtime.fontSans
                         font.pixelSize: panel.theme.fontSize(10)
@@ -280,7 +317,7 @@ Item {
                 }
 
                 Column {
-                    visible: !panel.showCores
+                    visible: !panel.showCores && !panel.showProcesses
                     width: parent.width
                     spacing: panel.theme.spacing2
                     Repeater {
@@ -299,6 +336,59 @@ Item {
                             currentText: index === 0 ? Math.round(panel.resourceState.cpuPercent * 100) + "%" : index === 1 ? Math.round(panel.resourceState.memoryPercent * 100) + "%" : panel.resourceState.speedString(panel.resourceState.networkDownload + panel.resourceState.networkUpload)
                             sampleLimit: panel.resourceState.historyLength
                         }
+                    }
+                }
+
+                Column {
+                    visible: panel.showProcesses
+                    width: parent.width
+                    spacing: 3
+                    ShellText {
+                        width: parent.width
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        text: "PID         PROCESS                                      CPU         MEM"
+                        color: panel.theme.textMuted
+                    }
+                    Repeater {
+                        model: panel.showProcesses ? panel.resourceState.processes : []
+                        delegate: Row {
+                            required property var modelData
+                            width: parent.width
+                            spacing: panel.theme.spacing2
+                            ShellText {
+                                width: 80
+                                runtime: panel.runtime
+                                theme: panel.theme
+                                text: modelData.pid
+                            }
+                            ShellText {
+                                width: Math.max(1, parent.width - 260)
+                                runtime: panel.runtime
+                                theme: panel.theme
+                                text: modelData.name
+                                elide: Text.ElideRight
+                            }
+                            ShellText {
+                                width: 75
+                                runtime: panel.runtime
+                                theme: panel.theme
+                                text: modelData.cpu.toFixed(1) + "%"
+                            }
+                            ShellText {
+                                width: 75
+                                runtime: panel.runtime
+                                theme: panel.theme
+                                text: modelData.memory.toFixed(1) + "%"
+                            }
+                        }
+                    }
+                    ShellText {
+                        visible: !panel.resourceState.processesAvailable
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        text: "Sampling process counters…"
+                        color: panel.theme.textMuted
                     }
                 }
 
@@ -366,16 +456,34 @@ Item {
             }
         }
 
-        KeyHintStrip {
+        Row {
             width: parent.width
-            runtime: panel.runtime
-            theme: panel.theme
-            hints: [
-                {
-                    shortcut: panel.runtime.shellHint("ResourceDashboard.refresh"),
-                    label: "Refresh"
+            height: 40
+            spacing: panel.theme.spacing2
+            Repeater {
+                model: [
+                    {action: "ResourceDashboard.refresh", title: "Refresh"},
+                    {action: "ResourceDashboard.interval", title: panel.resourceState.intervalSeconds + "s sampling"},
+                    {action: "ResourceDashboard.history", title: panel.resourceState.historyLength + " samples"},
+                    {action: "ResourceDashboard.processes", title: panel.showProcesses ? "History" : "Processes"},
+                    {action: "ResourceDashboard.sort", title: panel.resourceState.sortByMemory ? "Sort: memory" : "Sort: CPU"},
+                    {action: "ResourceDashboard.defaults", title: "Defaults"}
+                ]
+                delegate: ShellAction {
+                    required property var modelData
+                    width: (panel.width - 5 * panel.theme.spacing2) / 6
+                    height: 40
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    motion: panel.motion
+                    compact: true
+                    horizontalCompact: true
+                    title: modelData.title
+                    shortcut: panel.runtime.shellHint(modelData.action)
+                    enabled: modelData.action !== "ResourceDashboard.sort" || panel.showProcesses
+                    onActivated: panel.activateAction(modelData.action)
                 }
-            ]
+            }
         }
     }
 }
