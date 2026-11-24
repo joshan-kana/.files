@@ -931,7 +931,8 @@ test("the hub's content reveal follows its surface without leaving visible clipp
     qml,
     /return host\.chromeOpacity \* Math\.max\(0, Math\.min\(1,/,
   );
-  for (const id of ["tabs", "hubFooter", "contentViewport"]) {
+  assert.match(qml, /id: tabs[\s\S]*?opacity: shellSurface\.headerReveal/);
+  for (const id of ["hubFooter", "contentViewport"]) {
     assert.match(
       qml,
       new RegExp(

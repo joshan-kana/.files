@@ -825,6 +825,15 @@ PanelWindow {
             }
         }
 
+        // Header chrome follows the live silhouette, not the destination
+        // page. Once enough room exists it remains visible during page morphs.
+        readonly property real headerReveal: {
+            const minimumWidth = Math.max(1, Math.min(host.viewportWidth, 600 + host.theme.spacing4 * 2));
+            const minimumHeight = tabs.implicitHeight + host.theme.spacing3 * 2;
+            const fraction = Math.min(width / minimumWidth, height / minimumHeight);
+            return host.chromeOpacity * Math.max(0, Math.min(1, (fraction - 0.68) / 0.30));
+        }
+
         // The prewarmed page grows with the viewport, including Themes and
         // Wallpaper. Do not wait until the outer squircle is nearly full size.
         readonly property real contentReveal: {
@@ -853,13 +862,15 @@ PanelWindow {
                 // Keep Back and Help clickable while contextual help overlays
                 // the content; inactive tabs do not intercept modal actions.
                 z: 250
-                opacity: shellSurface.contentReveal
+                opacity: shellSurface.headerReveal
+                visible: opacity > 0.01
+                enabled: host.contentExpanded && opacity > 0.5
+                // Compensate for the destination-sized parent. Both outer
+                // buttons and the tab track follow the live morph each frame.
+                x: shellSurface.x - contentFrame.x + host.theme.spacing4
+                width: Math.max(0, shellSurface.width - host.theme.spacing4 * 2)
                 anchors {
-                    left: parent.left
-                    right: parent.right
                     top: parent.top
-                    leftMargin: host.theme.spacing4
-                    rightMargin: host.theme.spacing4
                     topMargin: host.theme.spacing3
                 }
                 runtime: host.runtime

@@ -33,7 +33,7 @@ Item {
 
     ShellSurface {
         id: track
-        width: parent.width - backButton.width - helpButton.width - root.theme.spacing2 * 2
+        width: Math.max(0, parent.width - backButton.width - helpButton.width - root.theme.spacing2 * 2)
         height: 42
         anchors.left: backButton.right
         anchors.leftMargin: root.theme.spacing2
@@ -45,9 +45,9 @@ Item {
 
         SquircleSurface {
             id: slidingSelection
-            x: root.theme.spacing1 + (track.width - 2 * root.theme.spacing1) / 3 * root.animatedIndex
+            x: root.theme.spacing1 + width * root.animatedIndex
             y: root.theme.spacing1
-            width: (track.width - 2 * root.theme.spacing1) / 3
+            width: Math.max(0, track.width - 2 * root.theme.spacing1) / 3
             height: track.height - 2 * root.theme.spacing1
             exponent: root.theme.squircleExponent
             cornerRadius: root.theme.radiusLarge

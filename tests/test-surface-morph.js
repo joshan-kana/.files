@@ -20,7 +20,7 @@ test("all hub views reveal progressively while geometry expands", () => {
     /const fraction = Math\.min\(width \/ Math\.max\(1, host\.closing \? host\.closeLayoutWidth : host\.contentWidth\), height \/ Math\.max\(1, host\.closing \? host\.closeLayoutHeight : host\.contentHeight\)\)/,
   );
   assert.match(qml, /\(fraction - 0\.68\) \/ 0\.30/);
-  for (const id of ["tabs", "hubFooter", "contentViewport"])
+  for (const id of ["hubFooter", "contentViewport"])
     assert.match(
       qml,
       new RegExp(
@@ -93,5 +93,34 @@ test("host flickable never steals hover/scroll gestures from nested views", () =
   assert.match(
     qml,
     /readonly property bool hostPageShortcutsEnabled: expansionState\.hasCurrent/,
+  );
+});
+
+test("hub header follows live painted width independently of the destination layout and remains visible across page morphs", () => {
+  assert.match(qml, /id: tabs[\s\S]*?opacity: shellSurface\.headerReveal/);
+  assert.match(
+    qml,
+    /x: shellSurface\.x - contentFrame\.x \+ host\.theme\.spacing4/,
+  );
+  assert.match(
+    qml,
+    /width: Math\.max\(0, shellSurface\.width - host\.theme\.spacing4 \* 2\)/,
+  );
+  const reveal = qml.match(
+    /readonly property real headerReveal: \{([\s\S]*?)\n        \}/,
+  )[1];
+  assert.match(reveal, /host\.chromeOpacity/);
+  assert.doesNotMatch(reveal, /contentWidth|contentHeight|contentLayoutWidth/);
+  const tabs = fs.readFileSync(
+    path.join(__dirname, "../modules/desktop/hyprland/shell/qml/HubTabs.qml"),
+    "utf8",
+  );
+  assert.match(
+    tabs,
+    /width: Math\.max\(0, parent\.width - backButton\.width - helpButton\.width/,
+  );
+  assert.match(
+    tabs,
+    /x: root\.theme\.spacing1 \+ width \* root\.animatedIndex/,
   );
 });
