@@ -73,7 +73,8 @@ List modes:
   Override startup mode with NIX_OPTIONS_FZF_LIST_MODE=flat or grouped.
 
 Hosts:
-  Hosts are discovered from the flake configuration outputs.
+  Hosts are discovered from the flake configuration outputs and refreshed
+  when repository state changes.
   Aliases are derived from host names. Run:
     ${cmd_name} --hosts
 
@@ -103,7 +104,7 @@ nix_bin="${NIX_BIN:-nix}"
 repo_cache_key="$(printf '%s\0' "$repo" | sha256sum | awk '{print substr($1, 1, 16)}')"
 cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles-options/$repo_cache_key"
 preview_script="$cache_dir/preview-option"
-hosts_cache="$cache_dir/hosts-v3.json"
+hosts_cache="$cache_dir/hosts-v4.json"
 value_cache_dir="$cache_dir/values-v3"
 mkdir -p "$cache_dir" "$value_cache_dir"
 
@@ -185,16 +186,36 @@ definition_items_name=""
 definition_item_name=""
 definition_item_value=""
 
-list_hosts() {
-  local tmp
+repo_state_hash() {
+  # Stable cache fingerprint:
+  # - HEAD identifies the committed base.
+  # - staged/unstaged diffs identify dirty tracked content.
+  # - untracked file hashes identify dirty untracked content.
+  # This is slower than mtime checks but stable across repeated cache reads.
+  {
+    git -C "$repo" rev-parse HEAD 2>/dev/null || true
+    git -C "$repo" diff --no-ext-diff --binary 2>/dev/null || true
+    git -C "$repo" diff --cached --no-ext-diff --binary 2>/dev/null || true
 
-  if [ ! -s "$hosts_cache" ]; then
+    while IFS= read -r -d '' f; do
+      [ -f "$repo/$f" ] || continue
+      printf 'UNTRACKED:%s
+' "$f"
+      sha256sum "$repo/$f" 2>/dev/null || true
+    done < <(git -C "$repo" ls-files --others --exclude-standard -z 2>/dev/null || true)
+  } | sha256sum | awk '{print $1}'
+}
+
+list_hosts() {
+  local tmp state flake_literal scope_lib_literal
+
+  state="$(repo_state_hash)"
+  if ! jq -e --arg state "$state" '.state == $state and (.hosts | type == "array")' "$hosts_cache" >/dev/null 2>&1; then
     tmp="$hosts_cache.tmp.$$"
-    local flake_literal
-    local scope_lib_literal
     flake_literal="$(jq -Rn --arg s "$flake" '$s')"
     scope_lib_literal="$(jq -Rn --arg s "$repo/scripts/nix-options-scopes.nix" '$s')"
-    if "$nix_bin" eval --impure --json --expr "let scopes = import (builtins.toPath $scope_lib_literal) { flakeRef = $flake_literal; }; in scopes.hosts" >"$tmp"; then
+    if "$nix_bin" eval --impure --json --expr "let scopes = import (builtins.toPath $scope_lib_literal) { flakeRef = $flake_literal; }; in scopes.hosts" |
+      jq -e --arg state "$state" 'if type == "array" and all(.[]; type == "string") then {state: $state, hosts: .} else error("Invalid host inventory") end' >"$tmp"; then
       mv "$tmp" "$hosts_cache"
     else
       rm -f "$tmp"
@@ -202,7 +223,7 @@ list_hosts() {
     fi
   fi
 
-  jq -r '.[]' "$hosts_cache"
+  jq -r '.hosts[]' "$hosts_cache"
 }
 
 host_aliases() {
@@ -238,8 +259,10 @@ resolve_host_arg() {
   local alias
   local matches=""
   local count=0
+  local hosts
 
-  if list_hosts | grep -Fxq -- "$arg"; then
+  hosts="$(list_hosts)" || return 2
+  if grep -Fxq -- "$arg" <<<"$hosts"; then
     printf '%s\n' "$arg"
     return 0
   fi
@@ -260,7 +283,7 @@ $h
         esac
       fi
     done < <(host_aliases "$h")
-  done < <(list_hosts)
+  done <<<"$hosts"
 
   if [ "$count" -eq 1 ]; then
     printf '%s' "$matches" | sed '/^$/d'
@@ -277,11 +300,12 @@ $h
 }
 
 show_host_table() {
-  local h
+  local h hosts
+  hosts="$(list_hosts)" || return 1
   while IFS= read -r h; do
     printf '%s\taliases: ' "$h"
     host_aliases "$h" | awk '!seen[$0]++ { if (out != "") out = out ", " $0; else out = $0 } END { print out }'
-  done < <(list_hosts)
+  done <<<"$hosts"
 }
 
 while [ "$#" -gt 0 ]; do
@@ -466,6 +490,11 @@ if [ "$refresh_all" -eq 0 ]; then
     fi
   elif [ -s "$default_host_file" ]; then
     host="$(cat "$default_host_file")"
+    remembered_hosts="$(list_hosts)"
+    if ! grep -Fxq -- "$host" <<<"$remembered_hosts"; then
+      echo "ERROR: remembered host no longer exists: $host. Choose a host from --hosts." >&2
+      exit 2
+    fi
   else
     cat >&2 <<EOF
 ERROR: no default host remembered for this repo yet.
@@ -481,7 +510,8 @@ EOF
     exit 2
   fi
 else
-  host="${host:-$(list_hosts | head -n 1)}"
+  refresh_hosts="$(list_hosts)"
+  host="${host:-$(head -n 1 <<<"$refresh_hosts")}"
 fi
 
 cache="$cache_dir/option-scopes-v3-$host.json"
@@ -494,26 +524,6 @@ nix_string() {
 path_to_nix_list() {
   local dotted="$1"
   jq -Rrn --arg s "$dotted" '$s | split(".") | map(@json) | "[ " + join(" ") + " ]"'
-}
-
-repo_state_hash() {
-  # Stable cache fingerprint:
-  # - HEAD identifies the committed base.
-  # - staged/unstaged diffs identify dirty tracked content.
-  # - untracked file hashes identify dirty untracked content.
-  # This is slower than mtime checks but stable across repeated cache reads.
-  {
-    git -C "$repo" rev-parse HEAD 2>/dev/null || true
-    git -C "$repo" diff --no-ext-diff --binary 2>/dev/null || true
-    git -C "$repo" diff --cached --no-ext-diff --binary 2>/dev/null || true
-
-    while IFS= read -r -d '' f; do
-      [ -f "$repo/$f" ] || continue
-      printf 'UNTRACKED:%s
-' "$f"
-      sha256sum "$repo/$f" 2>/dev/null || true
-    done < <(git -C "$repo" ls-files --others --exclude-standard -z 2>/dev/null || true)
-  } | sha256sum | awk '{print $1}'
 }
 
 value_cache_file() {
@@ -1839,8 +1849,9 @@ search_value_items() {
 
 if [ "$refresh_all" -eq 1 ]; then
   while IFS= read -r h; do
+    [ -n "$h" ] || continue
     build_cache "$h"
-  done < <(list_hosts)
+  done <<<"$refresh_hosts"
   exit 0
 fi
 
