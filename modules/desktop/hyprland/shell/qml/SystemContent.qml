@@ -41,6 +41,9 @@ FocusScope {
     property bool engaged: false
     property bool mixerOpen: false
     property real dashboardWidthBudget: theme.controlsDetailWidth
+    property real detailWidthLimit: theme.controlsDetailWidth
+    readonly property real detailLayoutWidth: Math.max(1, Math.min(detailWidthLimit, theme.controlsDetailWidth))
+    readonly property bool detailTransitioning: detailsVisible ? content.opacity > 0.01 : content.opacity < 0.99
     readonly property int dashboardTileHeight: 72
     // Connectivity keeps its three readback lines readable at larger
     // text scales without shortening icons or truncating the last row.
@@ -878,7 +881,11 @@ FocusScope {
 
         Column {
             id: content
-            width: parent.width
+            // Keep the outgoing dashboard's grid at its own destination
+            // size. The host clips it against the animated silhouette.
+            width: root.dashboardWidthBudget
+            x: (parent.width - width) / 2
+            visible: !root.detailsVisible || opacity > 0.01
             enabled: !root.detailsVisible
             opacity: root.detailsVisible ? 0 : 1
             Behavior on opacity {
@@ -1686,9 +1693,19 @@ FocusScope {
 
         Item {
             id: statusPanel
-            anchors.fill: parent
+            width: root.detailLayoutWidth
+            x: (parent.width - width) / 2
+            height: implicitHeight
             property bool open: false
-            visible: open
+            opacity: open ? 1 : 0
+            visible: open || opacity > 0.01
+            enabled: open
+            Behavior on opacity {
+                Anim {
+                    motion: root.motion
+                    type: Anim.FastEffects
+                }
+            }
             implicitWidth: statusContent.implicitWidth
             implicitHeight: statusContent.implicitHeight
             function openView(): void {
@@ -1717,8 +1734,10 @@ FocusScope {
         DeferredDetail {
             id: mixerView
             motion: root.motion
-            anchors.fill: parent
-            visible: root.mixerOpen
+            width: root.detailLayoutWidth
+            x: (parent.width - width) / 2
+            height: Math.max(1, implicitHeight)
+            requested: root.mixerOpen
             sourceComponent: Component {
                 AudioMixerContent {
                     active: root.engaged && root.mixerOpen
@@ -1735,7 +1754,9 @@ FocusScope {
         DeferredDetail {
             id: recordingsPanel
             motion: root.motion
-            anchors.fill: parent
+            width: root.detailLayoutWidth
+            x: (parent.width - width) / 2
+            height: Math.max(1, implicitHeight)
             sourceComponent: Component {
                 RecordingLibrary {
                     runtime: root.runtime
@@ -1749,7 +1770,9 @@ FocusScope {
         DeferredDetail {
             id: resourcesPanel
             motion: root.motion
-            anchors.fill: parent
+            width: root.detailLayoutWidth
+            x: (parent.width - width) / 2
+            height: Math.max(1, implicitHeight)
             sourceComponent: Component {
                 ResourceDashboard {
                     runtime: root.runtime
@@ -1764,7 +1787,9 @@ FocusScope {
         DeferredDetail {
             id: networkPanel
             motion: root.motion
-            anchors.fill: parent
+            width: root.detailLayoutWidth
+            x: (parent.width - width) / 2
+            height: Math.max(1, implicitHeight)
             sourceComponent: Component {
                 NetworkPanel {
                     system: root.system
@@ -1779,7 +1804,9 @@ FocusScope {
         DeferredDetail {
             id: bluetoothPanel
             motion: root.motion
-            anchors.fill: parent
+            width: root.detailLayoutWidth
+            x: (parent.width - width) / 2
+            height: Math.max(1, implicitHeight)
             sourceComponent: Component {
                 BluetoothPanel {
                     system: root.system
@@ -1794,7 +1821,9 @@ FocusScope {
         DeferredDetail {
             id: wallpaperPanel
             motion: root.motion
-            anchors.fill: parent
+            width: root.detailLayoutWidth
+            x: (parent.width - width) / 2
+            height: Math.max(1, implicitHeight)
             sourceComponent: Component {
                 WallpaperPanel {
                     appearance: root.appearance
@@ -1809,7 +1838,9 @@ FocusScope {
         DeferredDetail {
             id: settingsPanel
             motion: root.motion
-            anchors.fill: parent
+            width: root.detailLayoutWidth
+            x: (parent.width - width) / 2
+            height: Math.max(1, implicitHeight)
             sourceComponent: Component {
                 SettingsDetail {
                     kind: root.settingKind
@@ -1839,7 +1870,9 @@ FocusScope {
         DeferredDetail {
             id: vhsPanel
             motion: root.motion
-            anchors.fill: parent
+            width: root.detailLayoutWidth
+            x: (parent.width - width) / 2
+            height: Math.max(1, implicitHeight)
             sourceComponent: Component {
                 VhsPanel {
                     runtime: root.runtime
@@ -1854,7 +1887,9 @@ FocusScope {
         DeferredDetail {
             id: themePanel
             motion: root.motion
-            anchors.fill: parent
+            width: root.detailLayoutWidth
+            x: (parent.width - width) / 2
+            height: Math.max(1, implicitHeight)
             sourceComponent: Component {
                 ThemePanel {
                     runtime: root.runtime
@@ -1871,7 +1906,9 @@ FocusScope {
         DeferredDetail {
             id: sessionPanel
             motion: root.motion
-            anchors.fill: parent
+            width: Math.max(1, Math.min(root.detailWidthLimit, Math.max(600, implicitWidth)))
+            x: (parent.width - width) / 2
+            height: Math.max(1, implicitHeight)
             sourceComponent: Component {
                 SessionPanel {
                     runtime: root.runtime
@@ -1886,7 +1923,9 @@ FocusScope {
         DeferredDetail {
             id: trayMenu
             motion: root.motion
-            anchors.fill: parent
+            width: root.detailLayoutWidth
+            x: (parent.width - width) / 2
+            height: content.implicitHeight
             sourceComponent: Component {
                 TrayMenuView {
                     runtime: root.runtime

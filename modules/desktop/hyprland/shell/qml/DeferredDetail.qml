@@ -8,17 +8,18 @@ Loader {
     asynchronous: true
     active: true
     required property Motion motion
-    readonly property bool exposed: open || (panel && panel.open === undefined && visible)
+    property bool requested: false
+    readonly property bool exposed: open || requested
     opacity: exposed ? 1 : 0
-    transform: Translate {
-        y: detail.exposed ? 0 : -12
-        Behavior on y {
-            NumberAnimation {
-                duration: detail.motion.spatialFast
-                easing.type: detail.motion.spatialType
-                easing.bezierCurve: detail.motion.spatialCurve
-            }
-        }
+    visible: exposed || opacity > 0.01
+    enabled: exposed
+    // Retain the outgoing panel for the crossfade without keeping its
+    // controls active or applying an independent translation.
+    Binding {
+        target: detail.panel
+        property: "visible"
+        value: detail.visible
+        when: !!detail.panel && detail.panel.open !== undefined
     }
     Behavior on opacity {
         NumberAnimation {
@@ -31,7 +32,7 @@ Loader {
     readonly property var panel: item
     property bool pendingOpen: false
     property var pendingMenuItem: null
-    readonly property bool open: panel ? !!panel.open : pendingOpen
+    readonly property bool open: panel && panel.open !== undefined ? !!panel.open : pendingOpen
     readonly property bool operationRunning: !!(panel && panel.operationRunning)
     readonly property bool busy: !!(panel && panel.busy)
     readonly property bool editorRequestRunning: !!(panel && panel.editorRequestRunning)

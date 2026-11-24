@@ -996,3 +996,24 @@ test("compact detail cards still expose their primary open action using the shar
   assert.match(read("TileKeyHint.qml"), /top: parent\.top/);
   assert.match(read("ControlsMediaCard.qml"), /width: parent.width/);
 });
+
+test("detail transitions preserve source and destination layout during the crossfade", () => {
+  const controls = read("SystemContent.qml");
+  const host = read("ShellExpansionHost.qml");
+  const detail = read("DeferredDetail.qml");
+  assert.match(
+    controls,
+    /id: content[\s\S]*?width: root\.dashboardWidthBudget\s+x: \(parent\.width - width\) \/ 2/,
+  );
+  assert.match(
+    controls,
+    /id: settingsPanel[\s\S]*?width: root\.detailLayoutWidth\s+x: \(parent\.width - width\) \/ 2/,
+  );
+  assert.match(detail, /visible: exposed \|\| opacity > 0\.01/);
+  assert.match(detail, /enabled: exposed/);
+  assert.doesNotMatch(detail, /transform: Translate/);
+  assert.match(
+    host,
+    /clip: !host\.systemContent \|\| !host\.systemContent\.detailTransitioning/,
+  );
+});

@@ -349,7 +349,14 @@ PanelWindow {
     Binding {
         target: host.systemContent
         property: "dashboardWidthBudget"
-        value: host.controlsPreferredWidth
+        value: Math.max(1, Math.min(host.controlsPreferredWidth, host.viewportWidth - host.theme.spacing4 * 2))
+        when: !!host.systemContent
+    }
+
+    Binding {
+        target: host.systemContent
+        property: "detailWidthLimit"
+        value: Math.max(1, host.viewportWidth - host.theme.spacing4 * 2)
         when: !!host.systemContent
     }
 
@@ -988,7 +995,9 @@ PanelWindow {
                     // Every view clears the shared navigation footer by the same amount.
                     bottomMargin: host.theme.spacing3 + host.theme.spacing4
                 }
-                clip: true
+                // During a detail crossfade the outgoing grid retains its
+                // width; the outer ContentClipItem owns the moving contour.
+                clip: !host.systemContent || !host.systemContent.detailTransitioning
                 // Blur the viewport's own composited output. An offscreen copy
                 // drawn elsewhere changes the relative geometry of scaled and
                 // scrolling children, and can expose the hub's corner contour.
