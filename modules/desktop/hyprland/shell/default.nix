@@ -1461,6 +1461,32 @@ in
       };
     in
     {
+      # Hyprland draws and hit-tests lower order values above higher ones.
+      # Keep interactive shell surfaces above ordinary overlay clients regardless
+      # of map order, while preserving the priority of global modal dialogs.
+      wayland.windowManager.hyprland.settings.config.layer_rule = [
+        {
+          match.namespace = "^desktop-shell-expansion$";
+          order = -10;
+        }
+        {
+          match.namespace = "^desktop-shell-notification-popup$";
+          order = -15;
+        }
+        {
+          match.namespace = "^desktop-shell-modal$";
+          order = -20;
+        }
+        {
+          match.namespace = "^desktop-shell-capture$";
+          order = -30;
+        }
+        {
+          match.namespace = "^desktop-shell-authentication$";
+          order = -40;
+        }
+      ];
+
       services.awww.enable = true;
 
       home.packages = [
