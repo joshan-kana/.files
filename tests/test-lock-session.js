@@ -17,14 +17,8 @@ const actions = fs.readFileSync(path.join(root, "qml/Actions.qml"), "utf8");
 const qml = fs.readFileSync(path.join(root, "qml/lock.qml"), "utf8");
 
 test("lock launcher and desktop shell share the same native visuals import", () => {
-  const imports = nix.match(/export QML_IMPORT_PATH=[^\n]*/g) || [];
-  assert.equal(
-    imports.length,
-    3,
-    "desktop, development, and lock launcher must load the native module",
-  );
-  assert.equal(imports[0], imports[1]);
-  assert.equal(imports[1], imports[2]);
+  assert.match(nix, /shellEnvironment = ''[\s\S]*?export QML_IMPORT_PATH=/);
+  assert.equal((nix.match(/\$\{shellEnvironment\}/g) || []).length, 3);
   assert.match(nix, /lockServiceLauncher = pkgs\.writeShellApplication/);
   assert.match(
     nix,
