@@ -516,27 +516,33 @@ in
     description = "Default quiet notifications mode.";
   };
 
-  scopeOptions.notificationQuietHours = {
-    enabled = lib.mkOption {
-      type = lib.types.bool;
-      default = false;
-      description = "Enable scheduled quiet hours for ordinary notification popups.";
+  scopeOptions.notificationQuietHours = lib.mkOption {
+    type = lib.types.submodule {
+      options = {
+        enabled = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Enable scheduled quiet hours for ordinary notification popups.";
+        };
+        startMinute = lib.mkOption {
+          type = lib.types.ints.between 0 1439;
+          default = 1320;
+          description = "Local minute of day when quiet hours start.";
+        };
+        endMinute = lib.mkOption {
+          type = lib.types.ints.between 0 1439;
+          default = 420;
+          description = "Local minute of day when quiet hours end.";
+        };
+        days = lib.mkOption {
+          type = lib.types.ints.between 0 127;
+          default = 127;
+          description = "Quiet-hour start-day mask, Sunday in bit zero.";
+        };
+      };
     };
-    startMinute = lib.mkOption {
-      type = lib.types.ints.between 0 1439;
-      default = 1320;
-      description = "Local minute of day when quiet hours start.";
-    };
-    endMinute = lib.mkOption {
-      type = lib.types.ints.between 0 1439;
-      default = 420;
-      description = "Local minute of day when quiet hours end.";
-    };
-    days = lib.mkOption {
-      type = lib.types.ints.between 0 127;
-      default = 127;
-      description = "Quiet-hour start-day mask, Sunday in bit zero.";
-    };
+    default = { };
+    description = "Scheduled notification suppression defaults with per-field runtime overrides.";
   };
 
   scopeOptions.notificationsPresentation = lib.mkOption {
