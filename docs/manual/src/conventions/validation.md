@@ -4,7 +4,7 @@ Validate the behavioral effect of a change, not only the source syntax. Choose c
 
 ## Baseline
 
-Every pull request must pass the formatter, whitespace check, native flake checks, and cross-system evaluation on its final revision. Run both flake commands with remote builders disabled:
+Every pull request must pass the formatter, whitespace check, native flake checks, and cross-system evaluation on its final revision. For local validation, run both flake commands with remote builders disabled:
 
 ```sh
 nix fmt -- --ci
