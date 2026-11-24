@@ -58,7 +58,9 @@ in
   raycast =
     { pkgs, ... }:
     lib.optionalAttrs isDarwin {
-      home = _: { home.packages = [ pkgs.raycast ]; };
+      home = _: {
+        home.packages = [ pkgs.raycast ];
+      };
     };
 
   /**
@@ -72,7 +74,9 @@ in
   aldente =
     { pkgs, ... }:
     lib.optionalAttrs isDarwin {
-      home = _: { home.packages = [ pkgs.aldente ]; };
+      home = _: {
+        home.packages = [ pkgs.aldente ];
+      };
     };
 
   /**
@@ -81,7 +85,9 @@ in
   homerow =
     { pkgs, ... }:
     lib.optionalAttrs isDarwin {
-      home = _: { home.packages = [ pkgs.homerow ]; };
+      home = _: {
+        home.packages = [ pkgs.homerow ];
+      };
     };
 
   /**
@@ -90,7 +96,9 @@ in
   iceBar =
     { pkgs, ... }:
     lib.optionalAttrs isDarwin {
-      home = _: { home.packages = [ pkgs.ice-bar ]; };
+      home = _: {
+        home.packages = [ pkgs.ice-bar ];
+      };
     };
 
   /**
@@ -99,7 +107,9 @@ in
   linearmouse =
     { pkgs, ... }:
     lib.optionalAttrs isDarwin {
-      home = _: { home.packages = [ pkgs.linearmouse ]; };
+      home = _: {
+        home.packages = [ pkgs.linearmouse ];
+      };
     };
 
   /**

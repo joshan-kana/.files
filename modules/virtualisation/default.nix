@@ -39,7 +39,9 @@ in
   quickemu =
     _:
     lib.optionalAttrs isLinux {
-      home = _: { home.packages = [ pkgs.quickemu ]; };
+      home = _: {
+        home.packages = [ pkgs.quickemu ];
+      };
     };
 
   /**
@@ -48,7 +50,9 @@ in
   distrobox =
     _:
     lib.optionalAttrs isLinux {
-      home = _: { home.packages = [ pkgs.distrobox ]; };
+      home = _: {
+        home.packages = [ pkgs.distrobox ];
+      };
     };
 
   /**
@@ -57,7 +61,9 @@ in
   bottles =
     _:
     lib.optionalAttrs isLinux {
-      home = _: { home.packages = [ pkgs.bottles ]; };
+      home = _: {
+        home.packages = [ pkgs.bottles ];
+      };
     };
 
   /**

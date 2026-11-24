@@ -1,5 +1,4 @@
 { lib, system, ... }:
-
 {
   nixpkgs.overlays = lib.optionals (lib.systems.elaborate system).isLinux [
     (_final: prev: {

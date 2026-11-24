@@ -116,7 +116,6 @@ let
     OLLAMA_URL = dotfiles.services.ollama.url;
     NIXOS_REBUILD_FLAGS = dotfiles.rebuild.flags;
   };
-
 in
 {
   home = _: {
@@ -202,7 +201,7 @@ in
     args:
     {
       home = args: {
-        inherit ((nhConfig args)) programs;
+        inherit (nhConfig args) programs;
       };
     }
     // lib.optionalAttrs isLinux {
@@ -920,32 +919,46 @@ in
   };
 
   bitwardenCli = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.bitwarden-cli ]; };
+    home = _: {
+      home.packages = [ pkgs.bitwarden-cli ];
+    };
   };
 
   esptool = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.esptool ]; };
+    home = _: {
+      home.packages = [ pkgs.esptool ];
+    };
   };
 
   mediainfo = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.mediainfo ]; };
+    home = _: {
+      home.packages = [ pkgs.mediainfo ];
+    };
   };
 
   sevenzip = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs._7zz ]; };
+    home = _: {
+      home.packages = [ pkgs._7zz ];
+    };
   };
 
   tio = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.tio ]; };
+    home = _: {
+      home.packages = [ pkgs.tio ];
+    };
   };
 
   mas =
     { pkgs, ... }:
     lib.optionalAttrs isDarwin {
-      home = _: { home.packages = [ pkgs.mas ]; };
+      home = _: {
+        home.packages = [ pkgs.mas ];
+      };
     };
 
   crush = { pkgs, ... }: {
-    home = _: { home.packages = [ pkgs.crush ]; };
+    home = _: {
+      home.packages = [ pkgs.crush ];
+    };
   };
 }

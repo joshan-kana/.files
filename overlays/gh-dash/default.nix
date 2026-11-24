@@ -1,6 +1,4 @@
-_:
-
-{
+_: {
   nixpkgs.overlays = [
     (final: prev: {
       gh-dash = prev.gh-dash.overrideAttrs (

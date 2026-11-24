@@ -49,5 +49,4 @@ lib.recursiveUpdate (import ../../profiles/workstation.nix { inherit moduleRegis
     initrd.kernelModules = [ "virtio_gpu" ];
     kernelPackages = pkgs.linuxPackages_latest;
   };
-
 }

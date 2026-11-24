@@ -337,7 +337,6 @@ let
     wallpaper = {
       label = "Wallpaper";
     };
-
   };
 in
 {

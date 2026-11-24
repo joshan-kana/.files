@@ -58,7 +58,6 @@ lib.recursiveUpdate (import ../../profiles/workstation.nix { inherit moduleRegis
             onActivation.cleanup = "none";
           };
         };
-
       };
 
   cli = extendScope moduleRegistry.cli {
@@ -97,15 +96,21 @@ lib.recursiveUpdate (import ../../profiles/workstation.nix { inherit moduleRegis
 
   desktopApps = extendScope moduleRegistry.desktopApps {
     notion = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.notion-app ]; };
+      home = _: {
+        home.packages = [ pkgs.notion-app ];
+      };
     };
 
     steam = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.steam ]; };
+      home = _: {
+        home.packages = [ pkgs.steam ];
+      };
     };
 
     qmkToolbox = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.qmk-toolbox ]; };
+      home = _: {
+        home.packages = [ pkgs.qmk-toolbox ];
+      };
     };
 
     softubeCentral = _: {
@@ -117,23 +122,33 @@ lib.recursiveUpdate (import ../../profiles/workstation.nix { inherit moduleRegis
     };
 
     reaper = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.reaper ]; };
+      home = _: {
+        home.packages = [ pkgs.reaper ];
+      };
     };
 
     arduinoIde = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.arduino-ide ]; };
+      home = _: {
+        home.packages = [ pkgs.arduino-ide ];
+      };
     };
 
     kicad = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.kicad ]; };
+      home = _: {
+        home.packages = [ pkgs.kicad ];
+      };
     };
 
     dolphinEmulator = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.dolphin-emu ]; };
+      home = _: {
+        home.packages = [ pkgs.dolphin-emu ];
+      };
     };
 
     heroic = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.heroic ]; };
+      home = _: {
+        home.packages = [ pkgs.heroic ];
+      };
     };
 
     ilokLicenseManager = _: {
@@ -152,5 +167,4 @@ lib.recursiveUpdate (import ../../profiles/workstation.nix { inherit moduleRegis
       homebrew.casks = [ "parsec" ];
     };
   };
-
 }

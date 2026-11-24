@@ -1,6 +1,4 @@
-_:
-
-{
+_: {
   nixpkgs.overlays = [
     (final: _prev: {
       webhook =

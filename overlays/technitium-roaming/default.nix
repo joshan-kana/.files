@@ -91,7 +91,6 @@ let
         };
       };
     };
-
 in
 { lib, system, ... }: {
   imports = lib.optionals (lib.systems.elaborate system).isLinux [ roamingModule ];

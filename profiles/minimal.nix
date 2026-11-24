@@ -1,5 +1,4 @@
 { lib, moduleRegistry }:
-
 {
   inherit (moduleRegistry)
     system

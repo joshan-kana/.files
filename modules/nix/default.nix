@@ -52,7 +52,6 @@ in
   environment.systemPackages = [
     pkgs.determinate-nix-manpages
   ];
-
 }
 // {
   builders = _: {
@@ -94,7 +93,6 @@ in
         ];
     };
   };
-
 }
 // {
   home = _: {

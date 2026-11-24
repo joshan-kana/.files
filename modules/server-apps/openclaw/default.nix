@@ -33,7 +33,6 @@ let
   ];
 
   appDataGroup = server.storage.appData.group.name;
-
 in
 {
   services.openclaw-gateway = {
@@ -156,7 +155,5 @@ in
         }
       }
     '';
-
   };
-
 }

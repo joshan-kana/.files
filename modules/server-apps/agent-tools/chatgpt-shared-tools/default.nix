@@ -18,7 +18,6 @@ let
     export MCP_DISCOVERY_EXTRA_HEADERS="Authorization: env:MCPGATEWAY_AUTH"
     exec ${pkgs.openai-tunnel-client}/bin/tunnel-client run --log.level=info --log.format=struct-text
   '';
-
 in
 {
   config = lib.mkIf gatewayEnabled {

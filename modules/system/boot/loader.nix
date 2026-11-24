@@ -5,7 +5,7 @@
 }:
 
 let
-  inherit ((lib.systems.elaborate system)) isLinux;
+  inherit (lib.systems.elaborate system) isLinux;
 in
 {
   enable = isLinux;
