@@ -256,7 +256,7 @@ Item {
         layer.smooth: true
         layer.effect: MultiEffect {
             maskEnabled: true
-            maskSource: contentMask.item
+            maskSource: contentMask.item as Item
             autoPaddingEnabled: false
         }
         width: root.contentLayoutWidth
