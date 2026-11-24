@@ -69,40 +69,10 @@ let
     programs.nh.flake = repoPath;
   };
 
-  direnvConfig = _: {
-    programs.direnv = {
-      silent = true;
-      enableZshIntegration = false;
-    };
-  };
-
   zshConfig = _: {
     programs.zsh.enableCompletion = true;
   };
 
-  lazygitConfig = _: {
-    programs.lazygit.settings.git.diffRenderers = [
-      {
-        colorArg = "always";
-        command = ''sh -c 'pager="$(git config --get pager.diff || git config --get core.pager)"; [ -n "$pager" ] || exec cat; PAGER=cat exec sh -c "$pager"' '';
-      }
-    ];
-  };
-
-  starshipConfig = _: {
-    programs.starship.settings = {
-      character.success_symbol = "[➜](bold green) ";
-      character.error_symbol = "[✗](bold red) ";
-      container.disabled = true;
-    };
-  };
-
-  neovimConfig = _: {
-    programs.neovim = {
-      withRuby = false;
-      withPython3 = false;
-    };
-  };
   sessionVariables = {
     DOTFILES = repoPath;
     EDITOR = editor;
@@ -213,7 +183,7 @@ in
     };
 
   direnv =
-    _args:
+    _:
     let
       zshAliases.dt = "direnv_hook_toggle";
       hook = ''
@@ -258,13 +228,17 @@ in
       '';
     in
     {
-      home = args: {
+      home = _: {
         home.shellAliases = {
           da = "direnv allow";
           db = "direnv block";
           dr = "direnv reload";
         };
-        programs = (direnvConfig args).programs // {
+        programs = {
+          direnv = {
+            silent = true;
+            enableZshIntegration = false;
+          };
           zsh = {
             shellAliases = zshAliases;
             initContent = hook;
@@ -478,9 +452,14 @@ in
         };
       };
 
-      lazygit = _args: {
-        home = args: {
-          inherit (lazygitConfig args) programs;
+      lazygit = _: {
+        home = _: {
+          programs.lazygit.settings.git.diffRenderers = [
+            {
+              colorArg = "always";
+              command = ''sh -c 'pager="$(git config --get pager.diff || git config --get core.pager)"; [ -n "$pager" ] || exec cat; PAGER=cat exec sh -c "$pager"' '';
+            }
+          ];
         };
       };
     }
@@ -592,10 +571,15 @@ in
     };
   };
 
-  starship = _args: {
-    home = args: {
-      programs.starship = (starshipConfig args).programs.starship // {
+  starship = _: {
+    home = _: {
+      programs.starship = {
         enableZshIntegration = true;
+        settings = {
+          character.success_symbol = "[➜](bold green) ";
+          character.error_symbol = "[✗](bold red) ";
+          container.disabled = true;
+        };
       };
     };
   };
@@ -662,9 +646,9 @@ in
     };
   };
 
-  neovim = _args: {
+  neovim = _: {
     home =
-      args:
+      _:
       let
         editorTools = with pkgs; [
           fd
@@ -692,7 +676,9 @@ in
       in
       {
         home.shellAliases.v = "nvim";
-        programs.neovim = (neovimConfig args).programs.neovim // {
+        programs.neovim = {
+          withRuby = false;
+          withPython3 = false;
           extraPackages = editorTools;
           plugins = with pkgs.vimPlugins; [
             snacks-nvim
