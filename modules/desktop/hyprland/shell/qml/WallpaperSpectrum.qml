@@ -11,6 +11,7 @@ Variants {
     required property SpectrumState spectrum
     required property Theme theme
     property bool enabled: false
+    property real intensity: 0.8
 
     model: Quickshell.screens
 
@@ -62,7 +63,7 @@ Variants {
                 theme: visuals.theme
                 frequencyScale: frequencies
                 barCount: 64
-                opacity: 0.80
+                opacity: visuals.intensity
             }
         }
     }

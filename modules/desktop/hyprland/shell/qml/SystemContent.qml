@@ -563,7 +563,7 @@ FocusScope {
         if (!engaged)
             return;
 
-        if (["windows", "glass", "nightLight", "alerts", "stay", "power"].includes(requestedView))
+        if (["windows", "glass", "nightLight", "alerts", "stay", "power", "reactive", "spectrum"].includes(requestedView))
             openSetting(requestedView);
         else if (requestedView === "vhs")
             openVhs();
@@ -658,7 +658,7 @@ FocusScope {
     onRequestedViewChanged: requestedViewTimer.restart()
 
     function openSetting(name: string): void {
-        if (!["windows", "glass", "nightLight", "alerts", "stay", "power"].includes(name))
+        if (!["windows", "glass", "nightLight", "alerts", "stay", "power", "reactive", "spectrum"].includes(name))
             return;
         helpOpen = false;
         closeDetails();
@@ -1314,6 +1314,9 @@ FocusScope {
                             icon: "󰸉"
                             title: root.wallpaperSpectrumEnabled ? "Wallpaper spectrum" : "Spectrum off"
                             shortcut: root.runtime.shellHint("SystemContent.wallpaperSpectrum")
+                            detailShortcut: root.runtime.shellHint("SystemContent.wallpaperSpectrumDetails")
+                            detailName: "Wallpaper spectrum tuning"
+                            onDetailsRequested: root.openSetting("spectrum")
                             active: root.wallpaperSpectrumEnabled
                             activeColor: root.theme.roleColor("workspace")
                             onActivated: root.wallpaperSpectrumToggleRequested()
@@ -1328,6 +1331,9 @@ FocusScope {
                             icon: DesktopIcons.glyphFor("audioMixer")
                             title: root.musicReactiveEnabled ? "Audio reactive" : "Reactive off"
                             shortcut: root.runtime.shellHint("SystemContent.musicReactive")
+                            detailShortcut: root.runtime.shellHint("SystemContent.musicReactiveDetails")
+                            detailName: "Reactive audio tuning"
+                            onDetailsRequested: root.openSetting("reactive")
                             active: root.musicReactiveEnabled
                             activeColor: root.theme.roleColor("audio")
                             onActivated: root.musicReactiveToggleRequested()
@@ -1775,6 +1781,7 @@ FocusScope {
                     notifications: root.notificationState
                     powerProfile: root.powerProfile
                     system: root.system
+                    spectrum: root.spectrum
                     wallpaperSpectrumEnabled: root.wallpaperSpectrumEnabled
                     musicReactiveEnabled: root.musicReactiveEnabled
                     barVisible: root.barVisible
@@ -2229,7 +2236,7 @@ FocusScope {
                 // key must not alternately enable/disable a capability, while
                 // repeat of local navigation or range adjustment stays useful.
                 if (event.isAutoRepeat) {
-                    const oneShot = ["SystemContent.alerts", "SystemContent.stayAwake", "SystemContent.powerProfile", "SystemContent.nightLight", "SystemContent.windowTransparency", "SystemContent.shellGlass", "SystemContent.vhsToggle", "SystemContent.vhsTune", "SystemContent.networkDetails", "SystemContent.bluetoothDetails", "SystemContent.windowsDetails", "SystemContent.glassDetails", "SystemContent.nightLightDetails", "SystemContent.alertsDetails", "SystemContent.stayDetails", "SystemContent.powerDetails"].some(name => root.runtime.shellMatchesHint(name, event.key, event.modifiers));
+                    const oneShot = ["SystemContent.alerts", "SystemContent.stayAwake", "SystemContent.powerProfile", "SystemContent.nightLight", "SystemContent.windowTransparency", "SystemContent.shellGlass", "SystemContent.vhsToggle", "SystemContent.vhsTune", "SystemContent.networkDetails", "SystemContent.bluetoothDetails", "SystemContent.windowsDetails", "SystemContent.glassDetails", "SystemContent.nightLightDetails", "SystemContent.alertsDetails", "SystemContent.stayDetails", "SystemContent.powerDetails", "SystemContent.musicReactive", "SystemContent.wallpaperSpectrum", "SystemContent.musicReactiveDetails", "SystemContent.wallpaperSpectrumDetails"].some(name => root.runtime.shellMatchesHint(name, event.key, event.modifiers));
                     if (oneShot) {
                         event.accepted = true;
                         return;
@@ -2273,6 +2280,10 @@ FocusScope {
                 }
                 if (root.runtime.shellMatchesHint("SystemContent.brightnessFocus", event.key, event.modifiers) && root.brightness.supported) {
                     root.selectSlider("brightness");
+                } else if (root.runtime.shellMatchesHint("SystemContent.musicReactiveDetails", event.key, event.modifiers)) {
+                    root.openSetting("reactive");
+                } else if (root.runtime.shellMatchesHint("SystemContent.wallpaperSpectrumDetails", event.key, event.modifiers)) {
+                    root.openSetting("spectrum");
                 } else if (root.runtime.shellMatchesHint("SystemContent.windowsDetails", event.key, event.modifiers)) {
                     root.openSetting("windows");
                 } else if (root.runtime.shellMatchesHint("SystemContent.glassDetails", event.key, event.modifiers)) {
@@ -2296,9 +2307,9 @@ FocusScope {
                 } else if (shifted && event.key === root.runtime.shellKeyCode("controls", "C")) {
                     root.resetConfirmPending = true;
                     root.resetStatus = "";
-                } else if (shifted && event.key === root.runtime.shellKeyCode("controls", "F")) {
+                } else if (root.runtime.shellMatchesHint("SystemContent.wallpaperSpectrum", event.key, event.modifiers)) {
                     root.wallpaperSpectrumToggleRequested();
-                } else if (shifted && event.key === root.runtime.shellKeyCode("controls", "G")) {
+                } else if (root.runtime.shellMatchesHint("SystemContent.musicReactive", event.key, event.modifiers)) {
                     root.musicReactiveToggleRequested();
                 } else if (shifted && event.key === root.runtime.shellKeyCode("controls", "D")) {
                     root.windowTransparencyToggleRequested();

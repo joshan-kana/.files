@@ -6,6 +6,13 @@ QtObject {
 
     required property SpectrumState spectrum
     property bool enabled: false
+    // Runtime preferences are supplied by the shell's single appearance owner.
+    // No extra PipeWire listener, FFT graph or polling timer is created.
+    property real sensitivity: 1.0
+    property real attackMultiplier: 1.0
+    property real releaseMultiplier: 1.0
+    property real smoothing: 0.0
+    property string frequencyEmphasis: "balanced"
 
     // Sustained sub-bass stays visibly present. A separately tracked slower
     // envelope makes kick/808 attacks produce a distinct, brief accent.
@@ -40,7 +47,7 @@ QtObject {
             reset();
             return;
         }
-        const presence = clamp((loudness - 0.003) / 0.025);
+        const presence = clamp((loudness - 0.003) * sensitivity / 0.025);
         const bass = clamp(spectrum.sub * 0.78 + spectrum.bass * 0.22);
         const peak = clamp(spectrum.peak);
         if (!baselineReady) {
@@ -55,16 +62,23 @@ QtObject {
         const difference = bass - bassBaseline;
         const range = Math.max(0.07, bassVariation * 2.7);
         const relativeBass = clamp(0.5 + difference / range);
-        const attack = clamp(Math.max(0, difference) / range * 0.9 + Math.max(0, peak - peakBaseline) * 1.4);
+        const attack = clamp((Math.max(0, difference) / range * 0.9 + Math.max(0, peak - peakBaseline) * 1.4) * attackMultiplier);
         bassVariation += (Math.abs(difference) - bassVariation) * follow(0.09);
         bassBaseline += difference * follow(0.027);
         peakBaseline += (peak - peakBaseline) * follow(0.045);
 
         // Reserve most of the intensity range for actual musical variation.
         // Bass-heavy tracks no longer pin the whole interface to maximum glow.
-        sustain = presence * clamp(0.10 + bass * 0.16 + relativeBass * 0.43 + Math.sqrt(clamp(spectrum.mid)) * 0.10);
-        beatPulse = presence * clamp(Math.max(attack, beatPulse * Math.pow(0.52, elapsed * 15)));
-        treble = presence * clamp(Math.sqrt(clamp(spectrum.high)));
+        const mid = Math.sqrt(clamp(spectrum.mid));
+        const high = Math.sqrt(clamp(spectrum.high));
+        const emphasis = frequencyEmphasis === "bass" ? bass * 0.28
+            : frequencyEmphasis === "mid" ? mid * 0.28
+            : frequencyEmphasis === "treble" ? high * 0.28 : 0;
+        const targetSustain = presence * clamp(0.10 + bass * 0.16 + relativeBass * 0.43 + mid * 0.10 + emphasis);
+        const smoothingAlpha = smoothing <= 0 ? 1 : 1 - Math.pow(smoothing, elapsed * 15);
+        sustain += (targetSustain - sustain) * smoothingAlpha;
+        beatPulse = presence * clamp(Math.max(attack, beatPulse * Math.pow(0.52, elapsed * 15 * releaseMultiplier)));
+        treble = presence * high;
     }
 
     function reset(): void {

@@ -76,6 +76,7 @@ ShellRoot {
         glassOpacity: qmlAppearance.glassOpacity
         musicReactiveEnergy: reactive.sustain
         musicReactiveBeat: reactive.beatPulse
+        musicReactiveIntensity: qmlAppearance.musicReactiveIntensity
     }
 
     Motion {
@@ -323,6 +324,11 @@ ShellRoot {
         id: reactive
         spectrum: root.spectrumRef
         enabled: root.musicReactiveSurfaceVisible
+        sensitivity: qmlAppearance.musicReactiveSensitivity
+        attackMultiplier: qmlAppearance.musicReactiveAttack
+        releaseMultiplier: qmlAppearance.musicReactiveRelease
+        smoothing: qmlAppearance.musicReactiveSmoothing
+        frequencyEmphasis: qmlAppearance.musicReactiveEmphasis
     }
 
     WallpaperSpectrum {
@@ -330,6 +336,7 @@ ShellRoot {
         spectrum: root.spectrumRef
         theme: root.themeRef
         enabled: root.wallpaperSpectrumEnabled
+        intensity: qmlAppearance.wallpaperSpectrumOpacity
     }
 
     DesktopFrame {

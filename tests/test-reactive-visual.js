@@ -78,7 +78,7 @@ test("the original spectrum gradient transitions red to blue to cyan, without pe
   assert.ok(right.g > middle.g && right.b > right.r);
   assert.match(
     theme,
-    /musicReactiveWash: musicReactiveEnabled \? Math\.min\(0\.42,/,
+    /musicReactiveWash: musicReactiveEnabled \? Math\.min\(0\.60, 0\.42 \* musicReactiveIntensity,/,
   );
   assert.doesNotMatch(
     theme,

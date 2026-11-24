@@ -47,10 +47,11 @@ QtObject {
     property real glassOpacity: 0.70
     property real musicReactiveEnergy: 0
     property real musicReactiveBeat: 0
+    property real musicReactiveIntensity: 1.0
     // Share the spectrum's red/blue/cyan ramp with the shell, without
     // creating per-frame colour arrays or a second audio signal pipeline.
     // Music changes tint strength; the palette stays anchored to bass/treble.
-    readonly property real musicReactiveWash: musicReactiveEnabled ? Math.min(0.42, musicReactiveEnergy * 0.58 + musicReactiveBeat * 0.14) : 0
+    readonly property real musicReactiveWash: musicReactiveEnabled ? Math.min(0.60, 0.42 * musicReactiveIntensity, (musicReactiveEnergy * 0.58 + musicReactiveBeat * 0.14) * musicReactiveIntensity) : 0
     function reactiveColor(base: color, position: real): color {
         return musicReactiveWash > 0 ? blend(base, spectrumColor(position), musicReactiveWash) : base;
     }

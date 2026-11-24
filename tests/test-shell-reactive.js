@@ -93,7 +93,7 @@ test("the reactive shell shares the spectrum's three-stop red-blue-cyan palette"
   assert.match(theme, /const stops = \[critical, accent, accentTertiary\]/);
   assert.match(
     theme,
-    /musicReactiveWash: musicReactiveEnabled \? Math\.min\(0\.42,/,
+    /musicReactiveWash: musicReactiveEnabled \? Math\.min\(0\.60, 0\.42 \* musicReactiveIntensity,/,
   );
   assert.match(
     theme,
@@ -185,8 +185,8 @@ test("reactive audio uses continuous event-driven values instead of quantized br
     reactive,
     /function onSequenceChanged\(\): void \{\s*reactive\.updateAudio\(\)/,
   );
-  assert.match(reactive, /sustain = presence \* clamp\(/);
-  assert.match(reactive, /treble = presence \* clamp\(/);
+  assert.match(reactive, /targetSustain = presence \* clamp\(/);
+  assert.match(reactive, /treble = presence \* high/);
   assert.match(reactive, /elapsed \* 15/);
 });
 
@@ -199,9 +199,9 @@ test("reactive audio returns to exact zero on silence and connection loss", () =
   assert.match(reactive, /!spectrum\.connected \|\| loudness <= 0\.003/);
   assert.match(
     reactive,
-    /const presence = clamp\(\(loudness - 0\.003\) \/ 0\.025\)/,
+    /const presence = clamp\(\(loudness - 0\.003\) \* sensitivity \/ 0\.025\)/,
   );
-  for (const field of ["sustain", "beatPulse", "treble"])
+  for (const field of ["targetSustain", "beatPulse", "treble"])
     assert.match(reactive, new RegExp(`${field} = presence \\*`));
   assert.match(
     reactive,

@@ -17,6 +17,13 @@ QtObject {
         property string wallpaperResizeMode: appearance.runtime.appearanceDefaults.wallpaperResizeMode
         property string wallpaperTargetOutput: appearance.runtime.appearanceDefaults.wallpaperTargetOutput
         property bool musicReactiveEnabled: appearance.runtime.appearanceDefaults.musicReactiveEnabled
+        property real musicReactiveSensitivity: appearance.runtime.appearanceDefaults.musicReactiveSensitivity
+        property real musicReactiveAttack: appearance.runtime.appearanceDefaults.musicReactiveAttack
+        property real musicReactiveRelease: appearance.runtime.appearanceDefaults.musicReactiveRelease
+        property real musicReactiveSmoothing: appearance.runtime.appearanceDefaults.musicReactiveSmoothing
+        property real musicReactiveIntensity: appearance.runtime.appearanceDefaults.musicReactiveIntensity
+        property string musicReactiveEmphasis: appearance.runtime.appearanceDefaults.musicReactiveEmphasis
+        property real wallpaperSpectrumOpacity: appearance.runtime.appearanceDefaults.wallpaperSpectrumOpacity
         property bool barVisible: appearance.runtime.appearanceDefaults.barVisible
         property bool frameVisible: appearance.runtime.appearanceDefaults.frameVisible
         property bool windowTransparencyEnabled: appearance.runtime.appearanceDefaults.windowTransparencyEnabled
@@ -44,6 +51,23 @@ QtObject {
     readonly property string wallpaperResizeMode: effective("wallpaperResizeMode") === "crop" ? "crop" : "fit"
     readonly property string wallpaperTargetOutput: effective("wallpaperTargetOutput")
     readonly property bool musicReactiveEnabled: effective("musicReactiveEnabled")
+    readonly property real musicReactiveSensitivity: Math.max(0.4, Math.min(3.0, effective("musicReactiveSensitivity")))
+    readonly property real musicReactiveAttack: Math.max(0.5, Math.min(2.5, effective("musicReactiveAttack")))
+    readonly property real musicReactiveRelease: Math.max(0.4, Math.min(2.5, effective("musicReactiveRelease")))
+    readonly property real musicReactiveSmoothing: Math.max(0, Math.min(0.9, effective("musicReactiveSmoothing")))
+    readonly property real musicReactiveIntensity: Math.max(0.25, Math.min(2.0, effective("musicReactiveIntensity")))
+    readonly property string musicReactiveEmphasis: ["balanced", "bass", "mid", "treble"].includes(effective("musicReactiveEmphasis")) ? effective("musicReactiveEmphasis") : "balanced"
+    readonly property real wallpaperSpectrumOpacity: Math.max(0.2, Math.min(1.0, effective("wallpaperSpectrumOpacity")))
+    readonly property var musicReactiveParameterKeys: ["musicReactiveSensitivity", "musicReactiveAttack", "musicReactiveRelease", "musicReactiveSmoothing", "musicReactiveIntensity", "musicReactiveEmphasis"]
+    readonly property string musicReactivePreset: {
+        if (musicReactiveParameterKeys.every(key => !hasOverride(key)))
+            return "Default";
+        if (Math.abs(musicReactiveSensitivity - 0.75) <= 0.005 && Math.abs(musicReactiveAttack - 0.8) <= 0.005 && Math.abs(musicReactiveRelease - 1.3) <= 0.005 && Math.abs(musicReactiveSmoothing - 0.5) <= 0.005 && Math.abs(musicReactiveIntensity - 0.65) <= 0.005 && musicReactiveEmphasis === "balanced")
+            return "Subtle";
+        if (Math.abs(musicReactiveSensitivity - 1.6) <= 0.005 && Math.abs(musicReactiveAttack - 1.6) <= 0.005 && Math.abs(musicReactiveRelease - 0.75) <= 0.005 && Math.abs(musicReactiveSmoothing - 0.2) <= 0.005 && Math.abs(musicReactiveIntensity - 1.5) <= 0.005 && musicReactiveEmphasis === "bass")
+            return "Energetic";
+        return "Custom";
+    }
     readonly property bool barVisible: effective("barVisible")
     readonly property bool frameVisible: effective("frameVisible")
     readonly property bool windowTransparencyEnabled: effective("windowTransparencyEnabled")
@@ -163,6 +187,58 @@ QtObject {
         saved.musicReactiveEnabled = !musicReactiveEnabled;
         storeOverride("musicReactiveEnabled", saved.musicReactiveEnabled);
         saved.sync();
+    }
+
+    function setReactiveParameter(key: string, value: real): void {
+        const bounds = {
+            musicReactiveSensitivity: [0.4, 3.0],
+            musicReactiveAttack: [0.5, 2.5],
+            musicReactiveRelease: [0.4, 2.5],
+            musicReactiveSmoothing: [0.0, 0.9],
+            musicReactiveIntensity: [0.25, 2.0],
+            wallpaperSpectrumOpacity: [0.2, 1.0]
+        };
+        const range = bounds[key];
+        if (!range || !isFinite(value))
+            return;
+        const next = Math.round(Math.max(range[0], Math.min(range[1], value)) * 100) / 100;
+        if (next === effective(key))
+            return;
+        storeOverride(key, next);
+        saved.sync();
+    }
+
+    function setReactiveEmphasis(value: string): void {
+        if (!["balanced", "bass", "mid", "treble"].includes(value) || musicReactiveEmphasis === value)
+            return;
+        storeOverride("musicReactiveEmphasis", value);
+        saved.sync();
+    }
+
+    function resetReactiveTuning(): void {
+        for (const key of musicReactiveParameterKeys)
+            clearOverride(key);
+    }
+
+    function applyReactivePreset(name: string): void {
+        if (name === "Default") {
+            resetReactiveTuning();
+            return;
+        }
+        const presets = {
+            Subtle: [0.75, 0.8, 1.3, 0.5, 0.65, "balanced"],
+            Energetic: [1.6, 1.6, 0.75, 0.2, 1.5, "bass"]
+        };
+        const values = presets[name];
+        if (!values)
+            return;
+        for (let i = 0; i < musicReactiveParameterKeys.length; ++i)
+            storeOverride(musicReactiveParameterKeys[i], values[i]);
+        saved.sync();
+    }
+
+    function resetSpectrumTuning(): void {
+        clearOverride("wallpaperSpectrumOpacity");
     }
 
     function toggleFrame(): void {

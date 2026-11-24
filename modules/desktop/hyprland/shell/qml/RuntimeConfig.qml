@@ -250,6 +250,13 @@ QtObject {
                 property string wallpaperResizeMode: "fit"
                 property string wallpaperTargetOutput: ""
                 property bool musicReactiveEnabled: false
+                property real musicReactiveSensitivity: 1.0
+                property real musicReactiveAttack: 1.0
+                property real musicReactiveRelease: 1.0
+                property real musicReactiveSmoothing: 0.0
+                property real musicReactiveIntensity: 1.0
+                property string musicReactiveEmphasis: "balanced"
+                property real wallpaperSpectrumOpacity: 0.8
                 property bool barVisible: true
                 property bool frameVisible: true
                 property bool windowTransparencyEnabled: false

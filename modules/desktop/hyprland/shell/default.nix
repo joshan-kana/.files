@@ -363,6 +363,42 @@ in
           default = false;
           description = "Tint desktop shell surfaces in response to the currently playing audio.";
         };
+        musicReactiveSensitivity = lib.mkOption {
+          type = lib.types.numbers.between 0.4 3.0;
+          default = 1.0;
+          description = "Sensitivity multiplier for the single shared audio-reactive envelope.";
+        };
+        musicReactiveAttack = lib.mkOption {
+          type = lib.types.numbers.between 0.5 2.5;
+          default = 1.0;
+          description = "Multiplier for how strongly beat transients respond.";
+        };
+        musicReactiveRelease = lib.mkOption {
+          type = lib.types.numbers.between 0.4 2.5;
+          default = 1.0;
+          description = "Speed of the reactive beat-pulse release.";
+        };
+        musicReactiveSmoothing = lib.mkOption {
+          type = lib.types.numbers.between 0.0 0.9;
+          default = 0.0;
+          description = "Smoothing coefficient for the sustained reactive envelope; zero preserves direct response.";
+        };
+        musicReactiveIntensity = lib.mkOption {
+          type = lib.types.numbers.between 0.25 2.0;
+          default = 1.0;
+          description = "Visual intensity multiplier of the shell's existing music-reactive tint.";
+        };
+        musicReactiveEmphasis = lib.mkOption {
+          type = lib.types.enum [ "balanced" "bass" "mid" "treble" ];
+          default = "balanced";
+          description = "Frequency region emphasized by the reactive visual response.";
+        };
+        wallpaperSpectrumOpacity = lib.mkOption {
+          type = lib.types.numbers.between 0.2 1.0;
+          default = 0.8;
+          description = "Opacity of the existing wallpaper spectrum bars.";
+        };
+
         barVisible = lib.mkOption {
           type = lib.types.bool;
           default = true;

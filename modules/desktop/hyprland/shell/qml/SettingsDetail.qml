@@ -14,6 +14,7 @@ Item {
     required property NotificationState notifications
     required property PowerProfileState powerProfile
     required property SystemState system
+    required property SpectrumState spectrum
     required property bool wallpaperSpectrumEnabled
     required property bool musicReactiveEnabled
     required property bool barVisible
@@ -23,6 +24,7 @@ Item {
     signal barToggleRequested
     signal frameToggleRequested
     signal keyboardRequested
+    signal parameterAdjustmentRequested(int index)
 
     property string kind: ""
     property bool open: false
@@ -33,7 +35,9 @@ Item {
 
     readonly property bool hasMaster: ["windows", "glass", "nightLight", "alerts", "stay", "spectrum", "reactive", "bar", "frame", "motion"].includes(kind)
     readonly property bool hasBlur: ["windows", "glass"].includes(kind)
-    readonly property bool hasReset: hasBlur
+    readonly property bool reactiveTuning: kind === "reactive"
+    readonly property bool spectrumTuning: kind === "spectrum"
+    readonly property bool hasReset: hasBlur || spectrumTuning
     readonly property string titleText: ({
             windows: "Window transparency",
             glass: "Frosted glass",
@@ -117,6 +121,18 @@ Item {
                     suffix: " px"
                 }
             ];
+        if (reactiveTuning)
+            return [
+                { key: "musicReactiveSensitivity", title: "Sensitivity", description: "Response to quiet audio", minimum: 40, maximum: 300, step: 5, suffix: "%" },
+                { key: "musicReactiveAttack", title: "Attack", description: "Strength of beat transients", minimum: 50, maximum: 250, step: 5, suffix: "%" },
+                { key: "musicReactiveRelease", title: "Release speed", description: "Higher values settle sooner", minimum: 40, maximum: 250, step: 5, suffix: "%" },
+                { key: "musicReactiveSmoothing", title: "Smoothing", description: "Smooth the sustained envelope", minimum: 0, maximum: 90, step: 5, suffix: "%" },
+                { key: "musicReactiveIntensity", title: "Tint intensity", description: "Strength of the shared shell tint", minimum: 25, maximum: 200, step: 5, suffix: "%" }
+            ];
+        if (spectrumTuning)
+            return [
+                { key: "wallpaperSpectrumOpacity", title: "Spectrum opacity", description: "Strength of wallpaper spectrum bars", minimum: 20, maximum: 100, step: 5, suffix: "%" }
+            ];
         if (kind === "nightLight")
             return [
                 {
@@ -133,6 +149,8 @@ Item {
     }
 
     function currentValue(key: string): real {
+        if (key.startsWith("musicReactive") || key === "wallpaperSpectrumOpacity")
+            return Math.round(appearance[key] * 100);
         if (key === "windowOpacity")
             return Math.round(appearance.windowOpacity * 100);
         if (key === "glassOpacity")
@@ -145,7 +163,9 @@ Item {
     }
 
     function setValue(key: string, value: real): void {
-        if (key === "windowOpacity")
+        if (key.startsWith("musicReactive") || key === "wallpaperSpectrumOpacity")
+            appearance.setReactiveParameter(key, value / 100);
+        else if (key === "windowOpacity")
             appearance.setWindowOpacity(value / 100);
         else if (key === "glassOpacity")
             appearance.setGlassOpacity(value / 100);
@@ -196,6 +216,14 @@ Item {
     }
 
     function resetAppearance(): void {
+        if (reactiveTuning) {
+            appearance.resetReactiveTuning();
+            return;
+        }
+        if (spectrumTuning) {
+            appearance.resetSpectrumTuning();
+            return;
+        }
         if (kind === "windows") {
             appearance.clearOverride("windowTransparencyEnabled");
             appearance.clearOverride("windowOpacity");
@@ -213,6 +241,16 @@ Item {
     }
 
     function activateNumber(number: int): bool {
+        if (reactiveTuning) {
+            if (number >= 1 && number <= 3) {
+                appearance.applyReactivePreset(["Subtle", "Default", "Energetic"][number - 1]);
+                return true;
+            }
+            if (number >= 4 && number <= 7) {
+                appearance.setReactiveEmphasis(["balanced", "bass", "mid", "treble"][number - 4]);
+                return true;
+            }
+        }
         if (kind === "power") {
             const profiles = powerProfile.profiles;
             if (number <= profiles.length) {
@@ -243,7 +281,7 @@ Item {
                 "SettingsDetail.toggle", "SettingsDetail.blur", "SettingsDetail.reset",
                 "SettingsDetail.presentation", "SettingsDetail.history"
             ].some(name => runtime.shellMatchesHint(name, key, modifiers));
-            const choice = kind === "power" || kind === "stay" ? runtime.shellNumberIndex("controls", key, 5) : -1;
+            const choice = reactiveTuning ? runtime.shellNumberIndex("controls", key, 7) : kind === "power" || kind === "stay" ? runtime.shellNumberIndex("controls", key, 5) : -1;
             if (repeatedAction || choice >= 0)
                 return true;
         }
@@ -270,8 +308,8 @@ Item {
                 return true;
             }
         }
-        if ((kind === "power" || kind === "stay") && modifiers === Qt.NoModifier) {
-            const numberIndex = runtime.shellNumberIndex("controls", key, 5);
+        if ((kind === "power" || kind === "stay" || reactiveTuning) && modifiers === Qt.NoModifier) {
+            const numberIndex = runtime.shellNumberIndex("controls", key, reactiveTuning ? 7 : 5);
             if (numberIndex >= 0)
                 return activateNumber(numberIndex + 1);
         }
@@ -290,8 +328,10 @@ Item {
             }
             if (runtime.shellNavigates("controls", "left", key) || runtime.shellNavigates("controls", "right", key)) {
                 const entry = parameters[selectedIndex];
-                if (entry)
+                if (entry) {
+                    parameterAdjustmentRequested(selectedIndex);
                     setValue(entry.key, currentValue(entry.key) + (runtime.shellNavigates("controls", "left", key) ? -1 : 1) * entry.step);
+                }
                 return true;
             }
         }
@@ -394,15 +434,125 @@ Item {
             }
         }
 
-        Repeater {
-            model: panel.parameters
+        Column {
+            visible: panel.reactiveTuning || panel.spectrumTuning
+            width: parent.width
+            spacing: panel.theme.spacing2
 
-            delegate: ShellSurface {
+            ShellText {
+                runtime: panel.runtime
+                theme: panel.theme
+                text: !panel.spectrum.connected ? "Audio analyser disconnected" : !panel.spectrum.hasEnergy ? "Listening · no audio energy" : "Live audio · " + Math.round(panel.spectrum.rms * 100) + "% level"
+                color: panel.theme.textMuted
+                font.pixelSize: panel.theme.fontSize(11)
+            }
+
+            ShellText {
+                visible: panel.reactiveTuning
+                runtime: panel.runtime
+                theme: panel.theme
+                text: "Preset · " + panel.appearance.musicReactivePreset
+                color: panel.theme.textMuted
+                font.pixelSize: panel.theme.fontSize(10)
+            }
+
+            Row {
+                visible: panel.reactiveTuning
+                width: parent.width
+                height: visible ? 44 : 0
+                spacing: panel.theme.spacing2
+                Repeater {
+                    model: ["Subtle", "Default", "Energetic"]
+                    delegate: ShellAction {
+                        required property int index
+                        required property string modelData
+                        width: (panel.width - panel.theme.spacing2 * 2) / 3
+                        height: 44
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        motion: panel.motion
+                        title: modelData
+                        shortcut: panel.runtime.shellNumberHint("controls", index)
+                        compact: true
+                        horizontalCompact: true
+                        active: panel.appearance.musicReactivePreset === modelData
+                        onActivated: panel.appearance.applyReactivePreset(modelData)
+                    }
+                }
+            }
+
+            ShellText {
+                visible: panel.reactiveTuning
+                runtime: panel.runtime
+                theme: panel.theme
+                text: "Frequency emphasis"
+                color: panel.theme.textMuted
+                font.pixelSize: panel.theme.fontSize(10)
+            }
+
+            Row {
+                visible: panel.reactiveTuning
+                width: parent.width
+                height: visible ? 44 : 0
+                spacing: panel.theme.spacing2
+                Repeater {
+                    model: ["balanced", "bass", "mid", "treble"]
+                    delegate: ShellAction {
+                        required property int index
+                        required property string modelData
+                        width: (panel.width - panel.theme.spacing2 * 3) / 4
+                        height: 44
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        motion: panel.motion
+                        title: modelData.charAt(0).toUpperCase() + modelData.slice(1)
+                        shortcut: panel.runtime.shellNumberHint("controls", index + 3)
+                        compact: true
+                        horizontalCompact: true
+                        active: panel.appearance.musicReactiveEmphasis === modelData
+                        onActivated: panel.appearance.setReactiveEmphasis(modelData)
+                    }
+                }
+            }
+
+            ShellAction {
+                visible: panel.spectrumTuning
+                width: parent.width
+                height: visible ? 42 : 0
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                compact: true
+                horizontalCompact: true
+                title: "Restore default opacity"
+                shortcut: panel.runtime.shellHint("SettingsDetail.reset")
+                onActivated: panel.resetAppearance()
+            }
+        }
+
+        Grid {
+            id: parameterGrid
+            width: parent.width
+            columns: panel.reactiveTuning && width >= 750 ? 2 : 1
+            rowSpacing: panel.theme.spacing3
+            columnSpacing: panel.theme.spacing3
+            Repeater {
+                id: parameterRepeater
+                model: panel.parameters
+
+                delegate: ShellSurface {
                 id: parameterCard
                 required property int index
                 required property var modelData
-                width: panel.width
-                height: 104
+                width: (parameterGrid.width - (parameterGrid.columns - 1) * parameterGrid.columnSpacing) / parameterGrid.columns
+                height: Math.max(104, panel.theme.fontSize(70) + panel.theme.spacing3 * 2)
+                Connections {
+                    target: panel
+                    function onParameterAdjustmentRequested(index: int): void {
+                        if (index === parameterCard.index)
+                            parameterSlider.pulseAdjustment();
+                    }
+                }
                 theme: panel.theme
                 motion: panel.motion
                 surfaceLayer: ShellSurface.Control
@@ -418,11 +568,12 @@ Item {
                     spacing: panel.theme.spacing2
 
                     Row {
+                        id: parameterHeading
                         width: parent.width
-                        height: 37
+                        height: Math.max(37, panel.theme.fontSize(30))
                         spacing: panel.theme.spacing2
                         Column {
-                            width: Math.max(1, parent.width - valueReadback.implicitWidth - parameterHint.implicitWidth - parent.parent.spacing * 2)
+                            width: Math.max(1, parent.width - valueReadback.implicitWidth - parameterHint.implicitWidth - parameterHeading.spacing * 2)
                             spacing: panel.theme.spacing1
                             ShellText {
                                 runtime: panel.runtime
@@ -459,6 +610,7 @@ Item {
                     }
 
                     ShellSlider {
+                        id: parameterSlider
                         width: parent.width
                         height: 32
                         theme: panel.theme
@@ -474,6 +626,8 @@ Item {
                     }
                 }
             }
+        }
+
         }
 
         ShellText {

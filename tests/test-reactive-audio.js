@@ -34,6 +34,11 @@ const update = new Function(
 function newReactiveState() {
   const state = {
     enabled: true,
+    sensitivity: 1,
+    attackMultiplier: 1,
+    releaseMultiplier: 1,
+    smoothing: 0,
+    frequencyEmphasis: "balanced",
     sustain: 0,
     beatPulse: 0,
     treble: 0,
@@ -109,4 +114,27 @@ test("rollback does not retain the later nine-band impulse processing pipeline",
     source,
     /const range = Math\.max\(0\.07, bassVariation \* 2\.7\)/,
   );
+});
+
+test("reactive tuning changes the actual event-driven response, with the same silence reset", () => {
+  const quiet = {...audio(), rms: 0.008, peak: 0.01};
+  const low = newReactiveState(), high = newReactiveState();
+  low.sensitivity = 0.4; high.sensitivity = 3;
+  step(low, quiet, 20); step(high, quiet, 20);
+  assert.ok(high.sustain > low.sustain * 2);
+  const smooth = newReactiveState(); smooth.smoothing = 0.9;
+  step(smooth, audio(), 20);
+  const immediate = newReactiveState(); step(immediate, audio(), 20);
+  assert.ok(smooth.sustain < immediate.sustain);
+  const mid = newReactiveState(); mid.frequencyEmphasis = "mid";
+  step(mid, audio(), 20);
+  assert.ok(mid.sustain > immediate.sustain);
+  const slow = newReactiveState(), fast = newReactiveState();
+  slow.releaseMultiplier = 0.4; fast.releaseMultiplier = 2.5;
+  step(slow, audio(), 20); step(fast, audio(), 20);
+  slow.beatPulse = fast.beatPulse = 0.8;
+  step(slow, audio(), 120); step(fast, audio(), 120);
+  assert.ok(slow.beatPulse > fast.beatPulse);
+  step(high, {...quiet, rms: 0, peak: 0}, 40);
+  assert.deepEqual([high.sustain, high.beatPulse, high.treble], [0, 0, 0]);
 });

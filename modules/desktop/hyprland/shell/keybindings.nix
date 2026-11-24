@@ -278,6 +278,7 @@
           "SystemContent.legend.toggle_wi_fi_saved_connections" = "W / P";
           "SystemContent.motion" = "SHIFT+E";
           "SystemContent.musicReactive" = "SHIFT+G";
+          "SystemContent.musicReactiveDetails" = "ALT+SHIFT+G";
           "SystemContent.network" = "F";
           "SystemContent.powerProfile" = "V";
           "SystemContent.reset" = "SHIFT+C";
@@ -294,6 +295,7 @@
           "SystemContent.trayOpen" = "ENTER";
           "SystemContent.wallpaper" = "W";
           "SystemContent.wallpaperSpectrum" = "SHIFT+F";
+          "SystemContent.wallpaperSpectrumDetails" = "ALT+SHIFT+F";
           "VhsPanel.adjust" = "NAV_HORIZONTAL";
           "VhsPanel.toggle" = "T";
           "VhsPanel.select" = "NAV_VERTICAL · TAB/SHIFT+TAB";
