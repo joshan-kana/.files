@@ -512,9 +512,9 @@ Item {
             topMargin: panel.theme.spacing3
             bottomMargin: panel.theme.spacing3
         }
-        readonly property int columnCount: panel.theme.textScale >= 1.5 || width < 580 ? 1 : width < 950 ? 2 : 3
+        readonly property int columnCount: panel.theme.galleryColumns(width)
         cellWidth: width / columnCount
-        cellHeight: Math.max(210, panel.theme.fontSize(210))
+        cellHeight: panel.theme.galleryCellHeight(cellWidth)
         model: panel.filteredThemes
         clip: true
         currentIndex: panel.selectedIndex
@@ -587,125 +587,126 @@ Item {
                         fillColor: themeCard.preview ? themeCard.preview.background : panel.theme.surface
                         borderWidth: 1
                         borderColor: themeCard.preview ? themeCard.preview.outline : panel.theme.subtleBorder
-                        clip: true
+                        clipContentToShape: true
+                        readonly property real unit: Math.max(0.25, height / 160)
 
                         Rectangle {
                             width: parent.width
-                            height: 23
-                            radius: 8
+                            height: 23 * palettePreview.unit
+                            radius: 8 * palettePreview.unit
                             color: themeCard.preview ? themeCard.preview.surface : panel.theme.surface
                         }
                         Row {
-                            x: 10
-                            y: 8
-                            spacing: 5
+                            x: 10 * palettePreview.unit
+                            y: 8 * palettePreview.unit
+                            spacing: 5 * palettePreview.unit
                             Repeater {
                                 model: 3
                                 delegate: Rectangle {
                                     required property int index
-                                    width: 7
-                                    height: 7
-                                    radius: 4
+                                    width: 7 * palettePreview.unit
+                                    height: width
+                                    radius: width / 2
                                     color: themeCard.preview && themeCard.preview.swatches.length > 0 ? themeCard.preview.swatches[index % themeCard.preview.swatches.length] : panel.theme.accent
                                 }
                             }
                         }
                         Rectangle {
                             anchors.horizontalCenter: parent.horizontalCenter
-                            y: 9
-                            width: 32
-                            height: 5
-                            radius: 3
+                            y: 9 * palettePreview.unit
+                            width: 32 * palettePreview.unit
+                            height: 5 * palettePreview.unit
+                            radius: height / 2
                             color: themeCard.preview ? themeCard.preview.text : panel.theme.textStrong
                             opacity: 0.3
                         }
                         Rectangle {
-                            x: parent.width - 32
-                            y: 8
-                            width: 21
-                            height: 7
-                            radius: 4
+                            x: parent.width - 32 * palettePreview.unit
+                            y: 8 * palettePreview.unit
+                            width: 21 * palettePreview.unit
+                            height: 7 * palettePreview.unit
+                            radius: height / 2
                             color: themeCard.preview && themeCard.preview.swatches.length > 3 ? themeCard.preview.swatches[3] : panel.theme.accent
                             opacity: 0.85
                         }
 
                         Rectangle {
                             id: samplePane
-                            x: 10
-                            y: 32
-                            width: Math.max(90, parent.width * 0.6)
-                            height: 84
-                            radius: 10
+                            x: 10 * palettePreview.unit
+                            y: 32 * palettePreview.unit
+                            width: parent.width * 0.58
+                            height: 92 * palettePreview.unit
+                            radius: 10 * palettePreview.unit
                             color: themeCard.preview ? themeCard.preview.surface : panel.theme.surfaceRaised
 
                             Rectangle {
-                                x: 10
-                                y: 10
-                                width: parent.width - 20
-                                height: 6
-                                radius: 3
+                                x: 10 * palettePreview.unit
+                                y: 10 * palettePreview.unit
+                                width: Math.max(1, parent.width - 20 * palettePreview.unit)
+                                height: 6 * palettePreview.unit
+                                radius: height / 2
                                 color: themeCard.preview && themeCard.preview.swatches.length > 0 ? themeCard.preview.swatches[0] : panel.theme.accent
                             }
                             Text {
-                                x: 10
-                                y: 22
+                                x: 10 * palettePreview.unit
+                                y: 22 * palettePreview.unit
                                 text: "Ag"
                                 color: themeCard.preview ? themeCard.preview.text : panel.theme.textStrong
                                 font.family: panel.runtime.fontSans
-                                font.pixelSize: panel.theme.fontSize(22)
+                                font.pixelSize: Math.max(1, Math.round(22 * palettePreview.unit))
                                 font.weight: Font.DemiBold
                             }
                             Rectangle {
-                                x: 46
-                                y: 34
-                                width: Math.max(8, parent.width - 60)
-                                height: 5
-                                radius: 3
+                                x: 46 * palettePreview.unit
+                                y: 34 * palettePreview.unit
+                                width: Math.max(1, parent.width - 60 * palettePreview.unit)
+                                height: 5 * palettePreview.unit
+                                radius: height / 2
                                 color: themeCard.preview ? themeCard.preview.text : panel.theme.textStrong
                                 opacity: 0.8
                             }
                             Rectangle {
-                                x: 46
-                                y: 46
-                                width: Math.max(8, (parent.width - 60) * 0.65)
-                                height: 4
-                                radius: 2
+                                x: 46 * palettePreview.unit
+                                y: 46 * palettePreview.unit
+                                width: Math.max(1, (parent.width - 60 * palettePreview.unit) * 0.65)
+                                height: 4 * palettePreview.unit
+                                radius: height / 2
                                 color: themeCard.preview ? themeCard.preview.text : panel.theme.textStrong
                                 opacity: 0.35
                             }
                             Rectangle {
-                                x: 10
-                                y: 64
-                                width: Math.max(8, parent.width * 0.42)
-                                height: 9
-                                radius: 5
+                                x: 10 * palettePreview.unit
+                                y: 70 * palettePreview.unit
+                                width: parent.width * 0.42
+                                height: 9 * palettePreview.unit
+                                radius: height / 2
                                 color: themeCard.preview && themeCard.preview.swatches.length > 1 ? themeCard.preview.swatches[1] : panel.theme.accent
                             }
                         }
 
                         Column {
                             id: metricsColumn
-                            x: samplePane.x + samplePane.width + 12
-                            y: samplePane.y + 5
-                            width: Math.max(1, parent.width - x - 10)
-                            spacing: 9
+                            x: samplePane.x + samplePane.width + 12 * palettePreview.unit
+                            y: samplePane.y + 5 * palettePreview.unit
+                            width: Math.max(1, parent.width - x - 10 * palettePreview.unit)
+                            spacing: 9 * palettePreview.unit
                             Repeater {
                                 model: 3
                                 delegate: Row {
                                     id: sampleMetric
                                     required property int index
                                     width: metricsColumn.width
-                                    spacing: 4
+                                    spacing: 4 * palettePreview.unit
                                     Rectangle {
-                                        width: 9
-                                        height: 9
-                                        radius: 5
+                                        width: 9 * palettePreview.unit
+                                        height: width
+                                        radius: width / 2
                                         color: themeCard.preview && themeCard.preview.swatches.length > 0 ? themeCard.preview.swatches[(sampleMetric.index + 2) % themeCard.preview.swatches.length] : panel.theme.accent
                                     }
                                     Rectangle {
-                                        width: Math.max(4, sampleMetric.width - 18 - sampleMetric.index * 9)
-                                        height: 6
-                                        radius: 3
+                                        width: Math.max(1, sampleMetric.width - (18 + sampleMetric.index * 9) * palettePreview.unit)
+                                        height: 6 * palettePreview.unit
+                                        radius: height / 2
                                         color: themeCard.preview ? themeCard.preview.text : panel.theme.textStrong
                                         opacity: 0.6 - sampleMetric.index * 0.13
                                     }
@@ -713,17 +714,18 @@ Item {
                             }
                         }
                         Row {
-                            x: 10
-                            y: parent.height - 15
-                            width: parent.width - 20
-                            spacing: 5
+                            id: paletteSwatches
+                            x: 10 * palettePreview.unit
+                            y: parent.height - 15 * palettePreview.unit
+                            width: Math.max(1, parent.width - 2 * x)
+                            spacing: 5 * palettePreview.unit
                             Repeater {
                                 model: themeCard.preview ? themeCard.preview.swatches : []
                                 delegate: Rectangle {
                                     required property var modelData
-                                    width: Math.max(1, (palettePreview.width - 20 - 20) / 5)
-                                    height: 6
-                                    radius: 3
+                                    width: Math.max(1, (paletteSwatches.width - (Math.max(1, themeCard.preview?.swatches.length || 0) - 1) * paletteSwatches.spacing) / Math.max(1, themeCard.preview?.swatches.length || 0))
+                                    height: 6 * palettePreview.unit
+                                    radius: height / 2
                                     color: modelData
                                 }
                             }

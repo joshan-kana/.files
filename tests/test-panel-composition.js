@@ -89,3 +89,36 @@ test("all data and capability roles are declared in the theme adapter", () => {
     );
   }
 });
+
+test("galleries share measured geometry through 200 percent text scale", () => {
+  const theme = qml("Theme.qml");
+  const columns = theme.match(
+    /function galleryColumns\(width: real\): int \{([\s\S]*?)\n    \}/,
+  )[1];
+  const cellHeight = theme.match(
+    /function galleryCellHeight\(cellWidth: real\): int \{([\s\S]*?)\n    \}/,
+  )[1];
+  for (const scale of [1, 1.25, 1.5, 2]) {
+    const fontSize = (size) => Math.round(size * scale);
+    const count = new Function("width", "spacing2", "fontSize", columns)(
+      1096,
+      8,
+      fontSize,
+    );
+    assert.equal(count, scale <= 1.25 ? 3 : 2);
+    const height = new Function(
+      "cellWidth",
+      "spacing2",
+      "fontSize",
+      cellHeight,
+    )(1096 / count, 8, fontSize);
+    assert.ok(height >= fontSize(150));
+  }
+  for (const name of ["WallpaperPanel.qml", "ThemePanel.qml"]) {
+    assert.match(qml(name), /columnCount: panel.theme.galleryColumns\(width\)/);
+    assert.match(
+      qml(name),
+      /cellHeight: panel.theme.galleryCellHeight\(cellWidth\)/,
+    );
+  }
+});

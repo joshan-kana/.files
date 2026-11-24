@@ -685,9 +685,9 @@ Item {
                 height: parent.height
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
-                readonly property int columnCount: panel.theme.textScale >= 1.5 || width < 580 ? 1 : width < 950 ? 2 : 3
+                readonly property int columnCount: panel.theme.galleryColumns(width)
                 cellWidth: width / columnCount
-                cellHeight: Math.max(210, panel.theme.fontSize(210))
+                cellHeight: panel.theme.galleryCellHeight(cellWidth)
                 model: panel.filteredEntries
                 currentIndex: panel.selectedIndex
                 highlightMoveDuration: 0

@@ -95,6 +95,16 @@ QtObject {
         return Math.max(1, Math.round(size * textScale));
     }
 
+    // Library cards keep readable names and a useful preview aspect at every
+    // supported scale, rather than stretching a single column across the hub.
+    function galleryColumns(width: real): int {
+        return Math.max(1, Math.min(3, Math.floor((width + spacing2) / (fontSize(270) + spacing2))));
+    }
+
+    function galleryCellHeight(cellWidth: real): int {
+        return Math.max(fontSize(150), Math.round((cellWidth - spacing2) / 1.9) + fontSize(30));
+    }
+
     readonly property int radiusSmall: 14
     readonly property int radiusMedium: 25
     readonly property int radiusIsland: 22
