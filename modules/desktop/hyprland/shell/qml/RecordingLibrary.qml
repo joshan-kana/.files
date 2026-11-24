@@ -33,8 +33,53 @@ Item {
     property string statusText: ""
     property bool statusError: false
     property bool editorRequestRunning: false
+    property var destinations: ({screenshots: "", recordings: ""})
+    function locationAction(action: string, kind: string): void {
+        if (!runtime.captureLocations || locationProcess.running)
+            return;
+        locationProcess.exec([runtime.captureLocations, action, ...(kind ? [kind] : [])]);
+    }
+    Process {
+        id: locationProcess
+        stdout: StdioCollector { id: locationsOutput }
+        stderr: StdioCollector { id: locationsError }
+        onExited: (code, status) => {
+            if (code === 0) {
+                try {
+                    const next = JSON.parse(locationsOutput.text);
+                    const changed = next.screenshots !== library.destinations.screenshots || next.recordings !== library.destinations.recordings;
+                    library.destinations = next;
+                    if (changed && library.open) {
+                        library.closeText();
+                        library.deletePending = "";
+                        library.entries = [];
+                        library.listingSignature = "";
+                        library.clearPreview();
+                        library.refresh();
+                    }
+                } catch (_) {
+                    library.statusError = true;
+                    library.statusText = "Invalid capture location response";
+                }
+            } else {
+                library.statusError = true;
+                library.statusText = locationsError.text.trim() || "Capture location unavailable";
+            }
+            if (library.open)
+                library.keyboardRequested();
+        }
+    }
+    function handleLocationKey(key: int, modifiers: int, repeat: bool): bool {
+        const actions = {"RecordingLibrary.imageDestination": "screenshots", "RecordingLibrary.videoDestination": "recordings", "RecordingLibrary.destinationDefaults": ""};
+        const action = Object.keys(actions).find(name => runtime.shellMatchesHint(name, key, modifiers));
+        if (!action)
+            return false;
+        if (!repeat && !isBusy && !ocrVisible)
+            locationAction(actions[action] ? "choose" : "reset", actions[action]);
+        return true;
+    }
     readonly property var selectedEntry: entries.length > 0 ? entries[Math.max(0, Math.min(selectedIndex, entries.length - 1))] : null
-    readonly property bool isBusy: listProcess.running || actionProcess.running || ocrProcess.running
+    readonly property bool isBusy: listProcess.running || actionProcess.running || ocrProcess.running || locationProcess.running
 
     implicitHeight: 128 + statusBanner.implicitHeight + theme.spacing4 * 3 + 392 + footer.implicitHeight
     visible: open
@@ -64,6 +109,7 @@ Item {
         editorRequestTimeout.stop();
         closeText();
         refresh();
+        locationAction("status", "");
         keyboardRequested();
     }
     function queueText(name: string): void {
@@ -851,6 +897,43 @@ Item {
             shortcut: library.runtime.shellHint("RecordingLibrary.ocr")
             enabled: !!library.selectedEntry && !library.isBusy
             onActivated: library.showText()
+        }
+        Row {
+            id: destinationButtons
+            visible: !library.ocrVisible
+            width: parent.width
+            spacing: library.theme.spacing2
+            Repeater {
+                model: [
+                    {action: "RecordingLibrary.imageDestination", kind: "screenshots", title: "Images · " + (library.destinations.screenshots || "Unavailable")},
+                    {action: "RecordingLibrary.videoDestination", kind: "recordings", title: "Videos · " + (library.destinations.recordings || "Unavailable")},
+                    {action: "RecordingLibrary.destinationDefaults", kind: "", title: "Locations defaults"}
+                ]
+                delegate: ShellAction {
+                    required property var modelData
+                    width: (destinationButtons.width - 2 * destinationButtons.spacing) * (modelData.kind ? 0.4 : 0.2)
+                    height: 38
+                    runtime: library.runtime
+                    theme: library.theme
+                    motion: library.motion
+                    compact: true
+                    horizontalCompact: true
+                    title: modelData.title
+                    shortcut: library.runtime.shellHint(modelData.action)
+                    enabled: !library.isBusy && !!library.runtime.captureLocations
+                    onActivated: library.locationAction(modelData.kind ? "choose" : "reset", modelData.kind)
+                }
+            }
+        }
+        ShellText {
+            visible: !library.ocrVisible
+            width: parent.width
+            runtime: library.runtime
+            theme: library.theme
+            text: "Changing destinations does not move existing captures. The library shows the selected directories."
+            color: library.theme.textMuted
+            wrapMode: Text.WordWrap
+            font.pixelSize: library.theme.fontSize(10)
         }
         KeyHintStrip {
             width: parent.width

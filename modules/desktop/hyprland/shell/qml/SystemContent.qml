@@ -2029,6 +2029,10 @@ FocusScope {
                 }
 
                 if (recordingsPanel.open) {
+                    if (recordingsPanel.panel && recordingsPanel.panel.handleLocationKey(event.key, event.modifiers, event.isAutoRepeat)) {
+                        event.accepted = true;
+                        return;
+                    }
                     if (recordingsPanel.panel && recordingsPanel.panel.ocrVisible) {
                         const shifted = !!root.runtime.shellModifier("controls", "Shift", event.modifiers);
                         const control = !!root.runtime.shellModifier("controls", "Control", event.modifiers);

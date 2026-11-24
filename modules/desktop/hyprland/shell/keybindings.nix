@@ -209,6 +209,9 @@
           "RecordingLibrary.open" = "ENTER";
           "RecordingLibrary.page" = "U/D";
           "RecordingLibrary.refresh" = "R";
+          "RecordingLibrary.imageDestination" = "SHIFT+S";
+          "RecordingLibrary.videoDestination" = "SHIFT+V";
+          "RecordingLibrary.destinationDefaults" = "SHIFT+R";
           "RecordingLibrary.word" = "NAV_HORIZONTAL";
           "DisplaySettings.output" = "D";
           "DisplaySettings.refresh" = "R";

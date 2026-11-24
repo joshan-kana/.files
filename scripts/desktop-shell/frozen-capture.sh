@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# All capture producers and readers resolve the same effective directories.
+screenshot_dir="${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots"
+if command -v desktop-shell-capture-locations >/dev/null 2>&1; then
+  screenshot_dir="$(desktop-shell-capture-locations get screenshots)" || exit 1
+fi
 mode="${1:-}"
 private_dir="${XDG_RUNTIME_DIR:?}"
 ensure_snapshot() {
@@ -39,7 +44,7 @@ copy | save | annotate)
   # Preserve the frozen frame on export failure so Enter can retry.
   geometry="${w}x${h}+${x}+${y}"
   umask 077
-  dest="${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots"
+  dest="$screenshot_dir"
   mkdir -p -- "$dest"
   output="$dest/Screenshot-$(date +%Y%m%d-%H%M%S)-$$.$format"
   options=()

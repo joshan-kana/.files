@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# All capture producers and readers resolve the same effective directories.
+recording_dir="${DESKTOP_SHELL_RECORDING_DIR:-$HOME/Videos/Screencasts}"
+if command -v desktop-shell-capture-locations >/dev/null 2>&1; then
+  recording_dir="$(desktop-shell-capture-locations get recordings)" || exit 1
+fi
 umask 077
 settings="${XDG_RUNTIME_DIR:?}/desktop-shell-recording.conf"
 format=mp4
@@ -35,7 +40,7 @@ case "$fps" in 0 | 30 | 60 | 120) ;; *) exit 2 ;; esac
 case "$quality" in 18 | 23 | 28) ;; *) exit 2 ;; esac
 args+=(--codec "$codec" --codec-param "crf=$quality")
 if [ "$fps" -ne 0 ]; then args+=(--framerate "$fps"); fi
-directory="${DESKTOP_SHELL_RECORDING_DIR:-$HOME/Videos/Screencasts}"
+directory="$recording_dir"
 mkdir -p "$directory"
 output="$directory/Recording-$(date +%Y%m%d-%H%M%S)-$$.$format"
 case "$audio" in

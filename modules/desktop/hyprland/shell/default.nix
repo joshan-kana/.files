@@ -584,6 +584,17 @@ in
     description = "Wallpaper rotation policy. Wallpaper paths and collections are relative to the user library; runtime overrides are independent.";
   };
 
+  scopeOptions.captureLocations = lib.mkOption {
+    type = lib.types.submodule {
+      options = {
+        screenshots = lib.mkOption { type = lib.types.str; default = ""; description = "Absolute screenshot directory; empty uses the XDG Pictures directory."; };
+        recordings = lib.mkOption { type = lib.types.str; default = ""; description = "Absolute recording directory; empty uses the native recording directory."; };
+      };
+    };
+    default = { };
+    description = "Capture destination defaults; runtime selections override each directory independently.";
+  };
+
   scopeOptions.captureFreezeEnabled = lib.mkOption {
     type = lib.types.bool;
     default = true;
@@ -1212,6 +1223,7 @@ in
           wallpaperPolicy = lib.getExe wallpaperPolicy;
           recordingToggle = lib.getExe recordingToggle;
           recordingLibrary = lib.getExe recordingLibrary;
+          captureLocations = lib.getExe captureLocations;
           frozenCapture = lib.getExe frozenCapture;
           colourPicker = lib.getExe colourPicker;
           nightLightControl = lib.getExe nightLightControl;
@@ -1301,9 +1313,20 @@ in
         text = builtins.readFile ../../../../scripts/desktop-shell/pick-colour.sh;
       };
 
+      captureLocations = pkgs.writeShellApplication {
+        name = "desktop-shell-capture-locations";
+        runtimeInputs = [ pkgs.python3 pkgs.systemd pkgs.kdePackages.kdialog ];
+        text = ''
+          ${lib.optionalString (scopeConfig.captureLocations.screenshots != "") "export DESKTOP_SHELL_SCREENSHOT_DIR=${lib.escapeShellArg scopeConfig.captureLocations.screenshots}"}
+          ${lib.optionalString (scopeConfig.captureLocations.recordings != "") "export DESKTOP_SHELL_RECORDING_DIR=${lib.escapeShellArg scopeConfig.captureLocations.recordings}"}
+          exec python3 ${../../../../scripts/desktop-shell/capture-locations.py} "$@"
+        '';
+      };
+
       recordRegion = pkgs.writeShellApplication {
         name = "desktop-shell-record-region";
         runtimeInputs = [
+          captureLocations
           pkgs.coreutils
           pkgs.slurp
           pkgs.wf-recorder
@@ -1327,6 +1350,7 @@ in
       frozenCapture = pkgs.writeShellApplication {
         name = "desktop-shell-frozen-capture";
         runtimeInputs = [
+          captureLocations
           captureNotify
           pkgs.grim
           pkgs.imagemagick
@@ -1350,6 +1374,7 @@ in
       notificationOpen = pkgs.writeShellApplication {
         name = "desktop-shell-open-capture";
         runtimeInputs = [
+          captureLocations
           imageMarkup
           pkgs.quickshell
           pkgs.xdg-utils
@@ -1375,6 +1400,7 @@ in
       recordingLibrary = pkgs.writeShellApplication {
         name = "desktop-shell-recordings";
         runtimeInputs = [
+          captureLocations
           pkgs.tesseract
           imageMarkup
           pkgs.coreutils

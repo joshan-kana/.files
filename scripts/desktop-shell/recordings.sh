@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
+# All capture producers and readers resolve the same effective directories.
+screenshot_dir="${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots"
+recording_dir="${DESKTOP_SHELL_RECORDING_DIR:-$HOME/Videos/Screencasts}"
+if command -v desktop-shell-capture-locations >/dev/null 2>&1; then
+  screenshot_dir="$(desktop-shell-capture-locations get screenshots)" || exit 1
+  recording_dir="$(desktop-shell-capture-locations get recordings)" || exit 1
+fi
 action="${1:-}"
-recordings="${DESKTOP_SHELL_RECORDING_DIR:-$HOME/Videos/Screencasts}"
+recordings="$recording_dir"
 preview_dir="${XDG_RUNTIME_DIR:?}/desktop-shell-recordings-preview"
 case "$action" in
 list)
@@ -29,7 +36,7 @@ list)
       done < <(find "$recordings" -maxdepth 1 -type f -regextype posix-extended \
         -regex '.*/Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.(mp4|mkv)' -printf '%T@\t%f\t%s\n')
     fi
-    screenshots="${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots"
+    screenshots="$screenshot_dir"
     if [ -d "$screenshots" ]; then
       while IFS=$'\t' read -r modified name size; do
         [[ $name =~ ^Screenshot-[0-9]{8}-[0-9]{6}-[0-9]+\.(png|jpg)$ ]] || continue
@@ -50,7 +57,7 @@ preview | open | edit | copy | trash | ocr)
     path="$recordings/$name"
     kind=recording
   elif [[ $name =~ ^Screenshot-[0-9]{8}-[0-9]{6}-[0-9]+\.(png|jpg)$ ]]; then
-    path="${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots/$name"
+    path="$screenshot_dir/$name"
     kind=image
   else
     exit 2

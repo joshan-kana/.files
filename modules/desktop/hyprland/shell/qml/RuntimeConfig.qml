@@ -43,6 +43,7 @@ QtObject {
     readonly property string wallpaperPolicy: root.configData.tools.wallpaperPolicy
     readonly property string wallpaperLibrary: root.configData.tools.wallpaperLibrary
     readonly property string recordingToggle: root.configData.tools.recordingToggle
+    readonly property string captureLocations: root.configData.tools.captureLocations
     readonly property string recordingLibrary: root.configData.tools.recordingLibrary
     readonly property string frozenCapture: root.configData.tools.frozenCapture
     readonly property string colourPicker: root.configData.tools.colourPicker
@@ -368,6 +369,7 @@ QtObject {
                 property string wallpaperPolicy: ""
                 property string wallpaperLibrary: ""
                 property string recordingToggle: ""
+                property string captureLocations: ""
                 property string recordingLibrary: ""
                 property string frozenCapture: ""
                 property string colourPicker: ""
