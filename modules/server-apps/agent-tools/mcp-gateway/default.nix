@@ -143,7 +143,7 @@ in
         "github-authorization:${server.secretsDir}/agentgateway/github-authorization"
         "youtrack-authorization:${server.secretsDir}/agentgateway/youtrack-authorization"
         "n8n-authorization:${server.secretsDir}/agentgateway/n8n-authorization"
-        "dropbox-rclone:/var/lib/backup-credentials/rclone.conf"
+        "dropbox-rclone:${config.dotfiles.backups.secrets.rcloneConfigFile}"
       ];
       Restart = "always";
       RestartSec = "2s";
