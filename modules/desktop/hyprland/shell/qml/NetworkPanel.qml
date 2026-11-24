@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell.Io
 import Quickshell.Networking
+import "NetworkProfiles.js" as Profiles
 
 Item {
     id: panel
@@ -36,6 +37,137 @@ Item {
     property var detailBaseRows: []
     property bool detailError: false
     property string profileQueryUuid: ""
+    property bool profileEditing: false
+    property bool profileTextEditing: false
+    property int profileFieldIndex: 0
+    property string editUuid: ""
+    property var profileFields: []
+    property var profileOriginal: ({})
+    property var profileDraft: ({})
+    property bool profileReady: false
+    readonly property bool profileBusy: editQuery.running || editApply.running
+    readonly property bool profileEditable: savedView && savedSelected && ["802-11-wireless", "802-3-ethernet"].includes(savedSelected.kind) && detailUuid === savedSelected.uuid
+
+    Process {
+        id: editQuery
+        stdout: StdioCollector { id: editOutput }
+        onExited: function(code, status) {
+            if (!panel.profileEditing || panel.editUuid !== panel.detailUuid)
+                return;
+            const values = Profiles.parseProfile(editOutput.text, panel.profileFields);
+            panel.profileReady = code === 0 && panel.profileFields.every(field => Object.prototype.hasOwnProperty.call(values, field.key));
+            if (panel.profileReady) {
+                panel.profileOriginal = values;
+                panel.profileDraft = Object.assign({}, values);
+                panel.statusText = "Edit saved settings · active link unchanged";
+            } else {
+                panel.statusText = "Could not read saved profile";
+                panel.statusError = true;
+            }
+        }
+    }
+
+    Process {
+        id: editApply
+        stderr: StdioCollector { id: editError }
+        onExited: function(code, status) {
+            if (!panel.profileEditing)
+                return;
+            panel.statusError = code !== 0;
+            if (code === 0) {
+                panel.profileOriginal = Object.assign({}, panel.profileDraft);
+                panel.statusText = "Saved · changes take effect on next connection";
+                panel.refreshDetails();
+            } else {
+                panel.statusText = "Save failed // " + editError.text.trim().slice(0, 120);
+            }
+        }
+    }
+
+    function openProfileEditor(): void {
+        if (!detailView || !profileEditable || !detailUuid || profileBusy)
+            return;
+        profileFields = Profiles.editableFields(savedSelected.kind);
+        editUuid = detailUuid;
+        profileReady = false;
+        profileEditing = true;
+        profileFieldIndex = 0;
+        statusError = false;
+        statusText = "Reading saved settings…";
+        editQuery.exec([runtime.nmcli, "--escape", "yes", "-t", "-f", profileFields.map(field => field.key).join(","), "connection", "show", "uuid", editUuid]);
+        keyboardRequested();
+    }
+
+    function closeProfileEditor(): void {
+        if (editApply.running)
+            return;
+        profileTextEditing = false;
+        profileEditing = false;
+        profileReady = false;
+        statusText = "";
+        statusError = false;
+        keyboardRequested();
+    }
+
+    function stageProfileValue(key: string, value: string): void {
+        profileDraft = Object.assign({}, profileDraft, { [key]: value });
+    }
+
+    function adjustProfileField(delta: int): void {
+        if (!profileReady || profileBusy)
+            return;
+        const field = profileFields[profileFieldIndex];
+        if (!field)
+            return;
+        if (field.choices) {
+            const index = field.choices.indexOf(profileDraft[field.key]);
+            stageProfileValue(field.key, field.choices[(index + delta + field.choices.length) % field.choices.length]);
+        } else if (field.minimum !== undefined) {
+            stageProfileValue(field.key, String(Math.max(field.minimum, Math.min(field.maximum, Number(profileDraft[field.key]) + delta))));
+        }
+    }
+
+    function editProfileField(): void {
+        if (!profileReady || profileBusy)
+            return;
+        const field = profileFields[profileFieldIndex];
+        if (!field)
+            return;
+        if (field.choices || field.minimum !== undefined) {
+            adjustProfileField(1);
+            return;
+        }
+        profileTextEditing = true;
+        profileInput.text = profileDraft[field.key] || "";
+        profileInput.forceActiveFocus();
+        profileInput.selectAll();
+    }
+
+    function finishProfileText(save: bool): void {
+        if (save)
+            stageProfileValue(profileFields[profileFieldIndex].key, profileInput.text.trim());
+        profileTextEditing = false;
+        keyboardRequested();
+    }
+
+    function saveProfile(): void {
+        if (!profileReady || profileBusy || editUuid !== detailUuid)
+            return;
+        try {
+            const args = Profiles.modification(editUuid, profileFields, profileOriginal, profileDraft);
+            if (args.length === 4) {
+                statusText = "No changes";
+                return;
+            }
+            statusError = false;
+            statusText = "Saving profile…";
+            editApply.exec([runtime.nmcli].concat(args));
+        } catch (error) {
+            statusError = true;
+            statusText = String(error);
+        }
+    }
+
     readonly property bool detailPending: detailProcess.running || profileDetailsProcess.running
 
     property StdioCollector profileDetailsOutput: StdioCollector {}
@@ -210,6 +342,10 @@ Item {
     function toggleDetailView(): void {
         if (passwordPrompt)
             return;
+        if (profileEditing) {
+            closeProfileEditor();
+            return;
+        }
         if (detailView) {
             detailView = false;
             detailRows = [];
@@ -354,7 +490,7 @@ Item {
     readonly property var networks: system.wifiNetworks || []
     readonly property bool passwordPrompt: pendingNetwork !== null
 
-    readonly property real bodyHeight: detailView ? Math.min(448, Math.max(252, detailPending ? 448 : detailRows.length * 60 + 16)) : savedView ? Math.min(430, Math.max(185, savedProfiles.length * 76)) : system.wifiAvailable && system.wifiEnabled ? Math.min(430, Math.max(185, networks.length * 96)) : emptyState.implicitHeight + panel.theme.spacing3 + panel.theme.spacing4
+    readonly property real bodyHeight: profileEditing ? 448 : detailView ? Math.min(448, Math.max(252, detailPending ? 448 : detailRows.length * 60 + 16)) : savedView ? Math.min(430, Math.max(185, savedProfiles.length * 76)) : system.wifiAvailable && system.wifiEnabled ? Math.min(430, Math.max(185, networks.length * 96)) : emptyState.implicitHeight + panel.theme.spacing3 + panel.theme.spacing4
     implicitHeight: header.height + statusBanner.implicitHeight + panel.theme.spacing4 * 2 + bodyHeight + panel.theme.spacing3 + footer.implicitHeight
     visible: open
 
@@ -403,6 +539,8 @@ Item {
         detailView = false;
         detailRows = [];
         detailBaseRows = [];
+        profileEditing = false;
+        profileTextEditing = false;
         open = false;
         keyboardRequested();
     }
@@ -422,6 +560,11 @@ Item {
     }
 
     function moveSelection(delta: int): void {
+        if (profileEditing) {
+            profileFieldIndex = Math.max(0, Math.min(profileFields.length - 1, profileFieldIndex + delta));
+            profileList.positionViewAtIndex(profileFieldIndex, ListView.Contain);
+            return;
+        }
         if (detailView) {
             detailList.contentY = Math.max(0, Math.min(detailList.contentHeight - detailList.height, detailList.contentY + delta * 64));
             return;
@@ -479,6 +622,10 @@ Item {
     }
 
     function activateSelected(): void {
+        if (profileEditing) {
+            editProfileField();
+            return;
+        }
         if (detailView)
             return;
         if (savedView) {
@@ -546,7 +693,7 @@ Item {
         glyphFont: "Symbols Nerd Font"
         glyphColor: panel.system.networkConnected ? panel.theme.positive : panel.theme.warning
         eyebrow: "Connectivity / " + panel.system.connectivityText
-        title: panel.detailView ? "Connection details" : panel.savedView ? "Saved connections" : panel.system.wifiAvailable ? "Wi-Fi" : "Network"
+        title: panel.profileEditing ? "Saved profile settings" : panel.detailView ? "Connection details" : panel.savedView ? "Saved connections" : panel.system.wifiAvailable ? "Wi-Fi" : "Network"
         detail: panel.detailView ? panel.detailName + " · " + panel.detailType : panel.savedView ? panel.savedProfiles.length + " NetworkManager profiles · VPN / Wi-Fi" : panel.system.networkConnected ? panel.system.networkName : "No active network"
     }
 
@@ -826,9 +973,87 @@ Item {
         }
 
         ListView {
+            id: profileList
+            anchors.fill: parent
+            visible: panel.profileEditing && !panel.profileTextEditing
+            model: panel.profileFields
+            spacing: panel.theme.spacing2
+            clip: true
+            currentIndex: panel.profileFieldIndex
+            delegate: ShellAction {
+                required property var modelData
+                required property int index
+                width: ListView.view.width
+                height: 58
+                theme: panel.theme
+                runtime: panel.runtime
+                motion: panel.motion
+                compact: true
+                horizontalCompact: true
+                title: modelData.label + "  ·  " + (panel.profileReady ? (panel.profileDraft[modelData.key] || "None") : "Reading…")
+                active: panel.profileFieldIndex === index
+                enabled: panel.profileReady && !panel.profileBusy
+                shortcut: panel.profileFieldIndex === index ? panel.runtime.shellHint("NetworkPanel.connect") : ""
+                onActivated: {
+                    panel.profileFieldIndex = index;
+                    panel.editProfileField();
+                }
+            }
+        }
+        Column {
+            anchors.centerIn: parent
+            width: parent.width
+            spacing: panel.theme.spacing3
+            visible: panel.profileTextEditing
+            Text {
+                width: parent.width
+                text: panel.profileFields[panel.profileFieldIndex]?.label || ""
+                color: panel.theme.textStrong
+                font.family: panel.runtime.fontSans
+                font.pixelSize: panel.theme.fontSize(14)
+            }
+            ShellSurface {
+                width: parent.width
+                height: 54
+                theme: panel.theme
+                motion: panel.motion
+                surfaceLayer: ShellSurface.Control
+                cornerRadius: panel.theme.radiusMedium
+                TextInput {
+                    id: profileInput
+                    anchors.fill: parent
+                    anchors.margins: panel.theme.spacing3
+                    color: panel.theme.textStrong
+                    font.family: panel.runtime.fontMono
+                    font.pixelSize: panel.theme.fontSize(13)
+                    maximumLength: 512
+                    verticalAlignment: TextInput.AlignVCenter
+                    clip: true
+                    Keys.onPressed: event => {
+                        if (event.key === panel.runtime.shellKeyCode("controls", "Escape")) {
+                            panel.finishProfileText(false);
+                            event.accepted = true;
+                        } else if ((event.key === panel.runtime.shellKeyCode("controls", "Return") || event.key === panel.runtime.shellKeyCode("controls", "Enter"))) {
+                            panel.finishProfileText(true);
+                            event.accepted = true;
+                        }
+                    }
+                }
+            }
+            Text {
+                width: parent.width
+                text: "Enter DNS addresses separated by commas. Enter stages; Escape cancels."
+                wrapMode: Text.Wrap
+                color: panel.theme.textMuted
+                font.family: panel.runtime.fontSans
+                font.pixelSize: panel.theme.fontSize(11)
+            }
+        }
+
+        ListView {
             id: detailList
             anchors.fill: parent
-            visible: panel.detailView
+            visible: panel.detailView && !panel.profileEditing
             model: panel.detailRows
             spacing: panel.theme.spacing2
             clip: true
@@ -874,7 +1099,7 @@ Item {
 
         Column {
             anchors.centerIn: parent
-            visible: panel.detailView && panel.detailRows.length === 0
+            visible: panel.detailView && !panel.profileEditing && panel.detailRows.length === 0
             spacing: panel.theme.spacing3
             width: parent.width
             Text {
@@ -1035,6 +1260,39 @@ Item {
         Row {
             width: parent.width
             spacing: panel.theme.spacing2
+            visible: panel.profileEditing || (panel.detailView && panel.profileEditable)
+            ShellAction {
+                width: panel.profileEditing ? (parent.width - parent.spacing) / 2 : parent.width
+                height: 40
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                compact: true
+                horizontalCompact: true
+                title: panel.profileEditing ? "Save changes" : "Edit saved profile"
+                shortcut: panel.runtime.shellHint(panel.profileEditing ? "NetworkPanel.saveProfile" : "NetworkPanel.editProfile")
+                enabled: !panel.profileBusy && (!panel.profileEditing || panel.profileReady && !panel.profileTextEditing)
+                onActivated: panel.profileEditing ? panel.saveProfile() : panel.openProfileEditor()
+            }
+            ShellAction {
+                visible: panel.profileEditing
+                width: (parent.width - parent.spacing) / 2
+                height: 40
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                compact: true
+                horizontalCompact: true
+                title: "Back · discard unsaved"
+                shortcut: panel.runtime.shellHint("NetworkPanel.passwordCancel")
+                onActivated: panel.closeProfileEditor()
+            }
+        }
+
+        Row {
+            width: parent.width
+            spacing: panel.theme.spacing2
+            visible: !panel.profileEditing
             KeyHintStrip {
                 width: Math.max(1, parent.width - detailsButton.width - parent.spacing)
                 runtime: panel.runtime

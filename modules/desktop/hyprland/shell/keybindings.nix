@@ -173,6 +173,8 @@
           "NetworkPanel.connectNetwork" = "ENTER";
           "NetworkPanel.connectProfile" = "ENTER";
           "NetworkPanel.detail" = "V";
+          "NetworkPanel.editProfile" = "E";
+          "NetworkPanel.saveProfile" = "CTRL+S";
           "NetworkPanel.listScroll" = "NAV_VERTICAL";
           "NetworkPanel.passwordCancel" = "ESC";
           "NetworkPanel.passwordSubmit" = "ENTER";

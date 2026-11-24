@@ -518,6 +518,10 @@ FocusScope {
                 backFromDetail();
         } else if (audioChooserOpen) {
             audioDeck.handleKey(Qt.Key_Escape, Qt.NoModifier);
+        } else if (networkPanel.open && networkPanel.panel && networkPanel.panel.profileTextEditing) {
+            networkPanel.invoke("finishProfileText", false);
+        } else if (networkPanel.open && networkPanel.panel && networkPanel.panel.profileEditing) {
+            networkPanel.invoke("closeProfileEditor");
         } else if (networkPanel.open && networkPanel.passwordPrompt) {
             networkPanel.invoke("cancelPassword");
         } else if (recordingsPanel.open && recordingsPanel.panel && recordingsPanel.panel.ocrVisible) {
@@ -2160,8 +2164,37 @@ FocusScope {
                 }
 
                 if (networkPanel.open) {
-                    if (networkPanel.passwordPrompt)
+                    if (networkPanel.passwordPrompt || (networkPanel.panel && networkPanel.panel.profileTextEditing))
                         return;
+                    if (networkPanel.panel && networkPanel.panel.profileEditing) {
+                        if (root.runtime.shellMatchesHint("NetworkPanel.saveProfile", event.key, event.modifiers)) {
+                            if (!event.isAutoRepeat)
+                                networkPanel.invoke("saveProfile");
+                        } else if (root.runtime.shellNavigates("controls", "up", event.key)) {
+                            networkPanel.invoke("moveSelection", -1);
+                        } else if (root.runtime.shellNavigates("controls", "down", event.key)) {
+                            networkPanel.invoke("moveSelection", 1);
+                        } else if (root.runtime.shellNavigates("controls", "left", event.key)) {
+                            networkPanel.invoke("adjustProfileField", -1);
+                        } else if (root.runtime.shellNavigates("controls", "right", event.key)) {
+                            networkPanel.invoke("adjustProfileField", 1);
+                        } else if ((event.key === root.runtime.shellKeyCode("controls", "Return") || event.key === root.runtime.shellKeyCode("controls", "Enter"))) {
+                            if (!event.isAutoRepeat)
+                                networkPanel.invoke("editProfileField");
+                        } else if (event.key === root.runtime.shellKeyCode("controls", "Backspace")) {
+                            networkPanel.invoke("closeProfileEditor");
+                        } else {
+                            return;
+                        }
+                        event.accepted = true;
+                        return;
+                    }
+                    if (root.runtime.shellMatchesHint("NetworkPanel.editProfile", event.key, event.modifiers) && networkPanel.detailView) {
+                        if (!event.isAutoRepeat)
+                            networkPanel.invoke("openProfileEditor");
+                        event.accepted = true;
+                        return;
+                    }
 
                     if (event.key === root.runtime.shellKeyCode("controls", "Backspace")) {
                         root.navigateBack();
