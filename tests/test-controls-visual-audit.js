@@ -1077,5 +1077,6 @@ test("detail panel geometry follows the owning loader rather than dashboard widt
     detail,
     /height: Math.max\(104, parameterContent.implicitHeight/,
   );
-  assert.match(detail, /id: durationGrid/);
+  assert.match(detail, /Flow \{\s+id: durationFlow/);
+  assert.match(detail, /modelData === 0 \? durationFlow.width : Math.floor/);
 });

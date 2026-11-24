@@ -1302,18 +1302,17 @@ Item {
                 width: parent.width
                 wrapMode: Text.WordWrap
             }
-            Grid {
-                id: durationGrid
+            Flow {
+                id: durationFlow
                 width: parent.width
-                columns: width >= panel.theme.fontSize(480) ? 2 : 1
-                columnSpacing: panel.theme.spacing2
-                rowSpacing: panel.theme.spacing2
+                readonly property int columns: width >= panel.theme.fontSize(480) ? 2 : 1
+                spacing: panel.theme.spacing2
                 Repeater {
                     model: [15, 30, 60, 120, 0]
                     delegate: ShellAction {
                         required property int index
                         required property int modelData
-                        width: modelData === 0 ? durationGrid.width : (durationGrid.width - (durationGrid.columns - 1) * durationGrid.columnSpacing) / durationGrid.columns
+                        width: modelData === 0 ? durationFlow.width : Math.floor((durationFlow.width - (durationFlow.columns - 1) * durationFlow.spacing) / durationFlow.columns)
                         height: 52
                         runtime: panel.runtime
                         theme: panel.theme
