@@ -46,7 +46,7 @@ Item {
     readonly property bool hasBlur: ["windows", "glass"].includes(kind)
     readonly property bool reactiveTuning: kind === "reactive"
     readonly property bool spectrumTuning: kind === "spectrum"
-    readonly property bool hasReset: hasBlur || spectrumTuning || kind === "alerts" || kind === "nightLight"
+    readonly property bool hasReset: hasBlur || spectrumTuning || kind === "alerts" || kind === "nightLight" || kind === "power"
     readonly property string titleText: ({
             windows: "Window transparency",
             glass: "Frosted glass",
@@ -341,6 +341,10 @@ Item {
     }
 
     function resetAppearance(): void {
+        if (kind === "power") {
+            powerProfile.resetPolicy();
+            return;
+        }
         if (kind === "nightLight") {
             nightLight.change("reset", "");
             return;
@@ -416,6 +420,14 @@ Item {
                 powerProfile.setProfile(profiles[number - 1]);
                 return true;
             }
+            if (number >= 4 && number < 4 + profiles.length) {
+                powerProfile.setPolicyProfile("acProfile", profiles[number - 4]);
+                return true;
+            }
+            if (number >= 7 && number < 7 + profiles.length) {
+                powerProfile.setPolicyProfile("batteryProfile", profiles[number - 7]);
+                return true;
+            }
         }
         if (kind === "stay") {
             const durations = [15, 30, 60, 120, 0];
@@ -438,8 +450,8 @@ Item {
 
     function handleKey(key: int, modifiers: int, autoRepeat: bool): bool {
         if (autoRepeat) {
-            const repeatedAction = ["SettingsDetail.toggle", "SettingsDetail.blur", "SettingsDetail.reset", "SettingsDetail.presentation", "SettingsDetail.history", "SettingsDetail.quietHours", "SettingsDetail.nightResume", "SettingsDetail.nightPauseUntil"].some(name => runtime.shellMatchesHint(name, key, modifiers));
-            const choice = kind === "nightLight" ? runtime.shellNumberIndex("controls", key, 9) : reactiveTuning ? runtime.shellNumberIndex("controls", key, 7) : kind === "alerts" ? runtime.shellNumberIndex("controls", key, 6) : kind === "power" || kind === "stay" ? runtime.shellNumberIndex("controls", key, 5) : -1;
+            const repeatedAction = ["SettingsDetail.toggle", "SettingsDetail.blur", "SettingsDetail.reset", "SettingsDetail.presentation", "SettingsDetail.history", "SettingsDetail.quietHours", "SettingsDetail.nightResume", "SettingsDetail.nightPauseUntil", "SettingsDetail.powerAutomatic"].some(name => runtime.shellMatchesHint(name, key, modifiers));
+            const choice = (kind === "nightLight" || kind === "power") ? runtime.shellNumberIndex("controls", key, 9) : reactiveTuning ? runtime.shellNumberIndex("controls", key, 7) : kind === "alerts" ? runtime.shellNumberIndex("controls", key, 6) : kind === "power" || kind === "stay" ? runtime.shellNumberIndex("controls", key, 5) : -1;
             if (repeatedAction || choice >= 0)
                 return true;
         }
@@ -454,6 +466,10 @@ Item {
         }
         if (runtime.shellMatchesHint("SettingsDetail.reset", key, modifiers) && hasReset) {
             resetAppearance();
+            return true;
+        }
+        if (kind === "power" && runtime.shellMatchesHint("SettingsDetail.powerAutomatic", key, modifiers)) {
+            powerProfile.toggleAutomatic();
             return true;
         }
         if (kind === "nightLight" && runtime.shellMatchesHint("SettingsDetail.nightResume", key, modifiers)) {
@@ -481,7 +497,7 @@ Item {
             }
         }
         if ((kind === "power" || kind === "stay" || kind === "alerts" || kind === "nightLight" || reactiveTuning) && modifiers === Qt.NoModifier) {
-            const numberIndex = runtime.shellNumberIndex("controls", key, kind === "nightLight" ? 9 : reactiveTuning ? 7 : kind === "alerts" ? 6 : 5);
+            const numberIndex = runtime.shellNumberIndex("controls", key, (kind === "nightLight" || kind === "power") ? 9 : reactiveTuning ? 7 : kind === "alerts" ? 6 : 5);
             if (numberIndex >= 0)
                 return activateNumber(numberIndex + 1);
         }
@@ -971,6 +987,34 @@ Item {
             visible: panel.kind === "power"
             width: parent.width
             spacing: panel.theme.spacing2
+            ShellText {
+                width: parent.width
+                runtime: panel.runtime
+                theme: panel.theme
+                text: panel.powerProfile.policyStatus
+                color: panel.theme.textMuted
+                wrapMode: Text.WordWrap
+            }
+            ShellText {
+                visible: panel.powerProfile.batteryAvailable
+                width: parent.width
+                runtime: panel.runtime
+                theme: panel.theme
+                text: panel.powerProfile.batteryAvailable ? Math.round(panel.powerProfile.battery.percentage * 100) + "% · " + (panel.powerProfile.onBattery ? "Battery power · " + panel.powerProfile.duration(panel.powerProfile.battery.timeToEmpty) + " remaining" : "External power · " + panel.powerProfile.duration(panel.powerProfile.battery.timeToFull) + " to full") + " · " + panel.powerProfile.battery.energy.toFixed(1) + " / " + panel.powerProfile.battery.energyCapacity.toFixed(1) + " Wh" : ""
+                wrapMode: Text.WordWrap
+                color: panel.theme.textMuted
+            }
+            Repeater {
+                model: panel.powerProfile.physicalBatteries
+                delegate: ShellText {
+                    required property var modelData
+                    width: panel.width
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    text: (modelData.model || "Battery") + " · Health " + (modelData.healthSupported ? Math.round(modelData.healthPercentage * 100) + "%" : "unavailable")
+                    color: panel.theme.textMuted
+                }
+            }
             Repeater {
                 model: panel.powerProfile.profiles
                 delegate: ShellAction {
@@ -990,6 +1034,83 @@ Item {
                     enabled: panel.powerProfile.available && !panel.powerProfile.applying
                     onActivated: panel.powerProfile.setProfile(modelData)
                 }
+            }
+            ShellAction {
+                width: parent.width
+                height: 40
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                title: "Automatic AC / battery policy"
+                shortcut: panel.runtime.shellHint("SettingsDetail.powerAutomatic")
+                compact: true
+                horizontalCompact: true
+                active: panel.powerProfile.automatic
+                enabled: panel.powerProfile.available
+                onActivated: panel.powerProfile.toggleAutomatic()
+            }
+            Repeater {
+                model: ["acProfile", "batteryProfile"]
+                delegate: Column {
+                    id: sourceRow
+                    required property int index
+                    required property string modelData
+                    width: panel.width
+                    spacing: panel.theme.spacing2
+                    ShellText {
+                        width: parent.width
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        text: sourceRow.modelData === "acProfile" ? "External power preference" : "Battery preference"
+                        color: panel.theme.textMuted
+                    }
+                    Row {
+                        width: parent.width
+                        spacing: panel.theme.spacing2
+                        Repeater {
+                            model: panel.powerProfile.profiles
+                            delegate: ShellAction {
+                                required property int index
+                                required property string modelData
+                                width: (sourceRow.width - panel.theme.spacing2 * Math.max(0, panel.powerProfile.profiles.length - 1)) / Math.max(1, panel.powerProfile.profiles.length)
+                                height: 40
+                                runtime: panel.runtime
+                                theme: panel.theme
+                                motion: panel.motion
+                                title: panel.powerProfile.label(modelData)
+                                shortcut: panel.runtime.shellNumberHint("controls", (sourceRow.index === 0 ? 3 : 6) + index)
+                                compact: true
+                                horizontalCompact: true
+                                active: (sourceRow.modelData === "acProfile" ? panel.powerProfile.acProfile : panel.powerProfile.batteryProfile) === modelData
+                                onActivated: panel.powerProfile.setPolicyProfile(sourceRow.modelData, modelData)
+                            }
+                        }
+                    }
+                }
+            }
+            Repeater {
+                model: panel.powerProfile.holds
+                delegate: ShellText {
+                    required property var modelData
+                    width: panel.width
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    text: "Profile held by " + modelData.applicationId + " · " + modelData.reason
+                    color: panel.theme.textMuted
+                    wrapMode: Text.WordWrap
+                }
+            }
+            ShellAction {
+                width: parent.width
+                height: 40
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                title: "Restore power policy defaults"
+                shortcut: panel.runtime.shellHint("SettingsDetail.reset")
+                compact: true
+                horizontalCompact: true
+                onActivated: panel.powerProfile.resetPolicy()
             }
         }
 

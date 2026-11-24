@@ -89,6 +89,7 @@ QtObject {
     readonly property bool notificationPresentation: root.configData.notifications.presentation
     readonly property bool notificationHistoryEnabled: root.configData.notifications.historyEnabled
     readonly property var notificationQuietHours: root.configData.notifications.quietHours
+    readonly property var powerPolicy: root.configData.powerPolicy
     readonly property string weatherLocation: root.configData.weather.location
 
     function shortcut(id) {
@@ -293,6 +294,12 @@ QtObject {
                     property int endMinute: 420
                     property int days: 127
                 }
+            }
+
+            property JsonObject powerPolicy: JsonObject {
+                property bool automatic: false
+                property string acProfile: "balanced"
+                property string batteryProfile: "power-saver"
             }
 
             property JsonObject weather: JsonObject {

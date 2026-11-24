@@ -244,6 +244,7 @@ ShellRoot {
 
     PowerProfileState {
         id: qmlPowerProfile
+        runtime: qmlRuntime
         active: true
     }
 

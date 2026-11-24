@@ -557,6 +557,30 @@ in
     description = "Default notification history retention preference.";
   };
 
+  scopeOptions.powerPolicy = lib.mkOption {
+    type = lib.types.submodule {
+      options = {
+        automatic = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Select the configured power profile on AC/battery transitions.";
+        };
+        acProfile = lib.mkOption {
+          type = lib.types.enum [ "power-saver" "balanced" "performance" ];
+          default = "balanced";
+          description = "Preferred power profile on external power.";
+        };
+        batteryProfile = lib.mkOption {
+          type = lib.types.enum [ "power-saver" "balanced" "performance" ];
+          default = "power-saver";
+          description = "Preferred power profile on battery.";
+        };
+      };
+    };
+    default = { };
+    description = "Optional desktop power profile policy. Runtime overrides remain in the shared preferences store.";
+  };
+
   scopeOptions.nightLight = lib.mkOption {
     type = lib.types.submodule {
       options = {
@@ -869,6 +893,7 @@ in
           historyEnabled = scopeConfig.notificationsHistoryEnabled;
           quietHours = scopeConfig.notificationQuietHours;
         };
+        powerPolicy = scopeConfig.powerPolicy;
         weather.location = scopeConfig.weatherLocation;
         keybindings = cheatsheetBindings;
         shortcutHints = {
