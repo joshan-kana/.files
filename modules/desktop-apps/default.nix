@@ -236,8 +236,11 @@ in
             shellAliases.jm = "jellyfin-mpv-shim";
           }
           // lib.optionalAttrs isDarwin {
-            file."Library/Application Support/jellyfin-mpv-shim/mpv.conf".source =
-              config.xdg.configFile."mpv/mpv.conf".source;
+            file."Library/Application Support/jellyfin-mpv-shim/mpv.conf" =
+              lib.mkIf config.programs.mpv.enable
+                {
+                  source = config.xdg.configFile."mpv/mpv.conf".source;
+                };
             activation.jellyfinMpvShimSettings = lib.hm.dag.entryAfter [ "linkGeneration" ] (
               lib.hm.generators.mkImpureConfigMerger {
                 inherit pkgs;
@@ -256,7 +259,9 @@ in
             inherit settings;
           };
           systemd.user.services.jellyfin-mpv-shim.Install.WantedBy = lib.mkForce [ ];
-          xdg.configFile."jellyfin-mpv-shim/mpv.conf".source = config.xdg.configFile."mpv/mpv.conf".source;
+          xdg.configFile."jellyfin-mpv-shim/mpv.conf" = lib.mkIf config.programs.mpv.enable {
+            source = config.xdg.configFile."mpv/mpv.conf".source;
+          };
         };
     }
     // lib.optionalAttrs isDarwin {
