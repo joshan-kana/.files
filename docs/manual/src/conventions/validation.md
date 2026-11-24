@@ -9,6 +9,7 @@ Every pull request must pass the formatter, whitespace check, native flake check
 ```sh
 nix fmt -- --ci
 git diff --check
+git diff --cached --check
 nix flake check --option builders ''
 nix flake check --no-build --all-systems --option builders ''
 ```
@@ -26,12 +27,12 @@ Cross-system evaluation must not require foreign-architecture builds. Perform ad
 - **Service change:** inspect effective units, dependencies, credentials, ownership, network exposure, and startup behavior.
 - **Desktop change:** validate actual rendering, focus, input, performance, and accessibility.
 - **Security/network change:** verify listener bindings, firewall rules, authentication, and reachable paths.
-- **Storage change:** verify data preservation, permissions, backup coverage, and recovery.
+- **Storage change:** verify data preservation, permissions, backup coverage, and recovery. Check the fresh-provisioning path against all required datasets and mountpoints.
 
 An unexpected derivation change warrants investigation. A matching derivation is useful evidence of preservation, but does not establish every runtime property.
 
 ## Tests and reporting
 
-Test behavior by exercising the component or executable. Include deterministic, self-contained regression tests in the flake checks; keep tests requiring live services or hardware separate. For shared scope changes, check both enabled and disabled configurations and any dependent scopes. Derive fleet-wide validation targets from the configuration outputs; use explicit host fixtures only for host-specific requirements. Use source assertions for stable structural invariants, rather than as substitutes for behavioral tests or subjective style checks.
+Test behavior by exercising the component or executable. Include deterministic, self-contained regression tests in the flake checks; keep tests requiring live services or hardware separate. For shared scope changes, check both enabled and disabled configurations and any dependent scopes. Exercise non-default values when changing shared policy or its consumers. Derive fleet-wide validation targets from the configuration outputs; use explicit host fixtures only for host-specific requirements. Use source assertions for stable structural invariants, rather than as substitutes for behavioral tests or subjective style checks.
 
 Report which evaluations, builds, and live tests actually passed. A merged change, a successful build, and a successful deployment are distinct outcomes.

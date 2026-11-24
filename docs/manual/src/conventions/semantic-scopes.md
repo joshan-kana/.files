@@ -8,7 +8,7 @@ Keep native service options, packages, permissions, networking, and runtime sett
 
 Use `dotfiles.scopes.<path>.enable` to control scope inclusion. A disabled parent excludes its descendants. Native service enablement remains inside the owning scope.
 
-Use the `home = _: { ... };` boundary for Home Manager configuration within the same capability.
+Use the `home = _: { ... };` boundary for Home Manager configuration within the same capability. Put native definitions with configuration-dependent attribute names inside explicit `config` so the semantic scope structure can be inspected without forcing the configuration.
 
 ## Composition and profiles
 
