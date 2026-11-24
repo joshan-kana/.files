@@ -62,3 +62,25 @@ test("media key-down triggers the same action as pointer input with repeats only
     /if \(!event.isAutoRepeat\)\s*repeatAction.trigger\(\)/,
   );
 });
+
+test("compact transport keycaps and key-down dispatch share the three hybrid actions", () => {
+  const transport = qml("MediaTransport.qml");
+  const controls = qml("SystemContent.qml");
+  for (const action of ["play", "previous", "next"]) {
+    assert.ok(
+      transport.includes(
+        `compact ? "MediaTransport.${action}Compact" : "MediaTransport.${action}"`,
+      ),
+    );
+    assert.ok(
+      controls.includes(
+        `shellMatchesHint("MediaTransport.${action}Compact", event.key, event.modifiers)`,
+      ),
+    );
+    assert.ok(
+      controls.includes(
+        `mediaCard.triggerTransport("${action}", event.isAutoRepeat)`,
+      ),
+    );
+  }
+});

@@ -459,3 +459,56 @@ test("named-key and directional action hints dispatch the same assigned key", ()
     true,
   );
 });
+
+test("hybrid media transport keeps space and punctuation in both scopes", () => {
+  for (const [action, key, code] of [
+    ["play", "SPACE", Qt.Key_Space],
+    ["previous", ",", Qt.Key_Comma],
+    ["next", ".", Qt.Key_Period],
+  ]) {
+    for (const suffix of ["", "Compact"]) {
+      const name = "MediaTransport." + action + suffix;
+      assert.equal(f.hint(registry, name), key);
+      assert.equal(f.matchesHint(registry, name, code, 0, Qt), true);
+      assert.equal(
+        f.matchesHint(registry, name, code, Qt.ShiftModifier, Qt),
+        false,
+      );
+    }
+  }
+  const changed = {
+    ...registry,
+    overrides: { controls: { Comma: "G" }, media: { Period: "T" } },
+  };
+  assert.equal(f.hint(changed, "MediaTransport.previousCompact"), "G");
+  assert.equal(
+    f.matchesHint(changed, "MediaTransport.previousCompact", 71, 0, Qt),
+    true,
+  );
+  assert.equal(f.hint(changed, "MediaTransport.next"), "T");
+  assert.equal(f.matchesHint(changed, "MediaTransport.next", 84, 0, Qt), true);
+  assert.equal(
+    f.matchesHint(
+      registry,
+      "MediaContent.longer",
+      Qt.Key_Plus,
+      Qt.ShiftModifier,
+      Qt,
+    ),
+    true,
+  );
+  assert.equal(
+    f.matchesHint(
+      registry,
+      "MediaContent.longer",
+      Qt.Key_Equal,
+      Qt.ShiftModifier,
+      Qt,
+    ),
+    true,
+  );
+  assert.equal(
+    f.matchesHint(registry, "MediaContent.shorter", Qt.Key_Minus, 0, Qt),
+    true,
+  );
+});

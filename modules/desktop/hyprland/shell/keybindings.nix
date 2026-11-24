@@ -198,6 +198,9 @@
           "BluetoothPanel.scan" = "SHIFT+D";
           "BluetoothPanel.select" = "NAV_VERTICAL";
           "BluetoothPanel.trust" = "T";
+          "MediaTransport.playCompact" = "SPACE";
+          "MediaTransport.previousCompact" = ",";
+          "MediaTransport.nextCompact" = ".";
           "ControlsMediaCard.open" = "N";
           "ControlsMediaCard.repeat" = "B";
           "ControlsMediaCard.shuffle" = "Z";
@@ -320,7 +323,6 @@
           "SystemContent.legend.open_selected_capture" = "ENTER / O";
           "SystemContent.legend.page_selection" = "U/D · PGUP/PGDN";
           "SystemContent.legend.pair_trust_forget" = "P / T / F";
-          "SystemContent.legend.play_pause_previous_next_media" = "N";
           "SystemContent.legend.refresh_captures" = "R";
           "SystemContent.legend.refresh_now" = "R";
           "SystemContent.legend.restore_defaults_then_confirm" = "SHIFT+C · ENTER";
@@ -463,14 +465,11 @@
           "MediaContent.legend.cycle_connected_media_players" = "P";
           "MediaContent.legend.esc" = "ESC";
           "MediaContent.legend.overlay_local_synchronised_lyrics_lrc" = "Y";
-          "MediaContent.legend.previous_next_track" = "J / K";
           "MediaContent.legend.r" = "R";
           "MediaContent.legend.s" = "S";
           "MediaContent.legend.seek" = "NAV_HORIZONTAL";
-          "MediaContent.legend.seek_1" = "M";
-          "MediaContent.legend.seek_interval" = "SHIFT+H / SHIFT+L";
           "MediaContent.legend.switch_visualizer" = "V";
-          "MediaContent.longer" = "SHIFT+L";
+          "MediaContent.longer" = "+";
           "MediaContent.lyrics" = "Y";
           "MediaContent.player" = "P";
           "MediaContent.prefer" = "F";
@@ -478,16 +477,16 @@
           "MediaContent.rateDown" = "A";
           "MediaContent.rateUp" = "D";
           "MediaContent.repeat" = "R";
-          "MediaContent.shorter" = "SHIFT+H";
+          "MediaContent.shorter" = "-";
           "MediaContent.shuffle" = "S";
           "MediaContent.visualizer" = "V";
           "MediaTransport.back" = "NAV_KEY_LEFT_PRIMARY";
           "MediaTransport.backCompact" = "NAV_KEY_LEFT_PRIMARY_SHIFT";
           "MediaTransport.forward" = "NAV_KEY_RIGHT_PRIMARY";
           "MediaTransport.forwardCompact" = "NAV_KEY_RIGHT_PRIMARY_SHIFT";
-          "MediaTransport.next" = "K";
-          "MediaTransport.play" = "M";
-          "MediaTransport.previous" = "J";
+          "MediaTransport.next" = ".";
+          "MediaTransport.play" = "SPACE";
+          "MediaTransport.previous" = ",";
         };
         mixer = {
           "AudioMixerContent.effectsToggle" = "B";

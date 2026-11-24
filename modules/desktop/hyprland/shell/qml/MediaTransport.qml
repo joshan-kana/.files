@@ -91,22 +91,17 @@ Item {
     }
 
     function hint(action: string): string {
-        // The dashboard's two letter banks are fully occupied by direct
-        // tile actions. Full transport shortcuts belong to Now Playing;
-        // compact buttons remain focusable and clickable.
-        if (compact && action !== "back" && action !== "forward")
-            return "";
         switch (action) {
         case "previous":
-            return runtime.shellHint("MediaTransport.previous");
+            return runtime.shellHint(compact ? "MediaTransport.previousCompact" : "MediaTransport.previous");
         case "next":
-            return runtime.shellHint("MediaTransport.next");
+            return runtime.shellHint(compact ? "MediaTransport.nextCompact" : "MediaTransport.next");
         case "back":
             return compact ? runtime.shellHint("MediaTransport.backCompact") : runtime.shellHint("MediaTransport.back");
         case "forward":
             return compact ? runtime.shellHint("MediaTransport.forwardCompact") : runtime.shellHint("MediaTransport.forward");
         default:
-            return runtime.shellHint("MediaTransport.play");
+            return runtime.shellHint(compact ? "MediaTransport.playCompact" : "MediaTransport.play");
         }
     }
 

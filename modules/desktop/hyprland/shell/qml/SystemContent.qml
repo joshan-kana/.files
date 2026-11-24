@@ -438,8 +438,8 @@ FocusScope {
                             action: "Alerts / stay awake / power profile"
                         },
                         {
-                            key: root.runtime.shellHint("SystemContent.legend.play_pause_previous_next_media"),
-                            action: "Open Now Playing for transport shortcuts"
+                            key: [root.runtime.shellHint("MediaTransport.playCompact"), root.runtime.shellHint("MediaTransport.previousCompact"), root.runtime.shellHint("MediaTransport.nextCompact")].join(" / "),
+                            action: "Play / pause · previous / next track"
                         },
                         {
                             key: root.runtime.shellHint("SystemContent.legend.shuffle_repeat_choose_player"),
@@ -2501,6 +2501,12 @@ FocusScope {
                     root.openRecordings();
                 } else if (root.runtime.shellMatchesHint("SystemContent.powerProfile", event.key, event.modifiers) && root.powerProfile.available) {
                     root.powerProfile.cycle();
+                } else if (root.runtime.shellMatchesHint("MediaTransport.playCompact", event.key, event.modifiers)) {
+                    mediaCard.triggerTransport("play", event.isAutoRepeat);
+                } else if (root.runtime.shellMatchesHint("MediaTransport.previousCompact", event.key, event.modifiers)) {
+                    mediaCard.triggerTransport("previous", event.isAutoRepeat);
+                } else if (root.runtime.shellMatchesHint("MediaTransport.nextCompact", event.key, event.modifiers)) {
+                    mediaCard.triggerTransport("next", event.isAutoRepeat);
                 } else if (root.runtime.shellMatchesHint("ControlsMediaCard.open", event.key, event.modifiers)) {
                     root.mediaRequested();
                 } else if (root.runtime.shellMatchesHint("AudioDeviceControl.mute", event.key, event.modifiers)) {

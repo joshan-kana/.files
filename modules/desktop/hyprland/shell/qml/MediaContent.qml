@@ -20,7 +20,7 @@ FocusScope {
     property real scrubFraction: 0
     readonly property var helpBindings: [
         {
-            key: content.runtime.shellHint("MediaContent.legend.seek_1"),
+            key: content.runtime.shellHint("MediaTransport.play"),
             action: media.playing ? "Pause playback" : "Play"
         },
         {
@@ -28,11 +28,11 @@ FocusScope {
             action: "Seek " + media.seekSeconds + " seconds"
         },
         {
-            key: content.runtime.shellHint("MediaContent.legend.seek_interval"),
+            key: [content.runtime.shellHint("MediaContent.shorter"), content.runtime.shellHint("MediaContent.longer")].join(" / "),
             action: "Seek interval · " + media.seekSeconds + "s"
         },
         {
-            key: content.runtime.shellHint("MediaContent.legend.previous_next_track"),
+            key: [content.runtime.shellHint("MediaTransport.previous"), content.runtime.shellHint("MediaTransport.next")].join(" / "),
             action: "Previous / next track"
         },
         {
@@ -737,17 +737,19 @@ FocusScope {
                 } else if (content.runtime.shellMatchesHint("MediaTransport.play", event.key, event.modifiers)) {
                     fullTransport.triggerAction("play", event.isAutoRepeat);
                     event.accepted = true;
-                } else if (event.key === content.runtime.shellKeyCode("media", "V")) {
-                    content.toggleVisualizer();
+                } else if (content.runtime.shellMatchesHint("MediaContent.visualizer", event.key, event.modifiers)) {
+                    if (!event.isAutoRepeat)
+                        content.toggleVisualizer();
                     event.accepted = true;
-                } else if (event.key === content.runtime.shellKeyCode("media", "Y")) {
-                    content.toggleLyrics();
+                } else if (content.runtime.shellMatchesHint("MediaContent.lyrics", event.key, event.modifiers)) {
+                    if (!event.isAutoRepeat)
+                        content.toggleLyrics();
                     event.accepted = true;
-                } else if (event.key === content.runtime.shellKeyCode("media", "S")) {
+                } else if (content.runtime.shellMatchesHint("MediaContent.shuffle", event.key, event.modifiers)) {
                     if (!event.isAutoRepeat)
                         shuffleAction.trigger();
                     event.accepted = true;
-                } else if (event.key === content.runtime.shellKeyCode("media", "R")) {
+                } else if (content.runtime.shellMatchesHint("MediaContent.repeat", event.key, event.modifiers)) {
                     if (!event.isAutoRepeat)
                         repeatAction.trigger();
                     event.accepted = true;
@@ -767,7 +769,7 @@ FocusScope {
                     if (!event.isAutoRepeat && content.media.rateAvailable)
                         fasterAction.trigger();
                     event.accepted = true;
-                } else if (event.key === content.runtime.shellKeyCode("media", "P")) {
+                } else if (content.runtime.shellMatchesHint("MediaContent.player", event.key, event.modifiers)) {
                     if (!event.isAutoRepeat)
                         playerAction.trigger();
                     event.accepted = true;
@@ -777,11 +779,11 @@ FocusScope {
                 } else if (content.runtime.shellMatchesHint("MediaContent.longer", event.key, event.modifiers)) {
                     content.media.adjustSeekStep(1);
                     event.accepted = true;
-                } else if ((content.runtime.shellNavigates("media", "left", event.key))) {
+                } else if (event.modifiers === Qt.NoModifier && content.runtime.shellNavigates("media", "left", event.key)) {
                     progressTrack.beginKeyboardAdjustment();
                     fullTransport.triggerAction("back", event.isAutoRepeat);
                     event.accepted = true;
-                } else if ((content.runtime.shellNavigates("media", "right", event.key))) {
+                } else if (event.modifiers === Qt.NoModifier && content.runtime.shellNavigates("media", "right", event.key)) {
                     progressTrack.beginKeyboardAdjustment();
                     fullTransport.triggerAction("forward", event.isAutoRepeat);
                     event.accepted = true;

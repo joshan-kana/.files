@@ -121,6 +121,8 @@ function hint(registry, action) {
   const single = {
     "/": "Slash",
     "?": "Question",
+    ",": "Comma",
+    ".": "Period",
     "-": "Minus",
     "+": "Plus",
     "=": "Equal",
@@ -128,6 +130,10 @@ function hint(registry, action) {
     "]": "BracketRight",
   };
   if (entry.template in single) return render(single[entry.template]);
+  if (entry.template === ", / .")
+    return `${render("Comma")} / ${render("Period")}`;
+  if (entry.template === "- / +")
+    return `${render("Minus")} / ${render("Plus")}`;
   if (entry.template === "[ / ]")
     return `${render("BracketLeft")} / ${render("BracketRight")}`;
   if (entry.template === "1–0") {
@@ -243,12 +249,19 @@ function matchesHint(registry, action, key, modifiers, qt) {
   // a letter. Multi-action legends are display-only.
   if (
     !entry ||
-    !/^(?:(?:SHIFT|ALT|CTRL|SUPER)\+)*(?:[A-Z0-9]|ENTER|NUMENTER|ESC|BACKSPACE|SPACE|TAB|DEL|PGUP|PGDN|NAV_KEY_(?:UP|DOWN|LEFT|RIGHT)_(?:PRIMARY(?:_SHIFT)?|ARROW))$/.test(
+    !/^(?:(?:SHIFT|ALT|CTRL|SUPER)\+)*(?:[A-Z0-9]|ENTER|NUMENTER|ESC|BACKSPACE|SPACE|TAB|DEL|PGUP|PGDN|[,.+-]|NAV_KEY_(?:UP|DOWN|LEFT|RIGHT)_(?:PRIMARY(?:_SHIFT)?|ARROW))$/.test(
       entry.template,
     )
   )
     return false;
-  const parts = hint(registry, action).toUpperCase().split("+");
+  const rendered = hint(registry, action).toUpperCase();
+  if (rendered === "+")
+    return (
+      (key === qt.Key_Plus ||
+        (key === qt.Key_Equal && modifiers === qt.ShiftModifier)) &&
+      !(modifiers & (qt.AltModifier | qt.ControlModifier | qt.MetaModifier))
+    );
+  const parts = rendered.split("+");
   const assignedKey = parts.pop();
   const modifiersByName = {
     SHIFT: qt.ShiftModifier,
