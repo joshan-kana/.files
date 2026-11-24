@@ -387,6 +387,7 @@ Item {
                     width: parent.width
                     spacing: 3
                     Row {
+                        id: processHeader
                         width: parent.width
                         spacing: panel.theme.spacing2
                         Repeater {
@@ -394,7 +395,7 @@ Item {
                             delegate: ShellText {
                                 required property int index
                                 required property string modelData
-                                width: index === 1 ? Math.max(1, parent.width - panel.theme.fontSize(230) - parent.spacing * 3) : panel.theme.fontSize(index === 0 ? 80 : 75)
+                                width: index === 1 ? Math.max(1, processHeader.width - panel.theme.fontSize(230) - processHeader.spacing * 3) : panel.theme.fontSize(index === 0 ? 80 : 75)
                                 runtime: panel.runtime
                                 theme: panel.theme
                                 text: modelData
