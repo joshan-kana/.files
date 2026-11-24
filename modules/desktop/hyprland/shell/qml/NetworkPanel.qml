@@ -755,7 +755,7 @@ Item {
                 required property int index
 
                 width: ListView.view.width
-                height: 88
+                height: Math.max(88, panel.theme.fontSize(80))
                 theme: panel.theme
                 motion: panel.motion
                 selected: index === panel.selectedIndex
@@ -803,20 +803,20 @@ Item {
 
                             Text {
                                 id: statusBadge
-                                text: networkRow.modelData.connected ? "CONNECTED" : (networkRow.modelData.known ? "KNOWN" : "")
+                                text: networkRow.modelData.connected ? "Connected" : (networkRow.modelData.known ? "Saved" : "")
                                 color: networkRow.modelData.connected ? panel.theme.positive : panel.theme.textMuted
                                 font.family: panel.runtime.fontSans
-                                font.pixelSize: panel.theme.fontSize(8)
+                                font.pixelSize: panel.theme.fontUtility
                                 font.weight: Font.DemiBold
                             }
                         }
 
                         Text {
                             width: parent.width
-                            text: WifiSecurityType.toString(networkRow.modelData.security).toUpperCase() + " // SIG " + Math.round(networkRow.modelData.signalStrength * 100)
+                            text: WifiSecurityType.toString(networkRow.modelData.security) + " · " + Math.round(networkRow.modelData.signalStrength * 100) + "%"
                             color: panel.theme.textMuted
                             font.family: panel.runtime.fontMono
-                            font.pixelSize: panel.theme.fontSize(8)
+                            font.pixelSize: panel.theme.fontUtility
                             elide: Text.ElideRight
                         }
                     }
@@ -834,7 +834,7 @@ Item {
                             runtime: panel.runtime
                             theme: panel.theme
                             compact: true
-                            shortcut: panel.runtime.shellHint("NetworkPanel.connectNetwork")
+                            shortcut: networkRow.selected ? panel.runtime.shellHint("NetworkPanel.connectNetwork") : ""
                             label: networkRow.modelData.connected ? "Drop" : "Join"
                         }
 
@@ -846,7 +846,7 @@ Item {
                             text: visible ? ConnectionState.toString(networkRow.modelData.state).toUpperCase() : ""
                             color: panel.theme.warning
                             font.family: panel.runtime.fontSans
-                            font.pixelSize: panel.theme.fontSize(8)
+                            font.pixelSize: panel.theme.fontUtility
                             font.weight: Font.DemiBold
                         }
                     }
@@ -965,7 +965,7 @@ Item {
                             runtime: panel.runtime
                             theme: panel.theme
                             compact: true
-                            shortcut: panel.runtime.shellHint("NetworkPanel.connectProfile")
+                            shortcut: profileRow.selected ? panel.runtime.shellHint("NetworkPanel.connectProfile") : ""
                             label: profileRow.modelData.connected ? "Drop" : "Join"
                         }
 
@@ -1274,21 +1274,23 @@ Item {
             spacing: panel.theme.spacing2
             visible: panel.profileEditing || (panel.detailView && panel.profileEditable)
             ShellAction {
-                width: panel.profileEditing ? (parent.width - parent.spacing) / 2 : parent.width
+                width: Math.min(parent.width - (panel.profileEditing ? discardProfile.width + parent.spacing : 0), implicitWidth)
                 height: 40
                 runtime: panel.runtime
                 theme: panel.theme
                 motion: panel.motion
                 compact: true
                 horizontalCompact: true
+                icon: DesktopIcons.actionGlyph(panel.profileEditing ? "confirm" : "edit")
                 title: panel.profileEditing ? "Save changes" : "Edit saved profile"
                 shortcut: panel.runtime.shellHint(panel.profileEditing ? "NetworkPanel.saveProfile" : "NetworkPanel.editProfile")
                 enabled: !panel.profileBusy && (!panel.profileEditing || panel.profileReady && !panel.profileTextEditing)
                 onActivated: panel.profileEditing ? panel.saveProfile() : panel.openProfileEditor()
             }
             ShellAction {
+                id: discardProfile
                 visible: panel.profileEditing
-                width: (parent.width - parent.spacing) / 2
+                width: implicitWidth
                 height: 40
                 runtime: panel.runtime
                 theme: panel.theme

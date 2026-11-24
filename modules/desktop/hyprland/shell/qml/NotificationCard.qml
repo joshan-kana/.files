@@ -167,7 +167,7 @@ SquircleSurface {
             Text {
                 id: appName
                 anchors.verticalCenter: parent.verticalCenter
-                text: (card.notification && card.notification.appName || "SYSTEM").toUpperCase()
+                text: card.notification && card.notification.appName || "System"
                 elide: Text.ElideRight
                 width: Math.min(implicitWidth, Math.max(70, card.width * 0.38))
                 color: card.notification && card.notification.urgency === NotificationUrgency.Critical ? card.theme.readableRoleColor("critical") : card.read ? card.theme.textMuted : card.theme.readableRoleColor("notifications")
@@ -204,13 +204,13 @@ SquircleSurface {
                     text: (card.groupCount > 1 ? card.groupCount + " ITEMS · " : "") + (card.expanded ? "󰅃" : "󰅀") + (card.safeActions.length > 0 ? "  " + card.safeActions.length + " ACTIONS" : card.notification && card.notification.hasInlineReply ? "  REPLY" : card.notificationState.hasDefaultAction(card.notification) ? "  OPEN" : "  EXPAND")
                     color: card.theme.textMuted
                     font.family: card.runtime.fontSans
-                    font.pixelSize: card.theme.fontSize(8)
+                    font.pixelSize: card.theme.fontUtility
                 }
 
                 ShellAction {
                     id: readToggle
-                    width: 56
-                    height: 36
+                    width: Math.max(56, implicitWidth)
+                    height: Math.max(36, implicitHeight)
                     runtime: card.runtime
                     theme: card.theme
                     motion: card.motion
@@ -227,7 +227,7 @@ SquircleSurface {
                 ShellAction {
                     visible: !!card.notification && card.notification.hasInlineReply
                     width: visible ? 56 : 0
-                    height: 36
+                    height: Math.max(36, implicitHeight)
                     runtime: card.runtime
                     theme: card.theme
                     motion: card.motion
@@ -241,8 +241,8 @@ SquircleSurface {
                 }
 
                 ShellAction {
-                    width: 64
-                    height: 36
+                    width: Math.max(64, implicitWidth)
+                    height: Math.max(36, implicitHeight)
                     runtime: card.runtime
                     theme: card.theme
                     motion: card.motion

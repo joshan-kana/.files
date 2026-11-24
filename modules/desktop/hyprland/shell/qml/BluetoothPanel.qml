@@ -415,7 +415,7 @@ Item {
                 required property int index
 
                 width: ListView.view.width
-                height: 92
+                height: Math.max(92, panel.theme.fontSize(84))
                 theme: panel.theme
                 motion: panel.motion
                 selected: index === panel.selectedIndex
@@ -469,7 +469,7 @@ Item {
                             text: deviceRow.modelData.address
                             color: panel.theme.textMuted
                             font.family: panel.runtime.fontMono
-                            font.pixelSize: panel.theme.fontSize(8)
+                            font.pixelSize: panel.theme.fontUtility
                             elide: Text.ElideRight
                         }
 
@@ -480,24 +480,24 @@ Item {
                                 text: BluetoothDeviceState.toString(deviceRow.modelData.state).toUpperCase()
                                 color: deviceRow.modelData.connected ? panel.theme.positive : panel.theme.textMuted
                                 font.family: panel.runtime.fontSans
-                                font.pixelSize: panel.theme.fontSize(8)
+                                font.pixelSize: panel.theme.fontUtility
                                 font.weight: Font.DemiBold
                             }
 
                             Text {
-                                text: deviceRow.modelData.pairing ? "PAIRING" : (deviceRow.modelData.paired ? "PAIRED" : "UNPAIRED")
+                                text: deviceRow.modelData.pairing ? "Pairing" : (deviceRow.modelData.paired ? "Paired" : "Unpaired")
                                 color: panel.theme.readableRoleColor(deviceRow.modelData.paired || deviceRow.modelData.pairing ? "connectivity" : "warning")
                                 font.family: panel.runtime.fontSans
-                                font.pixelSize: panel.theme.fontSize(8)
+                                font.pixelSize: panel.theme.fontUtility
                                 font.weight: Font.DemiBold
                             }
 
                             Text {
                                 visible: deviceRow.modelData.trusted
-                                text: "TRUSTED"
+                                text: "Trusted"
                                 color: panel.theme.roleColor("connectivity")
                                 font.family: panel.runtime.fontSans
-                                font.pixelSize: panel.theme.fontSize(8)
+                                font.pixelSize: panel.theme.fontUtility
                                 font.weight: Font.DemiBold
                             }
                         }
@@ -513,7 +513,7 @@ Item {
                             runtime: panel.runtime
                             theme: panel.theme
                             compact: true
-                            shortcut: deviceRow.modelData.pairing || !deviceRow.modelData.paired ? panel.runtime.shellHint("BluetoothPanel.pair") : panel.runtime.shellHint("BluetoothPanel.activate")
+                            shortcut: !deviceRow.selected ? "" : deviceRow.modelData.pairing || !deviceRow.modelData.paired ? panel.runtime.shellHint("BluetoothPanel.pair") : panel.runtime.shellHint("BluetoothPanel.activate")
                             label: deviceRow.modelData.pairing ? "Cancel" : !deviceRow.modelData.paired ? "Pair" : deviceRow.modelData.connected ? "Drop" : "Link"
                         }
 
@@ -524,7 +524,7 @@ Item {
                             text: "BAT " + Math.round(deviceRow.modelData.battery * 100) + "%"
                             color: deviceRow.modelData.battery <= 0.20 ? panel.theme.warning : panel.theme.textMuted
                             font.family: panel.runtime.fontMono
-                            font.pixelSize: panel.theme.fontSize(8)
+                            font.pixelSize: panel.theme.fontUtility
                         }
                     }
                 }

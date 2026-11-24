@@ -99,6 +99,9 @@ test("notifications announce sender, body, actions, and editable reply semantics
   assert.match(card, /Accessible\.name: "Reply to "/);
   assert.match(content, /Accessible\.description: groupItem\.expanded/);
   assert.match(popup, /Accessible\.role: Accessible\.AlertMessage/);
-  assert.match(actions, /Accessible\.role: Accessible\.Button/);
+  assert.match(
+    actions,
+    /Accessible\.role: switchControl \? Accessible\.CheckBox : Accessible\.Button/,
+  );
   assert.match(actions, /Accessible\.name: title/);
 });

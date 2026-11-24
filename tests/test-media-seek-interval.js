@@ -92,14 +92,14 @@ test("seek interval controls use shared action keycaps and include keyboard navi
   const page = read("MediaContent.qml");
   assert.match(
     page,
-    /shortcut: content\.runtime\.shellHint\("MediaContent.shorter"\)/,
+    /decreaseShortcut: content\.runtime\.shellHint\("MediaContent.shorter"\)/,
   );
   assert.match(
     page,
-    /shortcut: content\.runtime\.shellHint\("MediaContent.longer"\)/,
+    /increaseShortcut: content\.runtime\.shellHint\("MediaContent.longer"\)/,
   );
-  assert.match(page, /onActivated: content\.media\.adjustSeekStep\(1\)/);
-  assert.match(page, /onActivated: content\.media\.adjustSeekStep\(-1\)/);
+  assert.match(page, /onIncreased: content\.media\.adjustSeekStep\(1\)/);
+  assert.match(page, /onDecreased: content\.media\.adjustSeekStep\(-1\)/);
   assert.match(
     page,
     /content\.runtime\.shellMatchesHint\("MediaContent\.shorter", event\.key, event\.modifiers\)/,
@@ -127,14 +127,15 @@ test("global keybinding descriptions match the configurable seek interval", () =
   );
 });
 
-test("Now Playing seek-step controls have readable words and enough width", () => {
+test("Now Playing seek and speed controls share measured, action-owned steppers", () => {
   const page = read("MediaContent.qml");
-  for (const title of ["Shorter", "Longer"]) {
-    assert.match(
-      page,
-      new RegExp('width: implicitWidth[\\s\\S]*?title: "' + title + '"'),
-    );
-  }
-  assert.match(page, /text: "Seek " \+ content\.media\.seekSeconds \+ "s"/);
-  assert.doesNotMatch(page, /title: "[+−] SEEK"/);
+  const stepper = read("ShellStepper.qml");
+  assert.match(page, /id: seekStepper[\s\S]*?title: "Seek interval"/);
+  assert.match(page, /readback: content.media.seekSeconds \+ "s"/);
+  assert.match(page, /id: speedStepper[\s\S]*?title: "Playback speed"/);
+  assert.match(stepper, /shortcut: stepper.decreaseShortcut/);
+  assert.match(stepper, /shortcut: stepper.increaseShortcut/);
+  assert.match(stepper, /function decrease\(\): void/);
+  assert.match(page, /seekStepper.decrease\(\)/);
+  assert.match(page, /speedStepper.increase\(\)/);
 });

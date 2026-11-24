@@ -180,8 +180,7 @@ ShellSurface {
             from: setting.blurEditing ? 5 : setting.minimumValue
             to: setting.blurEditing ? 25 : setting.maximumValue
             value: setting.blurEditing ? setting.blurValue : setting.opacityValue
-            trackHeight: 6
-            handleSize: 16
+            density: ShellSlider.Compact
             accentColor: setting.roleAccent
             onInteractionStarted: {
                 if (setting.blurEditing)

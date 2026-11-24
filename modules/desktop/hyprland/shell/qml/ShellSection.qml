@@ -26,11 +26,11 @@ Column {
             anchors.verticalCenter: parent.verticalCenter
             runtime: root.runtime
             theme: root.theme
-            text: root.emphasized ? root.title.toUpperCase() : root.title
+            text: root.title
             color: root.emphasized ? theme.readableRoleColor(root.accentRole) : theme.textStrong
-            font.pixelSize: root.emphasized ? theme.fontPanelEyebrow : theme.fontSize(11)
+            font.pixelSize: theme.fontSection
             font.weight: Font.DemiBold
-            font.letterSpacing: root.emphasized ? 0.8 : 0
+            font.letterSpacing: 0
         }
 
         Item {
@@ -46,7 +46,7 @@ Column {
             theme: root.theme
             text: root.detail
             color: theme.textMuted
-            font.pixelSize: theme.fontSize(9)
+            font.pixelSize: theme.fontSupporting
         }
 
         KeyHintStrip {

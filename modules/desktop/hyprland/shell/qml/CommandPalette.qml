@@ -1649,7 +1649,7 @@ Item {
 
                         Column {
                             anchors.verticalCenter: parent.verticalCenter
-                            width: Math.max(90, parent.width - 240)
+                            width: Math.max(1, parent.width - 72 - resultTail.width - parent.spacing * 3)
                             spacing: 1
 
                             MarqueeText {
@@ -1674,14 +1674,15 @@ Item {
                         }
 
                         Item {
+                            id: resultTail
                             anchors.verticalCenter: parent.verticalCenter
-                            width: 122
+                            width: Math.max(122, moreAction.implicitWidth + theme.fontSize(70) + theme.spacing2)
                             height: parent.height
 
                             KeyChord {
                                 anchors.right: parent.right
                                 anchors.verticalCenter: parent.verticalCenter
-                                anchors.rightMargin: result.ListView.isCurrentItem && !palette.actionMode && !palette.parameterTarget ? 34 : 0
+                                anchors.rightMargin: moreAction.visible ? moreAction.width + theme.spacing2 : 0
                                 shortcut: result.modelData.key.length > 0 ? result.modelData.key : (result.ListView.isCurrentItem ? "↵ RUN" : "")
                                 fontFamily: runtime.fontMono
                                 fontSize: theme.fontSize(11)
@@ -1703,11 +1704,12 @@ Item {
                     }
 
                     ShellAction {
+                        id: moreAction
                         anchors.right: parent.right
                         anchors.rightMargin: theme.spacing2
                         anchors.verticalCenter: parent.verticalCenter
-                        width: 29
-                        height: 29
+                        width: implicitWidth
+                        height: implicitHeight
                         visible: !palette.actionMode && result.ListView.isCurrentItem && !palette.parameterTarget
                         runtime: palette.runtime
                         theme: palette.theme
@@ -1715,7 +1717,9 @@ Item {
                         compact: true
                         iconOnly: true
                         icon: "󰍉"
-                        title: "More actions (" + palette.runtime.shellHint("CommandPalette.actionMenu") + ")"
+                        title: "More actions"
+                        inlineIconHint: true
+                        shortcut: search.activeFocus ? palette.runtime.shellHint("CommandPalette.actionMenu") : palette.runtime.shellHint("CommandPalette.resultActions")
                         onActivated: {
                             results.currentIndex = result.index;
                             palette.openActions();

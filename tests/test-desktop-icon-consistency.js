@@ -173,7 +173,7 @@ test("capability enable/disable actions share recognizable state glyphs", () => 
   assert.equal(context.toggleGlyph(false).codePointAt(0), 0xf0522);
   assert.match(
     qml("SettingsDetail.qml"),
-    /icon: DesktopIcons\.toggleGlyph\(panel\.masterState\)/,
+    /switchControl: true[\s\S]*?active: panel.masterState/,
   );
 });
 

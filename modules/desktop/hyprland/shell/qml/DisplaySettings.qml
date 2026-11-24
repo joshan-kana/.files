@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell.Io
+import "DesktopIcons.js" as DesktopIcons
 
 Column {
     id: panel
@@ -38,6 +39,26 @@ Column {
         }).sort((a, b) => a - b);
     }
     readonly property bool changed: !!output && (mode !== output.currentMode || scaleValue !== output.scale || orientation !== output.transform || positionX !== output.x || positionY !== output.y)
+    readonly property var logicalOutputs: monitors.filter(entry => !entry.disabled).map(entry => {
+        const staged = entry.name === output?.name;
+        const dimensions = (staged ? mode : entry.currentMode).split("@")[0].split("x").map(Number);
+        const scale = Math.max(0.01, staged ? scaleValue : entry.scale);
+        const rotated = (staged ? orientation : entry.transform) % 2 === 1;
+        const rawWidth = dimensions[0] || entry.width;
+        const rawHeight = dimensions[1] || entry.height;
+        return {
+            name: entry.name,
+            x: staged ? positionX : entry.x,
+            y: staged ? positionY : entry.y,
+            width: (rotated ? rawHeight : rawWidth) / scale,
+            height: (rotated ? rawWidth : rawHeight) / scale,
+            selected: staged
+        };
+    })
+    readonly property real layoutLeft: Math.min(0, ...logicalOutputs.map(entry => entry.x))
+    readonly property real layoutTop: Math.min(0, ...logicalOutputs.map(entry => entry.y))
+    readonly property real layoutRight: Math.max(1, ...logicalOutputs.map(entry => entry.x + entry.width))
+    readonly property real layoutBottom: Math.max(1, ...logicalOutputs.map(entry => entry.y + entry.height))
     spacing: theme.spacing2
 
     onEngagedChanged: {
@@ -200,7 +221,7 @@ Column {
         height: 42
         spacing: panel.theme.spacing2
         ShellAction {
-            width: (panel.width - 2 * panel.theme.spacing2) / 3
+            width: Math.max(1, (parent.width - displayRefresh.width - 2 * parent.spacing) / 2)
             height: parent.height
             runtime: panel.runtime
             theme: panel.theme
@@ -213,20 +234,23 @@ Column {
             onActivated: panel.cycleOutput()
         }
         ShellAction {
-            width: (panel.width - 2 * panel.theme.spacing2) / 3
+            id: displayRefresh
+            width: implicitWidth
             height: parent.height
             runtime: panel.runtime
             theme: panel.theme
             motion: panel.motion
             compact: true
-            horizontalCompact: true
+            iconOnly: true
+            inlineIconHint: true
+            icon: DesktopIcons.actionGlyph("refresh")
             title: "Refresh"
             shortcut: panel.runtime.shellHint("DisplaySettings.refresh")
             enabled: !panel.busy && !panel.previewActive
             onActivated: panel.refresh()
         }
         ShellAction {
-            width: (panel.width - 2 * panel.theme.spacing2) / 3
+            width: Math.max(1, (parent.width - displayRefresh.width - 2 * parent.spacing) / 2)
             height: parent.height
             runtime: panel.runtime
             theme: panel.theme
@@ -237,6 +261,54 @@ Column {
             shortcut: panel.runtime.shellHint("DisplaySettings.native")
             enabled: !panel.busy && !panel.previewActive && panel.runtime.displaySettings.length > 0
             onActivated: panel.nativeEditorRequested()
+        }
+    }
+    ShellSurface {
+        width: parent.width
+        height: panel.theme.fontSize(panel.logicalOutputs.length > 1 ? 150 : 104)
+        theme: panel.theme
+        motion: panel.motion
+        surfaceLayer: ShellSurface.Group
+        cornerRadius: panel.theme.radiusMedium
+        Item {
+            id: displayMap
+            anchors.fill: parent
+            anchors.margins: panel.theme.spacing3
+            readonly property real mapScale: Math.min(width / Math.max(1, panel.layoutRight - panel.layoutLeft), height / Math.max(1, panel.layoutBottom - panel.layoutTop))
+            readonly property real offsetX: (width - (panel.layoutRight - panel.layoutLeft) * mapScale) / 2
+            readonly property real offsetY: (height - (panel.layoutBottom - panel.layoutTop) * mapScale) / 2
+            Repeater {
+                model: panel.logicalOutputs
+                delegate: ShellSurface {
+                    id: outputShape
+                    required property var modelData
+                    x: displayMap.offsetX + (modelData.x - panel.layoutLeft) * displayMap.mapScale
+                    y: displayMap.offsetY + (modelData.y - panel.layoutTop) * displayMap.mapScale
+                    width: Math.max(2, modelData.width * displayMap.mapScale - 2)
+                    height: Math.max(2, modelData.height * displayMap.mapScale - 2)
+                    theme: panel.theme
+                    motion: panel.motion
+                    surfaceLayer: ShellSurface.Control
+                    cornerRadius: Math.min(panel.theme.radiusSmall, Math.min(width, height) / 6)
+                    outlined: modelData.selected
+                    borderColor: modelData.selected ? panel.theme.roleColor("display") : panel.theme.subtleBorder
+                    borderWidth: modelData.selected ? panel.theme.borderFocus : panel.theme.borderThin
+                    fillColor: modelData.selected ? panel.theme.selectedTabFill : panel.theme.controlBase
+                    Accessible.role: Accessible.StaticText
+                    Accessible.name: modelData.name + (modelData.selected ? ", selected" : "") + ", " + Math.round(modelData.width) + " by " + Math.round(modelData.height) + " logical pixels"
+                    ShellText {
+                        anchors.centerIn: parent
+                        width: parent.width - panel.theme.spacing2
+                        visible: width > panel.theme.fontSize(45) && parent.height > implicitHeight
+                        horizontalAlignment: Text.AlignHCenter
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        text: outputShape.modelData.name
+                        textRole: ShellText.Action
+                        elide: Text.ElideRight
+                    }
+                }
+            }
         }
     }
     ShellText {
@@ -388,30 +460,50 @@ Column {
     }
     Row {
         width: parent.width
-        height: 44
+        height: Math.max(transactionStatus.implicitHeight, previewAction.implicitHeight, discardAction.implicitHeight)
         spacing: panel.theme.spacing2
-        ShellAction {
-            width: (panel.width - panel.theme.spacing2) / 2
-            height: 44
+        ShellText {
+            id: transactionStatus
+            width: Math.max(1, parent.width - previewAction.width - discardAction.width - parent.spacing * 2)
+            anchors.verticalCenter: parent.verticalCenter
             runtime: panel.runtime
             theme: panel.theme
-            motion: panel.motion
-            title: panel.previewActive ? "Keep layout" : "Preview layout"
-            shortcut: panel.runtime.shellHint("DisplaySettings.apply")
-            active: panel.previewActive
-            enabled: !panel.busy && (panel.previewActive || panel.editable && panel.changed)
-            onActivated: panel.previewOrKeep()
+            text: panel.previewActive ? "Confirm temporary layout" : panel.changed ? "Unapplied display changes" : "Current layout"
+            textRole: ShellText.Supporting
+            wrapMode: Text.WordWrap
         }
         ShellAction {
-            width: (panel.width - panel.theme.spacing2) / 2
-            height: 44
+            id: discardAction
+            width: implicitWidth
+            height: implicitHeight
             runtime: panel.runtime
             theme: panel.theme
             motion: panel.motion
-            title: panel.previewActive ? "Revert" : "Discard edits"
+            compact: true
+            iconOnly: true
+            inlineIconHint: true
+            quietAction: true
+            icon: DesktopIcons.actionGlyph("cancel")
+            title: panel.previewActive ? "Revert temporary layout" : "Discard edits"
             shortcut: panel.runtime.shellHint("DisplaySettings.cancel")
             enabled: !panel.busy && (panel.previewActive || panel.changed)
             onActivated: panel.cancelNested()
+        }
+        ShellAction {
+            id: previewAction
+            width: implicitWidth
+            height: implicitHeight
+            runtime: panel.runtime
+            theme: panel.theme
+            motion: panel.motion
+            compact: true
+            horizontalCompact: true
+            icon: DesktopIcons.actionGlyph("confirm")
+            title: panel.previewActive ? "Keep layout" : "Preview layout"
+            shortcut: panel.runtime.shellHint("DisplaySettings.apply")
+            active: panel.previewActive || panel.changed
+            enabled: !panel.busy && (panel.previewActive || panel.editable && panel.changed)
+            onActivated: panel.previewOrKeep()
         }
     }
 }

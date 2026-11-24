@@ -11,11 +11,12 @@ ShellSurface {
     property string description: ""
     property color statusColor: theme.readableRoleColor("warning")
 
-    implicitHeight: 160
+    implicitHeight: Math.max(160, contents.implicitHeight + theme.spacing5 * 2)
     surfaceLayer: ShellSurface.Group
     cornerRadius: theme.radiusLarge
 
     Column {
+        id: contents
         anchors.centerIn: parent
         width: parent.width - card.theme.spacing5 * 2
         spacing: card.theme.spacing3
@@ -25,14 +26,14 @@ ShellSurface {
             text: card.statusText
             color: card.statusColor
             font.family: card.runtime.fontSans
-            font.pixelSize: card.theme.fontSize(11)
+            font.pixelSize: card.theme.fontSupporting
             font.weight: Font.DemiBold
         }
 
         Text {
             width: parent.width
             text: card.heading
-            elide: Text.ElideRight
+            wrapMode: Text.WordWrap
             color: card.theme.textStrong
             font.family: card.runtime.fontSans
             font.pixelSize: card.theme.fontSize(20)
@@ -45,7 +46,7 @@ ShellSurface {
             wrapMode: Text.WordWrap
             color: card.theme.textMuted
             font.family: card.runtime.fontSans
-            font.pixelSize: card.theme.fontSize(10)
+            font.pixelSize: card.theme.fontSupporting
         }
     }
 }

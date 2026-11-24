@@ -188,7 +188,7 @@ Item {
 
         Row {
             width: parent.width
-            height: 46
+            height: Math.max(46, toggleButton.implicitHeight)
             spacing: panel.theme.spacing3
 
             Text {
@@ -208,10 +208,10 @@ Item {
                 spacing: panel.theme.spacing1
 
                 Text {
-                    text: "VHS TAPE"
+                    text: "VHS tape"
                     color: panel.theme.textStrong
                     font.family: panel.runtime.fontSans
-                    font.pixelSize: panel.theme.fontSize(14)
+                    font.pixelSize: panel.theme.fontDetailTitle
                     font.weight: Font.DemiBold
                 }
 
@@ -219,35 +219,25 @@ Item {
                     text: "Signal tuning · " + panel.appearance.vhsPreset
                     color: panel.theme.textMuted
                     font.family: panel.runtime.fontSans
-                    font.pixelSize: panel.theme.fontSize(10)
+                    font.pixelSize: panel.theme.fontSupporting
                 }
             }
 
-            Item {
+            ShellAction {
                 id: toggleButton
-                width: 126
-                height: 38
+                width: implicitWidth
+                height: implicitHeight
                 anchors.verticalCenter: parent.verticalCenter
-
-                StateLayer {
-                    theme: panel.theme
-                    motion: panel.motion
-                    selected: panel.appearance.vhsEnabled
-                    cornerRadius: panel.theme.radiusMedium
-                    Accessible.role: Accessible.Button
-                    Accessible.name: panel.appearance.vhsEnabled ? "Disable VHS effect" : "Enable VHS effect"
-                    onActivated: panel.appearance.toggleVhs()
-                }
-
-                KeyHint {
-                    anchors.centerIn: parent
-                    runtime: panel.runtime
-                    theme: panel.theme
-                    shortcut: panel.runtime.shellHint("VhsPanel.toggle")
-                    label: panel.appearance.vhsEnabled ? "Disable" : "Enable"
-                    compact: true
-                    emphasized: panel.appearance.vhsEnabled
-                }
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                compact: true
+                iconOnly: true
+                switchControl: true
+                active: panel.appearance.vhsEnabled
+                title: active ? "Disable VHS effect" : "Enable VHS effect"
+                shortcut: panel.runtime.shellHint("VhsPanel.toggle")
+                onActivated: panel.appearance.toggleVhs()
             }
         }
 
@@ -275,131 +265,41 @@ Item {
             }
         }
 
-        ShellAction {
+        Flow {
+            id: parameterFlow
             width: parent.width
-            height: 40
-            runtime: panel.runtime
-            theme: panel.theme
-            motion: panel.motion
-            title: "Restore " + panel.parameters[panel.selectedIndex].title.toLowerCase()
-            shortcut: panel.runtime.shellHint("VhsPanel.reset")
-            compact: true
-            horizontalCompact: true
-            enabled: panel.appearance.hasOverride(panel.parameters[panel.selectedIndex].key)
-            onActivated: panel.appearance.resetVhsParameter(panel.parameters[panel.selectedIndex].key)
-        }
-
-        Column {
-            width: parent.width
-            spacing: panel.theme.spacing1
-
+            readonly property int columns: width >= panel.theme.fontSize(750) ? 2 : 1
+            spacing: panel.theme.spacing3
             Repeater {
                 model: panel.parameters
-
-                delegate: ShellSurface {
+                delegate: ParameterCard {
                     id: parameterRow
                     required property int index
                     required property var modelData
-
-                    width: parent.width
-                    height: 80
+                    width: index === panel.parameters.length - 1 && panel.parameters.length % parameterFlow.columns === 1 ? parameterFlow.width : Math.floor((parameterFlow.width - (parameterFlow.columns - 1) * parameterFlow.spacing) / parameterFlow.columns)
+                    height: implicitHeight
+                    runtime: panel.runtime
                     theme: panel.theme
                     motion: panel.motion
-                    surfaceLayer: ShellSurface.Control
-                    outlined: panel.selectedIndex === index
-                    borderWidth: outlined ? panel.theme.borderFocus : 0
-                    borderColor: outlined ? panel.theme.roleColor("display") : "transparent"
-                    fillColor: panel.theme.expressiveSurfaceStrong
-                    hovered: rowHover.hovered
-
-                    HoverHandler {
-                        id: rowHover
-                    }
-
-                    Column {
-                        anchors {
-                            fill: parent
-                            leftMargin: panel.theme.spacing3
-                            rightMargin: panel.theme.spacing3
-                            topMargin: panel.theme.spacing1
-                            bottomMargin: panel.theme.spacing1
-                        }
-                        spacing: 0
-
-                        Item {
-                            width: parent.width
-                            height: 36
-
-                            StateLayer {
-                                theme: panel.theme
-                                motion: panel.motion
-                                selected: panel.selectedIndex === parameterRow.index
-                                cornerRadius: panel.theme.radiusSmall
-                                Accessible.role: Accessible.Button
-                                Accessible.name: "Select " + parameterRow.modelData.title + ", " + panel.valueText(parameterRow.modelData)
-                                Accessible.description: parameterRow.modelData.description + (parameterRow.modelData.unit === "×" ? ", 0.25× to 2.50× in 0.05× steps" : ", 0 to 100% in 5% keyboard steps")
-                                onActivated: panel.selectParameter(parameterRow.index)
-                            }
-
-                            Row {
-                                anchors.fill: parent
-                                spacing: panel.theme.spacing2
-
-                                Text {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    text: parameterRow.modelData.title
-                                    color: panel.theme.textStrong
-                                    font.family: panel.runtime.fontSans
-                                    font.pixelSize: panel.theme.fontSize(11)
-                                    font.weight: Font.DemiBold
-                                }
-
-                                Text {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    width: Math.max(1, parent.width - parent.children[0].implicitWidth - valueLabel.implicitWidth - parent.spacing * 2)
-                                    text: parameterRow.modelData.description
-                                    elide: Text.ElideRight
-                                    color: panel.theme.textMuted
-                                    font.family: panel.runtime.fontSans
-                                    font.pixelSize: panel.theme.fontSize(9)
-                                }
-
-                                Text {
-                                    id: valueLabel
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    text: panel.valueText(parameterRow.modelData)
-                                    color: panel.theme.roleColor("display")
-                                    font.family: panel.runtime.fontMono
-                                    font.pixelSize: panel.theme.fontSize(11)
-                                    font.weight: Font.DemiBold
-                                }
-                            }
-                        }
-
-                        ShellSlider {
-                            id: vhsSlider
-                            Connections {
-                                target: panel
-                                function onParameterAdjustmentRequested(index: int): void {
-                                    if (index === parameterRow.index)
-                                        vhsSlider.beginKeyboardAdjustment();
-                                }
-                            }
-                            width: parent.width
-                            height: 36
-                            theme: panel.theme
-                            motion: panel.motion
-                            from: parameterRow.modelData.minimum
-                            to: parameterRow.modelData.maximum
-                            value: panel.parameterValue(parameterRow.modelData.key)
-                            trackHeight: 6
-                            handleSize: 18
-                            accentColor: panel.theme.roleColor("display")
-                            Accessible.role: Accessible.Slider
-                            Accessible.name: parameterRow.modelData.title + ": " + panel.valueText(parameterRow.modelData)
-                            Accessible.description: parameterRow.modelData.description + (parameterRow.modelData.unit === "×" ? ", 0.25× to 2.50× in 0.05× steps" : ", 0 to 100% in 5% keyboard steps")
-                            onInteractionStarted: panel.selectParameter(parameterRow.index)
-                            onValueRequested: next => panel.setParameter(parameterRow.modelData, next)
+                    title: modelData.title
+                    description: modelData.description
+                    readback: panel.valueText(modelData)
+                    from: modelData.minimum
+                    to: modelData.maximum
+                    value: panel.parameterValue(modelData.key)
+                    accentColor: panel.theme.roleColor("display")
+                    selectedParameter: panel.selectedIndex === index
+                    adjustShortcut: panel.runtime.shellHint("VhsPanel.adjust")
+                    resetShortcut: panel.runtime.shellHint("VhsPanel.reset")
+                    resetAvailable: panel.appearance.hasOverride(modelData.key)
+                    onSelectedRequested: panel.selectParameter(index)
+                    onValueRequested: next => panel.setParameter(modelData, next)
+                    onResetRequested: panel.appearance.resetVhsParameter(modelData.key)
+                    Connections {
+                        target: panel
+                        function onParameterAdjustmentRequested(index: int): void {
+                            if (index === parameterRow.index)
+                                parameterRow.beginKeyboardAdjustment();
                         }
                     }
                 }
@@ -414,10 +314,6 @@ Item {
                 {
                     shortcut: panel.runtime.shellHint("VhsPanel.select"),
                     label: "Select parameter"
-                },
-                {
-                    shortcut: panel.runtime.shellHint("VhsPanel.adjust"),
-                    label: "Adjust"
                 }
             ]
         }

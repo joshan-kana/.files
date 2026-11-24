@@ -406,8 +406,7 @@ FocusScope {
                 }
                 enabled: content.media.seekable && content.media.length > 0
                 accentColor: theme.roleColor("media")
-                trackHeight: 8
-                handleSize: 18
+                density: ShellSlider.Compact
 
                 onInteractionStarted: value => {
                     content.scrubbing = true;
@@ -452,7 +451,7 @@ FocusScope {
 
                 ShellAction {
                     id: shuffleAction
-                    width: 58
+                    width: Math.max(58, implicitWidth)
                     height: 46
                     runtime: content.runtime
                     theme: content.theme
@@ -471,7 +470,7 @@ FocusScope {
 
                 ShellAction {
                     id: repeatAction
-                    width: 58
+                    width: Math.max(58, implicitWidth)
                     height: 46
                     runtime: content.runtime
                     theme: content.theme
@@ -537,7 +536,7 @@ FocusScope {
                     motion: content.motion
                     compact: true
                     horizontalCompact: true
-                    title: content.visualizerMode.toUpperCase()
+                    title: content.visualizerMode === "bars" ? "Bars" : "Curve"
                     shortcut: content.runtime.shellHint("MediaContent.visualizer")
                     active: true
                     onActivated: content.toggleVisualizer()
@@ -551,47 +550,25 @@ FocusScope {
                     motion: content.motion
                     compact: true
                     horizontalCompact: true
-                    title: "LYRICS"
+                    title: "Lyrics"
                     shortcut: content.runtime.shellHint("MediaContent.lyrics")
                     active: content.lyricsVisible
                     onActivated: content.toggleLyrics()
                 }
 
-                ShellAction {
-                    width: implicitWidth
-                    height: 42
+                ShellStepper {
+                    id: seekStepper
                     runtime: content.runtime
                     theme: content.theme
                     motion: content.motion
-                    compact: true
-                    horizontalCompact: true
-                    title: "Shorter"
-                    shortcut: content.runtime.shellHint("MediaContent.shorter")
-                    enabled: content.media.seekSeconds > 5
-                    onActivated: content.media.adjustSeekStep(-1)
-                }
-
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: "Seek " + content.media.seekSeconds + "s"
-                    color: content.theme.textStrong
-                    font.family: content.runtime.fontSans
-                    font.pixelSize: content.theme.fontSize(12)
-                    font.weight: Font.DemiBold
-                }
-
-                ShellAction {
-                    width: implicitWidth
-                    height: 42
-                    runtime: content.runtime
-                    theme: content.theme
-                    motion: content.motion
-                    compact: true
-                    horizontalCompact: true
-                    title: "Longer"
-                    shortcut: content.runtime.shellHint("MediaContent.longer")
-                    enabled: content.media.seekSeconds < 60
-                    onActivated: content.media.adjustSeekStep(1)
+                    title: "Seek interval"
+                    readback: content.media.seekSeconds + "s"
+                    decreaseShortcut: content.runtime.shellHint("MediaContent.shorter")
+                    increaseShortcut: content.runtime.shellHint("MediaContent.longer")
+                    canDecrease: content.media.seekSeconds > 5
+                    canIncrease: content.media.seekSeconds < 60
+                    onDecreased: content.media.adjustSeekStep(-1)
+                    onIncreased: content.media.adjustSeekStep(1)
                 }
             }
             Row {
@@ -636,45 +613,19 @@ FocusScope {
                     elide: Text.ElideRight
                 }
             }
-            Row {
+            ShellStepper {
+                id: speedStepper
                 visible: content.media.rateAvailable
                 anchors.horizontalCenter: parent.horizontalCenter
-                spacing: content.theme.spacing2
-                ShellAction {
-                    id: slowerAction
-                    visible: content.media.rateAvailable
-                    width: implicitWidth
-                    height: 40
-                    runtime: content.runtime
-                    theme: content.theme
-                    motion: content.motion
-                    compact: true
-                    horizontalCompact: true
-                    title: "Slower"
-                    shortcut: content.runtime.shellHint("MediaContent.rateDown")
-                    onActivated: content.media.adjustRate(-0.25)
-                }
-                ShellText {
-                    visible: content.media.rateAvailable
-                    anchors.verticalCenter: parent.verticalCenter
-                    runtime: content.runtime
-                    theme: content.theme
-                    text: content.media.rate.toFixed(2) + "×"
-                }
-                ShellAction {
-                    id: fasterAction
-                    visible: content.media.rateAvailable
-                    width: implicitWidth
-                    height: 40
-                    runtime: content.runtime
-                    theme: content.theme
-                    motion: content.motion
-                    compact: true
-                    horizontalCompact: true
-                    title: "Faster"
-                    shortcut: content.runtime.shellHint("MediaContent.rateUp")
-                    onActivated: content.media.adjustRate(0.25)
-                }
+                runtime: content.runtime
+                theme: content.theme
+                motion: content.motion
+                title: "Playback speed"
+                readback: content.media.rate.toFixed(2) + "×"
+                decreaseShortcut: content.runtime.shellHint("MediaContent.rateDown")
+                increaseShortcut: content.runtime.shellHint("MediaContent.rateUp")
+                onDecreased: content.media.adjustRate(-0.25)
+                onIncreased: content.media.adjustRate(0.25)
             }
         }
 
@@ -750,21 +701,21 @@ FocusScope {
                     event.accepted = true;
                 } else if (content.runtime.shellMatchesHint("MediaContent.rateDown", event.key, event.modifiers)) {
                     if (!event.isAutoRepeat && content.media.rateAvailable)
-                        slowerAction.trigger();
+                        speedStepper.decrease();
                     event.accepted = true;
                 } else if (content.runtime.shellMatchesHint("MediaContent.rateUp", event.key, event.modifiers)) {
                     if (!event.isAutoRepeat && content.media.rateAvailable)
-                        fasterAction.trigger();
+                        speedStepper.increase();
                     event.accepted = true;
                 } else if (content.runtime.shellMatchesHint("MediaContent.player", event.key, event.modifiers)) {
                     if (!event.isAutoRepeat)
                         playerAction.trigger();
                     event.accepted = true;
                 } else if (content.runtime.shellMatchesHint("MediaContent.shorter", event.key, event.modifiers)) {
-                    content.media.adjustSeekStep(-1);
+                    seekStepper.decrease();
                     event.accepted = true;
                 } else if (content.runtime.shellMatchesHint("MediaContent.longer", event.key, event.modifiers)) {
-                    content.media.adjustSeekStep(1);
+                    seekStepper.increase();
                     event.accepted = true;
                 } else if (content.runtime.shellMatchesHint("MediaTransport.back", event.key, event.modifiers) || content.runtime.shellMatchesHint("MediaTransport.backArrow", event.key, event.modifiers)) {
                     progressTrack.beginKeyboardAdjustment();

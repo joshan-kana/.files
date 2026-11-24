@@ -114,7 +114,8 @@ test("compact Visual Modes tiles have no embedded parameter sliders", () => {
     controls,
     /readonly property var sliderTargets: brightness\.supported \? \["brightness"\] : \[\]/,
   );
-  assert.match(qml("SettingsDetail.qml"), /ShellSlider \{/);
+  assert.match(qml("SettingsDetail.qml"), /ParameterCard \{/);
+  assert.match(qml("ParameterCard.qml"), /ShellSlider \{/);
 });
 
 test("visual parameter controls do not add a separate appearance action row", () => {

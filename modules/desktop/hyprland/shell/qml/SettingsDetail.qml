@@ -649,7 +649,7 @@ Item {
 
         Row {
             width: parent.width
-            height: Math.max(44, heading.implicitHeight, masterAction.implicitHeight)
+            height: Math.max(44, heading.implicitHeight, masterAction.implicitHeight, appearanceReset.height)
             spacing: panel.theme.spacing3
 
             Text {
@@ -666,7 +666,7 @@ Item {
             Column {
                 id: heading
                 anchors.verticalCenter: parent.verticalCenter
-                width: Math.max(1, parent.width - capabilityGlyph.width - masterAction.width - (panel.hasMaster ? 2 : 1) * parent.spacing)
+                width: Math.max(1, parent.width - capabilityGlyph.width - masterAction.width - appearanceReset.width - (1 + (panel.hasMaster ? 1 : 0) + (appearanceReset.visible ? 1 : 0)) * parent.spacing)
                 spacing: panel.theme.spacing1
 
                 ShellText {
@@ -699,13 +699,31 @@ Item {
                 theme: panel.theme
                 motion: panel.motion
                 compact: true
-                horizontalCompact: true
-                icon: DesktopIcons.toggleGlyph(panel.masterState)
-                title: panel.masterState ? "Disable" : "Enable"
+                iconOnly: true
+                switchControl: true
+                title: (panel.masterState ? "Disable " : "Enable ") + panel.titleText
                 shortcut: panel.runtime.shellHint("SettingsDetail.toggle")
                 active: panel.masterState
                 enabled: panel.masterAvailable
                 onActivated: panel.toggleMaster()
+            }
+            ShellAction {
+                id: appearanceReset
+                visible: panel.hasBlur || panel.spectrumTuning || ["bar", "frame", "motion"].includes(panel.kind)
+                width: visible ? implicitWidth : 0
+                height: visible ? implicitHeight : 0
+                anchors.verticalCenter: parent.verticalCenter
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                compact: true
+                iconOnly: true
+                inlineIconHint: true
+                quietAction: true
+                icon: DesktopIcons.actionGlyph("reset")
+                title: "Restore " + panel.titleText.toLowerCase() + " defaults"
+                shortcut: panel.runtime.shellHint("SettingsDetail.reset")
+                onActivated: panel.resetAppearance()
             }
         }
 
@@ -720,52 +738,35 @@ Item {
             onNativeEditorRequested: panel.nativeDisplayEditorRequested()
         }
 
-        ShellAction {
-            visible: ["bar", "frame", "motion"].includes(panel.kind)
-            width: parent.width
-            height: visible ? 40 : 0
-            runtime: panel.runtime
-            theme: panel.theme
-            motion: panel.motion
-            compact: true
-            horizontalCompact: true
-            title: "Restore parameter default"
-            shortcut: panel.runtime.shellHint("SettingsDetail.reset")
-            onActivated: panel.resetAppearance()
-        }
-
         Row {
             visible: panel.hasBlur
             width: parent.width
-            height: visible ? 42 : 0
+            height: visible ? Math.max(blurLabel.implicitHeight, blurSwitch.implicitHeight) : 0
             spacing: panel.theme.spacing2
+            ShellText {
+                id: blurLabel
+                width: Math.max(1, parent.width - blurSwitch.width - parent.spacing)
+                anchors.verticalCenter: parent.verticalCenter
+                runtime: panel.runtime
+                theme: panel.theme
+                text: "Compositor blur"
+                textRole: ShellText.Action
+                wrapMode: Text.WordWrap
+            }
             ShellAction {
-                width: Math.max(1, parent.width - resetButton.width - parent.spacing)
-                height: 40
+                id: blurSwitch
+                width: implicitWidth
+                height: implicitHeight
                 runtime: panel.runtime
                 theme: panel.theme
                 motion: panel.motion
                 compact: true
-                horizontalCompact: true
-                icon: panel.appearance.blurEnabled ? "󰖨" : "󰖧"
-                title: panel.appearance.blurEnabled ? "Blur enabled" : "Blur disabled"
+                iconOnly: true
+                switchControl: true
+                title: panel.appearance.blurEnabled ? "Disable compositor blur" : "Enable compositor blur"
                 active: panel.appearance.blurEnabled
                 shortcut: panel.runtime.shellHint("SettingsDetail.blur")
                 onActivated: panel.appearance.toggleBlur()
-            }
-            ShellAction {
-                id: resetButton
-                width: implicitWidth
-                height: 40
-                runtime: panel.runtime
-                theme: panel.theme
-                motion: panel.motion
-                compact: true
-                horizontalCompact: true
-                icon: "󰑐"
-                title: "Defaults"
-                shortcut: panel.runtime.shellHint("SettingsDetail.reset")
-                onActivated: panel.resetAppearance()
             }
         }
 
@@ -849,34 +850,6 @@ Item {
                     }
                 }
             }
-
-            ShellAction {
-                visible: panel.spectrumTuning
-                width: parent.width
-                height: visible ? 42 : 0
-                runtime: panel.runtime
-                theme: panel.theme
-                motion: panel.motion
-                compact: true
-                horizontalCompact: true
-                title: "Restore spectrum defaults"
-                shortcut: panel.runtime.shellHint("SettingsDetail.reset")
-                onActivated: panel.resetAppearance()
-            }
-        }
-
-        ShellAction {
-            visible: panel.parameters.length > 1
-            width: parent.width
-            height: visible ? 36 : 0
-            runtime: panel.runtime
-            theme: panel.theme
-            motion: panel.motion
-            compact: true
-            horizontalCompact: true
-            title: "Restore selected parameter · " + (panel.parameters[panel.selectedIndex]?.title || "")
-            shortcut: panel.runtime.shellHint("SettingsDetail.resetParameter")
-            onActivated: panel.resetParameter()
         }
 
         Flow {
@@ -887,95 +860,33 @@ Item {
             Repeater {
                 id: parameterRepeater
                 model: panel.parameters
-
-                delegate: ShellSurface {
+                delegate: ParameterCard {
                     id: parameterCard
                     required property int index
                     required property var modelData
                     width: index === panel.parameters.length - 1 && panel.parameters.length % parameterFlow.columns === 1 ? parameterFlow.width : Math.floor((parameterFlow.width - (parameterFlow.columns - 1) * parameterFlow.spacing) / parameterFlow.columns)
-                    height: Math.max(104, parameterContent.implicitHeight + panel.theme.spacing3 * 2)
+                    height: implicitHeight
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    motion: panel.motion
+                    title: modelData.title
+                    description: modelData.description
+                    readback: panel.valueLabel(modelData)
+                    from: modelData.minimum
+                    to: modelData.maximum
+                    value: panel.currentValue(modelData.key)
+                    selectedParameter: panel.selectedIndex === index
+                    adjustable: panel.kind !== "nightLight" || panel.nightLight.supported
+                    adjustShortcut: panel.runtime.shellHint("SettingsDetail.adjust")
+                    resetShortcut: panel.parameters.length > 1 ? panel.runtime.shellHint("SettingsDetail.resetParameter") : ""
+                    onSelectedRequested: panel.selectParameter(index)
+                    onValueRequested: next => panel.setValue(modelData.key, Math.round(next / modelData.step) * modelData.step)
+                    onResetRequested: panel.resetParameter()
                     Connections {
                         target: panel
                         function onParameterAdjustmentRequested(index: int): void {
                             if (index === parameterCard.index)
-                                parameterSlider.beginKeyboardAdjustment();
-                        }
-                    }
-                    theme: panel.theme
-                    motion: panel.motion
-                    surfaceLayer: ShellSurface.Control
-                    cornerRadius: theme.radiusMedium
-                    outlined: panel.selectedIndex === index
-                    borderWidth: outlined ? panel.theme.borderFocus : 0
-                    borderColor: outlined ? panel.theme.accent : "transparent"
-                    fillColor: panel.theme.expressiveSurfaceStrong
-
-                    Column {
-                        id: parameterContent
-                        width: parent.width - panel.theme.spacing3 * 2
-                        anchors.centerIn: parent
-                        spacing: panel.theme.spacing2
-
-                        Row {
-                            id: parameterHeading
-                            width: parent.width
-                            height: Math.max(parameterCopy.implicitHeight, valueReadback.implicitHeight, parameterHint.implicitHeight)
-                            spacing: panel.theme.spacing2
-                            Column {
-                                id: parameterCopy
-                                width: Math.max(1, parent.width - valueReadback.implicitWidth - parameterHint.implicitWidth - parameterHeading.spacing * 2)
-                                spacing: panel.theme.spacing1
-                                ShellText {
-                                    runtime: panel.runtime
-                                    theme: panel.theme
-                                    width: parent.width
-                                    text: parameterCard.modelData.title
-                                    font.weight: Font.DemiBold
-                                    font.pixelSize: panel.theme.fontAction
-                                    wrapMode: Text.WordWrap
-                                }
-                                ShellText {
-                                    runtime: panel.runtime
-                                    theme: panel.theme
-                                    width: parent.width
-                                    text: parameterCard.modelData.description
-                                    color: panel.theme.textMuted
-                                    font.pixelSize: panel.theme.fontSupporting
-                                    wrapMode: Text.WordWrap
-                                }
-                            }
-                            KeyHint {
-                                id: parameterHint
-                                visible: panel.selectedIndex === parameterCard.index
-                                runtime: panel.runtime
-                                theme: panel.theme
-                                shortcut: panel.runtime.shellHint("SettingsDetail.adjust")
-                                compact: true
-                            }
-                            ShellText {
-                                id: valueReadback
-                                runtime: panel.runtime
-                                theme: panel.theme
-                                text: panel.valueLabel(parameterCard.modelData)
-                                font.pixelSize: panel.theme.fontReadback
-                                font.weight: Font.DemiBold
-                            }
-                        }
-
-                        ShellSlider {
-                            id: parameterSlider
-                            width: parent.width
-                            height: 32
-                            theme: panel.theme
-                            motion: panel.motion
-                            from: parameterCard.modelData.minimum
-                            to: parameterCard.modelData.maximum
-                            value: panel.currentValue(parameterCard.modelData.key)
-                            enabled: panel.kind !== "nightLight" || panel.nightLight.supported
-                            Accessible.role: Accessible.Slider
-                            Accessible.name: parameterCard.modelData.title + " " + panel.valueLabel(parameterCard.modelData)
-                            onInteractionStarted: panel.selectParameter(parameterCard.index)
-                            onValueRequested: next => panel.setValue(parameterCard.modelData.key, Math.round(next / parameterCard.modelData.step) * parameterCard.modelData.step)
+                                parameterCard.beginKeyboardAdjustment();
                         }
                     }
                 }
@@ -1180,24 +1091,30 @@ Item {
                     color: panel.theme.textMuted
                 }
             }
-            Repeater {
-                model: panel.powerProfile.profiles
-                delegate: ShellAction {
-                    required property int index
-                    required property string modelData
-                    width: panel.width
-                    height: 44
-                    runtime: panel.runtime
-                    theme: panel.theme
-                    motion: panel.motion
-                    compact: true
-                    horizontalCompact: true
-                    icon: "󰚥"
-                    title: panel.powerProfile.label(modelData)
-                    shortcut: panel.runtime.shellChoiceHint(index)
-                    active: panel.powerProfile.current === modelData
-                    enabled: panel.powerProfile.available && !panel.powerProfile.applying
-                    onActivated: panel.powerProfile.setProfile(modelData)
+            Flow {
+                id: profileFlow
+                width: parent.width
+                spacing: panel.theme.spacing2
+                readonly property int columns: width >= panel.theme.fontSize(600) ? Math.max(1, panel.powerProfile.profiles.length) : 1
+                Repeater {
+                    model: panel.powerProfile.profiles
+                    delegate: ShellAction {
+                        required property int index
+                        required property string modelData
+                        width: Math.floor((profileFlow.width - (profileFlow.columns - 1) * profileFlow.spacing) / profileFlow.columns)
+                        height: Math.max(60, implicitHeight)
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        motion: panel.motion
+                        compact: true
+                        icon: DesktopIcons.powerProfileGlyph(modelData)
+                        title: panel.powerProfile.label(modelData)
+                        shortcut: panel.runtime.shellChoiceHint(index)
+                        active: panel.powerProfile.current === modelData
+                        activeColor: panel.theme.powerProfileColor(modelData)
+                        enabled: panel.powerProfile.available && !panel.powerProfile.applying
+                        onActivated: panel.powerProfile.setProfile(modelData)
+                    }
                 }
             }
             ShellAction {
@@ -1295,9 +1212,9 @@ Item {
             ShellText {
                 runtime: panel.runtime
                 theme: panel.theme
-                text: panel.idleStatus + " · Choose or replace the current duration:"
-                color: panel.theme.textMuted
-                font.pixelSize: panel.theme.fontSupporting
+                text: panel.idleStatus
+                textRole: ShellText.Display
+                color: panel.theme.roleColor("power")
                 width: parent.width
                 wrapMode: Text.WordWrap
             }
@@ -1379,18 +1296,34 @@ Item {
                 title: "Quiet hours"
                 emphasized: true
                 accentRole: "attention"
-                ShellAction {
-                    runtime: panel.runtime
-                    theme: panel.theme
-                    motion: panel.motion
-                    compact: true
-                    horizontalCompact: true
+                Row {
                     width: parent.width
-                    height: 40
-                    title: "Quiet hours"
-                    active: panel.notifications.quietEnabled
-                    shortcut: panel.runtime.shellHint("SettingsDetail.quietHours")
-                    onActivated: panel.notifications.setQuietPreference("enabled", !panel.notifications.quietEnabled)
+                    spacing: panel.theme.spacing2
+                    ShellText {
+                        width: Math.max(1, parent.width - quietHoursSwitch.width - parent.spacing)
+                        anchors.verticalCenter: parent.verticalCenter
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        text: "Quiet hours"
+                        textRole: ShellText.Action
+                        wrapMode: Text.WordWrap
+                    }
+                    ShellAction {
+                        id: quietHoursSwitch
+                        width: implicitWidth
+                        height: implicitHeight
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        motion: panel.motion
+                        compact: true
+                        iconOnly: true
+                        switchControl: true
+                        title: (active ? "Disable " : "Enable ") + "quiet hours"
+                        active: panel.notifications.quietEnabled
+                        enabled: true
+                        shortcut: panel.runtime.shellHint("SettingsDetail.quietHours")
+                        onActivated: panel.notifications.setQuietPreference("enabled", !panel.notifications.quietEnabled)
+                    }
                 }
                 Row {
                     width: parent.width
@@ -1434,8 +1367,9 @@ Item {
                     motion: panel.motion
                     compact: true
                     horizontalCompact: true
-                    width: parent.width
-                    height: 40
+                    width: implicitWidth
+                    height: implicitHeight
+                    icon: DesktopIcons.actionGlyph("reset")
                     title: "Restore quiet-hour defaults"
                     shortcut: panel.runtime.shellHint("SettingsDetail.reset")
                     onActivated: panel.notifications.resetQuietHours()
@@ -1447,31 +1381,63 @@ Item {
                 title: "Delivery and history"
                 emphasized: true
                 accentRole: "attention"
-                ShellAction {
-                    runtime: panel.runtime
-                    theme: panel.theme
-                    motion: panel.motion
-                    compact: true
-                    horizontalCompact: true
+                Row {
                     width: parent.width
-                    height: 44
-                    title: panel.notifications.presentation ? "Presentation mode on" : "Presentation mode off"
-                    active: panel.notifications.presentation
-                    shortcut: panel.runtime.shellHint("SettingsDetail.presentation")
-                    onActivated: panel.notifications.togglePresentation()
+                    spacing: panel.theme.spacing2
+                    ShellText {
+                        width: Math.max(1, parent.width - presentationSwitch.width - parent.spacing)
+                        anchors.verticalCenter: parent.verticalCenter
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        text: "Presentation mode"
+                        textRole: ShellText.Action
+                        wrapMode: Text.WordWrap
+                    }
+                    ShellAction {
+                        id: presentationSwitch
+                        width: implicitWidth
+                        height: implicitHeight
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        motion: panel.motion
+                        compact: true
+                        iconOnly: true
+                        switchControl: true
+                        title: (active ? "Disable " : "Enable ") + "presentation mode"
+                        active: panel.notifications.presentation
+                        enabled: true
+                        shortcut: panel.runtime.shellHint("SettingsDetail.presentation")
+                        onActivated: panel.notifications.togglePresentation()
+                    }
                 }
-                ShellAction {
-                    runtime: panel.runtime
-                    theme: panel.theme
-                    motion: panel.motion
-                    compact: true
-                    horizontalCompact: true
+                Row {
                     width: parent.width
-                    height: 44
-                    title: panel.notifications.historyEnabled ? "Save notification history" : "History disabled"
-                    active: panel.notifications.historyEnabled
-                    shortcut: panel.runtime.shellHint("SettingsDetail.history")
-                    onActivated: panel.notifications.toggleHistory()
+                    spacing: panel.theme.spacing2
+                    ShellText {
+                        width: Math.max(1, parent.width - historySwitch.width - parent.spacing)
+                        anchors.verticalCenter: parent.verticalCenter
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        text: "Save notification history"
+                        textRole: ShellText.Action
+                        wrapMode: Text.WordWrap
+                    }
+                    ShellAction {
+                        id: historySwitch
+                        width: implicitWidth
+                        height: implicitHeight
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        motion: panel.motion
+                        compact: true
+                        iconOnly: true
+                        switchControl: true
+                        title: (active ? "Disable " : "Enable ") + "save notification history"
+                        active: panel.notifications.historyEnabled
+                        enabled: true
+                        shortcut: panel.runtime.shellHint("SettingsDetail.history")
+                        onActivated: panel.notifications.toggleHistory()
+                    }
                 }
             }
         }

@@ -22,7 +22,13 @@ Item {
 
     signal activated
 
-    implicitHeight: 78
+    implicitWidth: Math.max(140 * theme.textScale, labelMetrics.advanceWidth + theme.spacing2 * 2, primaryHint.implicitWidth + detailHint.implicitWidth + theme.spacing4 * 2 + theme.iconLarge)
+    implicitHeight: Math.max(72, tileContent.implicitHeight + theme.spacing3 + 3 + theme.spacing2)
+    TextMetrics {
+        id: labelMetrics
+        text: chip.title
+        font: tileLabel.font
+    }
     Accessible.role: Accessible.Grouping
     Accessible.name: title
 
@@ -53,6 +59,7 @@ Item {
         // Icon and title retain their own layout while shortcuts are anchored
         // independently to the tile surface.
         Column {
+            id: tileContent
             anchors {
                 fill: parent
                 leftMargin: chip.theme.spacing2
@@ -77,13 +84,16 @@ Item {
                 }
             }
 
-            MarqueeText {
+            ShellText {
+                id: tileLabel
                 width: parent.width
+                runtime: chip.runtime
+                theme: chip.theme
                 text: chip.title
                 color: chip.theme.textStrong
-                alignCenter: true
-                font.family: chip.runtime.fontSans
-                font.pixelSize: chip.theme.fontSize(10)
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.WordWrap
+                font.pixelSize: chip.theme.fontCompactAction
                 font.weight: chip.active ? Font.DemiBold : Font.Medium
             }
         }
@@ -101,6 +111,7 @@ Item {
             emphasisColor: chip.activeColor
         }
         TileKeyHint {
+            id: detailHint
             visible: chip.detailShortcut.length > 0
             shortcut: chip.detailShortcut
             compact: true

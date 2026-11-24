@@ -12,7 +12,10 @@ const shellAction = fs.readFileSync(
 );
 
 test("shared shell controls expose actionable screen-reader buttons", () => {
-  assert.match(shellAction, /Accessible\.role: Accessible\.Button/);
+  assert.match(
+    shellAction,
+    /Accessible\.role: switchControl \? Accessible\.CheckBox : Accessible\.Button/,
+  );
   assert.match(shellAction, /Accessible\.name: title/);
   assert.match(
     shellAction,

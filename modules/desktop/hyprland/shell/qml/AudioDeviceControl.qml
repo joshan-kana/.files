@@ -166,8 +166,7 @@ ShellSurface {
                 enabled: deviceControl.available
                 value: deviceControl.level
                 accentColor: deviceControl.theme.audioLevelColor(deviceControl.muted)
-                trackHeight: deviceControl.compact ? 11 : 9
-                handleSize: deviceControl.compact ? 20 : 16
+                density: deviceControl.compact ? ShellSlider.Standard : ShellSlider.Compact
                 Accessible.role: Accessible.Slider
                 Accessible.name: deviceControl.microphone ? "Microphone volume" : "Output volume"
                 onInteractionStarted: deviceControl.selectedRequested()

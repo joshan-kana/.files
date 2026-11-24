@@ -120,8 +120,8 @@ Item {
                 }
             }
             ShellAction {
-                width: 44
-                height: 40
+                width: Math.max(44, implicitWidth)
+                height: Math.max(40, implicitHeight)
                 anchors.verticalCenter: parent.verticalCenter
                 runtime: content.runtime
                 theme: content.theme
@@ -136,8 +136,8 @@ Item {
                 onActivated: content.copyStatus()
             }
             ShellAction {
-                width: 44
-                height: 40
+                width: Math.max(44, implicitWidth)
+                height: Math.max(40, implicitHeight)
                 anchors.verticalCenter: parent.verticalCenter
                 runtime: content.runtime
                 theme: content.theme

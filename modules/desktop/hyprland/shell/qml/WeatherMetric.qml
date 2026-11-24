@@ -29,10 +29,10 @@ ShellSurface {
             spacing: metric.theme.spacing1
 
             Text {
-                text: metric.title.toUpperCase()
+                text: metric.title
                 color: metric.theme.textMuted
                 font.family: metric.theme.runtime.fontSans
-                font.pixelSize: metric.theme.fontSize(10)
+                font.pixelSize: metric.theme.fontUtility
                 font.weight: Font.DemiBold
             }
 

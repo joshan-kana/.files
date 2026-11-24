@@ -164,7 +164,7 @@ PanelWindow {
                     text: qmlPopup.osd.kind === "mode" ? "ACTIVE" : qmlPopup.keyboardMode ? FeedbackSemantics.stateLabel(qmlPopup.osd.keyboardState) : qmlPopup.osd.muted ? "MUTED" : qmlPopup.osd.value + "%"
                     color: qmlPopup.theme.textStrong
                     font.family: qmlPopup.runtime.fontSans
-                    font.pixelSize: qmlPopup.theme.fontSize(12)
+                    font.pixelSize: qmlPopup.theme.fontReadback
                     font.weight: Font.DemiBold
                 }
             }
@@ -182,32 +182,18 @@ PanelWindow {
                 compact: true
             }
 
-            Rectangle {
+            LevelTrack {
                 visible: !qmlPopup.keyboardMode && qmlPopup.osd.kind !== "mode"
                 anchors {
                     right: parent.right
                     bottom: parent.bottom
                     left: parent.left
                 }
-
-                height: 7
-                radius: height / 2
-                color: qmlPopup.theme.surfaceRaised
-
-                Rectangle {
-                    height: parent.height
-                    radius: parent.radius
-                    width: parent.width * qmlPopup.osd.value / 100
-                    color: qmlPopup.accentColor
-
-                    Behavior on width {
-                        NumberAnimation {
-                            duration: qmlPopup.motion.fast
-                            easing.type: qmlPopup.motion.enterType
-                            easing.bezierCurve: qmlPopup.motion.enterCurve
-                        }
-                    }
-                }
+                height: qmlPopup.theme.prominentTrack
+                theme: qmlPopup.theme
+                motion: qmlPopup.motion
+                fraction: qmlPopup.osd.value / 100
+                accentColor: qmlPopup.accentColor
             }
         }
     }

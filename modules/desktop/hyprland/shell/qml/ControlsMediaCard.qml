@@ -179,8 +179,7 @@ Item {
                 value: card.media.length > 0 ? Math.max(0, Math.min(1, card.media.position / card.media.length)) : 0
                 enabled: card.media.seekable && card.media.length > 0
                 accentColor: card.theme.roleColor("media")
-                trackHeight: 7
-                handleSize: 16
+                density: ShellSlider.Compact
                 Accessible.role: Accessible.Slider
                 Accessible.name: "Playback position"
                 onInteractionFinished: fraction => card.media.seekTo(card.media.length * fraction)
@@ -195,7 +194,7 @@ Item {
 
                 ShellAction {
                     id: shuffleButton
-                    width: 44
+                    width: Math.max(44, implicitWidth)
                     height: 46
                     anchors.verticalCenter: parent.verticalCenter
                     runtime: card.runtime
@@ -228,7 +227,7 @@ Item {
 
                 ShellAction {
                     id: repeatButton
-                    width: 44
+                    width: Math.max(44, implicitWidth)
                     height: 46
                     anchors.verticalCenter: parent.verticalCenter
                     runtime: card.runtime

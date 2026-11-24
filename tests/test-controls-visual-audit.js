@@ -14,7 +14,7 @@ const tileLayout = (width, textScale, count, spacing = 8) => {
     textScale,
     width,
     spacing,
-    children: { length: count },
+    children: Array.from({ length: count }, () => ({ implicitWidth: 0 })),
   };
   for (const property of ["minimumTileWidth", "capacity", "rows", "columns"]) {
     const expression = canvas.match(
@@ -91,11 +91,19 @@ test("Visual Modes and Quick Actions have distinct full-width balanced sections"
   assert.ok(actionCount > 0);
   assert.equal(
     visualCount,
-    (visual.match(/height: root.dashboardTileHeight/g) || []).length,
+    (
+      visual.match(
+        /height: Math.max\(root.dashboardTileHeight, implicitHeight\)/g,
+      ) || []
+    ).length,
   );
   assert.equal(
     actionCount,
-    (actions.match(/height: root.dashboardTileHeight/g) || []).length,
+    (
+      actions.match(
+        /height: Math.max\(root.dashboardTileHeight, implicitHeight\)/g,
+      ) || []
+    ).length,
   );
   assert.doesNotMatch(
     visual,
@@ -158,7 +166,8 @@ test("Night Light keeps instant toggling in its compact tile and parameter editi
   );
   assert.doesNotMatch(controls, /AdjustableSetting \{/);
   assert.match(detail, /key: "temperature"/);
-  assert.match(detail, /ShellSlider \{/);
+  assert.match(detail, /ParameterCard \{/);
+  assert.match(read("ParameterCard.qml"), /ShellSlider \{/);
   assert.match(detail, /nightLight\.setTemperature\(value\)/);
   assert.match(detail, /onValueRequested: next => panel\.setValue/);
   assert.match(state, /function setTemperature\(target: real\)/);
@@ -541,7 +550,7 @@ test("both Controls sections use the same balanced row width calculation", () =>
   const flow = read("BalancedTileFlow.qml");
   assert.match(
     flow,
-    /readonly property real minimumTileWidth: 140 \* textScale/,
+    /readonly property real minimumTileWidth: Math.max\(140 \* textScale, \.\.\.children.map/,
   );
   assert.match(
     flow,
@@ -751,7 +760,7 @@ test("Quick Actions retain handlers and keep Restore Defaults last", () => {
   assert.match(actions, /onDetailsRequested: root.openRecordings\(\)/);
 });
 
-test("all visual and action tile heights remain fixed when categories rebalance", () => {
+test("all visual and action tile heights respect the shared measured baseline", () => {
   const controls = read("SystemContent.qml");
   const visual = controls
     .split("id: visualTiles")[1]
@@ -766,11 +775,19 @@ test("all visual and action tile heights remain fixed when categories rebalance"
     actions.match(/width: actionTiles\.cellWidth\(this\)/g) || []
   ).length;
   assert.equal(
-    (visual.match(/height: root.dashboardTileHeight/g) || []).length,
+    (
+      visual.match(
+        /height: Math.max\(root.dashboardTileHeight, implicitHeight\)/g,
+      ) || []
+    ).length,
     visualCount,
   );
   assert.equal(
-    (actions.match(/height: root.dashboardTileHeight/g) || []).length,
+    (
+      actions.match(
+        /height: Math.max\(root.dashboardTileHeight, implicitHeight\)/g,
+      ) || []
+    ).length,
     actionCount,
   );
   assert.match(controls, /readonly property int dashboardTileHeight: 72/);
@@ -1043,7 +1060,10 @@ test("capability headers describe their controls instead of repeating master sta
     /Enabled|Disabled|masterState|Current settings/,
   );
   assert.match(detail, /text: panel.subtitleText/);
-  assert.match(detail, /title: panel.masterState \? "Disable" : "Enable"/);
+  assert.match(
+    detail,
+    /title: \(panel.masterState \? "Disable " : "Enable "\) \+ panel.titleText/,
+  );
 });
 
 test("shared actions measure visible content and retain full fixed labels", () => {
@@ -1074,8 +1094,8 @@ test("detail panel geometry follows the owning loader rather than dashboard widt
     /implicitWidth:.*theme.richDetailWidth : theme.compactDetailWidth/,
   );
   assert.match(
-    detail,
-    /height: Math.max\(104, parameterContent.implicitHeight/,
+    read("ParameterCard.qml"),
+    /implicitHeight: parameterContent.implicitHeight \+ theme.spacing3 \* 2/,
   );
   assert.match(detail, /Flow \{\s+id: parameterFlow/);
   assert.match(detail, /panel.parameters.length % parameterFlow.columns === 1/);

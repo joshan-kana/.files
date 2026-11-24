@@ -55,3 +55,28 @@ function capabilityGlyph(kind, state) {
 function toggleGlyph(active) {
   return active ? "󰔡" : "󰔢";
 }
+
+function actionGlyph(action) {
+  return (
+    {
+      reset: "󰑐",
+      refresh: "󰑐",
+      confirm: "󰄬",
+      cancel: "󰜺",
+      decrease: "󰍴",
+      increase: "󰐕",
+      copy: "󰆏",
+      edit: "󰏫",
+    }[action] || ""
+  );
+}
+
+function powerProfileGlyph(profile) {
+  return (
+    {
+      "power-saver": "󰌪",
+      balanced: "󰾅",
+      performance: "󰓅",
+    }[profile] || glyphFor("session")
+  );
+}

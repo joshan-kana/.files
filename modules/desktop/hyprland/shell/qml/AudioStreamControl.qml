@@ -90,13 +90,14 @@ Item {
                 ShellAction {
                     id: muteButton
                     anchors.verticalCenter: parent.verticalCenter
-                    width: 48
+                    width: Math.max(channel.theme.fontSize(70), implicitWidth)
                     height: channel.compact ? 30 : 36
                     runtime: channel.runtime
                     theme: channel.theme
                     motion: channel.motion
                     iconOnly: true
                     iconHint: shortcut.length > 0
+                    inlineIconHint: true
                     icon: channel.muted ? "󰝟" : "󰕾"
                     title: channel.capture ? "Mute capture stream" : "Mute application"
                     active: channel.muted
@@ -138,8 +139,7 @@ Item {
                 enabled: channel.available
                 value: channel.available ? channel.stream.audio.volume : 0
                 accentColor: channel.theme.audioLevelColor(channel.muted)
-                trackHeight: channel.compact ? 6 : 10
-                handleSize: channel.compact ? 14 : 18
+                density: channel.compact ? ShellSlider.Compact : ShellSlider.Standard
                 Accessible.role: Accessible.Slider
                 Accessible.name: channel.displayName + " volume"
                 onInteractionStarted: channel.selectedRequested()

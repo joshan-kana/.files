@@ -282,12 +282,12 @@ test("VHS tuning exposes correct keyboard focus, pointer and navigation paths", 
     tile,
     /StateLayer \{[\s\S]*?onActivated: chip\.detailShortcut\.length > 0 \? chip\.detailsRequested\(\)/,
   );
-  assert.match(
-    panel,
-    /onInteractionStarted: panel\.selectParameter\(parameterRow\.index\)/,
-  );
+  assert.match(panel, /onSelectedRequested: panel\.selectParameter\(index\)/);
   assert.match(panel, /onValueRequested: next => panel\.setParameter/);
-  assert.match(panel, /Accessible\.role: Accessible\.Slider/);
+  assert.match(
+    read(path.join(shell, "qml/ParameterCard.qml")),
+    /Accessible\.role: Accessible\.Slider/,
+  );
   assert.match(panel, /shellNavigates\("controls", "up", key\)/);
   assert.match(panel, /shellNavigates\("controls", "right", key\)/);
   assert.match(panel, /shellKeyCode\("controls", "Backtab"\)/);

@@ -82,7 +82,8 @@ test("opacity and shared blur parameters live in focused details, not compact ti
   const controls = qml("SystemContent.qml");
   const host = qml("ShellExpansionHost.qml");
   const preferences = qml("AppearancePreferences.qml");
-  assert.match(detail, /ShellSlider \{/);
+  assert.match(detail, /ParameterCard \{/);
+  assert.match(qml("ParameterCard.qml"), /ShellSlider \{/);
   for (const key of ["windowOpacity", "glassOpacity", "blurSize"])
     assert.ok(detail.includes('key: "' + key + '"'), key);
   assert.match(detail, /appearance\.setWindowOpacity\(value \/ 100\)/);

@@ -416,8 +416,8 @@ FocusScope {
 
             ShellAction {
                 id: resetButton
-                width: 76
-                height: 30
+                width: Math.max(76, implicitWidth)
+                height: Math.max(30, implicitHeight)
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
                 iconOnly: true

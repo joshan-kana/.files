@@ -85,7 +85,10 @@ test("shared motion tokens drive compact, normal and split-button deformation", 
 
 test("selected state, hit target size and shortcut ownership remain independent of press scale", () => {
   const action = qml("ShellAction.qml");
-  assert.match(action, /Accessible\.role: Accessible\.Button/);
+  assert.match(
+    action,
+    /Accessible\.role: switchControl \? Accessible\.CheckBox : Accessible\.Button/,
+  );
   assert.match(action, /active: false/);
   assert.match(action, /cornerRadius: buttonSurface\.cornerRadius/);
   for (const name of ["TileCornerAction.qml", "TileQuickAction.qml"]) {

@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import QtQuick.Controls as Controls
 
 Item {
     id: root
@@ -20,7 +21,10 @@ Item {
     property bool horizontalCompact: false
     property bool headerEntry: false
     property bool iconOnly: false
-    property bool iconHint: false
+    property bool iconHint: shortcut.length > 0
+    property bool switchControl: false
+    property bool quietAction: false
+    readonly property bool inlineSymbol: inlineIconHint || switchControl
     property bool inlineIconHint: false
     property int horizontalPadding: headerEntry ? theme.spacing4 + theme.spacing2 : compact ? theme.spacing3 : theme.spacing4
 
@@ -31,16 +35,25 @@ Item {
 
     readonly property real inlineGlyphWidth: iconName.length > 0 ? theme.fontSize(17) : icon.length > 0 ? inlineIcon.implicitWidth : 0
     readonly property real inlineHintWidth: shortcut.length > 0 ? inlineHint.implicitWidth : 0
-    implicitWidth: iconOnly ? 44 : Math.max(96, horizontalPadding * 2 + (horizontalCompact ? actionLabelMetrics.advanceWidth + inlineGlyphWidth + inlineHintWidth + (inlineGlyphWidth > 0 ? theme.spacing2 : 0) + (inlineHintWidth > 0 ? theme.spacing2 : 0) : Math.max(stackedLabel.implicitWidth, stackedSubtitle.implicitWidth)))
-    implicitHeight: iconOnly ? 40 : horizontalCompact ? Math.max(40, inlineLabel.implicitHeight + theme.spacing2 * 2, inlineHint.implicitHeight + theme.spacing2 * 2) : Math.max(compact ? 40 : 58, content.implicitHeight + theme.spacing2 * 2)
+    readonly property real symbolWidth: switchControl ? Math.max(46, theme.fontSize(42)) : theme.iconRegular
+    readonly property real symbolHeight: switchControl ? Math.max(26, theme.fontSize(24)) : inlineSymbol ? theme.iconRegular : theme.fontSize(17)
+    implicitWidth: iconOnly ? Math.max(theme.minActionTarget, inlineSymbol ? symbolWidth + inlineHintWidth + (iconHint ? theme.spacing1 : 0) + theme.spacing2 * 2 : Math.max(symbolWidth, iconHint ? inlineHintWidth : 0) + theme.spacing2) : Math.max(96, horizontalPadding * 2 + (horizontalCompact ? actionLabelMetrics.advanceWidth + inlineGlyphWidth + inlineHintWidth + (inlineGlyphWidth > 0 ? theme.spacing2 : 0) + (inlineHintWidth > 0 ? theme.spacing2 : 0) : Math.max(stackedLabel.implicitWidth, stackedSubtitle.implicitWidth)))
+    implicitHeight: iconOnly ? Math.max(40, inlineSymbol ? Math.max(symbolHeight, inlineHint.implicitHeight) + theme.spacing2 : symbolHeight + (iconHint ? inlineHint.implicitHeight + theme.spacing1 : 0) + theme.spacing1) : horizontalCompact ? Math.max(40, inlineLabel.implicitHeight + theme.spacing2 * 2, inlineHint.implicitHeight + theme.spacing2 * 2) : Math.max(compact ? 40 : 58, content.implicitHeight + theme.spacing2 * 2)
 
     TextMetrics {
         id: actionLabelMetrics
         text: root.title
         font: inlineLabel.font
     }
-    Accessible.role: Accessible.Button
+    Accessible.role: switchControl ? Accessible.CheckBox : Accessible.Button
+    Accessible.checkable: switchControl
+    Accessible.checked: switchControl && active
     Accessible.name: title
+    Accessible.description: subtitle
+    Controls.ToolTip.visible: root.iconOnly && root.visible && (interaction.pointerHovered || interaction.activeFocus) && root.title.length > 0
+    Controls.ToolTip.text: root.title
+    Controls.ToolTip.delay: 650
+    Controls.ToolTip.timeout: 4000
     // Assistive-technology press must use the same activation signal as
     // pointer and keyboard controls. A role/name without a press handler is
     // discoverable but cannot actually invoke sender-owned actions.
@@ -96,7 +109,7 @@ Item {
             motion: root.motion
             surfaceLayer: ShellSurface.Control
             selected: root.active
-            fillColor: root.active ? root.theme.blend(root.theme.controlBase, root.activeColor, root.theme.dark ? 0.20 : 0.12) : root.theme.expressiveSurfaceStrong
+            fillColor: root.quietAction || root.switchControl ? "transparent" : root.active ? root.theme.blend(root.theme.controlBase, root.activeColor, root.theme.dark ? 0.20 : 0.12) : root.theme.expressiveSurfaceStrong
             cornerRadius: root.motion.enabled && interaction.visualPressed ? Math.min(root.height / 2, root.theme.radiusSmall) : root.active ? root.theme.radiusLarge : root.compact ? theme.radiusSmall : theme.radiusMedium
             Behavior on cornerRadius {
                 Anim {
@@ -145,7 +158,7 @@ Item {
                 theme: root.theme
                 text: root.subtitle
                 color: theme.textMuted
-                font.pixelSize: theme.fontSize(root.compact ? 9 : 11)
+                font.pixelSize: theme.fontSupporting
                 elide: Text.ElideRight
             }
         }
@@ -213,11 +226,11 @@ Item {
 
         // Icon-only actions share one fixed glyph box, independent of font bearings.
         Text {
-            visible: root.iconOnly && !root.inlineIconHint
+            visible: root.iconOnly && !root.inlineSymbol
             anchors.centerIn: parent
-            anchors.verticalCenterOffset: root.iconHint ? -6 : 0
+            anchors.verticalCenterOffset: root.iconHint ? -(inlineHint.implicitHeight + root.theme.spacing1) / 2 : 0
             width: root.width
-            height: root.iconHint ? Math.max(20, root.height - 14) : root.height
+            height: root.symbolHeight
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             text: root.icon
@@ -227,19 +240,57 @@ Item {
         }
 
         Row {
-            visible: root.iconOnly && root.iconHint && root.inlineIconHint
+            visible: root.iconOnly && root.inlineSymbol
             anchors.centerIn: parent
             spacing: root.theme.spacing1
 
-            Text {
+            Item {
+                width: root.symbolWidth
+                height: root.symbolHeight
                 anchors.verticalCenter: parent.verticalCenter
-                text: root.icon
-                color: root.iconColor
-                font.family: "Symbols Nerd Font"
-                font.pixelSize: root.theme.fontSize(16)
+                Rectangle {
+                    anchors.fill: parent
+                    visible: root.switchControl
+                    radius: height / 2
+                    color: root.active ? root.theme.blend(root.theme.controlBase, root.activeColor, 0.60) : root.theme.layer3
+                    border.color: root.active ? root.activeColor : root.theme.subtleBorder
+                    border.width: root.theme.borderThin
+                    Rectangle {
+                        id: switchThumb
+                        width: parent.height - root.theme.spacing1 * 2
+                        height: width
+                        radius: width / 2
+                        x: root.active ? parent.width - width - root.theme.spacing1 : root.theme.spacing1
+                        anchors.verticalCenter: parent.verticalCenter
+                        color: root.active ? root.activeColor : root.theme.textMuted
+                        Behavior on x {
+                            Anim {
+                                motion: root.motion
+                                type: Anim.FastSpatial
+                            }
+                        }
+                        Text {
+                            anchors.centerIn: parent
+                            text: root.active ? "✓" : "−"
+                            color: root.theme.background
+                            font.family: root.runtime.fontSans
+                            font.pixelSize: root.theme.fontUtility
+                            font.weight: Font.DemiBold
+                        }
+                    }
+                }
+                Text {
+                    visible: !root.switchControl
+                    anchors.centerIn: parent
+                    text: root.icon
+                    color: root.iconColor
+                    font.family: "Symbols Nerd Font"
+                    font.pixelSize: root.theme.iconSmall
+                }
             }
 
             KeyHint {
+                visible: root.iconHint && root.shortcut.length > 0
                 anchors.verticalCenter: parent.verticalCenter
                 shortcut: root.shortcut
                 compact: true
@@ -266,7 +317,7 @@ Item {
         }
 
         KeyHint {
-            visible: root.iconOnly && root.iconHint && !root.inlineIconHint && root.shortcut.length > 0
+            visible: root.iconOnly && root.iconHint && !root.inlineSymbol && root.shortcut.length > 0
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 2
@@ -285,8 +336,10 @@ Item {
         motion: root.motion
         disabled: !root.enabled
         selected: root.active
-        keyboardFocusable: !root.iconOnly || root.iconHint
-        Accessible.role: Accessible.Button
+        keyboardFocusable: !root.iconOnly || root.iconHint || root.title.length > 0
+        Accessible.role: root.switchControl ? Accessible.CheckBox : Accessible.Button
+        Accessible.checkable: root.switchControl
+        Accessible.checked: root.switchControl && root.active
         Accessible.name: root.title.length > 0 ? root.title : "Activate control"
         Accessible.onPressAction: root.trigger()
         stateColor: root.active ? root.activeColor : root.theme.textStrong

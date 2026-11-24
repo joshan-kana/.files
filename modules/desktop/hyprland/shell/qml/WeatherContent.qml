@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
+import "DesktopIcons.js" as DesktopIcons
 
 FocusScope {
     id: panel
@@ -119,8 +120,8 @@ FocusScope {
 
             ShellAction {
                 id: refreshButton
-                width: 48
-                height: 42
+                width: Math.max(48, implicitWidth)
+                height: Math.max(42, implicitHeight)
                 anchors.verticalCenter: parent.verticalCenter
                 runtime: panel.runtime
                 theme: panel.theme
@@ -168,14 +169,16 @@ FocusScope {
             }
             ShellAction {
                 id: defaultsButton
-                width: 105
+                width: implicitWidth
                 height: parent.height
                 runtime: panel.runtime
                 theme: panel.theme
                 motion: panel.motion
                 compact: true
-                horizontalCompact: true
-                title: "Defaults"
+                iconOnly: true
+                inlineIconHint: true
+                icon: DesktopIcons.actionGlyph("reset")
+                title: "Restore weather defaults"
                 shortcut: panel.runtime.shellHint("WeatherContent.reset")
                 onActivated: {
                     panel.weather.resetLocation();
@@ -230,14 +233,16 @@ FocusScope {
                 id: applyLocation
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                width: 85
-                height: 36
+                width: implicitWidth
+                height: implicitHeight
                 runtime: panel.runtime
                 theme: panel.theme
                 motion: panel.motion
                 compact: true
-                horizontalCompact: true
-                title: "Apply"
+                iconOnly: true
+                inlineIconHint: true
+                icon: DesktopIcons.actionGlyph("confirm")
+                title: "Apply location"
                 shortcut: panel.runtime.shellHint("WeatherContent.applyLocation")
                 onActivated: panel.finishLocation(true)
             }

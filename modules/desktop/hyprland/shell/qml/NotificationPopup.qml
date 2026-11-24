@@ -333,10 +333,10 @@ PanelWindow {
                         Text {
                             id: appName
                             anchors.verticalCenter: parent.verticalCenter
-                            text: toast.notification ? (toast.notification.appName || "SYSTEM").toUpperCase() : "SYSTEM"
+                            text: toast.notification ? (toast.notification.appName || "System") : "System"
                             color: toast.urgencyColor
                             font.family: qmlPopup.runtime.fontSans
-                            font.pixelSize: qmlPopup.theme.fontSize(10)
+                            font.pixelSize: qmlPopup.theme.fontUtility
                             font.weight: Font.DemiBold
                             font.letterSpacing: 1.4
                             width: Math.min(implicitWidth, Math.max(90, parent.width * 0.42))

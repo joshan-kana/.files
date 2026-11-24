@@ -90,64 +90,91 @@ Item {
             detail: "CPU · Memory · GPU · Temperature · Network · Disk · Last " + panel.resourceState.historySeconds + "s"
         }
 
-        Row {
+        Flow {
+            id: primaryMetrics
             width: parent.width
             spacing: panel.theme.spacing3
-
+            readonly property int columns: width >= panel.theme.fontSize(650) ? 3 : 1
             Repeater {
-                model: 2
-
+                model: [
+                    {
+                        title: "CPU",
+                        glyph: "󰍛",
+                        role: "resources",
+                        fraction: panel.resourceState.cpuPercent,
+                        known: panel.resourceState.cpuSampleReady,
+                        detail: "Processor activity"
+                    },
+                    {
+                        title: "Memory",
+                        glyph: "󰘚",
+                        role: "connectivity",
+                        fraction: panel.resourceState.memoryPercent,
+                        known: panel.resourceState.memoryTotal > 0,
+                        detail: panel.resourceState.kibString(panel.resourceState.memoryUsed) + " / " + panel.resourceState.kibString(panel.resourceState.memoryTotal)
+                    },
+                    {
+                        title: "Storage",
+                        glyph: "󰋊",
+                        role: "positive",
+                        fraction: panel.resourceState.diskPercent,
+                        known: panel.resourceState.diskTotal > 0,
+                        detail: panel.resourceState.diskTotal > 0 ? panel.resourceState.kibString(panel.resourceState.diskUsed) + " used" : "Capacity unavailable"
+                    }
+                ]
                 delegate: ShellSurface {
-                    id: tile
-                    required property int index
-                    readonly property bool cpu: index === 0
-                    readonly property color gaugeColor: cpu ? panel.theme.roleColor("resources") : panel.theme.roleColor("connectivity")
-                    readonly property real percentage: cpu ? panel.resourceState.cpuPercent : panel.resourceState.memoryPercent
-                    readonly property string detailText: cpu ? "Processor activity" : panel.resourceState.kibString(panel.resourceState.memoryUsed) + " / " + panel.resourceState.kibString(panel.resourceState.memoryTotal)
-                    width: (panel.width - panel.theme.spacing3) / 2
-                    height: Math.max(168, metricContent.implicitHeight + panel.theme.spacing4 * 2)
+                    id: metricTile
+                    required property var modelData
+                    width: Math.floor((primaryMetrics.width - (primaryMetrics.columns - 1) * primaryMetrics.spacing) / primaryMetrics.columns)
+                    height: metricContent.implicitHeight + panel.theme.spacing4 * 2
                     theme: panel.theme
                     motion: panel.motion
                     surfaceLayer: ShellSurface.Group
                     cornerRadius: panel.theme.radiusLarge
-                    fillColor: panel.theme.blend(panel.theme.groupBase, tile.gaugeColor, cpu ? (panel.theme.dark ? 0.065 : 0.035) : (panel.theme.dark ? 0.055 : 0.03))
-
+                    readonly property color metricColor: panel.theme.roleColor(modelData.role)
+                    fillColor: panel.theme.blend(panel.theme.groupBase, metricColor, panel.theme.dark ? 0.08 : 0.045)
                     Column {
                         id: metricContent
+                        width: parent.width - panel.theme.spacing4 * 2
                         anchors.centerIn: parent
-                        spacing: panel.theme.spacing1
+                        spacing: panel.theme.spacing2
                         Row {
-                            anchors.horizontalCenter: parent.horizontalCenter
                             spacing: panel.theme.spacing2
                             Text {
-                                text: tile.cpu ? "󰍛" : "󰘚"
-                                color: tile.gaugeColor
+                                text: metricTile.modelData.glyph
+                                color: metricTile.metricColor
                                 font.family: "Symbols Nerd Font"
-                                font.pixelSize: panel.theme.fontSize(18)
+                                font.pixelSize: panel.theme.iconRegular
                             }
-                            Text {
-                                text: tile.cpu ? "CPU" : "MEMORY"
-                                color: panel.theme.textStrong
-                                font.family: panel.runtime.fontSans
-                                font.pixelSize: panel.theme.fontSize(12)
-                                font.weight: Font.DemiBold
+                            ShellText {
+                                runtime: panel.runtime
+                                theme: panel.theme
+                                text: metricTile.modelData.title
+                                textRole: ShellText.Section
                             }
                         }
-                        ResourceGauge {
-                            anchors.horizontalCenter: parent.horizontalCenter
+                        ShellText {
+                            runtime: panel.runtime
+                            theme: panel.theme
+                            text: metricTile.modelData.known ? Math.round(metricTile.modelData.fraction * 100) + "%" : "—"
+                            textRole: ShellText.Display
+                            color: metricTile.metricColor
+                        }
+                        LevelTrack {
+                            width: parent.width
                             theme: panel.theme
                             motion: panel.motion
-                            accentColor: tile.gaugeColor
-                            value: tile.percentage
-                            known: tile.cpu ? panel.resourceState.cpuSampleReady : panel.resourceState.memoryTotal > 0
-                            label: known ? "Used" : "Sampling"
+                            fraction: metricTile.modelData.fraction
+                            known: metricTile.modelData.known
+                            accentColor: metricTile.metricColor
                         }
-                        Text {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            text: tile.detailText
-                            color: panel.theme.textMuted
-                            font.family: panel.runtime.fontSans
-                            font.pixelSize: panel.theme.fontSize(9)
+                        ShellText {
+                            width: parent.width
+                            runtime: panel.runtime
+                            theme: panel.theme
+                            text: metricTile.modelData.known ? metricTile.modelData.detail : "Unavailable or sampling"
+                            textRole: ShellText.Supporting
+                            wrapMode: Text.WordWrap
                         }
                     }
                 }
@@ -170,17 +197,12 @@ Item {
                 Repeater {
                     model: [
                         {
-                            title: "DISK /",
-                            value: panel.resourceState.diskTotal > 0 ? Math.round(panel.resourceState.diskPercent * 100) + "%" : "N/A",
-                            subtitle: panel.resourceState.diskTotal > 0 ? panel.resourceState.kibString(panel.resourceState.diskUsed) + " used" : "Capacity unavailable"
-                        },
-                        {
-                            title: "NETWORK ↓",
+                            title: "↓ Receiving",
                             value: panel.resourceState.networkInterface ? panel.resourceState.speedString(panel.resourceState.networkDownload) : "N/A",
                             subtitle: panel.resourceState.networkInterface || "No active interface"
                         },
                         {
-                            title: "NETWORK ↑",
+                            title: "↑ Sending",
                             value: panel.resourceState.networkInterface ? panel.resourceState.speedString(panel.resourceState.networkUpload) : "N/A",
                             subtitle: "Outgoing traffic"
                         }
@@ -188,7 +210,7 @@ Item {
                     delegate: Column {
                         id: metricColumn
                         required property var modelData
-                        width: (parent.width - 2 * panel.theme.spacing4) / 3
+                        width: (parent.width - panel.theme.spacing4) / 2
                         spacing: 2
                         Text {
                             text: metricColumn.modelData.title
@@ -201,7 +223,7 @@ Item {
                             text: metricColumn.modelData.value
                             color: panel.theme.textStrong
                             font.family: panel.runtime.fontMono
-                            font.pixelSize: panel.theme.fontSize(14)
+                            font.pixelSize: panel.theme.fontReadback
                             font.weight: Font.DemiBold
                             elide: Text.ElideRight
                         }
@@ -210,7 +232,7 @@ Item {
                             text: metricColumn.modelData.subtitle
                             color: panel.theme.textMuted
                             font.family: panel.runtime.fontSans
-                            font.pixelSize: panel.theme.fontSize(9)
+                            font.pixelSize: panel.theme.fontUtility
                             elide: Text.ElideRight
                         }
                     }
@@ -233,17 +255,17 @@ Item {
                 Repeater {
                     model: [
                         {
-                            title: "GPU LOAD",
+                            title: "GPU load",
                             value: panel.resourceState.gpuPercent >= 0 ? Math.round(panel.resourceState.gpuPercent) + "%" : "Unavailable",
                             detail: "Supported driver counter"
                         },
                         {
-                            title: "CPU TEMPERATURE",
+                            title: "CPU temperature",
                             value: panel.resourceState.cpuTemperature >= 0 ? panel.resourceState.cpuTemperature.toFixed(1) + "°C" : "Unavailable",
                             detail: "Supported thermal sensor"
                         },
                         {
-                            title: "GPU TEMPERATURE",
+                            title: "GPU temperature",
                             value: panel.resourceState.gpuTemperature >= 0 ? panel.resourceState.gpuTemperature.toFixed(1) + "°C" : "Unavailable",
                             detail: "Supported thermal sensor"
                         }
@@ -264,7 +286,7 @@ Item {
                             text: sensorColumn.modelData.value
                             color: sensorColumn.modelData.value === "Unavailable" ? panel.theme.textMuted : panel.theme.textStrong
                             font.family: panel.runtime.fontMono
-                            font.pixelSize: panel.theme.fontSize(14)
+                            font.pixelSize: panel.theme.fontReadback
                             font.weight: Font.DemiBold
                             elide: Text.ElideRight
                         }
@@ -273,7 +295,7 @@ Item {
                             text: sensorColumn.modelData.detail
                             color: panel.theme.textMuted
                             font.family: panel.runtime.fontSans
-                            font.pixelSize: panel.theme.fontSize(9)
+                            font.pixelSize: panel.theme.fontUtility
                             elide: Text.ElideRight
                         }
                     }
@@ -292,20 +314,23 @@ Item {
 
         ShellSurface {
             width: parent.width
-            height: 273
+            height: Math.max(panel.theme.fontSize(273), historyContent.implicitHeight + panel.theme.spacing3 * 2)
             theme: panel.theme
             motion: panel.motion
             surfaceLayer: ShellSurface.Group
             cornerRadius: panel.theme.radiusMedium
 
             Column {
-                anchors.fill: parent
+                id: historyContent
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
                 anchors.margins: panel.theme.spacing3
                 spacing: panel.theme.spacing2
 
                 Row {
                     width: parent.width
-                    height: 25
+                    height: Math.max(viewToggle.implicitHeight, panel.theme.fontSection)
                     spacing: panel.theme.spacing3
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
@@ -313,15 +338,15 @@ Item {
                         text: panel.showProcesses ? (panel.resourceState.sortByMemory ? "TOP PROCESSES · MEMORY" : "TOP PROCESSES · LIFETIME CPU") : panel.showCores ? "LOGICAL CORES · " + panel.resourceState.coreUsage.length + " ACTIVE COUNTERS" : "RESOURCE HISTORY · LAST " + panel.resourceState.historySeconds + "s"
                         color: panel.theme.textStrong
                         font.family: panel.runtime.fontSans
-                        font.pixelSize: panel.theme.fontSize(10)
+                        font.pixelSize: panel.theme.fontSection
                         font.weight: Font.DemiBold
                         elide: Text.ElideRight
                     }
                     ShellAction {
                         id: viewToggle
                         anchors.verticalCenter: parent.verticalCenter
-                        width: 114
-                        height: 25
+                        width: implicitWidth
+                        height: implicitHeight
                         runtime: panel.runtime
                         theme: panel.theme
                         motion: panel.motion
@@ -344,7 +369,7 @@ Item {
                             id: historyGraph
                             required property int index
                             width: parent.width
-                            height: 66
+                            height: panel.theme.fontSize(67)
                             runtime: panel.runtime
                             theme: panel.theme
                             label: index === 0 ? "CPU" : index === 1 ? "MEMORY" : "NETWORK · RX+TX"
@@ -361,12 +386,21 @@ Item {
                     visible: panel.showProcesses
                     width: parent.width
                     spacing: 3
-                    ShellText {
+                    Row {
                         width: parent.width
-                        runtime: panel.runtime
-                        theme: panel.theme
-                        text: "PID         PROCESS                                      CPU AVG     MEM"
-                        color: panel.theme.textMuted
+                        spacing: panel.theme.spacing2
+                        Repeater {
+                            model: ["PID", "Process", "CPU avg", "Memory"]
+                            delegate: ShellText {
+                                required property int index
+                                required property string modelData
+                                width: index === 1 ? Math.max(1, parent.width - panel.theme.fontSize(230) - parent.spacing * 3) : panel.theme.fontSize(index === 0 ? 80 : 75)
+                                runtime: panel.runtime
+                                theme: panel.theme
+                                text: modelData
+                                textRole: ShellText.Utility
+                            }
+                        }
                     }
                     Repeater {
                         model: panel.showProcesses ? panel.resourceState.processes : []
@@ -376,26 +410,26 @@ Item {
                             width: parent.width
                             spacing: panel.theme.spacing2
                             ShellText {
-                                width: 80
+                                width: panel.theme.fontSize(80)
                                 runtime: panel.runtime
                                 theme: panel.theme
                                 text: processRow.modelData.pid
                             }
                             ShellText {
-                                width: Math.max(1, parent.width - 260)
+                                width: Math.max(1, parent.width - panel.theme.fontSize(230) - parent.spacing * 3)
                                 runtime: panel.runtime
                                 theme: panel.theme
                                 text: processRow.modelData.name
                                 elide: Text.ElideRight
                             }
                             ShellText {
-                                width: 75
+                                width: panel.theme.fontSize(75)
                                 runtime: panel.runtime
                                 theme: panel.theme
                                 text: processRow.modelData.cpu.toFixed(1) + "%"
                             }
                             ShellText {
-                                width: 75
+                                width: panel.theme.fontSize(75)
                                 runtime: panel.runtime
                                 theme: panel.theme
                                 text: processRow.modelData.memory.toFixed(1) + "%"
@@ -444,7 +478,7 @@ Item {
                                     text: "C" + String(coreTile.modelData.index).padStart(2, "0")
                                     color: panel.theme.textMuted
                                     font.family: panel.runtime.fontMono
-                                    font.pixelSize: panel.theme.fontSize(9)
+                                    font.pixelSize: panel.theme.fontUtility
                                 }
                                 Item {
                                     width: Math.max(0, parent.width - 58)

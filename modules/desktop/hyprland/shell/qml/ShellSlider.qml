@@ -13,8 +13,14 @@ Item {
     // Animate external/keyboard changes, never fight pointer dragging.
     property bool animateValueChanges: true
     property color accentColor: theme.accent
-    property real trackHeight: 10
-    property real handleSize: 20
+    enum Density {
+        Compact,
+        Standard,
+        Prominent
+    }
+    property int density: ShellSlider.Standard
+    property real trackHeight: density === ShellSlider.Compact ? theme.compactTrack : density === ShellSlider.Prominent ? theme.prominentTrack : theme.standardTrack
+    property real handleSize: theme.fontSize(density === ShellSlider.Compact ? 18 : density === ShellSlider.Prominent ? 28 : 22)
     // Material Expressive uses a narrow, vertical pill that compresses on
     // press. Keep its centre fixed so the pointer's requested value cannot
     // jump when the thumb changes shape.
@@ -98,19 +104,13 @@ Item {
     Rectangle {
         id: handle
         width: Math.max(4, root.handleSize * (root.thumbPressed ? 0.26 : root.motion.enabled && root.thumbHovered ? 0.5 : 0.42))
-        height: Math.min(root.height, root.handleSize * (root.thumbPressed ? 1.14 : 1))
+        height: Math.min(root.height, root.handleSize)
         radius: width / 2
         x: root.thumbCenterX - width / 2
         anchors.verticalCenter: parent.verticalCenter
         color: root.accentColor
 
         Behavior on width {
-            Anim {
-                motion: root.motion
-                type: Anim.FastSpatial
-            }
-        }
-        Behavior on height {
             Anim {
                 motion: root.motion
                 type: Anim.FastSpatial

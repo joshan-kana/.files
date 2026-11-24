@@ -990,8 +990,7 @@ FocusScope {
                                     value: root.brightness.percent
                                     enabled: root.brightness.supported
                                     accentColor: root.theme.roleColor("display")
-                                    trackHeight: 12
-                                    handleSize: 20
+                                    density: ShellSlider.Prominent
                                     onInteractionStarted: root.selectSlider("brightness")
                                     onValueRequested: next => root.brightness.setPercent(next)
                                 }
@@ -1109,7 +1108,7 @@ FocusScope {
 
                         QuickSettingChip {
                             width: actionTiles.cellWidth(this)
-                            height: root.dashboardTileHeight
+                            height: Math.max(root.dashboardTileHeight, implicitHeight)
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
@@ -1127,7 +1126,7 @@ FocusScope {
 
                         QuickSettingChip {
                             width: actionTiles.cellWidth(this)
-                            height: root.dashboardTileHeight
+                            height: Math.max(root.dashboardTileHeight, implicitHeight)
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
@@ -1145,7 +1144,7 @@ FocusScope {
 
                         QuickSettingChip {
                             width: actionTiles.cellWidth(this)
-                            height: root.dashboardTileHeight
+                            height: Math.max(root.dashboardTileHeight, implicitHeight)
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
@@ -1164,7 +1163,7 @@ FocusScope {
 
                         QuickSettingChip {
                             width: actionTiles.cellWidth(this)
-                            height: root.dashboardTileHeight
+                            height: Math.max(root.dashboardTileHeight, implicitHeight)
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
@@ -1177,7 +1176,7 @@ FocusScope {
 
                         QuickSettingChip {
                             width: actionTiles.cellWidth(this)
-                            height: root.dashboardTileHeight
+                            height: Math.max(root.dashboardTileHeight, implicitHeight)
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
@@ -1192,7 +1191,7 @@ FocusScope {
 
                         QuickSettingChip {
                             width: actionTiles.cellWidth(this)
-                            height: root.dashboardTileHeight
+                            height: Math.max(root.dashboardTileHeight, implicitHeight)
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
@@ -1208,7 +1207,7 @@ FocusScope {
 
                         QuickSettingChip {
                             width: actionTiles.cellWidth(this)
-                            height: root.dashboardTileHeight
+                            height: Math.max(root.dashboardTileHeight, implicitHeight)
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
@@ -1221,7 +1220,7 @@ FocusScope {
 
                         QuickSettingChip {
                             width: actionTiles.cellWidth(this)
-                            height: root.dashboardTileHeight
+                            height: Math.max(root.dashboardTileHeight, implicitHeight)
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
@@ -1308,7 +1307,7 @@ FocusScope {
 
                         QuickSettingChip {
                             width: visualTiles.cellWidth(this)
-                            height: root.dashboardTileHeight
+                            height: Math.max(root.dashboardTileHeight, implicitHeight)
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
@@ -1325,7 +1324,7 @@ FocusScope {
 
                         QuickSettingChip {
                             width: visualTiles.cellWidth(this)
-                            height: root.dashboardTileHeight
+                            height: Math.max(root.dashboardTileHeight, implicitHeight)
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
@@ -1342,7 +1341,7 @@ FocusScope {
 
                         QuickSettingChip {
                             width: visualTiles.cellWidth(this)
-                            height: root.dashboardTileHeight
+                            height: Math.max(root.dashboardTileHeight, implicitHeight)
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
@@ -1359,7 +1358,7 @@ FocusScope {
 
                         QuickSettingChip {
                             width: visualTiles.cellWidth(this)
-                            height: root.dashboardTileHeight
+                            height: Math.max(root.dashboardTileHeight, implicitHeight)
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
@@ -1376,7 +1375,7 @@ FocusScope {
 
                         QuickSettingChip {
                             width: visualTiles.cellWidth(this)
-                            height: root.dashboardTileHeight
+                            height: Math.max(root.dashboardTileHeight, implicitHeight)
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
@@ -1393,7 +1392,7 @@ FocusScope {
 
                         QuickSettingChip {
                             width: visualTiles.cellWidth(this)
-                            height: root.dashboardTileHeight
+                            height: Math.max(root.dashboardTileHeight, implicitHeight)
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
@@ -1409,7 +1408,7 @@ FocusScope {
                         }
                         QuickSettingChip {
                             width: visualTiles.cellWidth(this)
-                            height: root.dashboardTileHeight
+                            height: Math.max(root.dashboardTileHeight, implicitHeight)
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
@@ -1428,7 +1427,7 @@ FocusScope {
 
                         QuickSettingChip {
                             width: visualTiles.cellWidth(this)
-                            height: root.dashboardTileHeight
+                            height: Math.max(root.dashboardTileHeight, implicitHeight)
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
@@ -1447,7 +1446,7 @@ FocusScope {
 
                         QuickSettingChip {
                             width: visualTiles.cellWidth(this)
-                            height: root.dashboardTileHeight
+                            height: Math.max(root.dashboardTileHeight, implicitHeight)
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion

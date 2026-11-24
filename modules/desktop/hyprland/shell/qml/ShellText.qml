@@ -4,7 +4,19 @@ Text {
     required property RuntimeConfig runtime
     required property Theme theme
 
-    color: theme.text
-    font.family: runtime.fontSans
-    font.pixelSize: theme.fontSize(13)
+    enum Role {
+        Body,
+        Supporting,
+        Utility,
+        Action,
+        Section,
+        Title,
+        Readback,
+        Display
+    }
+    property int textRole: ShellText.Body
+    color: textRole === ShellText.Supporting || textRole === ShellText.Utility ? theme.textMuted : theme.text
+    font.family: textRole === ShellText.Readback || textRole === ShellText.Display ? runtime.fontMono : runtime.fontSans
+    font.pixelSize: [theme.fontAction, theme.fontSupporting, theme.fontUtility, theme.fontAction, theme.fontSection, theme.fontDetailTitle, theme.fontReadback, theme.fontDisplay][textRole]
+    font.weight: textRole >= ShellText.Action ? Font.DemiBold : Font.Normal
 }

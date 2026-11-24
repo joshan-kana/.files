@@ -133,8 +133,7 @@ ShellSurface {
             to: setting.to
             value: setting.value
             enabled: setting.canAdjust
-            trackHeight: 6
-            handleSize: 16
+            density: ShellSlider.Compact
             accentColor: setting.roleAccent
             Accessible.role: Accessible.Slider
             Accessible.name: setting.label + " " + setting.valueText
