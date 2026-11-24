@@ -8,9 +8,6 @@ let
   runtimeScopeOption = (builtins.head hosts).options.dotfiles.scopes;
   tree = semanticScopeOptions.scopeTree configurations;
   options = semanticScopeOptions.nixdOptions configurations;
-  hostOptions = semanticScopeOptions.nixdHostOptions configurations (builtins.head hosts);
-  nixosHostOptions = semanticScopeOptions.nixdHostOptions configurations configurations.nixos;
-  serverHostOptions = semanticScopeOptions.nixdHostOptions configurations configurations.nixos-server;
   scopes = options.dotfiles.scopes.type.getSubOptions [ ];
 
   visibleOptions =
@@ -55,13 +52,42 @@ let
       builtins.attrNames childScopes
     );
 
+  validateEdits =
+    scopeTree: editOptions:
+    let
+      children = semanticChildren scopeTree;
+    in
+    sameNames (
+      [
+        "config"
+        "home"
+      ]
+      ++ builtins.attrNames children
+    ) (builtins.attrNames editOptions)
+    && editOptions.config.type.name == "raw"
+    && editOptions.home.type.name == "raw"
+    && builtins.all (name: validateEdits children.${name} editOptions.${name}) (
+      builtins.attrNames children
+    );
+
   rootOptions = visibleOptions scopes;
-  hostScopes = hostOptions.dotfiles.scopes.type.getSubOptions [ ];
-  nixosHostScopes = visibleOptions (nixosHostOptions.dotfiles.scopes.type.getSubOptions [ ]);
-  serverHostScopes = visibleOptions (serverHostOptions.dotfiles.scopes.type.getSubOptions [ ]);
-  nixosResolvedScopes = semanticChildren configurations.nixos.config.dotfiles.resolvedScopes;
-  serverResolvedScopes = semanticChildren configurations.nixos-server.config.dotfiles.resolvedScopes;
   rootChildren = semanticChildren tree;
+  validateHost =
+    host:
+    let
+      hostOptions = semanticScopeOptions.nixdHostOptions configurations host;
+      hostScopes = visibleOptions (hostOptions.dotfiles.scopes.type.getSubOptions [ ]);
+      resolved = semanticChildren host.config.dotfiles.resolvedScopes;
+    in
+    sameNames (builtins.attrNames resolved) (builtins.attrNames hostScopes)
+    && sameNames (builtins.attrNames rootChildren) (builtins.attrNames hostOptions.scopeEdits)
+    && builtins.all (name: validateScope resolved.${name} hostScopes.${name}) (
+      builtins.attrNames resolved
+    )
+    && builtins.all (name: validateEdits rootChildren.${name} hostOptions.scopeEdits.${name}) (
+      builtins.attrNames rootChildren
+    )
+    && builtins.all (name: builtins.hasAttr name hostOptions) (builtins.attrNames host.options);
   privateHost = {
     options = { };
     config.dotfiles.resolvedScopes.root = {
@@ -81,33 +107,11 @@ assert hosts != [ ];
 assert privateHostOptions.app.token.type.name == "str";
 assert builtins.hasAttr "root" privateHostOptions.scopeEdits;
 assert builtins.hasAttr "app" privateHostOptions.scopeEdits.root;
-assert builtins.hasAttr "cava" hostOptions.scopeEdits.cli;
-assert builtins.hasAttr "delta" hostOptions.scopeEdits.cli.git;
-assert hostOptions.scopeEdits.cli.cava.home.type.name == "raw";
-assert hostOptions.scopeEdits.cli.cava.config.type.name == "raw";
-assert sameNames (builtins.attrNames rootChildren) (builtins.attrNames hostOptions.scopeEdits);
-assert sameNames (builtins.attrNames rootChildren) (
-  builtins.attrNames serverHostOptions.scopeEdits
-);
-assert sameNames (builtins.attrNames rootChildren) (builtins.attrNames nixosHostOptions.scopeEdits);
+assert privateHostOptions.scopeEdits.root.app.home.type.name == "raw";
+assert privateHostOptions.scopeEdits.root.app.config.type.name == "raw";
 assert rootChildren != { };
 assert sameNames (builtins.attrNames rootChildren) (builtins.attrNames rootOptions);
-assert sameNames (builtins.attrNames (
-  semanticChildren (builtins.head hosts).config.dotfiles.resolvedScopes
-)) (builtins.attrNames (visibleOptions hostScopes));
-assert sameNames (builtins.attrNames nixosResolvedScopes) (builtins.attrNames nixosHostScopes);
-assert sameNames (builtins.attrNames serverResolvedScopes) (builtins.attrNames serverHostScopes);
-assert builtins.all (name: validateScope nixosResolvedScopes.${name} nixosHostScopes.${name}) (
-  builtins.attrNames nixosResolvedScopes
-);
-assert builtins.all (name: validateScope serverResolvedScopes.${name} serverHostScopes.${name}) (
-  builtins.attrNames serverResolvedScopes
-);
-assert !(nixosHostScopes ? serverApps);
-assert serverHostScopes ? serverApps;
-assert builtins.all (name: builtins.hasAttr name hostOptions) (
-  builtins.attrNames (builtins.head hosts).options
-);
+assert builtins.all validateHost hosts;
 assert builtins.all (name: validateScope rootChildren.${name} rootOptions.${name}) (
   builtins.attrNames rootChildren
 );
