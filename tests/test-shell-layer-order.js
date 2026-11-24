@@ -6,7 +6,7 @@ const path = require("node:path");
 const root = path.join(__dirname, "../modules/desktop/hyprland/shell");
 const source = fs.readFileSync(path.join(root, "default.nix"), "utf8");
 const rules = source.match(
-  /wayland\.windowManager\.hyprland\.settings\.config\.layer_rule = \[([\s\S]*?)\];/,
+  /wayland\.windowManager\.hyprland\.settings\.layer_rule = \[([\s\S]*?)\];/,
 )[1];
 const order = Object.fromEntries(
   [

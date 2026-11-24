@@ -1464,7 +1464,7 @@ in
       # Hyprland draws and hit-tests lower order values above higher ones.
       # Keep interactive shell surfaces above ordinary overlay clients regardless
       # of map order, while preserving the priority of global modal dialogs.
-      wayland.windowManager.hyprland.settings.config.layer_rule = [
+      wayland.windowManager.hyprland.settings.layer_rule = [
         {
           match.namespace = "^desktop-shell-expansion$";
           order = -10;
