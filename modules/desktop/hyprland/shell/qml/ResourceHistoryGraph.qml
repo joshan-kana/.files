@@ -12,6 +12,7 @@ Item {
     required property real maximum
     required property int sampleLimit
 
+    property bool showHeader: true
     implicitHeight: 54
 
     onValuesChanged: plot.requestPaint()
@@ -20,6 +21,7 @@ Item {
     onSampleLimitChanged: plot.requestPaint()
 
     Row {
+        visible: graph.showHeader
         anchors {
             left: parent.left
             right: parent.right
@@ -72,7 +74,7 @@ Item {
             right: parent.right
             top: parent.top
             bottom: parent.bottom
-            topMargin: graph.theme.fontSize(24)
+            topMargin: graph.showHeader ? graph.theme.fontSize(24) : 0
             bottomMargin: graph.theme.fontSize(14)
         }
         onWidthChanged: requestPaint()

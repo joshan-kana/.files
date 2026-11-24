@@ -103,7 +103,8 @@ Item {
                         role: "resources",
                         fraction: panel.resourceState.cpuPercent,
                         known: panel.resourceState.cpuSampleReady,
-                        detail: "Processor activity"
+                        detail: "Processor activity",
+                        history: panel.resourceState.cpuHistory
                     },
                     {
                         title: "Memory",
@@ -111,7 +112,8 @@ Item {
                         role: "connectivity",
                         fraction: panel.resourceState.memoryPercent,
                         known: panel.resourceState.memoryTotal > 0,
-                        detail: panel.resourceState.kibString(panel.resourceState.memoryUsed) + " / " + panel.resourceState.kibString(panel.resourceState.memoryTotal)
+                        detail: panel.resourceState.kibString(panel.resourceState.memoryUsed) + " / " + panel.resourceState.kibString(panel.resourceState.memoryTotal),
+                        history: panel.resourceState.memoryHistory
                     },
                     {
                         title: "Storage",
@@ -161,6 +163,7 @@ Item {
                             color: metricTile.metricColor
                         }
                         LevelTrack {
+                            visible: !metricTile.modelData.history
                             width: parent.width
                             theme: panel.theme
                             motion: panel.motion
@@ -176,6 +179,20 @@ Item {
                             textRole: ShellText.Supporting
                             wrapMode: Text.WordWrap
                         }
+                        ResourceHistoryGraph {
+                            visible: !!metricTile.modelData.history
+                            width: parent.width
+                            height: visible ? panel.theme.fontSize(80) : 0
+                            runtime: panel.runtime
+                            theme: panel.theme
+                            label: metricTile.modelData.title
+                            currentText: ""
+                            showHeader: false
+                            graphColor: metricTile.metricColor
+                            values: metricTile.modelData.history || []
+                            maximum: 1
+                            sampleLimit: panel.resourceState.historyLength
+                        }
                     }
                 }
             }
@@ -183,34 +200,41 @@ Item {
 
         ShellSurface {
             width: parent.width
-            height: Math.max(82, panel.theme.fontSize(55) + panel.theme.spacing3 * 2)
+            height: traffic.implicitHeight + panel.theme.spacing3 * 2
             theme: panel.theme
             motion: panel.motion
             surfaceLayer: ShellSurface.Group
             cornerRadius: panel.theme.radiusMedium
 
-            Row {
-                anchors.fill: parent
-                anchors.margins: panel.theme.spacing3
-                spacing: panel.theme.spacing4
+            Grid {
+                id: traffic
+                width: parent.width - panel.theme.spacing3 * 2
+                anchors.centerIn: parent
+                columns: width >= panel.theme.fontSize(360) ? 2 : 1
+                columnSpacing: panel.theme.spacing4
+                rowSpacing: panel.theme.spacing3
 
                 Repeater {
                     model: [
                         {
                             title: "↓ Receiving",
                             value: panel.resourceState.networkInterface ? panel.resourceState.speedString(panel.resourceState.networkDownload) : "N/A",
-                            subtitle: panel.resourceState.networkInterface || "No active interface"
+                            subtitle: panel.resourceState.networkInterface || "No active interface",
+                            role: "connectivity",
+                            history: panel.resourceState.receiveHistory
                         },
                         {
                             title: "↑ Sending",
                             value: panel.resourceState.networkInterface ? panel.resourceState.speedString(panel.resourceState.networkUpload) : "N/A",
-                            subtitle: "Outgoing traffic"
+                            subtitle: "Outgoing traffic",
+                            role: "resources",
+                            history: panel.resourceState.sendHistory
                         }
                     ]
                     delegate: Column {
                         id: metricColumn
                         required property var modelData
-                        width: (parent.width - panel.theme.spacing4) / 2
+                        width: (traffic.width - traffic.columnSpacing * (traffic.columns - 1)) / traffic.columns
                         spacing: 2
                         Text {
                             text: metricColumn.modelData.title
@@ -234,6 +258,19 @@ Item {
                             font.family: panel.runtime.fontSans
                             font.pixelSize: panel.theme.fontUtility
                             elide: Text.ElideRight
+                        }
+                        ResourceHistoryGraph {
+                            width: parent.width
+                            height: panel.theme.fontSize(66)
+                            runtime: panel.runtime
+                            theme: panel.theme
+                            label: metricColumn.modelData.title
+                            currentText: ""
+                            showHeader: false
+                            graphColor: panel.theme.roleColor(metricColumn.modelData.role)
+                            values: metricColumn.modelData.history
+                            maximum: Math.max(131072, ...panel.resourceState.receiveHistory, ...panel.resourceState.sendHistory)
+                            sampleLimit: panel.resourceState.historyLength
                         }
                     }
                 }
@@ -303,7 +340,7 @@ Item {
 
         ShellSurface {
             width: parent.width
-            height: Math.max(panel.theme.fontSize(273), historyContent.implicitHeight + panel.theme.spacing3 * 2)
+            height: historyContent.implicitHeight + panel.theme.spacing3 * 2
             theme: panel.theme
             motion: panel.motion
             surfaceLayer: ShellSurface.Group
@@ -324,7 +361,7 @@ Item {
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         width: Math.max(1, parent.width - viewToggle.width - parent.spacing)
-                        text: panel.showProcesses ? (panel.resourceState.sortByMemory ? "Top processes · memory" : "Top processes · CPU average") : panel.showCores ? "Logical cores · " + panel.resourceState.coreUsage.length + " active counters" : "Resource history · last " + panel.resourceState.historySeconds + "s"
+                        text: panel.showProcesses ? (panel.resourceState.sortByMemory ? "Top processes · memory" : "Top processes · CPU average") : panel.showCores ? "Logical cores · " + panel.resourceState.coreUsage.length + " active counters" : "History · " + panel.resourceState.historySeconds + "s"
                         color: panel.theme.textStrong
                         font.family: panel.runtime.fontSans
                         font.pixelSize: panel.theme.fontSection
@@ -345,29 +382,6 @@ Item {
                         title: panel.showCores ? "History" : "Cores"
                         shortcut: panel.runtime.shellHint("ResourceDashboard.toggleCores")
                         onActivated: panel.toggleCoreView()
-                    }
-                }
-
-                Column {
-                    visible: !panel.showCores && !panel.showProcesses
-                    width: parent.width
-                    spacing: panel.theme.spacing2
-                    Repeater {
-                        model: 3
-                        delegate: ResourceHistoryGraph {
-                            id: historyGraph
-                            required property int index
-                            width: parent.width
-                            height: panel.theme.fontSize(90)
-                            runtime: panel.runtime
-                            theme: panel.theme
-                            label: index === 0 ? "CPU activity" : index === 1 ? "Memory usage" : "Network · receive + send"
-                            values: index === 0 ? panel.resourceState.cpuHistory : index === 1 ? panel.resourceState.memoryHistory : panel.resourceState.networkHistory
-                            maximum: index === 2 ? Math.max(131072, ...values) : 1
-                            graphColor: index === 0 ? panel.theme.roleColor("resources") : index === 1 ? panel.theme.roleColor("connectivity") : panel.theme.roleColor("positive")
-                            currentText: index === 0 ? Math.round(panel.resourceState.cpuPercent * 100) + "%" : index === 1 ? Math.round(panel.resourceState.memoryPercent * 100) + "%" : panel.resourceState.speedString(panel.resourceState.networkDownload + panel.resourceState.networkUpload)
-                            sampleLimit: panel.resourceState.historyLength
-                        }
                     }
                 }
 

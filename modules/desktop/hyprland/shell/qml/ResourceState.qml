@@ -22,7 +22,8 @@ QtObject {
     property var coreUsage: []
     property var cpuHistory: []
     property var memoryHistory: []
-    property var networkHistory: []
+    property var receiveHistory: []
+    property var sendHistory: []
     property string networkInterface: ""
     property real networkDownload: 0
     property real networkUpload: 0
@@ -70,12 +71,14 @@ QtObject {
         previousNetworkStats = null;
         cpuHistory = [];
         memoryHistory = [];
-        networkHistory = [];
+        receiveHistory = [];
+        sendHistory = [];
     }
     onHistoryLengthChanged: {
         cpuHistory = cpuHistory.slice(-historyLength);
         memoryHistory = memoryHistory.slice(-historyLength);
-        networkHistory = networkHistory.slice(-historyLength);
+        receiveHistory = receiveHistory.slice(-historyLength);
+        sendHistory = sendHistory.slice(-historyLength);
     }
     property bool showProcesses: false
     property var processes: []
@@ -227,7 +230,8 @@ QtObject {
             networkDownload = 0;
             networkUpload = 0;
         }
-        networkHistory = updateHistory(networkHistory, networkDownload + networkUpload);
+        receiveHistory = updateHistory(receiveHistory, networkDownload);
+        sendHistory = updateHistory(sendHistory, networkUpload);
         refreshProcesses();
         if (++sensorTicks >= Math.ceil(10 / intervalSeconds)) {
             sensorTicks = 0;
@@ -250,7 +254,8 @@ QtObject {
             coreUsage = [];
             cpuHistory = [];
             memoryHistory = [];
-            networkHistory = [];
+            receiveHistory = [];
+            sendHistory = [];
             previousNetworkStats = null;
             diskTicks = Math.ceil(10 / intervalSeconds);
             sensorTicks = Math.ceil(10 / intervalSeconds);
