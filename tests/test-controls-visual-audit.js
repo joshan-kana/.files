@@ -1077,6 +1077,18 @@ test("detail panel geometry follows the owning loader rather than dashboard widt
     detail,
     /height: Math.max\(104, parameterContent.implicitHeight/,
   );
+  assert.match(detail, /Flow \{\s+id: parameterFlow/);
+  assert.match(detail, /panel.parameters.length % parameterFlow.columns === 1/);
+  for (const title of [
+    "Temporary silence",
+    "Quiet hours",
+    "Delivery and history",
+    "Duration",
+  ])
+    assert.match(
+      detail,
+      new RegExp(`ShellSection \\{[\\s\\S]*?title: "${title}"`),
+    );
   assert.match(detail, /Flow \{\s+id: durationFlow/);
   assert.match(detail, /modelData === 0 \? durationFlow.width : Math.floor/);
 });

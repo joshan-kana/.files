@@ -879,12 +879,11 @@ Item {
             onActivated: panel.resetParameter()
         }
 
-        Grid {
-            id: parameterGrid
+        Flow {
+            id: parameterFlow
             width: parent.width
-            columns: panel.reactiveTuning && width >= 750 ? 2 : 1
-            rowSpacing: panel.theme.spacing3
-            columnSpacing: panel.theme.spacing3
+            readonly property int columns: (panel.reactiveTuning || panel.spectrumTuning || panel.kind === "alerts" || panel.kind === "nightLight") && width >= panel.theme.fontSize(750) ? 2 : 1
+            spacing: panel.theme.spacing3
             Repeater {
                 id: parameterRepeater
                 model: panel.parameters
@@ -893,7 +892,7 @@ Item {
                     id: parameterCard
                     required property int index
                     required property var modelData
-                    width: (parameterGrid.width - (parameterGrid.columns - 1) * parameterGrid.columnSpacing) / parameterGrid.columns
+                    width: index === panel.parameters.length - 1 && panel.parameters.length % parameterFlow.columns === 1 ? parameterFlow.width : Math.floor((parameterFlow.width - (parameterFlow.columns - 1) * parameterFlow.spacing) / parameterFlow.columns)
                     height: Math.max(104, parameterContent.implicitHeight + panel.theme.spacing3 * 2)
                     Connections {
                         target: panel
@@ -1302,27 +1301,34 @@ Item {
                 width: parent.width
                 wrapMode: Text.WordWrap
             }
-            Flow {
-                id: durationFlow
-                width: parent.width
-                readonly property int columns: width >= panel.theme.fontSize(480) ? 2 : 1
-                spacing: panel.theme.spacing2
-                Repeater {
-                    model: [15, 30, 60, 120, 0]
-                    delegate: ShellAction {
-                        required property int index
-                        required property int modelData
-                        width: modelData === 0 ? durationFlow.width : Math.floor((durationFlow.width - (durationFlow.columns - 1) * durationFlow.spacing) / durationFlow.columns)
-                        height: 52
-                        runtime: panel.runtime
-                        theme: panel.theme
-                        motion: panel.motion
-                        compact: true
-                        horizontalCompact: true
-                        title: modelData === 0 ? "Until disabled" : modelData + " minutes"
-                        shortcut: panel.runtime.shellChoiceHint(index)
-                        active: panel.system.idleInhibited && panel.system.idleInhibitMinutes === modelData
-                        onActivated: panel.system.setIdleInhibitMinutes(modelData)
+            ShellSection {
+                runtime: panel.runtime
+                theme: panel.theme
+                title: "Duration"
+                emphasized: true
+                accentRole: "power"
+                Flow {
+                    id: durationFlow
+                    width: parent.width
+                    readonly property int columns: width >= panel.theme.fontSize(480) ? 2 : 1
+                    spacing: panel.theme.spacing2
+                    Repeater {
+                        model: [15, 30, 60, 120, 0]
+                        delegate: ShellAction {
+                            required property int index
+                            required property int modelData
+                            width: modelData === 0 ? durationFlow.width : Math.floor((durationFlow.width - (durationFlow.columns - 1) * durationFlow.spacing) / durationFlow.columns)
+                            height: 52
+                            runtime: panel.runtime
+                            theme: panel.theme
+                            motion: panel.motion
+                            compact: true
+                            horizontalCompact: true
+                            title: modelData === 0 ? "Until disabled" : modelData + " minutes"
+                            shortcut: panel.runtime.shellChoiceHint(index)
+                            active: panel.system.idleInhibited && panel.system.idleInhibitMinutes === modelData
+                            onActivated: panel.system.setIdleInhibitMinutes(modelData)
+                        }
                     }
                 }
             }
@@ -1338,114 +1344,135 @@ Item {
                 text: panel.notifications.suppressionLabel
                 color: panel.theme.textMuted
             }
-            Row {
-                width: parent.width
-                height: 40
-                spacing: panel.theme.spacing2
-                Repeater {
-                    model: [15, 30, 60]
-                    delegate: ShellAction {
-                        required property int index
-                        required property int modelData
-                        width: (panel.width - panel.theme.spacing2 * 2) / 3
-                        height: 40
-                        runtime: panel.runtime
-                        theme: panel.theme
-                        motion: panel.motion
-                        title: modelData + " min"
-                        shortcut: panel.runtime.shellChoiceHint(index)
-                        compact: true
-                        horizontalCompact: true
-                        onActivated: panel.notifications.silenceFor(modelData)
-                    }
-                }
-            }
-            ShellAction {
+            ShellSection {
                 runtime: panel.runtime
                 theme: panel.theme
-                motion: panel.motion
-                compact: true
-                horizontalCompact: true
-                width: parent.width
-                height: 40
-                title: "Quiet hours"
-                active: panel.notifications.quietEnabled
-                shortcut: panel.runtime.shellHint("SettingsDetail.quietHours")
-                onActivated: panel.notifications.setQuietPreference("enabled", !panel.notifications.quietEnabled)
-            }
-            Row {
-                width: parent.width
-                height: 40
-                spacing: panel.theme.spacing2
-                Repeater {
-                    model: [
-                        {
-                            title: "Every day",
-                            days: 127
-                        },
-                        {
-                            title: "Weekdays",
-                            days: 62
-                        },
-                        {
-                            title: "Weekends",
-                            days: 65
+                title: "Temporary silence"
+                emphasized: true
+                accentRole: "attention"
+                Row {
+                    width: parent.width
+                    height: 40
+                    spacing: panel.theme.spacing2
+                    Repeater {
+                        model: [15, 30, 60]
+                        delegate: ShellAction {
+                            required property int index
+                            required property int modelData
+                            width: (panel.width - panel.theme.spacing2 * 2) / 3
+                            height: 40
+                            runtime: panel.runtime
+                            theme: panel.theme
+                            motion: panel.motion
+                            title: modelData + " min"
+                            shortcut: panel.runtime.shellChoiceHint(index)
+                            compact: true
+                            horizontalCompact: true
+                            onActivated: panel.notifications.silenceFor(modelData)
                         }
-                    ]
-                    delegate: ShellAction {
-                        required property int index
-                        required property var modelData
-                        width: (panel.width - panel.theme.spacing2 * 2) / 3
-                        height: 40
-                        runtime: panel.runtime
-                        theme: panel.theme
-                        motion: panel.motion
-                        title: modelData.title
-                        shortcut: panel.runtime.shellChoiceHint(index + 3)
-                        compact: true
-                        horizontalCompact: true
-                        active: panel.notifications.quietDays === modelData.days
-                        onActivated: panel.notifications.setQuietPreference("days", modelData.days)
                     }
                 }
             }
-            ShellAction {
+            ShellSection {
                 runtime: panel.runtime
                 theme: panel.theme
-                motion: panel.motion
-                compact: true
-                horizontalCompact: true
-                width: parent.width
-                height: 40
-                title: "Restore quiet-hour defaults"
-                shortcut: panel.runtime.shellHint("SettingsDetail.reset")
-                onActivated: panel.notifications.resetQuietHours()
+                title: "Quiet hours"
+                emphasized: true
+                accentRole: "attention"
+                ShellAction {
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    motion: panel.motion
+                    compact: true
+                    horizontalCompact: true
+                    width: parent.width
+                    height: 40
+                    title: "Quiet hours"
+                    active: panel.notifications.quietEnabled
+                    shortcut: panel.runtime.shellHint("SettingsDetail.quietHours")
+                    onActivated: panel.notifications.setQuietPreference("enabled", !panel.notifications.quietEnabled)
+                }
+                Row {
+                    width: parent.width
+                    height: 40
+                    spacing: panel.theme.spacing2
+                    Repeater {
+                        model: [
+                            {
+                                title: "Every day",
+                                days: 127
+                            },
+                            {
+                                title: "Weekdays",
+                                days: 62
+                            },
+                            {
+                                title: "Weekends",
+                                days: 65
+                            }
+                        ]
+                        delegate: ShellAction {
+                            required property int index
+                            required property var modelData
+                            width: (panel.width - panel.theme.spacing2 * 2) / 3
+                            height: 40
+                            runtime: panel.runtime
+                            theme: panel.theme
+                            motion: panel.motion
+                            title: modelData.title
+                            shortcut: panel.runtime.shellChoiceHint(index + 3)
+                            compact: true
+                            horizontalCompact: true
+                            active: panel.notifications.quietDays === modelData.days
+                            onActivated: panel.notifications.setQuietPreference("days", modelData.days)
+                        }
+                    }
+                }
+                ShellAction {
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    motion: panel.motion
+                    compact: true
+                    horizontalCompact: true
+                    width: parent.width
+                    height: 40
+                    title: "Restore quiet-hour defaults"
+                    shortcut: panel.runtime.shellHint("SettingsDetail.reset")
+                    onActivated: panel.notifications.resetQuietHours()
+                }
             }
-            ShellAction {
+            ShellSection {
                 runtime: panel.runtime
                 theme: panel.theme
-                motion: panel.motion
-                compact: true
-                horizontalCompact: true
-                width: parent.width
-                height: 44
-                title: panel.notifications.presentation ? "Presentation mode on" : "Presentation mode off"
-                active: panel.notifications.presentation
-                shortcut: panel.runtime.shellHint("SettingsDetail.presentation")
-                onActivated: panel.notifications.togglePresentation()
-            }
-            ShellAction {
-                runtime: panel.runtime
-                theme: panel.theme
-                motion: panel.motion
-                compact: true
-                horizontalCompact: true
-                width: parent.width
-                height: 44
-                title: panel.notifications.historyEnabled ? "Save notification history" : "History disabled"
-                active: panel.notifications.historyEnabled
-                shortcut: panel.runtime.shellHint("SettingsDetail.history")
-                onActivated: panel.notifications.toggleHistory()
+                title: "Delivery and history"
+                emphasized: true
+                accentRole: "attention"
+                ShellAction {
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    motion: panel.motion
+                    compact: true
+                    horizontalCompact: true
+                    width: parent.width
+                    height: 44
+                    title: panel.notifications.presentation ? "Presentation mode on" : "Presentation mode off"
+                    active: panel.notifications.presentation
+                    shortcut: panel.runtime.shellHint("SettingsDetail.presentation")
+                    onActivated: panel.notifications.togglePresentation()
+                }
+                ShellAction {
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    motion: panel.motion
+                    compact: true
+                    horizontalCompact: true
+                    width: parent.width
+                    height: 44
+                    title: panel.notifications.historyEnabled ? "Save notification history" : "History disabled"
+                    active: panel.notifications.historyEnabled
+                    shortcut: panel.runtime.shellHint("SettingsDetail.history")
+                    onActivated: panel.notifications.toggleHistory()
+                }
             }
         }
 
