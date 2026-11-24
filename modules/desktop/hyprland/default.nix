@@ -241,8 +241,8 @@ in
 
     home.shellAliases = {
       h = "start-hyprland";
-      HI = "${config.dotfiles.paths.repoPath}/scripts/hyprland_intel.sh";
-      HN = "${config.dotfiles.paths.repoPath}/scripts/hyprland_nvidia.sh";
+      HI = "WLR_DRM_DEVICES=/dev/dri/card1 ${lib.getExe' config.programs.hyprland.package "start-hyprland"}";
+      HN = "WLR_DRM_DEVICES=/dev/dri/card0 LIBVA_DRIVER_NAME=nvidia GBM_BACKEND=nvidia-drm __GLX_VENDOR_LIBRARY_NAME=nvidia ${lib.getExe' config.programs.hyprland.package "start-hyprland"}";
     };
 
     wayland.windowManager.hyprland =
@@ -454,11 +454,15 @@ in
             (modBind "ALT + 6" (exec "code"))
             (modBind "ALT + 7" (exec "obsidian --disable-gpu"))
             (modBind "ALT + E" (exec "nautilus"))
-            (modBind "SHIFT + V" (exec "${config.dotfiles.paths.repoPath}/scripts/volume_mixer.sh"))
-            (modBind "ALT + V" (exec "${config.dotfiles.paths.repoPath}/scripts/audio_fx.sh"))
+            (modBind "SHIFT + V" (
+              exec "${lib.getExe' pkgs.procps "pkill"} pavucontrol; ${lib.getExe' config.programs.hyprland.package "hyprctl"} dispatch exec [float] pavucontrol"
+            ))
+            (modBind "ALT + V" (
+              exec "${lib.getExe' config.programs.hyprland.package "hyprctl"} dispatch exec [float] easyeffects"
+            ))
 
             # Applets and launchers
-            (modBind "SPACE" (exec "${config.dotfiles.paths.repoPath}/scripts/app_launch.sh"))
+            (modBind "SPACE" (exec "${lib.getExe' pkgs.tofi "tofi-drun"} --drun-launch=true"))
             (modBind "V" (exec "cliphist list | tofi | cliphist decode | wl-copy"))
             (bind "ALT + SPACE" (exec "~/repos/rofi-desktop/scripts/rofi-desktop.sh"))
 
