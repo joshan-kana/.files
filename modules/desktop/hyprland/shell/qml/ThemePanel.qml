@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import QtCore
 import "DesktopIcons.js" as DesktopIcons
 import Quickshell
 import Quickshell.Io
@@ -18,8 +19,42 @@ Item {
     property bool open: false
     property bool returnToControls: false
     property var themes: []
+    property string previousTheme: ""
+    property int polarityFilter: 0
+    property bool favoritesOnly: false
+    property Settings preferences: Settings {
+        location: "file://" + (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/desktop-shell/preferences.ini"
+        category: "ThemeGallery"
+        property var favorites: []
+    }
+    function toggleFavorite(): void {
+        const selected = selectedTheme();
+        if (!selected)
+            return;
+        const name = selected.name;
+        preferences.favorites = preferences.favorites.includes(name) ? preferences.favorites.filter(value => value !== name) : [...preferences.favorites, name];
+        preferences.sync();
+    }
+    function handleGalleryKey(key: int, modifiers: int, repeat: bool): bool {
+        for (const action of ["ThemePanel.favorite", "ThemePanel.favorites", "ThemePanel.polarity", "ThemePanel.previous"]) {
+            if (!runtime.shellMatchesHint(action, key, modifiers))
+                continue;
+            if (!repeat)
+                galleryAction(action);
+            return true;
+        }
+        return false;
+    }
+    function galleryAction(action: string): void {
+        switch (action) {
+        case "ThemePanel.favorite": toggleFavorite(); break;
+        case "ThemePanel.favorites": favoritesOnly = !favoritesOnly; break;
+        case "ThemePanel.polarity": polarityFilter = (polarityFilter + 1) % 3; break;
+        case "ThemePanel.previous": activateTheme(previousTheme); break;
+        }
+    }
     property string searchText: ""
-    readonly property var filteredThemes: themes.filter(entry => (entry.label || entry.name).toLowerCase().includes(searchText.toLowerCase()) || entry.name.toLowerCase().includes(searchText.toLowerCase()))
+    readonly property var filteredThemes: themes.filter(entry => ((entry.label || entry.name).toLowerCase().includes(searchText.toLowerCase()) || entry.name.toLowerCase().includes(searchText.toLowerCase())) && (!favoritesOnly || preferences.favorites.includes(entry.name)) && (polarityFilter === 0 || entry.polarity === (polarityFilter === 1 ? "dark" : "light")))
     readonly property bool searching: searchField.activeFocus
     onSearchTextChanged: {
         selectionTouched = true;
@@ -101,6 +136,7 @@ Item {
                 panel.operationRunning = status.running;
                 panel.operationPhase = status.phase;
                 panel.operationTarget = status.target;
+                panel.previousTheme = status.previous || "";
                 if (status.running && (status.phase === "authorizing" || status.phase === "activating"))
                     panel.switchLaunched();
                 else
@@ -281,10 +317,15 @@ Item {
     }
 
     function activateSelected(): void {
+        const selected = selectedTheme();
+        if (selected)
+            activateTheme(selected.name);
+    }
+
+    function activateTheme(name: string): void {
         if (runtime.themeSet.length === 0 || switchProcess.running || operationRunning)
             return;
-
-        const selected = selectedTheme();
+        const selected = themes.find(entry => entry.name === name);
         if (!selected)
             return;
         selectionTouched = true;
@@ -686,7 +727,7 @@ Item {
                         }
                         Text {
                             id: status
-                            text: themeCard.modelData.name === panel.currentTheme ? "ACTIVE" : ""
+                            text: themeCard.modelData.name === panel.currentTheme ? "ACTIVE" : panel.preferences.favorites.includes(themeCard.modelData.name) ? "♥" : ""
                             color: panel.theme.positive
                             font.family: panel.runtime.fontSans
                             font.pixelSize: panel.theme.fontSize(9)
@@ -718,6 +759,34 @@ Item {
             left: parent.left
         }
         spacing: panel.theme.spacing2
+
+        Row {
+            id: galleryButtons
+            width: parent.width
+            spacing: panel.theme.spacing2
+            Repeater {
+                model: [
+                    {action: "ThemePanel.favorite", title: panel.selectedTheme() && panel.preferences.favorites.includes(panel.selectedTheme().name) ? "Remove favourite" : "Favourite", enabled: !!panel.selectedTheme()},
+                    {action: "ThemePanel.favorites", title: panel.favoritesOnly ? "Favourites only" : "All themes", enabled: true},
+                    {action: "ThemePanel.polarity", title: ["Any polarity", "Dark", "Light"][panel.polarityFilter], enabled: true},
+                    {action: "ThemePanel.previous", title: panel.previousTheme ? "Restore " + panel.themeLabel(panel.previousTheme) : "No previous theme", enabled: !!panel.previousTheme && !panel.operationRunning && panel.previousTheme !== panel.currentTheme}
+                ]
+                delegate: ShellAction {
+                    required property var modelData
+                    width: (galleryButtons.width - 3 * galleryButtons.spacing) / 4
+                    height: 42
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    motion: panel.motion
+                    compact: true
+                    horizontalCompact: true
+                    title: modelData.title
+                    enabled: modelData.enabled
+                    shortcut: panel.runtime.shellHint(modelData.action)
+                    onActivated: panel.galleryAction(modelData.action)
+                }
+            }
+        }
 
         KeyHintStrip {
             width: parent.width

@@ -239,36 +239,21 @@ function matchesHint(registry, action, key, modifiers, qt) {
     return (modifiers & bits) === expected;
   }
   const entry = registry?.hints?.[action];
-  if (!entry || !/^(?:SHIFT\+|ALT\+|CTRL\+)?[A-Z0-9]$/.test(entry.template))
+  // A single action may use a named key or a directional slot as well as
+  // a letter. Multi-action legends are display-only.
+  if (!entry || !/^(?:(?:SHIFT|ALT|CTRL|SUPER)\+)*(?:[A-Z0-9]|ENTER|NUMENTER|ESC|BACKSPACE|SPACE|TAB|DEL|PGUP|PGDN|NAV_KEY_(?:UP|DOWN|LEFT|RIGHT)_(?:PRIMARY(?:_SHIFT)?|ARROW))$/.test(entry.template))
     return false;
-  const parts = entry.template.split("+");
-  const slot = parts.pop();
-  if (key !== keyCode(registry, entry.scope, slot, qt)) return false;
-  const expected = parts.reduce(
-    (mask, name) =>
-      mask |
-      ({
-        SHIFT: qt.ShiftModifier,
-        ALT: qt.AltModifier,
-        CTRL: qt.ControlModifier,
-        SUPER: qt.MetaModifier,
-      }[
-        assigned(
-          registry,
-          entry.scope,
-          { SHIFT: "Shift", ALT: "Alt", CTRL: "Control" }[name],
-        ).toUpperCase()
-      ] ?? 0),
-    0,
-  );
-  return (
-    (modifiers &
-      (qt.ShiftModifier |
-        qt.AltModifier |
-        qt.ControlModifier |
-        qt.MetaModifier)) ===
-    expected
-  );
+  const parts = hint(registry, action).toUpperCase().split("+");
+  const assignedKey = parts.pop();
+  const modifiersByName = {
+    SHIFT: qt.ShiftModifier, ALT: qt.AltModifier,
+    CTRL: qt.ControlModifier, SUPER: qt.MetaModifier,
+  };
+  if (codeFor(assignedKey, qt) !== key || parts.some(name => !(name in modifiersByName)))
+    return false;
+  const expected = parts.reduce((mask, name) => mask | modifiersByName[name], 0);
+  const bits = qt.ShiftModifier | qt.AltModifier | qt.ControlModifier | qt.MetaModifier;
+  return (modifiers & bits) === expected;
 }
 
 // Numbered actions can be rearranged without requiring contiguous Qt keycodes.

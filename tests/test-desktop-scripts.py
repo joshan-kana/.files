@@ -138,6 +138,40 @@ esac
         self.assertFalse(json.loads(run("state"))["active"])
         self.assertEqual(json.loads(run("state"))["temperature"], 4500)
 
+    def test_wallpaper_rotation_respects_selection_and_native_fit(self):
+        """Rotate through existing favourites, and respect a manual selection."""
+        spec = importlib.util.spec_from_file_location("rotation", SCRIPTS / "wallpaper-policy.py")
+        rotation = importlib.util.module_from_spec(spec)
+        with mock.patch.dict(os.environ, self.env):
+            spec.loader.exec_module(rotation)
+        root = self.home / "wallpapers"
+        state = {"overrides": {"mode": "interval", "intervalMinutes": 5, "favoritesOnly": True, "collection": "nature"}, "favorites": ["nature/a.png", "nature/b.png", "other/c.png"]}
+        self.assertEqual(rotation.phase_at(60, 1200, 360), "day")
+        self.assertEqual(rotation.phase_at(500, 1200, 360), "night")
+        self.assertEqual(rotation.candidates(rotation.resolved(state), state, ["nature/a.png", "nature/b.png", "other/c.png"]), ["nature/a.png", "nature/b.png"])
+        current = str(root / "nature/a.png")
+
+        def library(*args):
+            nonlocal current
+            if args[0] == "current":
+                return current
+            if args[0] == "current-resize":
+                return "crop"
+            if args[0] == "list":
+                return json.dumps([str(root / name) for name in ["nature/a.png", "nature/b.png"]])
+            if args[0] == "set":
+                self.assertEqual(args[2], "crop")
+                current = args[3]
+            return ""
+
+        with mock.patch.object(rotation, "ROOT", root), mock.patch.object(rotation, "PROGRESS", self.state / "rotation.json"), mock.patch.object(rotation, "command"), mock.patch.object(rotation, "library", side_effect=library), mock.patch.object(rotation.time, "time", return_value=1000):
+            progress = rotation.apply(state, {}, force=True)
+            self.assertEqual(current, str(root / "nature/b.png"))
+            self.assertEqual(progress["nextDue"], 1300)
+            current = str(root / "nature/a.png")
+            self.assertEqual(rotation.apply(state, progress)["lastPath"], current)
+            self.assertEqual(rotation.apply({}, progress), {})
+
     def test_display_preview_preserves_native_layout(self):
         """A display preview never persists until verified confirmation."""
         spec = importlib.util.spec_from_file_location("display", SCRIPTS / "display-settings.py")

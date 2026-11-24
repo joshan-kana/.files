@@ -457,6 +457,7 @@ in
                       {
                         inherit name;
                         inherit (value) label;
+                        polarity = value.polarity or "dark";
                       }
                       // lib.optionalAttrs (value ? colors) {
                         preview =

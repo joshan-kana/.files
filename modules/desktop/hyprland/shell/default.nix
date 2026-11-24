@@ -519,6 +519,24 @@ in
     description = "Desktop appearance defaults. Explicit user preferences take precedence until restored to the declared values.";
   };
 
+  scopeOptions.wallpaperRotation = lib.mkOption {
+    type = lib.types.submodule {
+      options = {
+        mode = lib.mkOption { type = lib.types.enum [ "off" "interval" "dayNight" ]; default = "off"; };
+        target = lib.mkOption { type = lib.types.str; default = "all"; };
+        intervalMinutes = lib.mkOption { type = lib.types.enum [ 5 15 30 60 120 ]; default = 60; };
+        favoritesOnly = lib.mkOption { type = lib.types.bool; default = false; };
+        collection = lib.mkOption { type = lib.types.str; default = ""; };
+        dayStart = lib.mkOption { type = lib.types.ints.between 0 1439; default = 420; };
+        nightStart = lib.mkOption { type = lib.types.ints.between 0 1439; default = 1140; };
+        dayWallpaper = lib.mkOption { type = lib.types.str; default = ""; };
+        nightWallpaper = lib.mkOption { type = lib.types.str; default = ""; };
+      };
+    };
+    default = { };
+    description = "Wallpaper rotation policy. Wallpaper paths and collections are relative to the user library; runtime overrides are independent.";
+  };
+
   scopeOptions.captureFreezeEnabled = lib.mkOption {
     type = lib.types.bool;
     default = true;
@@ -858,6 +876,16 @@ in
           + builtins.readFile ../../../../scripts/desktop-shell/wallpaper-library.sh;
       };
 
+      wallpaperPolicy = pkgs.writeShellApplication {
+        name = "desktop-shell-wallpaper-policy";
+        runtimeInputs = [ pkgs.python3 pkgs.systemd ];
+        text = ''
+          export DESKTOP_WALLPAPER_LIBRARY=${lib.escapeShellArg (lib.getExe wallpaperLibrary)}
+          export DESKTOP_WALLPAPER_POLICY_DEFAULTS=${lib.escapeShellArg (builtins.toJSON scopeConfig.wallpaperRotation)}
+          exec python3 ${../../../../scripts/desktop-shell/wallpaper-policy.py} "$@"
+        '';
+      };
+
       wallpaperVideoFromState = pkgs.writeShellApplication {
         name = "desktop-shell-wallpaper-video-from-state";
         runtimeInputs = [
@@ -1093,6 +1121,7 @@ in
           paletteSearch = lib.getExe paletteSearch;
           clipboardPaste = lib.getExe' pkgs.wl-clipboard "wl-paste";
           wallpaperLibrary = lib.getExe wallpaperLibrary;
+          wallpaperPolicy = lib.getExe wallpaperPolicy;
           recordingToggle = lib.getExe recordingToggle;
           recordingLibrary = lib.getExe recordingLibrary;
           frozenCapture = lib.getExe frozenCapture;
@@ -1354,6 +1383,18 @@ in
         Install.WantedBy = [ "timers.target" ];
       };
 
+      systemd.user.timers.desktop-shell-wallpaper-rotation = {
+        Unit = {
+          Description = "Re-evaluate the active wallpaper rotation policy";
+          PartOf = [ sessionTarget ];
+        };
+        Timer = {
+          OnCalendar = "*-*-* *:*:00";
+          AccuracySec = "1s";
+          Unit = "desktop-shell-wallpaper-rotation.service";
+        };
+      };
+
       systemd.user.timers.desktop-shell-display-preview = {
         Unit.Description = "Revert an unconfirmed display layout";
         Timer = {
@@ -1376,6 +1417,19 @@ in
       };
 
       systemd.user.services = {
+        desktop-shell-wallpaper-rotation = {
+          Unit = {
+            Description = "Apply the active wallpaper rotation policy";
+            After = [ "desktop-shell-wallpaper-image.service" ];
+            PartOf = [ sessionTarget ];
+          };
+          Service = {
+            Type = "oneshot";
+            ExecStart = "${lib.getExe wallpaperPolicy} apply";
+          };
+          Install.WantedBy = [ sessionTarget ];
+        };
+
         desktop-shell-display-preview = {
           Unit.Description = "Restore the previous display layout";
           Service = {

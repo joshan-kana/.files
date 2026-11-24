@@ -42,7 +42,8 @@ status)
   target="$(cat "$operationDir/target" 2>/dev/null || :)"
   active=false
   if systemctl --user --quiet is-active "$operationUnit"; then active=true; fi
-  jq -n --arg phase "$phase" --arg target "$target" --argjson running "$active" '{phase:$phase,target:$target,running:$running}'
+  previous="$(cat "$operationDir/previous" 2>/dev/null || :)"
+  jq -n --arg phase "$phase" --arg target "$target" --arg previous "$previous" --argjson running "$active" '{phase:$phase,target:$target,previous:$previous,running:$running}'
   ;;
 logs)
   if [ -f "$operationDir/output.log" ]; then tail -n 12 "$operationDir/output.log" | cut -c1-150; fi
@@ -118,6 +119,9 @@ switch)
   printf 'Requesting permission to activate %s...\n' "$selected"
   set_phase activating
   nh os switch "$themeFlakeRef" --hostname "$configurationName-$selected" --diff never
+  if [ "$configuredTheme" != "$selected" ]; then
+    printf '%s\n' "$configuredTheme" >"$operationDir/previous"
+  fi
   printf 'Activated %s.\n' "$selected"
   ;;
 *)

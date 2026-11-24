@@ -108,6 +108,17 @@ list)
     printf '[]\n'
   fi
   ;;
+current-resize)
+  current_file="$state_file"
+  if [ ! -f "$current_file" ] && [ "$output" != all ]; then
+    current_file="$state_dir/all.wall"
+  fi
+  if [ -f "$current_file" ]; then
+    head -n 1 "$current_file"
+  else
+    jq -r '.appearance.wallpaperResizeMode // "fit"' "$runtime"
+  fi
+  ;;
 current)
   # An all-output override also applies to screens that have no
   # more-specific override. Report the effective wallpaper, not
@@ -124,7 +135,7 @@ current)
     if [ -n "$default_video" ] && [ -f "$default_video" ]; then
       printf '%s\n' "$default_video"
     else
-      jq -er '.wallpaper' "$runtime"
+      jq -er '.wallpaper' "$(dirname "$runtime")/theme.json"
     fi
   fi
   ;;

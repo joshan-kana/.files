@@ -14,6 +14,180 @@ Item {
 
     property bool open: false
     property var entries: []
+    property var favoritePaths: []
+    property bool favoritesOnly: false
+    property string collectionFilter: ""
+    readonly property string libraryRoot: Quickshell.env("HOME") + "/wallpapers/"
+    readonly property var collections: ["", ...new Set(entries.map(path => path.startsWith(libraryRoot) ? path.slice(libraryRoot.length, path.lastIndexOf("/")) : "").filter(value => value.length > 0))].sort()
+    property bool policyView: false
+    property var policy: ({mode: "off", target: "all", intervalMinutes: 60, favoritesOnly: false, collection: "", dayStart: 420, nightStart: 1140, dayWallpaper: "", nightWallpaper: ""})
+    property bool policyKnown: false
+    property string policyError: ""
+    property double nextDue: 0
+    property string policyPhase: ""
+    property string scheduleCandidate: ""
+    readonly property bool policyBusy: policyProcess.running
+    property bool refreshPolicyPending: false
+
+    property Process policyProcess: Process {
+        stdout: StdioCollector { id: policyOutput }
+        stderr: StdioCollector { id: policyErrors }
+        onExited: (code, status) => {
+            if (code === 0) {
+                try {
+                    const data = JSON.parse(policyOutput.text);
+                    panel.policy = data.policy;
+                    panel.favoritePaths = data.favorites;
+                    panel.policyKnown = true;
+                    panel.policyError = data.error || "";
+                    panel.nextDue = data.nextDue;
+                    panel.policyPhase = data.phase;
+                    if (panel.open && !panel.busy)
+                        panel.refreshCurrent();
+                } catch (_) {
+                    panel.policyError = "Invalid wallpaper policy response";
+                }
+            } else {
+                panel.policyError = policyErrors.text.trim() || "Wallpaper policy failed";
+            }
+            if (panel.refreshPolicyPending) {
+                panel.refreshPolicyPending = false;
+                Qt.callLater(() => panel.refreshPolicy());
+            }
+        }
+    }
+    property FileView rotationReadback: FileView {
+        path: panel.open ? (Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state") + "/desktop-shell/wallpapers/rotation.json" : ""
+        watchChanges: panel.open
+        printErrors: false
+        onFileChanged: {
+            reload();
+            panel.refreshPolicy();
+        }
+    }
+    function runPolicy(action: string, args = []): void {
+        if (!runtime.wallpaperPolicy || policyBusy)
+            return;
+        policyError = "";
+        policyProcess.exec([runtime.wallpaperPolicy, action, ...args]);
+    }
+    function refreshPolicy(): void {
+        if (!open)
+            return;
+        if (policyBusy) {
+            refreshPolicyPending = true;
+            return;
+        }
+        runPolicy("status");
+    }
+    function setPolicy(key: string, value: var): void {
+        runPolicy("set", [key, JSON.stringify(value)]);
+    }
+    function cycleCollection(): void {
+        collectionFilter = collections[(collections.indexOf(collectionFilter) + 1) % collections.length];
+        selectedIndex = 0;
+    }
+    function timeLabel(minutes: int): string {
+        return String(Math.floor(minutes / 60)).padStart(2, "0") + ":" + String(minutes % 60).padStart(2, "0");
+    }
+    function togglePolicyView(): void {
+        if (policyView) {
+            policyView = false;
+        } else {
+            scheduleCandidate = selectedPath();
+            policyView = true;
+            refreshPolicy();
+        }
+        keyboardRequested();
+    }
+    readonly property var galleryPolicyActions: [
+        {action: "WallpaperPanel.favorite", title: favoritePaths.includes(selectedPath()) ? "Remove favourite" : "Favourite", enabled: policyKnown && !policyBusy && selectedPath() !== ""},
+        {action: "WallpaperPanel.favorites", title: favoritesOnly ? "Favourites only" : "All wallpapers", enabled: true},
+        {action: "WallpaperPanel.collection", title: collectionFilter || "All folders", enabled: collections.length > 1},
+        {action: "WallpaperPanel.rotation", title: "Rotation · " + (policy.mode === "dayNight" ? "Day/night" : policy.mode === "interval" ? "Interval" : "Off"), enabled: !!runtime.wallpaperPolicy}
+    ]
+    readonly property var scheduleActions: [
+        {action: "WallpaperPolicy.mode", title: policy.mode === "dayNight" ? "Day/night" : policy.mode === "interval" ? "Interval" : "Off"},
+        {action: "WallpaperPolicy.target", title: "Target · " + policy.target},
+        {action: "WallpaperPolicy.period", title: policy.intervalMinutes + " min"},
+        {action: "WallpaperPolicy.favorites", title: policy.favoritesOnly ? "Favourites" : "Entire library"},
+        {action: "WallpaperPolicy.collection", title: policy.collection || "All folders"},
+        {action: "WallpaperPolicy.day", title: "Use selection for day"},
+        {action: "WallpaperPolicy.night", title: "Use selection for night"},
+        {action: "WallpaperPolicy.dayEarlier", title: "Day −30 min"},
+        {action: "WallpaperPolicy.dayLater", title: "Day +30 min"},
+        {action: "WallpaperPolicy.nightEarlier", title: "Night −30 min"},
+        {action: "WallpaperPolicy.nightLater", title: "Night +30 min"},
+        {action: "WallpaperPolicy.next", title: "Rotate now"},
+        {action: "WallpaperPolicy.defaults", title: "Restore policy defaults"},
+        {action: "WallpaperPanel.rotation", title: "Back to wallpapers"}
+    ]
+    function policyActionEnabled(action: string): bool {
+        if (action === "WallpaperPanel.rotation")
+            return true;
+        if (!policyKnown || policyBusy)
+            return false;
+        if (action === "WallpaperPolicy.day" || action === "WallpaperPolicy.night")
+            return scheduleCandidate !== "";
+        if (action === "WallpaperPolicy.next")
+            return policy.mode === "interval";
+        if (action === "WallpaperPolicy.target")
+            return outputAvailable;
+        return true;
+    }
+    function invokePolicyAction(action: string): void {
+        if (action === "WallpaperPanel.rotation") {
+            togglePolicyView();
+            return;
+        }
+        if (!policyView) {
+            if (action === "WallpaperPanel.favorite" && policyKnown && selectedPath() !== "")
+                runPolicy("favorite", [selectedPath()]);
+            else if (action === "WallpaperPanel.favorites") {
+                favoritesOnly = !favoritesOnly;
+                selectedIndex = 0;
+            } else if (action === "WallpaperPanel.collection")
+                cycleCollection();
+            return;
+        }
+        if (!policyActionEnabled(action))
+            return;
+        switch (action) {
+        case "WallpaperPolicy.mode": {
+            const modes = ["off", "interval", "dayNight"];
+            setPolicy("mode", modes[(modes.indexOf(policy.mode) + 1) % modes.length]);
+            break;
+        }
+        case "WallpaperPolicy.target": setPolicy("target", outputName); break;
+        case "WallpaperPolicy.period": {
+            const choices = [5, 15, 30, 60, 120];
+            setPolicy("intervalMinutes", choices[(choices.indexOf(policy.intervalMinutes) + 1) % choices.length]);
+            break;
+        }
+        case "WallpaperPolicy.favorites": setPolicy("favoritesOnly", !policy.favoritesOnly); break;
+        case "WallpaperPolicy.collection": setPolicy("collection", collections[(collections.indexOf(policy.collection) + 1) % collections.length]); break;
+        case "WallpaperPolicy.day": setPolicy("dayWallpaper", scheduleCandidate); break;
+        case "WallpaperPolicy.night": setPolicy("nightWallpaper", scheduleCandidate); break;
+        case "WallpaperPolicy.dayEarlier": setPolicy("dayStart", (policy.dayStart + 1410) % 1440); break;
+        case "WallpaperPolicy.dayLater": setPolicy("dayStart", (policy.dayStart + 30) % 1440); break;
+        case "WallpaperPolicy.nightEarlier": setPolicy("nightStart", (policy.nightStart + 1410) % 1440); break;
+        case "WallpaperPolicy.nightLater": setPolicy("nightStart", (policy.nightStart + 30) % 1440); break;
+        case "WallpaperPolicy.next": runPolicy("next"); break;
+        case "WallpaperPolicy.defaults": runPolicy("reset"); break;
+        }
+    }
+    function handlePolicyKey(key: int, modifiers: int, autoRepeat: bool): bool {
+        const actions = policyView ? scheduleActions : galleryPolicyActions;
+        for (const entry of actions) {
+            if (runtime.shellMatchesHint(entry.action, key, modifiers)) {
+                if (!autoRepeat)
+                    invokePolicyAction(entry.action);
+                return true;
+            }
+        }
+        return false;
+    }
+
     property string currentPath: ""
     property string applyingPath: ""
     property string searchText: ""
@@ -30,7 +204,7 @@ Item {
     }
     property bool resetPending: false
 
-    readonly property var filteredEntries: entries.filter(path => path.toLowerCase().includes(searchText.toLowerCase()))
+    readonly property var filteredEntries: entries.filter(path => path.toLowerCase().includes(searchText.toLowerCase()) && (!favoritesOnly || favoritePaths.includes(path)) && (!collectionFilter || path.startsWith(libraryRoot + collectionFilter + "/")))
     property string currentRequestOutput: ""
     property bool currentRefreshPending: false
     readonly property string hostOutput: {
@@ -70,12 +244,14 @@ Item {
     implicitWidth: 1120
     // Derive the detail height from its content so shared navigation retains
     // the same clearance as other details when the gallery layout changes.
-    implicitHeight: galleryLayout.implicitHeight
+    implicitHeight: policyView ? policyLayout.implicitHeight : galleryLayout.implicitHeight
 
     onOpenChanged: {
-        if (open)
+        if (open) {
             refresh();
-        else {
+            refreshPolicy();
+        } else {
+            policyView = false;
             searchField.text = "";
             statusText = "";
         }
@@ -256,6 +432,7 @@ Item {
 
     Column {
         id: galleryLayout
+        visible: !panel.policyView
         anchors.fill: parent
         spacing: panel.theme.spacing3
 
@@ -404,7 +581,7 @@ Item {
                         id: motionPreviewDebounce
                         interval: 220
                         onTriggered: {
-                            if (entry.animatedFile && entry.previewActive && panel.open && panel.runtime.wallpaperLibrary.length > 0 && !entry.motionPosterProcess.running && entry.motionPosterPath.length === 0)
+                            if (entry.animatedFile && entry.previewActive && panel.open && !panel.policyView && panel.runtime.wallpaperLibrary.length > 0 && !entry.motionPosterProcess.running && entry.motionPosterPath.length === 0)
                                 entry.motionPosterProcess.exec([panel.runtime.wallpaperLibrary, "thumbnail-animated", entry.modelData]);
                         }
                     }
@@ -484,9 +661,9 @@ Item {
                                 right: parent.right
                                 bottom: filenameBar.top
                             }
-                            source: entry.previewActive && panel.open && entry.motionPosterPath.length > 0 ? "file://" + entry.motionPosterPath : ""
+                            source: entry.previewActive && panel.open && !panel.policyView && entry.motionPosterPath.length > 0 ? "file://" + entry.motionPosterPath : ""
                             fillMode: Image.PreserveAspectCrop
-                            playing: entry.previewActive && panel.open
+                            playing: entry.previewActive && panel.open && !panel.policyView
                             visible: status === AnimatedImage.Ready && playing
                         }
 
@@ -541,7 +718,7 @@ Item {
                                 Text {
                                     id: stateLabel
                                     anchors.verticalCenter: parent.verticalCenter
-                                    text: entry.applied ? "ACTIVE" : ""
+                                    text: entry.applied ? "ACTIVE" : panel.favoritePaths.includes(entry.modelData) ? "♥" : ""
                                     color: panel.theme.positive
                                     font.family: panel.runtime.fontSans
                                     font.pixelSize: panel.theme.fontSize(9)
@@ -580,7 +757,7 @@ Item {
                     right: parent.right
                 }
                 height: gallery.height
-                visible: panel.filteredEntries.length === 0 && !panel.loading && panel.searchText.length === 0 && panel.runtime.wallpaper.length > 0
+                visible: panel.filteredEntries.length === 0 && !panel.loading && !panel.favoritesOnly && panel.collectionFilter === "" && panel.searchText.length === 0 && panel.runtime.wallpaper.length > 0
                 theme: panel.theme
                 motion: panel.motion
                 surfaceLayer: ShellSurface.Group
@@ -619,8 +796,8 @@ Item {
 
             Text {
                 anchors.centerIn: parent
-                visible: panel.filteredEntries.length === 0 && (panel.loading || panel.searchText.length > 0 || panel.runtime.wallpaper.length === 0)
-                text: panel.loading ? "Loading wallpapers…" : panel.searchText.length > 0 ? "No matching wallpapers" : "Add images, GIFs or videos to ~/wallpapers"
+                visible: panel.filteredEntries.length === 0 && (panel.loading || panel.searchText.length > 0 || panel.favoritesOnly || panel.collectionFilter !== "" || panel.runtime.wallpaper.length === 0)
+                text: panel.loading ? "Loading wallpapers…" : panel.searchText.length > 0 || panel.favoritesOnly || panel.collectionFilter !== "" ? "No matching wallpapers" : "Add images, GIFs or videos to ~/wallpapers"
                 color: panel.theme.textMuted
                 font.family: panel.runtime.fontSans
                 font.pixelSize: panel.theme.fontSize(11)
@@ -659,6 +836,29 @@ Item {
             }
         }
 
+        Row {
+            width: parent.width
+            spacing: panel.theme.spacing2
+            Repeater {
+                model: panel.galleryPolicyActions
+                delegate: ShellAction {
+                    id: galleryAction
+                    required property var modelData
+                    width: (panel.width - 3 * panel.theme.spacing2) / 4
+                    height: 40
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    motion: panel.motion
+                    compact: true
+                    horizontalCompact: true
+                    title: modelData.title
+                    shortcut: panel.runtime.shellHint(modelData.action)
+                    enabled: modelData.enabled
+                    onActivated: panel.invokePolicyAction(galleryAction.modelData.action)
+                }
+            }
+        }
+
         KeyHintStrip {
             width: parent.width
             runtime: panel.runtime
@@ -687,4 +887,81 @@ Item {
             ]
         }
     }
+
+    Column {
+        id: policyLayout
+        visible: panel.policyView
+        width: parent.width
+        spacing: panel.theme.spacing3
+
+        DetailHero {
+            width: parent.width
+            runtime: panel.runtime
+            theme: panel.theme
+            motion: panel.motion
+            glyph: DesktopIcons.glyphFor("wallpaper")
+            glyphFont: "Symbols Nerd Font"
+            glyphColor: panel.theme.roleColor("wallpaper")
+            eyebrow: "Wallpaper library / rotation"
+            title: "Wallpaper rotation"
+            detail: "One session schedule · selected target " + panel.outputLabel
+        }
+        ShellText {
+            width: parent.width
+            runtime: panel.runtime
+            theme: panel.theme
+            text: panel.policyError || (panel.policyBusy ? "Applying policy…" : panel.policy.mode === "off" ? "Automatic wallpaper changes disabled" : panel.policy.mode === "interval" ? "Next rotation · " + (panel.nextDue > 0 ? Qt.formatDateTime(new Date(panel.nextDue * 1000), "ddd HH:mm") : "Not scheduled") : "Current phase · " + (panel.policyPhase || "Waiting for valid selections"))
+            color: panel.policyError ? panel.theme.warning : panel.theme.textMuted
+            wrapMode: Text.WordWrap
+        }
+        ShellText {
+            width: parent.width
+            runtime: panel.runtime
+            theme: panel.theme
+            text: "Selected wallpaper · " + (panel.scheduleCandidate ? panel.scheduleCandidate.slice(panel.scheduleCandidate.lastIndexOf("/") + 1) : "None")
+            elide: Text.ElideRight
+        }
+        ShellText {
+            width: parent.width
+            runtime: panel.runtime
+            theme: panel.theme
+            text: "Day " + panel.timeLabel(panel.policy.dayStart) + " · " + (panel.policy.dayWallpaper || "Not selected") + "    |    Night " + panel.timeLabel(panel.policy.nightStart) + " · " + (panel.policy.nightWallpaper || "Not selected")
+            wrapMode: Text.WordWrap
+            color: panel.theme.textMuted
+        }
+        Grid {
+            id: scheduleGrid
+            width: parent.width
+            columns: panel.theme.textScale >= 1.5 ? 2 : 3
+            rowSpacing: panel.theme.spacing2
+            columnSpacing: panel.theme.spacing2
+            Repeater {
+                model: panel.scheduleActions
+                delegate: ShellAction {
+                    id: scheduleAction
+                    required property var modelData
+                    width: (panel.width - (scheduleGrid.columns - 1) * panel.theme.spacing2) / scheduleGrid.columns
+                    height: 44
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    motion: panel.motion
+                    compact: true
+                    horizontalCompact: true
+                    title: modelData.title
+                    shortcut: panel.runtime.shellHint(modelData.action)
+                    enabled: panel.policyActionEnabled(modelData.action)
+                    onActivated: panel.invokePolicyAction(scheduleAction.modelData.action)
+                }
+            }
+        }
+        ShellText {
+            width: parent.width
+            runtime: panel.runtime
+            theme: panel.theme
+            text: "Manual wallpaper selections remain in effect until the next scheduled interval or day/night boundary. All-display rotation intentionally replaces output-specific selections."
+            wrapMode: Text.WordWrap
+            color: panel.theme.textMuted
+        }
+    }
+
 }

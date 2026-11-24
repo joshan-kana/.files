@@ -39,6 +39,7 @@ QtObject {
     readonly property string urlOpen: root.configData.tools.urlOpen
     readonly property string paletteSearch: root.configData.tools.paletteSearch
     readonly property string clipboardPaste: root.configData.tools.clipboardPaste
+    readonly property string wallpaperPolicy: root.configData.tools.wallpaperPolicy
     readonly property string wallpaperLibrary: root.configData.tools.wallpaperLibrary
     readonly property string recordingToggle: root.configData.tools.recordingToggle
     readonly property string recordingLibrary: root.configData.tools.recordingLibrary
@@ -358,6 +359,7 @@ QtObject {
                 property string urlOpen: ""
                 property string paletteSearch: ""
                 property string clipboardPaste: ""
+                property string wallpaperPolicy: ""
                 property string wallpaperLibrary: ""
                 property string recordingToggle: ""
                 property string recordingLibrary: ""

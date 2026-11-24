@@ -512,6 +512,8 @@ FocusScope {
             themePanel.invoke("leaveSearch");
         } else if (wallpaperPanel.open && wallpaperPanel.panel && wallpaperPanel.panel.searching) {
             wallpaperPanel.invoke("leaveSearch");
+        } else if (wallpaperPanel.open && wallpaperPanel.panel && wallpaperPanel.panel.policyView) {
+            wallpaperPanel.invoke("togglePolicyView");
         } else if (settingsPanel.open && settingsPanel.panel && settingsPanel.panel.cancelNested()) {
             return;
         } else if (mixerOpen) {
@@ -1977,8 +1979,12 @@ FocusScope {
                 }
 
                 if (wallpaperPanel.open) {
-                    if (event.key === root.runtime.shellKeyCode("controls", "Backspace")) {
-                        root.backFromDetail();
+                    if (wallpaperPanel.panel && wallpaperPanel.panel.handlePolicyKey(event.key, event.modifiers, event.isAutoRepeat)) {
+                        event.accepted = true;
+                    } else if (event.key === root.runtime.shellKeyCode("controls", "Backspace")) {
+                        root.navigateBack();
+                        event.accepted = true;
+                    } else if (wallpaperPanel.panel && wallpaperPanel.panel.policyView) {
                         event.accepted = true;
                     } else if (event.key === root.runtime.shellKeyCode("controls", "Slash")) {
                         wallpaperPanel.invoke("enterSearch");
@@ -1999,16 +2005,20 @@ FocusScope {
                         wallpaperPanel.invoke("moveHalfPage", (event.key === root.runtime.shellKeyCode("controls", "U") || event.key === root.runtime.shellKeyCode("controls", "PageUp")) ? -1 : 1);
                         event.accepted = true;
                     } else if (event.key === root.runtime.shellKeyCode("controls", "M")) {
-                        wallpaperPanel.invoke("cycleOutput");
+                        if (!event.isAutoRepeat)
+                            wallpaperPanel.invoke("cycleOutput");
                         event.accepted = true;
                     } else if (event.key === root.runtime.shellKeyCode("controls", "F")) {
-                        wallpaperPanel.invoke("toggleFit");
+                        if (!event.isAutoRepeat)
+                            wallpaperPanel.invoke("toggleFit");
                         event.accepted = true;
                     } else if (event.key === root.runtime.shellKeyCode("controls", "R")) {
-                        wallpaperPanel.invoke("resetWallpaper");
+                        if (!event.isAutoRepeat)
+                            wallpaperPanel.invoke("resetWallpaper");
                         event.accepted = true;
                     } else if (event.key === root.runtime.shellKeyCode("controls", "Return") || event.key === root.runtime.shellKeyCode("controls", "Enter")) {
-                        wallpaperPanel.invoke("applySelected");
+                        if (!event.isAutoRepeat)
+                            wallpaperPanel.invoke("applySelected");
                         event.accepted = true;
                     }
                     return;
@@ -2166,7 +2176,9 @@ FocusScope {
                 }
 
                 if (themePanel.open) {
-                    if (event.key === root.runtime.shellKeyCode("controls", "Slash")) {
+                    if (themePanel.panel && themePanel.panel.handleGalleryKey(event.key, event.modifiers, event.isAutoRepeat)) {
+                        event.accepted = true;
+                    } else if (event.key === root.runtime.shellKeyCode("controls", "Slash")) {
                         themePanel.invoke("enterSearch");
                         event.accepted = true;
                     } else if (event.key === root.runtime.shellKeyCode("controls", "Backspace")) {
@@ -2188,10 +2200,12 @@ FocusScope {
                         themePanel.invoke("moveHalfPage", (event.key === root.runtime.shellKeyCode("controls", "U") || event.key === root.runtime.shellKeyCode("controls", "PageUp")) ? -1 : 1);
                         event.accepted = true;
                     } else if (event.key === root.runtime.shellKeyCode("controls", "X") && themePanel.operationRunning) {
-                        themePanel.invoke("cancelOperation");
+                        if (!event.isAutoRepeat)
+                            themePanel.invoke("cancelOperation");
                         event.accepted = true;
                     } else if (event.key === root.runtime.shellKeyCode("controls", "Return") || event.key === root.runtime.shellKeyCode("controls", "Enter")) {
-                        themePanel.invoke("activateSelected");
+                        if (!event.isAutoRepeat)
+                            themePanel.invoke("activateSelected");
                         event.accepted = true;
                     }
 

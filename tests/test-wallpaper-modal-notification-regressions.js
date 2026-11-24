@@ -241,7 +241,7 @@ test("Wallpaper gallery keeps thumbnail names and ACTIVE but removes redundant s
   assert.match(wallpaper, /id: filenameBar/);
   assert.match(
     wallpaper,
-    /id: stateLabel[\s\S]*?text: entry.applied \? "ACTIVE" : ""/,
+    /id: stateLabel[\s\S]*?text: entry\.applied \? "ACTIVE" : panel\.favoritePaths\.includes\(entry\.modelData\) \? "♥" : ""/,
   );
   assert.match(wallpaper, /bottom: filenameBar.top/);
   assert.doesNotMatch(
