@@ -150,16 +150,14 @@ ShellSurface {
             }
         }
 
-        Row {
+        Column {
             width: parent.width
-            height: 28
-            spacing: deviceControl.theme.spacing2
+            spacing: deviceControl.theme.spacing1
             AudioPeakMeter {
                 id: meter
                 visible: !deviceControl.compact
-                width: visible ? Math.min(230, Math.max(60, parent.width * 0.40)) : 0
-                height: 26
-                anchors.verticalCenter: parent.verticalCenter
+                width: parent.width
+                height: visible ? 22 : 0
                 theme: deviceControl.theme
                 node: deviceControl.device
                 muted: deviceControl.muted
@@ -167,8 +165,8 @@ ShellSurface {
             }
             ShellSlider {
                 id: levelSlider
-                width: Math.max(1, parent.width - meter.width - (meter.visible ? parent.spacing : 0))
-                anchors.verticalCenter: parent.verticalCenter
+                width: parent.width
+                height: implicitHeight
                 theme: deviceControl.theme
                 motion: deviceControl.motion
                 enabled: deviceControl.available

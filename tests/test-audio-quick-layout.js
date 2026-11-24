@@ -157,7 +157,9 @@ test("mixer selection follows visual left-to-right order before descending throu
 
 test("full mixer height matches visible channels before virtual scrolling", () => {
   const mixer = qml("AudioMixerContent.qml");
-  assert.ok(mixer.includes("Math.min(330, mixer.streams.length * 112 + 36)"));
+  assert.ok(
+    mixer.includes("Math.min(mixer.theme.fontSize(340), contentHeight)"),
+  );
   assert.ok(mixer.includes("cacheBuffer: 90"));
   assert.ok(
     mixer.includes(

@@ -620,14 +620,14 @@ FocusScope {
             ListView {
                 id: list
                 width: parent.width
-                height: !mixer.compact && mixer.streams.length > 0 ? Math.min(330, mixer.streams.length * 112 + 36) : 0
+                height: !mixer.compact && mixer.streams.length > 0 ? Math.min(mixer.theme.fontSize(340), contentHeight) : 0
                 visible: !mixer.compact && mixer.streams.length > 0
                 model: mixer.compact ? 0 : mixer.streams.length
                 orientation: ListView.Vertical
                 spacing: mixer.theme.spacing1
                 cacheBuffer: 90
                 clip: true
-                interactive: !mixer.compact && mixer.streams.length > 3
+                interactive: !mixer.compact && contentHeight > height
                 boundsBehavior: Flickable.StopAtBounds
                 currentIndex: mixer.selectedStreamIndex
                 onCurrentIndexChanged: {
@@ -643,7 +643,7 @@ FocusScope {
                     readonly property bool sectionStart: index === 0 || index === mixer.system.audioApplicationStreams.length
                     readonly property bool inViewport: y + height > list.contentY && y < list.contentY + list.height
                     width: list.width
-                    height: (mixer.compact ? 72 : 112) + (sectionStart && !mixer.compact ? 18 : 0)
+                    height: streamCard.height + (sectionStart && !mixer.compact ? 18 : 0)
 
                     Text {
                         visible: streamRow.sectionStart && !mixer.compact
@@ -655,13 +655,14 @@ FocusScope {
                     }
 
                     ShellSurface {
+                        id: streamCard
                         anchors {
                             left: parent.left
                             right: parent.right
                             top: parent.top
                             topMargin: streamRow.sectionStart && !mixer.compact ? 18 : 0
                         }
-                        height: mixer.compact ? 72 : 112
+                        height: streamControl.implicitHeight + mixer.theme.spacing2 * 2
                         theme: mixer.theme
                         motion: mixer.motion
                         surfaceLayer: ShellSurface.Control
@@ -692,6 +693,14 @@ FocusScope {
                             theme: mixer.theme
                             motion: mixer.motion
                             monitoring: mixer.active && list.visible && streamRow.inViewport
+                            readonly property var routeDevice: mixer.system.streamDevice(streamRow.stream, streamRow.capture)
+                            routeLabel: (streamRow.capture ? "Input: " : "Output: ") + (routeDevice?.description || routeDevice?.name || "Not connected")
+                            routeAvailable: (streamRow.capture ? mixer.system.inputDevices : mixer.system.outputDevices).length > 0 && mixer.runtime.pwMetadata !== "" && mixer.pendingRoute === ""
+                            routeOpen: selected && mixer.routeOpen
+                            onRouteRequested: {
+                                mixer.selectStreamIndex(streamRow.index);
+                                mixer.toggleSelectedDeviceChooser();
+                            }
                             onSelectedRequested: mixer.selectStreamIndex(streamRow.index)
                         }
                     }
@@ -719,20 +728,6 @@ FocusScope {
                 visible: !mixer.compact && mixer.routeStream !== null
                 width: parent.width
                 spacing: mixer.theme.spacing1
-                ShellAction {
-                    width: parent.width
-                    height: 36
-                    runtime: mixer.runtime
-                    theme: mixer.theme
-                    motion: mixer.motion
-                    title: (mixer.routeCapture ? "Input: " : "Output: ") + (mixer.routedDevice?.description || mixer.routedDevice?.name || "Not connected")
-                    shortcut: mixer.runtime.shellHint("AudioDeviceControl.chooser")
-                    compact: true
-                    horizontalCompact: true
-                    enabled: mixer.routeDevices.length > 0 && mixer.runtime.pwMetadata !== "" && mixer.pendingRoute === ""
-                    active: mixer.routeOpen
-                    onActivated: mixer.toggleSelectedDeviceChooser()
-                }
                 ListView {
                     width: parent.width
                     height: mixer.routeOpen ? Math.min(4, mixer.routeDevices.length) * 38 : 0

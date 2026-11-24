@@ -25,18 +25,23 @@ Item {
     }
 
     signal selectedRequested
+    signal routeRequested
+    property string routeLabel: ""
+    property bool routeAvailable: false
+    property bool routeOpen: false
 
-    implicitHeight: compact ? 64 : 82
+    implicitHeight: channelContents.implicitHeight
     Accessible.role: Accessible.Grouping
     Accessible.name: displayName + ", " + (capture ? "capture" : "playback") + ", " + (muted ? "muted" : percent + " percent")
 
     Column {
-        anchors.fill: parent
+        id: channelContents
+        width: parent.width
         spacing: channel.theme.spacing1
 
         Item {
             width: parent.width
-            height: channel.compact ? 31 : 37
+            height: Math.max(channel.theme.fontSize(channel.compact ? 31 : 37), muteButton.height)
 
             StateLayer {
                 anchors.fill: parent
@@ -121,17 +126,15 @@ Item {
             }
         }
 
-        Row {
+        Column {
             width: parent.width
-            height: 36
-            spacing: channel.theme.spacing2
+            spacing: channel.theme.spacing1
 
             AudioPeakMeter {
                 id: streamMeter
                 visible: !channel.compact
-                width: visible ? Math.min(320, Math.max(105, parent.width * 0.42)) : 0
-                height: 32
-                anchors.verticalCenter: parent.verticalCenter
+                width: parent.width
+                height: visible ? 22 : 0
                 theme: channel.theme
                 node: channel.stream
                 muted: channel.muted
@@ -140,8 +143,8 @@ Item {
 
             ShellSlider {
                 id: levelSlider
-                width: Math.max(1, parent.width - streamMeter.width - (streamMeter.visible ? parent.spacing : 0))
-                anchors.verticalCenter: parent.verticalCenter
+                width: parent.width
+                height: implicitHeight
                 theme: channel.theme
                 motion: channel.motion
                 enabled: channel.available
@@ -156,6 +159,21 @@ Item {
                     channel.system.setStreamVolume(channel.stream, value);
                 }
             }
+        }
+        ShellAction {
+            visible: !channel.compact
+            width: parent.width
+            height: visible ? implicitHeight : 0
+            runtime: channel.runtime
+            theme: channel.theme
+            motion: channel.motion
+            title: channel.routeLabel
+            shortcut: channel.selected ? channel.runtime.shellHint("AudioDeviceControl.chooser") : ""
+            compact: true
+            horizontalCompact: true
+            enabled: channel.routeAvailable
+            active: channel.routeOpen
+            onActivated: channel.routeRequested()
         }
     }
 }
