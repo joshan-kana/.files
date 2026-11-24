@@ -25,7 +25,17 @@ Column {
     readonly property bool busy: worker.running
     readonly property bool editable: !!output?.editable && !busy && !previewActive
     readonly property var modes: output ? [...new Set([output.currentMode, ...(output.availableModes || [])].filter(value => !!value))] : []
-    readonly property var scales: [...new Set([output?.scale || 1, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 3])].sort((a, b) => a - b)
+    readonly property var scales: {
+        const dimensions = mode.split("@")[0].split("x").map(Number);
+        const candidates = [1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 3];
+        if (output && mode === output.currentMode)
+            candidates.push(output.scale);
+        return [...new Set(candidates)].filter(scale => {
+            if (output && mode === output.currentMode && scale === output.scale)
+                return true;
+            return dimensions.length === 2 && dimensions.every(size => size > 0 && Math.abs(size / scale - Math.round(size / scale)) < 0.001);
+        }).sort((a, b) => a - b);
+    }
     readonly property bool changed: !!output && (mode !== output.currentMode || scaleValue !== output.scale || orientation !== output.transform || positionX !== output.x || positionY !== output.y)
     spacing: theme.spacing2
 
@@ -107,9 +117,11 @@ Column {
         if (!editable || modes.length === 0)
             return;
         mode = modes[(modes.indexOf(mode) + delta + modes.length) % modes.length];
+        if (!scales.includes(scaleValue))
+            scaleValue = scales.reduce((best, value) => Math.abs(value - scaleValue) < Math.abs(best - scaleValue) ? value : best, 1);
     }
     function cycleScale(delta: int): void {
-        if (!editable)
+        if (!editable || scales.length === 0)
             return;
         scaleValue = scales[(scales.indexOf(scaleValue) + delta + scales.length) % scales.length];
     }
