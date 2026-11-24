@@ -78,10 +78,10 @@ QtObject {
     readonly property int blurSize: Math.max(5, Math.min(25, effective("blurSize")))
     readonly property var vhsParameterKeys: ["vhsIntensity", "vhsTracking", "vhsChroma", "vhsNoise", "vhsScanlines", "vhsSpeed", "vhsDropouts"]
     readonly property var vhsPresets: ({
-        Subtle: [0.25, 0.15, 0.25, 0.10, 0.15, 0.8, 0.0],
-        Analog: [0.55, 0.45, 0.55, 0.3, 0.4, 1.0, 0.1],
-        Degraded: [0.85, 0.8, 0.8, 0.65, 0.7, 1.3, 0.55]
-    })
+            Subtle: [0.25, 0.15, 0.25, 0.10, 0.15, 0.8, 0.0],
+            Analog: [0.55, 0.45, 0.55, 0.3, 0.4, 1.0, 0.1],
+            Degraded: [0.85, 0.8, 0.8, 0.65, 0.7, 1.3, 0.55]
+        })
     readonly property string vhsPreset: {
         if (vhsParameterKeys.every(key => !hasOverride(key)))
             return "Default";

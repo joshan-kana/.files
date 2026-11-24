@@ -37,9 +37,7 @@ Item {
         triggeredOnStart: true
         onTriggered: panel.clockMs = Date.now()
     }
-    readonly property string idleStatus: !system.idleInhibited ? "Idle allowed"
-        : system.idleInhibitDeadline <= 0 ? "Inhibited until disabled"
-        : Math.max(0, Math.ceil((system.idleInhibitDeadline - clockMs) / 60000)) + " min remaining"
+    readonly property string idleStatus: !system.idleInhibited ? "Idle allowed" : system.idleInhibitDeadline <= 0 ? "Inhibited until disabled" : Math.max(0, Math.ceil((system.idleInhibitDeadline - clockMs) / 60000)) + " min remaining"
     visible: open
     implicitWidth: theme.controlsDetailWidth
     implicitHeight: content.implicitHeight
@@ -194,8 +192,24 @@ Item {
             ];
         if (kind === "alerts")
             return [
-                { key: "quietStart", title: "Quiet hours start", description: "Local time", minimum: 0, maximum: 1425, step: 15, suffix: "time" },
-                { key: "quietEnd", title: "Quiet hours end", description: "Local time", minimum: 0, maximum: 1425, step: 15, suffix: "time" }
+                {
+                    key: "quietStart",
+                    title: "Quiet hours start",
+                    description: "Local time",
+                    minimum: 0,
+                    maximum: 1425,
+                    step: 15,
+                    suffix: "time"
+                },
+                {
+                    key: "quietEnd",
+                    title: "Quiet hours end",
+                    description: "Local time",
+                    minimum: 0,
+                    maximum: 1425,
+                    step: 15,
+                    suffix: "time"
+                }
             ];
         if (kind === "nightLight")
             return [
@@ -835,7 +849,20 @@ Item {
                 height: 40
                 spacing: panel.theme.spacing2
                 Repeater {
-                    model: [{title: "Every day", days: 127}, {title: "Weekdays", days: 62}, {title: "Weekends", days: 65}]
+                    model: [
+                        {
+                            title: "Every day",
+                            days: 127
+                        },
+                        {
+                            title: "Weekdays",
+                            days: 62
+                        },
+                        {
+                            title: "Weekends",
+                            days: 65
+                        }
+                    ]
                     delegate: ShellAction {
                         required property int index
                         required property var modelData

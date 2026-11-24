@@ -328,11 +328,29 @@ test("compact detail open actions follow remapped keys in labels and dispatch", 
 });
 
 test("reactive detail chords dispatch their visible multi-modifier assignments", () => {
-  for (const [name, key] of [["musicReactiveDetails", "G"], ["wallpaperSpectrumDetails", "F"]]) {
+  for (const [name, key] of [
+    ["musicReactiveDetails", "G"],
+    ["wallpaperSpectrumDetails", "F"],
+  ]) {
     const id = "SystemContent." + name;
     assert.equal(f.hint(registry, id), "ALT+SHIFT+" + key);
-    assert.equal(f.matchesHint(registry, id, key.charCodeAt(0), Qt.AltModifier | Qt.ShiftModifier, Qt), true);
-    assert.equal(f.matchesHint(registry, id, key.charCodeAt(0), Qt.ShiftModifier, Qt), false);
-    assert.equal(f.matchesHint(registry, id, key.charCodeAt(0), Qt.AltModifier, Qt), false);
+    assert.equal(
+      f.matchesHint(
+        registry,
+        id,
+        key.charCodeAt(0),
+        Qt.AltModifier | Qt.ShiftModifier,
+        Qt,
+      ),
+      true,
+    );
+    assert.equal(
+      f.matchesHint(registry, id, key.charCodeAt(0), Qt.ShiftModifier, Qt),
+      false,
+    );
+    assert.equal(
+      f.matchesHint(registry, id, key.charCodeAt(0), Qt.AltModifier, Qt),
+      false,
+    );
   }
 });

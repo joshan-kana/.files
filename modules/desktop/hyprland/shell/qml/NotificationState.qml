@@ -40,10 +40,7 @@ QtObject {
     readonly property bool quietActive: quietEnabled && Schedule.activeAt(new Date(clockMs), quietStart, quietEnd, quietDays)
     readonly property bool temporarilySilent: temporarySilentUntil > clockMs
     readonly property bool silent: manualSilent || temporarilySilent || (quietActive && quietPauseUntil <= clockMs)
-    readonly property string suppressionLabel: presentation ? "Presentation mode" :
-        temporarilySilent ? Math.max(1, Math.ceil((temporarySilentUntil - clockMs) / 60000)) + " min remaining" :
-        manualSilent ? "Silenced until enabled" :
-        quietActive && quietPauseUntil <= clockMs ? "Scheduled quiet hours" : "Ordinary alerts enabled"
+    readonly property string suppressionLabel: presentation ? "Presentation mode" : temporarilySilent ? Math.max(1, Math.ceil((temporarySilentUntil - clockMs) / 60000)) + " min remaining" : manualSilent ? "Silenced until enabled" : quietActive && quietPauseUntil <= clockMs ? "Scheduled quiet hours" : "Ordinary alerts enabled"
     property Timer quietClock: Timer {
         interval: 15000
         repeat: true
@@ -175,17 +172,22 @@ QtObject {
 
     function setQuietPreference(key: string, value: var): void {
         if (key === "enabled") {
-            if (typeof value !== "boolean") return;
+            if (typeof value !== "boolean")
+                return;
         } else if (key === "startMinute" || key === "endMinute") {
-            if (!Number.isInteger(value) || value < 0 || value > 1439) return;
+            if (!Number.isInteger(value) || value < 0 || value > 1439)
+                return;
         } else if (key === "days") {
-            if (!Number.isInteger(value) || value < 0 || value > 127) return;
+            if (!Number.isInteger(value) || value < 0 || value > 127)
+                return;
         } else {
             return;
         }
         clockMs = Date.now();
         quietPauseUntil = 0;
-        settings.quietOverridesJson = JSON.stringify(Object.assign({}, quietOverrides, { [key]: value }));
+        settings.quietOverridesJson = JSON.stringify(Object.assign({}, quietOverrides, {
+            [key]: value
+        }));
         settings.sync();
     }
 
