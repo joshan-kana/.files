@@ -271,7 +271,6 @@
           "SettingsDetail.quietHours" = "Q";
           "SettingsDetail.nightResume" = "N";
           "SettingsDetail.nightPauseUntil" = "U";
-          "SettingsDetail.powerAutomatic" = "A";
           "SystemContent.alerts" = "A";
           "SystemContent.audioAdjust" = "NAV_HORIZONTAL";
           "SystemContent.audioLevel" = "NAV_HORIZONTAL";

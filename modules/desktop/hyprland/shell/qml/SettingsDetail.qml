@@ -49,7 +49,7 @@ Item {
     readonly property bool hasBlur: ["windows", "glass"].includes(kind)
     readonly property bool reactiveTuning: kind === "reactive"
     readonly property bool spectrumTuning: kind === "spectrum"
-    readonly property bool hasReset: hasBlur || spectrumTuning || reactiveTuning || kind === "alerts" || kind === "nightLight" || kind === "power" || ["bar", "frame", "motion"].includes(kind)
+    readonly property bool hasReset: hasBlur || spectrumTuning || reactiveTuning || kind === "alerts" || kind === "nightLight" || ["bar", "frame", "motion"].includes(kind)
     readonly property string titleText: ({
             windows: "Window transparency",
             glass: "Frosted glass",
@@ -440,10 +440,6 @@ Item {
             motion.resetToDeclared();
             return;
         }
-        if (kind === "power") {
-            powerProfile.resetPolicy();
-            return;
-        }
         if (kind === "nightLight") {
             nightLight.change("reset", "");
             return;
@@ -521,14 +517,6 @@ Item {
                 powerProfile.setProfile(profiles[number - 1]);
                 return true;
             }
-            if (number >= 4 && number < 4 + profiles.length) {
-                powerProfile.setPolicyProfile("acProfile", profiles[number - 4]);
-                return true;
-            }
-            if (number >= 7 && number < 7 + profiles.length) {
-                powerProfile.setPolicyProfile("batteryProfile", profiles[number - 7]);
-                return true;
-            }
         }
         if (kind === "stay") {
             const durations = [15, 30, 60, 120, 0];
@@ -557,8 +545,8 @@ Item {
         if (kind === "displays")
             return displayDetails.handleKey(key, modifiers, autoRepeat);
         if (autoRepeat) {
-            const repeatedAction = ["SettingsDetail.toggle", "SettingsDetail.blur", "SettingsDetail.reset", "SettingsDetail.resetParameter", "SettingsDetail.presentation", "SettingsDetail.history", "SettingsDetail.quietHours", "SettingsDetail.nightResume", "SettingsDetail.nightPauseUntil", "SettingsDetail.powerAutomatic"].some(name => runtime.shellMatchesHint(name, key, modifiers));
-            const choice = (kind === "nightLight" || kind === "power") ? runtime.shellChoiceIndex(key, modifiers, 9) : reactiveTuning ? runtime.shellChoiceIndex(key, modifiers, 7) : kind === "alerts" ? runtime.shellChoiceIndex(key, modifiers, 6) : kind === "power" || kind === "stay" ? runtime.shellChoiceIndex(key, modifiers, 5) : -1;
+            const repeatedAction = ["SettingsDetail.toggle", "SettingsDetail.blur", "SettingsDetail.reset", "SettingsDetail.resetParameter", "SettingsDetail.presentation", "SettingsDetail.history", "SettingsDetail.quietHours", "SettingsDetail.nightResume", "SettingsDetail.nightPauseUntil"].some(name => runtime.shellMatchesHint(name, key, modifiers));
+            const choice = kind === "nightLight" ? runtime.shellChoiceIndex(key, modifiers, 9) : reactiveTuning ? runtime.shellChoiceIndex(key, modifiers, 7) : kind === "alerts" ? runtime.shellChoiceIndex(key, modifiers, 6) : kind === "power" ? runtime.shellChoiceIndex(key, modifiers, powerProfile.profiles.length) : kind === "stay" ? runtime.shellChoiceIndex(key, modifiers, 5) : -1;
             if (repeatedAction || choice >= 0)
                 return true;
         }
@@ -577,10 +565,6 @@ Item {
         }
         if (runtime.shellMatchesHint("SettingsDetail.reset", key, modifiers) && hasReset) {
             resetAppearance();
-            return true;
-        }
-        if (kind === "power" && runtime.shellMatchesHint("SettingsDetail.powerAutomatic", key, modifiers)) {
-            powerProfile.toggleAutomatic();
             return true;
         }
         if (kind === "nightLight" && runtime.shellMatchesHint("SettingsDetail.nightResume", key, modifiers)) {
@@ -608,7 +592,7 @@ Item {
             }
         }
         if (kind === "power" || kind === "stay" || kind === "alerts" || kind === "nightLight" || reactiveTuning) {
-            const numberIndex = runtime.shellChoiceIndex(key, modifiers, (kind === "nightLight" || kind === "power") ? 9 : reactiveTuning ? 7 : kind === "alerts" ? 6 : 5);
+            const numberIndex = runtime.shellChoiceIndex(key, modifiers, kind === "nightLight" ? 9 : reactiveTuning ? 7 : kind === "alerts" ? 6 : kind === "power" ? powerProfile.profiles.length : 5);
             if (numberIndex >= 0)
                 return activateNumber(numberIndex + 1);
         }
@@ -1146,14 +1130,6 @@ Item {
             visible: panel.kind === "power"
             width: parent.width
             spacing: panel.theme.spacing2
-            ShellText {
-                width: parent.width
-                runtime: panel.runtime
-                theme: panel.theme
-                text: panel.powerProfile.policyStatus
-                color: panel.theme.textMuted
-                wrapMode: Text.WordWrap
-            }
             ShellSurface {
                 id: batteryCard
                 visible: panel.powerProfile.batteryAvailable
@@ -1246,18 +1222,17 @@ Item {
                 id: profileFlow
                 width: parent.width
                 spacing: panel.theme.spacing2
-                readonly property int columns: width >= panel.theme.fontSize(600) ? Math.max(1, panel.powerProfile.profiles.length) : 1
+                readonly property int columns: width >= panel.theme.fontSize(360) ? Math.max(1, panel.powerProfile.profiles.length) : 1
                 Repeater {
                     model: panel.powerProfile.profiles
                     delegate: ShellAction {
                         required property int index
                         required property string modelData
                         width: Math.floor((profileFlow.width - (profileFlow.columns - 1) * profileFlow.spacing) / profileFlow.columns)
-                        height: Math.max(60, implicitHeight)
+                        height: Math.max(panel.theme.fontSize(82), implicitHeight)
                         runtime: panel.runtime
                         theme: panel.theme
                         motion: panel.motion
-                        compact: true
                         icon: DesktopIcons.powerProfileGlyph(modelData)
                         title: panel.powerProfile.label(modelData)
                         shortcut: panel.runtime.shellChoiceHint(index)
@@ -1266,77 +1241,6 @@ Item {
                         activeColor: panel.theme.powerProfileColor(modelData)
                         enabled: panel.powerProfile.available && !panel.powerProfile.applying
                         onActivated: panel.powerProfile.setProfile(modelData)
-                    }
-                }
-            }
-            Row {
-                width: parent.width
-                spacing: panel.theme.spacing2
-                ShellText {
-                    width: Math.max(1, parent.width - automaticSwitch.width - parent.spacing)
-                    anchors.verticalCenter: parent.verticalCenter
-                    runtime: panel.runtime
-                    theme: panel.theme
-                    text: "Automatic AC / battery policy"
-                    textRole: ShellText.Action
-                    wrapMode: Text.WordWrap
-                }
-                ShellAction {
-                    id: automaticSwitch
-                    width: implicitWidth
-                    height: implicitHeight
-                    runtime: panel.runtime
-                    theme: panel.theme
-                    motion: panel.motion
-                    title: "Automatic AC / battery policy"
-                    shortcut: panel.runtime.shellHint("SettingsDetail.powerAutomatic")
-                    compact: true
-                    iconOnly: true
-                    switchControl: true
-                    active: panel.powerProfile.automatic
-                    activeColor: panel.theme.positive
-                    enabled: panel.powerProfile.available
-                    onActivated: panel.powerProfile.toggleAutomatic()
-                }
-            }
-            Repeater {
-                model: ["acProfile", "batteryProfile"]
-                delegate: Column {
-                    id: sourceRow
-                    required property int index
-                    required property string modelData
-                    width: panel.width
-                    spacing: panel.theme.spacing2
-                    ShellText {
-                        width: parent.width
-                        runtime: panel.runtime
-                        theme: panel.theme
-                        text: sourceRow.modelData === "acProfile" ? "External power preference" : "Battery preference"
-                        color: panel.theme.textMuted
-                    }
-                    Row {
-                        width: parent.width
-                        spacing: panel.theme.spacing2
-                        Repeater {
-                            model: panel.powerProfile.profiles
-                            delegate: ShellAction {
-                                required property int index
-                                required property string modelData
-                                width: (sourceRow.width - panel.theme.spacing2 * Math.max(0, panel.powerProfile.profiles.length - 1)) / Math.max(1, panel.powerProfile.profiles.length)
-                                height: 40
-                                runtime: panel.runtime
-                                theme: panel.theme
-                                motion: panel.motion
-                                title: panel.powerProfile.label(modelData)
-                                shortcut: panel.runtime.shellChoiceHint((sourceRow.index === 0 ? 3 : 6) + index)
-                                compact: true
-                                horizontalCompact: true
-                                connectedGroup: true
-                                activeColor: panel.theme.powerProfileColor(modelData)
-                                active: (sourceRow.modelData === "acProfile" ? panel.powerProfile.acProfile : panel.powerProfile.batteryProfile) === modelData
-                                onActivated: panel.powerProfile.setPolicyProfile(sourceRow.modelData, modelData)
-                            }
-                        }
                     }
                 }
             }

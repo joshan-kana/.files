@@ -183,29 +183,37 @@ FocusScope {
     readonly property var helpBindings: settingsPanel.open ? [
         {
             key: root.runtime.shellHint("SettingsDetail.toggle"),
-            action: "Toggle this capability"
+            action: "Toggle this capability",
+            visible: !!settingsPanel.panel?.hasMaster
         },
         {
             key: root.runtime.shellHint("SettingsDetail.adjust"),
-            action: "Adjust selected parameter"
+            action: "Adjust selected parameter",
+            visible: (settingsPanel.panel?.parameters.length || 0) > 0
         },
         {
             key: root.runtime.shellHint("SettingsDetail.select"),
-            action: "Select parameter"
+            action: "Select parameter",
+            visible: (settingsPanel.panel?.parameters.length || 0) > 1
         },
         {
             key: root.runtime.shellHint("SettingsDetail.reset"),
-            action: "Restore capability defaults"
+            action: "Restore capability defaults",
+            visible: !!settingsPanel.panel?.hasReset
         },
         {
             key: root.runtime.shellHint("SettingsDetail.resetParameter"),
-            action: "Restore selected parameter"
+            action: "Restore selected parameter",
+            visible: (settingsPanel.panel?.parameters.length || 0) > 1
         },
         {
             key: root.runtime.shellHint("SystemContent.legend.back"),
             action: "Back to Controls"
-        }
-    ] : vhsPanel.open ? [
+        },
+        ...(settingsPanel.panel?.kind === "power" ? root.powerProfile.profiles.map((profile, index) => ({
+                        key: root.runtime.shellChoiceHint(index),
+                        action: root.powerProfile.label(profile)
+                    })) : [])].filter(entry => entry.visible !== false) : vhsPanel.open ? [
         {
             key: root.runtime.shellHint("VhsPanel.select"),
             action: "Select VHS parameter"
