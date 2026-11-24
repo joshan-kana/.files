@@ -11,7 +11,9 @@ if [[ ${1:-} == --list ]]; then
 fi
 
 if [[ $# == 0 || ($# == 1 && $1 == --all) ]]; then
-  mapfile -t selected < <(jq -r 'keys[]' "$registry")
+  names=$(jq -r 'keys[]' "$registry")
+  [[ -n $names ]] || exit 0
+  mapfile -t selected <<<"$names"
 else
   selected=("$@")
 fi
@@ -34,22 +36,28 @@ trap cleanup EXIT
 git worktree add --detach --quiet "$tmp" origin/schema-artifacts
 changed=false
 for name in "${selected[@]}"; do
-  input="$(jq -r --arg name "$name" '.[$name].input' "$registry")"
-  generator="$(jq -r --arg name "$name" '.[$name].generator' "$registry")"
-  revision="$(jq -er --arg input "$input" '.nodes[$input].locked.rev' flake.lock)"
+  input="$(jq -er --arg name "$name" '.[$name].input | strings | select(length > 0)' "$registry")"
+  generator="$(jq -er --arg name "$name" '.[$name].generator | strings | select(length > 0)' "$registry")"
+  # shellcheck disable=SC2016 # The expression is evaluated by Nix.
+  revision="$(SCHEMA_INPUT="$input" nix eval --no-update-lock-file --raw --impure --expr '
+    let flake = builtins.getFlake (toString ./.);
+    in flake.inputs.${builtins.getEnv "SCHEMA_INPUT"}.rev
+  ')"
   [[ $revision =~ ^[0-9a-f]{40}$ ]] || {
     echo "No locked revision for $name ($input)" >&2
     exit 1
   }
 
-  hashFile="$(mktemp "${TMPDIR:-/tmp}/schema-hash.XXXXXXXX")"
+  sources="$(jq -er --arg name "$name" '.[$name].generatorSources | if type == "array" and length > 0 and all(.[]; type == "string" and length > 0) then .[] else error("Invalid generator sources") end' "$registry")"
+  hashFile="$tmp/.generator-hash-input"
+  : >"$hashFile"
   while IFS= read -r filename; do
     [[ -f $filename ]] || {
       echo "Missing generator source: $filename" >&2
       exit 1
     }
     cat "$filename" >>"$hashFile"
-  done < <(jq -r --arg name "$name" '.[$name].generatorSources[]' "$registry")
+  done <<<"$sources"
   generator_hash="$(nix hash file --type sha256 --base16 "$hashFile")"
   rm -f "$hashFile"
 
@@ -60,10 +68,13 @@ for name in "${selected[@]}"; do
   fi
 
   system="$(nix eval --raw --impure --expr builtins.currentSystem)"
-  output="$(nix build --no-link --print-out-paths --impure --expr "
-    let flake = builtins.getFlake (toString $repo);
-    in import ($repo + \"/$generator\") { inputs = flake.inputs; system = \"$system\"; }
-  ")"
+  output="$(SCHEMA_GENERATOR="$generator" SCHEMA_SYSTEM="$system" nix build --no-update-lock-file --no-link --print-out-paths --impure --expr '
+    let flake = builtins.getFlake (toString ./.);
+    in import (./. + ("/" + builtins.getEnv "SCHEMA_GENERATOR")) {
+      inputs = flake.inputs;
+      system = builtins.getEnv "SCHEMA_SYSTEM";
+    }
+  ')"
   [[ -s "$output/schema.json" ]] || {
     echo "No generated schema for $name" >&2
     exit 1

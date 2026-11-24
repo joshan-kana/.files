@@ -737,6 +737,22 @@
                 bash ${./tests/system-update.sh} ${./scripts/system-update.sh}
                 touch "$out"
               '';
+          schema-update =
+            pkgs.runCommand "schema-update-tests"
+              {
+                nativeBuildInputs = with pkgs; [
+                  bash
+                  coreutils
+                  git
+                  jq
+                ];
+              }
+              ''
+                export HOME="$TMPDIR/home"
+                mkdir -p "$HOME"
+                bash ${./tests/update-schemas.sh} ${./scripts/update-schemas.sh}
+                touch "$out"
+              '';
           git-attributes =
             assert lib.assertMsg (
               builtins.readFile ./.gitattributes == gitAttributesText
