@@ -1007,49 +1007,80 @@ Item {
             motion: panel.motion
             surfaceLayer: ShellSurface.Group
             cornerRadius: panel.theme.radiusMedium
-            Row {
+            Column {
                 id: modeRow
                 width: parent.width - panel.theme.spacing3 * 2
                 anchors.centerIn: parent
                 spacing: panel.theme.spacing2
-                Column {
-                    width: Math.max(1, modeRow.width - modeAction.width - modeRow.spacing)
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: panel.theme.spacing1
+                Row {
+                    width: parent.width
+                    spacing: panel.theme.spacing2
                     ShellText {
-                        width: parent.width
+                        width: Math.max(1, parent.width - cycleHint.implicitWidth - parent.spacing)
                         runtime: panel.runtime
                         theme: panel.theme
                         text: "Schedule mode"
                         textRole: ShellText.Section
                         wrapMode: Text.WordWrap
                     }
-                    ShellText {
-                        width: parent.width
+                    KeyHint {
+                        id: cycleHint
                         runtime: panel.runtime
                         theme: panel.theme
-                        text: !panel.policyKnown ? "Reading schedule…" : panel.policy.mode === "off" ? "Manual wallpaper selection" : panel.policy.mode === "interval" ? "Change after a fixed interval" : "Change at daily boundaries"
-                        textRole: ShellText.Supporting
-                        wrapMode: Text.WordWrap
+                        shortcut: panel.runtime.shellHint("WallpaperPolicy.mode")
+                        label: "Cycle"
+                        compact: true
                     }
                 }
-                ShellAction {
-                    id: modeAction
-                    width: Math.min(modeRow.width * 0.48, implicitWidth)
-                    height: implicitHeight
-                    anchors.verticalCenter: parent.verticalCenter
+                Flow {
+                    id: modeChoices
+                    width: parent.width
+                    spacing: panel.theme.spacing2
+                    readonly property int columns: width >= panel.theme.fontSize(420) ? 3 : 1
+                    Repeater {
+                        model: [
+                            {
+                                id: "off",
+                                title: "Off",
+                                glyph: "󰜺"
+                            },
+                            {
+                                id: "interval",
+                                title: "Interval",
+                                glyph: "󰥔"
+                            },
+                            {
+                                id: "dayNight",
+                                title: "Day / night",
+                                glyph: "󰖔"
+                            }
+                        ]
+                        delegate: ShellAction {
+                            required property var modelData
+                            width: Math.floor((modeChoices.width - (modeChoices.columns - 1) * modeChoices.spacing) / modeChoices.columns)
+                            height: Math.max(panel.theme.fontSize(58), implicitHeight)
+                            runtime: panel.runtime
+                            theme: panel.theme
+                            motion: panel.motion
+                            icon: modelData.glyph
+                            title: modelData.title
+                            compact: true
+                            connectedGroup: modeChoices.columns > 1
+                            active: panel.policy.mode === modelData.id
+                            activeColor: panel.theme.roleColor("wallpaper")
+                            enabled: panel.policyActionEnabled("WallpaperPolicy.mode")
+                            onActivated: if (panel.policy.mode !== modelData.id)
+                                panel.setPolicy("mode", modelData.id)
+                        }
+                    }
+                }
+                ShellText {
+                    width: parent.width
                     runtime: panel.runtime
                     theme: panel.theme
-                    motion: panel.motion
-                    compact: true
-                    horizontalCompact: true
-                    icon: panel.policy.mode === "dayNight" ? "󰖔" : panel.policy.mode === "interval" ? "󰥔" : "󰜺"
-                    title: panel.policy.mode === "dayNight" ? "Day / night" : panel.policy.mode === "interval" ? "Interval" : "Off"
-                    shortcut: panel.runtime.shellHint("WallpaperPolicy.mode")
-                    active: panel.policy.mode !== "off"
-                    activeColor: panel.theme.roleColor("wallpaper")
-                    enabled: panel.policyActionEnabled("WallpaperPolicy.mode")
-                    onActivated: panel.invokePolicyAction("WallpaperPolicy.mode")
+                    text: !panel.policyKnown ? "Reading schedule…" : panel.policy.mode === "off" ? "Manual wallpaper selection" : panel.policy.mode === "interval" ? "Change after a fixed interval" : "Change at daily boundaries"
+                    textRole: ShellText.Supporting
+                    wrapMode: Text.WordWrap
                 }
             }
         }
