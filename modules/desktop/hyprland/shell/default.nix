@@ -904,8 +904,8 @@ in
 
   assertions = [
     {
-      assertion = scopeConfig.textScale >= 0.75 && scopeConfig.textScale <= 1.5;
-      message = "desktop.hyprland.shell.textScale must be between 0.75 and 1.5";
+      assertion = scopeConfig.textScale >= 0.75 && scopeConfig.textScale <= 2.0;
+      message = "desktop.hyprland.shell.textScale must be between 0.75 and 2.0";
     }
     {
       assertion = scopeConfig.videoWallpaper == null || lib.hasPrefix "/" scopeConfig.videoWallpaper;
