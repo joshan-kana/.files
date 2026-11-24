@@ -24,7 +24,7 @@ test("shared shell controls expose actionable screen-reader buttons", () => {
   assert.match(shellAction, /onActivated: root\.activated\(\)/);
   assert.match(
     shellAction,
-    /function trigger\(\): void \{[\s\S]*?if \(!enabled\)[\s\S]*?interaction\.playPressFeedback\([\s\S]*?activated\(\)/,
+    /function trigger\(\): void \{\s*if \(enabled\)\s*interaction\.trigger\(\)/,
   );
 });
 

@@ -220,11 +220,17 @@ FocusScope {
     function toggleSelectedMute(): void {
         const target = selectedTarget;
         if (target?.kind === "output")
-            system.toggleMute();
+            outputDevice.triggerMute();
         else if (target?.kind === "input")
-            system.toggleMicrophoneMute();
-        else if (target?.node)
-            system.toggleStreamMute(target.node);
+            inputDevice.triggerMute();
+        else if (target?.node) {
+            list.forceLayout();
+            const row = list.itemAtIndex(selectedStreamIndex);
+            if (row)
+                row.control.triggerMute();
+            else
+                system.toggleStreamMute(target.node);
+        }
     }
 
     function toggleSelectedDeviceChooser(): void {
@@ -340,7 +346,7 @@ FocusScope {
                 toggleSelectedDeviceChooser();
         } else if (key === mixer.runtime.shellKeyCode("mixer", "X")) {
             if (!autoRepeat)
-                system.toggleMicrophoneMute();
+                inputDevice.triggerMute();
         } else {
             return false;
         }
@@ -637,6 +643,7 @@ FocusScope {
 
                 delegate: Item {
                     id: streamRow
+                    readonly property alias control: streamControl
                     required property int index
                     readonly property var stream: mixer.streams[index] || null
                     readonly property bool capture: index >= mixer.system.audioApplicationStreams.length

@@ -24,6 +24,10 @@ Item {
         levelSlider.beginKeyboardAdjustment();
     }
 
+    function triggerMute(): void {
+        muteButton.trigger();
+    }
+
     signal selectedRequested
     signal routeRequested
     property string routeLabel: ""

@@ -171,3 +171,18 @@ test("secondary tile hit feedback stays local and follows the owning tile withou
   assert.match(action, /hoverOpacity: 0\.22/);
   assert.match(action, /pressOpacity: 0\.32/);
 });
+
+test("direct shortcuts and accessibility use the shared feedback dispatch", () => {
+  const state = qml("StateLayer.qml");
+  assert.match(
+    state,
+    /function trigger\(\): void \{\s*if \(!enabled\)\s*return;\s*playPressFeedback\(width \/ 2, height \/ 2\);\s*activated\(null\)/,
+  );
+  assert.match(qml("ShellAction.qml"), /interaction\.trigger\(\)/);
+  assert.match(qml("AudioDeviceControl.qml"), /muteHit\.trigger\(\)/);
+  assert.match(qml("AudioStreamControl.qml"), /muteButton\.trigger\(\)/);
+  const mixer = qml("AudioMixerContent.qml");
+  assert.match(mixer, /outputDevice\.triggerMute\(\)/);
+  assert.match(mixer, /inputDevice\.triggerMute\(\)/);
+  assert.match(mixer, /row\.control\.triggerMute\(\)/);
+});

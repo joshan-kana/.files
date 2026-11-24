@@ -121,6 +121,14 @@ MouseArea {
         growRipple.restart();
     }
 
+    // Shortcut dispatch uses the same action owner and feedback as pointer input.
+    function trigger(): void {
+        if (!enabled)
+            return;
+        playPressFeedback(width / 2, height / 2);
+        activated(null);
+    }
+
     signal activated(var event)
 
     anchors.fill: parent

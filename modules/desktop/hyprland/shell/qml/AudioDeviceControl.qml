@@ -26,6 +26,10 @@ ShellSurface {
         levelSlider.beginKeyboardAdjustment();
     }
 
+    function triggerMute(): void {
+        muteHit.trigger();
+    }
+
     signal selectedRequested
 
     implicitHeight: deviceContents.implicitHeight + (compact ? theme.spacing3 * 2 : theme.spacing2 * 2)
@@ -87,6 +91,7 @@ ShellSurface {
             width: parent.width
             height: 28
             StateLayer {
+                id: muteHit
                 anchors.fill: parent
                 theme: deviceControl.theme
                 motion: deviceControl.motion
@@ -94,8 +99,9 @@ ShellSurface {
                 disabled: !deviceControl.available
                 Accessible.role: Accessible.Button
                 Accessible.name: deviceControl.microphone ? "Toggle microphone mute" : "Toggle output mute"
-                onActivated: {
-                    deviceControl.selectedRequested();
+                onActivated: event => {
+                    if (event)
+                        deviceControl.selectedRequested();
                     if (deviceControl.microphone)
                         deviceControl.system.toggleMicrophoneMute();
                     else

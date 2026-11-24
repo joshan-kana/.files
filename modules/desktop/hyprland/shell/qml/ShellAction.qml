@@ -68,10 +68,8 @@ Item {
     property real animatedScaleY: motion.enabled && visualPressed ? motion.pressScaleNormal : 1
     readonly property real bodyScaleY: Math.max(0, Math.min(1, animatedScaleY))
     function trigger(): void {
-        if (!enabled)
-            return;
-        interaction.playPressFeedback(width / 2, height / 2);
-        activated();
+        if (enabled)
+            interaction.trigger();
     }
     Behavior on animatedScaleX {
         enabled: root.motion.enabled

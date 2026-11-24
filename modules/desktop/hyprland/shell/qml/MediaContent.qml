@@ -541,6 +541,7 @@ FocusScope {
                 spacing: content.theme.spacing2
 
                 ShellAction {
+                    id: visualizerAction
                     width: implicitWidth
                     height: Math.max(42, implicitHeight)
                     runtime: content.runtime
@@ -556,6 +557,7 @@ FocusScope {
                 }
 
                 ShellAction {
+                    id: lyricsAction
                     width: implicitWidth
                     height: Math.max(42, implicitHeight)
                     runtime: content.runtime
@@ -698,11 +700,11 @@ FocusScope {
                     event.accepted = true;
                 } else if (content.runtime.shellMatchesHint("MediaContent.visualizer", event.key, event.modifiers)) {
                     if (!event.isAutoRepeat)
-                        content.toggleVisualizer();
+                        visualizerAction.trigger();
                     event.accepted = true;
                 } else if (content.runtime.shellMatchesHint("MediaContent.lyrics", event.key, event.modifiers)) {
                     if (!event.isAutoRepeat)
-                        content.toggleLyrics();
+                        lyricsAction.trigger();
                     event.accepted = true;
                 } else if (content.runtime.shellMatchesHint("MediaContent.shuffle", event.key, event.modifiers)) {
                     if (!event.isAutoRepeat)
