@@ -50,8 +50,10 @@ Item {
 
     Process {
         id: editQuery
-        stdout: StdioCollector { id: editOutput }
-        onExited: function(code, status) {
+        stdout: StdioCollector {
+            id: editOutput
+        }
+        onExited: function (code, status) {
             if (!panel.profileEditing || panel.editUuid !== panel.detailUuid)
                 return;
             const values = Profiles.parseProfile(editOutput.text, panel.profileFields);
@@ -69,8 +71,10 @@ Item {
 
     Process {
         id: editApply
-        stderr: StdioCollector { id: editError }
-        onExited: function(code, status) {
+        stderr: StdioCollector {
+            id: editError
+        }
+        onExited: function (code, status) {
             if (!panel.profileEditing)
                 return;
             panel.statusError = code !== 0;
@@ -110,7 +114,9 @@ Item {
     }
 
     function stageProfileValue(key: string, value: string): void {
-        profileDraft = Object.assign({}, profileDraft, { [key]: value });
+        profileDraft = Object.assign({}, profileDraft, {
+            [key]: value
+        });
     }
 
     function adjustProfileField(delta: int): void {
