@@ -74,7 +74,17 @@
   # Optional scope-specific slot overrides. Keep unrelated panels independent.
   overrides = { };
 
-  widgetChoices = [ "SHIFT+Q" "SHIFT+W" "SHIFT+E" "SHIFT+A" "SHIFT+S" "SHIFT+D" "SHIFT+Z" "SHIFT+X" "SHIFT+C" ];
+  widgetChoices = [
+    "SHIFT+Q"
+    "SHIFT+W"
+    "SHIFT+E"
+    "SHIFT+A"
+    "SHIFT+S"
+    "SHIFT+D"
+    "SHIFT+Z"
+    "SHIFT+X"
+    "SHIFT+C"
+  ];
 
   # Action-specific assignments take precedence over shared slot defaults.
   # Changing an action must not silently remap every use of the same letter.

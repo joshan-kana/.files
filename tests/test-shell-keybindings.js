@@ -298,16 +298,25 @@ test("semantic action bindings change their handler and hint without changing a 
 });
 
 test("power, notifications and preset choices use positional shifted letters", () => {
-  const detail = fs.readFileSync(path.join(qmlDir, "SettingsDetail.qml"), "utf8");
+  const detail = fs.readFileSync(
+    path.join(qmlDir, "SettingsDetail.qml"),
+    "utf8",
+  );
   assert.match(detail, /shellChoiceIndex\(key, modifiers, 5\)/);
   assert.match(detail, /shellChoiceHint\(index\)/);
   assert.doesNotMatch(detail, /shellNumber(?:Index|Hint)/);
   assert.equal(f.widgetChoiceHint(registry, 0), "SHIFT+Q");
   assert.equal(f.widgetChoiceIndex(registry, 81, Qt.ShiftModifier, 9, Qt), 0);
   assert.equal(f.widgetChoiceIndex(registry, 81, 0, 9, Qt), -1);
-  assert.equal(f.widgetChoiceIndex(registry, 81, Qt.ShiftModifier | Qt.AltModifier, 9, Qt), -1);
+  assert.equal(
+    f.widgetChoiceIndex(registry, 81, Qt.ShiftModifier | Qt.AltModifier, 9, Qt),
+    -1,
+  );
   assert.equal(new Set(registry.widgetChoices).size, 9);
-  assert.match(fs.readFileSync(path.join(qmlDir, "NotificationContent.qml"), "utf8"), /shellChoiceIndex/);
+  assert.match(
+    fs.readFileSync(path.join(qmlDir, "NotificationContent.qml"), "utf8"),
+    /shellChoiceIndex/,
+  );
 });
 
 test("compact detail open actions follow remapped keys in labels and dispatch", () => {
@@ -324,18 +333,79 @@ test("compact detail open actions follow remapped keys in labels and dispatch", 
 });
 
 test("reactive details have independent plain-letter assignments", () => {
-  for (const [name, key] of [["musicReactiveDetails", "U"], ["wallpaperSpectrumDetails", "Y"]]) {
+  for (const [name, key] of [
+    ["musicReactiveDetails", "U"],
+    ["wallpaperSpectrumDetails", "Y"],
+  ]) {
     const id = "SystemContent." + name;
     assert.equal(f.hint(registry, id), key);
     assert.equal(f.matchesHint(registry, id, key.charCodeAt(0), 0, Qt), true);
-    assert.equal(f.matchesHint(registry, id, key.charCodeAt(0), Qt.ShiftModifier, Qt), false);
-    assert.equal(f.matchesHint(registry, id, key.charCodeAt(0), Qt.AltModifier, Qt), false);
+    assert.equal(
+      f.matchesHint(registry, id, key.charCodeAt(0), Qt.ShiftModifier, Qt),
+      false,
+    );
+    assert.equal(
+      f.matchesHint(registry, id, key.charCodeAt(0), Qt.AltModifier, Qt),
+      false,
+    );
   }
 });
 
 test("dashboard direct widget bindings are collision-free unmodified or shifted letters", () => {
-  const actions = ["bar", "frame", "nightLight", "shellGlass", "vhsTune", "vhsToggle", "networkDetails", "bluetoothDetails", "brightnessFocus", "alertsDetails", "stayDetails", "powerDetails", "windowsDetails", "glassDetails", "nightLightDetails", "wallpaperSpectrumDetails", "musicReactiveDetails", "barDetails", "frameDetails", "motionDetails", "alerts", "bluetooth", "captures", "displays", "motion", "musicReactive", "network", "powerProfile", "reset", "resources", "statusInspection", "stayAwake", "themes", "wallpaper", "wallpaperSpectrum", "windowTransparency"].map(name => "SystemContent." + name).concat(["AudioMixerContent.open", "AudioDeviceControl.chooser", "AudioDeviceControl.mute", "AudioDeviceControl.muteMicrophone", "ControlsMediaCard.open", "ControlsMediaCard.repeat", "ControlsMediaCard.shuffle"]);
-  const seen = new Map(["H", "J", "K", "L", "I", "O", "SHIFT+H", "SHIFT+L"].map(key => [key, "reserved navigation"]));
+  const actions = [
+    "bar",
+    "frame",
+    "nightLight",
+    "shellGlass",
+    "vhsTune",
+    "vhsToggle",
+    "networkDetails",
+    "bluetoothDetails",
+    "brightnessFocus",
+    "alertsDetails",
+    "stayDetails",
+    "powerDetails",
+    "windowsDetails",
+    "glassDetails",
+    "nightLightDetails",
+    "wallpaperSpectrumDetails",
+    "musicReactiveDetails",
+    "barDetails",
+    "frameDetails",
+    "motionDetails",
+    "alerts",
+    "bluetooth",
+    "captures",
+    "displays",
+    "motion",
+    "musicReactive",
+    "network",
+    "powerProfile",
+    "reset",
+    "resources",
+    "statusInspection",
+    "stayAwake",
+    "themes",
+    "wallpaper",
+    "wallpaperSpectrum",
+    "windowTransparency",
+  ]
+    .map((name) => "SystemContent." + name)
+    .concat([
+      "AudioMixerContent.open",
+      "AudioDeviceControl.chooser",
+      "AudioDeviceControl.mute",
+      "AudioDeviceControl.muteMicrophone",
+      "ControlsMediaCard.open",
+      "ControlsMediaCard.repeat",
+      "ControlsMediaCard.shuffle",
+    ]);
+  const seen = new Map(
+    ["H", "J", "K", "L", "I", "O", "SHIFT+H", "SHIFT+L"].map((key) => [
+      key,
+      "reserved navigation",
+    ]),
+  );
   for (const action of actions) {
     const key = f.hint(registry, action);
     assert.match(key, /^(?:SHIFT\+)?[A-Z]$/, action);

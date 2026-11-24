@@ -696,7 +696,10 @@ Item {
         runtime: panel.runtime
         theme: panel.theme
         motion: panel.motion
-        glyph: DesktopIcons.capabilityGlyph("network", {wifiConnected: panel.system.wifiConnected, networkConnected: panel.system.networkConnected})
+        glyph: DesktopIcons.capabilityGlyph("network", {
+            wifiConnected: panel.system.wifiConnected,
+            networkConnected: panel.system.networkConnected
+        })
         glyphFont: "Symbols Nerd Font"
         glyphColor: panel.system.networkConnected ? panel.theme.positive : panel.theme.warning
         eyebrow: "Connectivity / " + panel.system.connectivityText

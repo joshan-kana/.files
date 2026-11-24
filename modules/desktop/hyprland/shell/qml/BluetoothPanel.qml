@@ -274,7 +274,9 @@ Item {
         runtime: panel.runtime
         theme: panel.theme
         motion: panel.motion
-        glyph: DesktopIcons.capabilityGlyph("bluetooth", {active: panel.system.bluetoothEnabled})
+        glyph: DesktopIcons.capabilityGlyph("bluetooth", {
+            active: panel.system.bluetoothEnabled
+        })
         glyphFont: "Symbols Nerd Font"
         glyphColor: panel.system.bluetoothEnabled ? panel.theme.positive : panel.theme.textMuted
         eyebrow: "Connectivity / Bluetooth"

@@ -431,11 +431,11 @@ FocusScope {
                         },
                         {
                             key: root.runtime.shellHint("SystemContent.legend.play_pause_previous_next_media"),
-                            action: "Play-pause / previous / next media"
+                            action: "Open Now Playing for transport shortcuts"
                         },
                         {
                             key: root.runtime.shellHint("SystemContent.legend.shuffle_repeat_choose_player"),
-                            action: "Shuffle / repeat / choose player"
+                            action: "Shuffle / repeat"
                         },
                         {
                             key: root.runtime.shellHint("SystemContent.legend.seek_backward_forward"),
@@ -451,7 +451,7 @@ FocusScope {
                         },
                         {
                             key: root.runtime.shellHint("SystemContent.legend.night_light_warmer_cooler"),
-                            action: "Night Light / warmer / cooler"
+                            action: "Night Light toggle / details"
                         },
                         {
                             key: root.runtime.shellHint("SystemContent.legend.hardware_display_brightness_and_volume_style_osd"),
@@ -1069,7 +1069,10 @@ FocusScope {
                             title: "Network"
                             detail: root.system.networkDevices.length === 0 ? "Hardware unavailable" : root.system.networkConnected ? root.system.networkName : "No connection"
                             status: failed ? "CONNECTION FAILED" : pending ? networkPanel.pendingNetwork ? "AUTHENTICATION REQUIRED" : "UPDATING CONNECTION" : unavailable ? "" : root.system.networkConnected ? (root.system.wifiConnected ? "WI-FI · CONNECTED" : "ETHERNET · CONNECTED") : "OFFLINE"
-                            glyph: DesktopIcons.capabilityGlyph("network", {wifiConnected: root.system.wifiConnected, networkConnected: root.system.networkConnected})
+                            glyph: DesktopIcons.capabilityGlyph("network", {
+                                wifiConnected: root.system.wifiConnected,
+                                networkConnected: root.system.networkConnected
+                            })
                             shortcut: root.runtime.shellHint("SystemContent.network")
                             detailShortcut: root.runtime.shellHint("SystemContent.networkDetails")
                             connected: root.system.networkConnected
@@ -1093,7 +1096,9 @@ FocusScope {
                             title: "Bluetooth"
                             detail: unavailable ? "Hardware unavailable" : root.system.bluetoothEnabled ? root.system.bluetoothConnectedCount + " connected devices" : "Radio disabled"
                             status: failed ? "ACTION FAILED" : scanning ? "SCANNING FOR DEVICES" : pending ? "PAIRING DEVICE" : unavailable ? "" : root.system.bluetoothEnabled ? "ADAPTER ON" : "RADIO OFF"
-                            glyph: DesktopIcons.capabilityGlyph("bluetooth", {active: root.system.bluetoothEnabled})
+                            glyph: DesktopIcons.capabilityGlyph("bluetooth", {
+                                active: root.system.bluetoothEnabled
+                            })
                             shortcut: root.runtime.shellHint("SystemContent.bluetooth")
                             detailShortcut: root.runtime.shellHint("SystemContent.bluetoothDetails")
                             connected: root.system.bluetoothEnabled
@@ -1137,7 +1142,9 @@ FocusScope {
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
-                            icon: DesktopIcons.capabilityGlyph("alerts", {active: !root.notificationState.silent})
+                            icon: DesktopIcons.capabilityGlyph("alerts", {
+                                active: !root.notificationState.silent
+                            })
                             title: root.notificationState.silent ? "Silent" : "Alerts"
                             shortcut: root.runtime.shellHint("SystemContent.alerts")
                             detailShortcut: root.runtime.shellHint("SystemContent.alertsDetails")
@@ -1153,7 +1160,9 @@ FocusScope {
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
-                            icon: DesktopIcons.capabilityGlyph("stay", {active: root.system.idleInhibited})
+                            icon: DesktopIcons.capabilityGlyph("stay", {
+                                active: root.system.idleInhibited
+                            })
                             title: root.system.idleInhibited ? "Stay awake" : "Idle allowed"
                             shortcut: root.runtime.shellHint("SystemContent.stayAwake")
                             detailShortcut: root.runtime.shellHint("SystemContent.stayDetails")
@@ -1169,7 +1178,10 @@ FocusScope {
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
-                            icon: DesktopIcons.capabilityGlyph("power", {batteryAvailable: root.system.batteryAvailable, batteryLevelIcon: root.system.batteryLevelIcon})
+                            icon: DesktopIcons.capabilityGlyph("power", {
+                                batteryAvailable: root.system.batteryAvailable,
+                                batteryLevelIcon: root.system.batteryLevelIcon
+                            })
                             title: (root.powerProfile.available ? root.powerProfile.label(root.powerProfile.current) : "Power") + (root.system.batteryAvailable ? " " + root.system.batteryPercent + "%" : "")
                             shortcut: root.runtime.shellHint("SystemContent.powerProfile")
                             detailShortcut: root.runtime.shellHint("SystemContent.powerDetails")
@@ -1424,7 +1436,9 @@ FocusScope {
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
-                            icon: DesktopIcons.capabilityGlyph("frame", {active: root.frameVisible})
+                            icon: DesktopIcons.capabilityGlyph("frame", {
+                                active: root.frameVisible
+                            })
                             title: root.frameVisible ? "Frame visible" : "Frame hidden"
                             shortcut: root.runtime.shellHint("SystemContent.frame")
                             detailShortcut: root.runtime.shellHint("SystemContent.frameDetails")
@@ -1441,7 +1455,9 @@ FocusScope {
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
-                            icon: DesktopIcons.capabilityGlyph("motion", {active: root.motion.enabled})
+                            icon: DesktopIcons.capabilityGlyph("motion", {
+                                active: root.motion.enabled
+                            })
                             title: root.motion.enabled ? "Animations" : "Reduced motion"
                             shortcut: root.runtime.shellHint("SystemContent.motion")
                             detailShortcut: root.runtime.shellHint("SystemContent.motionDetails")
@@ -1458,7 +1474,9 @@ FocusScope {
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
-                            icon: DesktopIcons.capabilityGlyph("nightLight", {active: root.nightLight.active})
+                            icon: DesktopIcons.capabilityGlyph("nightLight", {
+                                active: root.nightLight.active
+                            })
                             title: root.nightLight.supported ? "Night " + root.nightLight.temperature + " K" : "Night unavailable"
                             shortcut: root.runtime.shellHint("SystemContent.nightLight")
                             detailShortcut: root.runtime.shellHint("SystemContent.nightLightDetails")
@@ -2475,7 +2493,6 @@ FocusScope {
                     root.toggleSelectedAudioDeviceChooser();
                 } else if (root.runtime.shellMatchesHint("SystemContent.nightLight", event.key, event.modifiers)) {
                     root.nightLight.toggle();
-
                 } else if (event.key === root.runtime.shellKeyCode("controls", "BracketLeft") && root.system.trayCount > 0) {
                     root.trayIndex = (root.trayIndex - 1 + root.system.trayCount) % root.system.trayCount;
                 } else if (event.key === root.runtime.shellKeyCode("controls", "BracketRight") && root.system.trayCount > 0) {
