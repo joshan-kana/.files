@@ -203,3 +203,32 @@ test("one-shot detail actions execute on initial key-down without auto-repeat", 
     /Keys\.onPressed: event => \{[\s\S]*?if \(!event\.isAutoRepeat\) \{[\s\S]*?playPressFeedback\([\s\S]*?activated\(event\)/,
   );
 });
+
+test("Weather Back and Escape discard the same location draft before leaving the page", () => {
+  const weather = qml("WeatherContent.qml");
+  const host = qml("ShellExpansionHost.qml");
+  assert.match(
+    host,
+    /else if \(weatherContent\) \{\s*weatherContent.navigateBack\(\)/,
+  );
+  assert.match(
+    weather,
+    /function navigateBack\(\): void \{\s*if \(locationEditing\)\s*finishLocation\(false\);\s*else\s*closeRequested\(\)/,
+  );
+  assert.equal(
+    [
+      ...weather.matchAll(
+        /shellKeyCode\("weather", "Escape"\)\) \{\s*if \(!event.isAutoRepeat\)\s*panel.navigateBack\(\)/g,
+      ),
+    ].length,
+    2,
+  );
+  assert.match(
+    host,
+    /tabShortcutsEnabled: [^\n]*!\(weatherContent && weatherContent.locationEditing\)/,
+  );
+  assert.match(
+    host,
+    /escapeHintLabel: [^\n]*weatherContent.locationEditing[^\n]*"Exit search"/,
+  );
+});

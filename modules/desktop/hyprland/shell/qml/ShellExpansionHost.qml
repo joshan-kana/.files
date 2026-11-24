@@ -97,6 +97,7 @@ PanelWindow {
     readonly property SystemContent controlsContent: contentLoaderB.item as SystemContent
     readonly property SystemContent systemContent: expansionState.currentName === "system" ? loadedContent as SystemContent : null
     readonly property NotificationContent activityContent: expansionState.currentName === "activity" ? loadedContent as NotificationContent : null
+    readonly property WeatherContent weatherContent: expansionState.currentName === "weather" ? loadedContent as WeatherContent : null
     readonly property CalendarContent calendarContent: expansionState.currentName === "calendar" ? loadedContent as CalendarContent : null
     // The operation owner survives navigation; the contour belongs only
     // to the currently presented page, never another prewarmed loader.
@@ -106,9 +107,9 @@ PanelWindow {
     readonly property MediaContent mediaContent: expansionState.currentName === "media" ? loadedContent as MediaContent : null
     property bool otherHelpOpen: false
     readonly property bool helpVisible: systemContent ? systemContent.helpOpen : (mediaContent ? mediaContent.helpOpen : otherHelpOpen)
-    readonly property bool tabShortcutsEnabled: expansionState.hasCurrent && !helpVisible && !(systemContent && (systemContent.resetConfirmPending || systemContent.sessionConfirmationPending || systemContent.networkPasswordPending || systemContent.recordingDeletePending || systemContent.detailSearchFocused || systemContent.audioChooserOpen)) && !(activityContent && activityContent.replyEditing)
+    readonly property bool tabShortcutsEnabled: expansionState.hasCurrent && !helpVisible && !(systemContent && (systemContent.resetConfirmPending || systemContent.sessionConfirmationPending || systemContent.networkPasswordPending || systemContent.recordingDeletePending || systemContent.detailSearchFocused || systemContent.audioChooserOpen)) && !(activityContent && activityContent.replyEditing) && !(weatherContent && weatherContent.locationEditing)
     readonly property bool confirmationPending: !!systemContent && (systemContent.resetConfirmPending || systemContent.sessionConfirmationPending || systemContent.networkPasswordPending || systemContent.recordingDeletePending)
-    readonly property string escapeHintLabel: confirmationPending ? "Cancel" : (systemContent && systemContent.detailSearchFocused) ? "Exit search" : helpVisible || detailVisible || (systemContent && (systemContent.audioChooserOpen || systemContent.selectedSlider.length > 0)) || (activityContent && (activityContent.replyEditing || activityContent.policyOpen || activityContent.expandedGroupKey.length > 0)) ? "Back" : "Close"
+    readonly property string escapeHintLabel: confirmationPending ? "Cancel" : ((systemContent && systemContent.detailSearchFocused) || (weatherContent && weatherContent.locationEditing)) ? "Exit search" : helpVisible || detailVisible || (systemContent && (systemContent.audioChooserOpen || systemContent.selectedSlider.length > 0)) || (activityContent && (activityContent.replyEditing || activityContent.policyOpen || activityContent.expandedGroupKey.length > 0)) ? "Back" : "Close"
     // Hub scrolling is a fallback only for views without their own paging
     // owner. Calendar, Activity and collection details consume paging locally.
     readonly property bool hostPageShortcutsEnabled: expansionState.hasCurrent && !helpVisible && (expansionState.currentName === "weather" || expansionState.currentName === "media" || (expansionState.currentName === "system" && (!detailVisible || !!systemContent?.detailUsesHostPaging)))
@@ -241,6 +242,8 @@ PanelWindow {
             mediaContent.navigateBack();
         } else if (activityContent) {
             activityContent.navigateBack();
+        } else if (weatherContent) {
+            weatherContent.navigateBack();
         } else if (calendarContent) {
             calendarContent.navigateBack();
         } else {

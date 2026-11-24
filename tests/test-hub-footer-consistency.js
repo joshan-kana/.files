@@ -42,7 +42,10 @@ test("Escape label follows the actual focus owner", () => {
     /confirmationPending: !!systemContent && \(systemContent\.resetConfirmPending \|\| systemContent\.sessionConfirmationPending \|\| systemContent\.networkPasswordPending \|\| systemContent\.recordingDeletePending\)/,
   );
   assert.match(host, /escapeHintLabel: confirmationPending \? "Cancel"/);
-  assert.match(host, /systemContent\.detailSearchFocused\) \? "Exit search"/);
+  assert.match(
+    host,
+    /systemContent\.detailSearchFocused\) \|\| \(weatherContent && weatherContent\.locationEditing\)\) \? "Exit search"/,
+  );
   assert.match(
     host,
     /helpVisible \|\| detailVisible \|\| \(systemContent && \(systemContent\.audioChooserOpen \|\| systemContent\.selectedSlider\.length > 0\)\) \|\| \(activityContent && \(activityContent\.replyEditing \|\| activityContent\.policyOpen \|\| activityContent\.expandedGroupKey\.length > 0\)\) \? "Back" : "Close"/,

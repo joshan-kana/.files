@@ -28,6 +28,13 @@ FocusScope {
         keys.forceActiveFocus();
     }
 
+    function navigateBack(): void {
+        if (locationEditing)
+            finishLocation(false);
+        else
+            closeRequested();
+    }
+
     signal closeRequested
     signal calendarRequested
 
@@ -55,25 +62,24 @@ FocusScope {
         focus: true
         Keys.onPressed: event => {
             if (event.key === panel.runtime.shellKeyCode("weather", "Escape")) {
-                panel.closeRequested();
+                if (!event.isAutoRepeat)
+                    panel.navigateBack();
                 event.accepted = true;
             } else if (panel.runtime.shellMatchesHint("WeatherContent.location", event.key, event.modifiers)) {
                 if (!event.isAutoRepeat)
-                    panel.editLocation();
+                    locationButton.trigger();
                 event.accepted = true;
             } else if (panel.runtime.shellMatchesHint("WeatherContent.units", event.key, event.modifiers)) {
                 if (!event.isAutoRepeat)
-                    panel.weather.toggleUnits();
+                    unitsButton.trigger();
                 event.accepted = true;
             } else if (panel.runtime.shellMatchesHint("WeatherContent.reset", event.key, event.modifiers)) {
-                if (!event.isAutoRepeat) {
-                    panel.weather.resetLocation();
-                    panel.weather.resetUnits();
-                }
+                if (!event.isAutoRepeat)
+                    defaultsButton.trigger();
                 event.accepted = true;
             } else if (panel.runtime.shellMatchesHint("WeatherContent.refresh", event.key, event.modifiers)) {
                 if (!event.isAutoRepeat)
-                    panel.weather.refresh(true);
+                    refreshButton.trigger();
                 event.accepted = true;
             } else if (event.key === panel.runtime.shellKeyCode("weather", "C") || event.key === panel.runtime.shellKeyCode("weather", "Backspace")) {
                 panel.calendarRequested();
@@ -142,6 +148,7 @@ FocusScope {
             height: 40
             spacing: panel.theme.spacing2
             ShellAction {
+                id: locationButton
                 width: Math.max(1, parent.width - unitsButton.width - defaultsButton.width - 2 * parent.spacing)
                 height: parent.height
                 runtime: panel.runtime
@@ -211,11 +218,12 @@ FocusScope {
                 Accessible.name: "Weather city or latitude,longitude"
                 Keys.onPressed: event => {
                     if (event.key === panel.runtime.shellKeyCode("weather", "Escape")) {
-                        panel.finishLocation(false);
+                        if (!event.isAutoRepeat)
+                            panel.navigateBack();
                         event.accepted = true;
                     } else if (event.key === panel.runtime.shellKeyCode("weather", "Return") || event.key === panel.runtime.shellKeyCode("weather", "Enter")) {
                         if (!event.isAutoRepeat)
-                            panel.finishLocation(true);
+                            applyLocation.trigger();
                         event.accepted = true;
                     }
                 }
