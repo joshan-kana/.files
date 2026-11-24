@@ -37,10 +37,6 @@ lib.recursiveUpdate (import ../../profiles/workstation.nix { inherit moduleRegis
         };
       })
       {
-        authentication = _: {
-          security.pam.services.sudo_local.touchIdAuth = true;
-        };
-
         preferences = _: {
           system.defaults = {
             dock = {
