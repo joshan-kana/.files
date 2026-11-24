@@ -195,8 +195,8 @@ jobs:
             echo "::error::System update failed; changes were preserved on $UPDATE_BRANCH." >&2
             exit 1
           fi
-          nix flake check --no-update-lock-file
-          nix flake check --all-systems --no-build --no-update-lock-file
+          nix flake check --option builders '' --no-update-lock-file
+          nix flake check --no-build --all-systems --option builders '' --no-update-lock-file
           gh workflow run nix-build-cache.yml \
             --repo "$GITHUB_REPOSITORY" \
             --ref "$UPDATE_BRANCH" \
