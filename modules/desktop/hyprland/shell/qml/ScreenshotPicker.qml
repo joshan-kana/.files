@@ -3,6 +3,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import QtCore
+import "DesktopIcons.js" as DesktopIcons
 
 Item {
     id: picker
@@ -141,7 +142,8 @@ Item {
             {
                 key: "",
                 action: "ScreenshotPicker.resetEncoding",
-                title: "DEFAULTS",
+                glyph: DesktopIcons.actionGlyph("reset"),
+                title: "Restore defaults",
                 values: []
             }
         ]);
@@ -175,8 +177,7 @@ Item {
             qmlCapturePreferences.encodingOverrides = JSON.stringify(Object.assign({}, encodingOverrides, preset.values));
             qmlCapturePreferences.sync();
         } else if (field.key === "") {
-            qmlCapturePreferences.encodingOverrides = "{}";
-            qmlCapturePreferences.sync();
+            resetToDeclared();
         } else {
             const index = field.values.indexOf(encoding(field.key));
             setEncoding(field.key, field.values[(index + 1) % field.values.length]);
@@ -810,6 +811,7 @@ Item {
                         compact: true
                         horizontalCompact: true
                         title: modelData.title
+                        icon: modelData.glyph || ""
                         shortcut: picker.runtime.shellHint(modelData.action)
                         enabled: !picker.countingDown && !picker.exporting && !(picker.selectionMode !== "record" && (picker.copying || picker.annotateAfterCapture) && ["imageFormat", "jpegQuality", "preset"].includes(modelData.key))
                         onActivated: picker.cycleEncoding(modelData)

@@ -123,6 +123,7 @@ Item {
         {
             action: "WallpaperPanel.favorite",
             glyph: favoritePaths.includes(selectedPath()) ? "󰋑" : "󰋕",
+            iconOnly: true,
             title: favoritePaths.includes(selectedPath()) ? "Remove favourite" : "Favourite",
             enabled: policyKnown && !policyBusy && selectedPath() !== ""
         },
@@ -150,50 +151,62 @@ Item {
     readonly property var scheduleActions: [
         {
             action: "WallpaperPolicy.mode",
+            glyph: policy.mode === "dayNight" ? "󰖔" : policy.mode === "interval" ? "󰥔" : "󰜺",
             title: policy.mode === "dayNight" ? "Day/night" : policy.mode === "interval" ? "Interval" : "Off"
         },
         {
             action: "WallpaperPolicy.target",
+            activeOnly: true,
             title: "Target · " + policy.target
         },
         {
             action: "WallpaperPolicy.period",
+            intervalOnly: true,
             title: policy.intervalMinutes + " min"
         },
         {
             action: "WallpaperPolicy.favorites",
+            intervalOnly: true,
             title: policy.favoritesOnly ? "Favourites" : "Entire library"
         },
         {
             action: "WallpaperPolicy.collection",
+            intervalOnly: true,
             title: policy.collection || "All folders"
         },
         {
             action: "WallpaperPolicy.day",
+            dayNightOnly: true,
             title: "Use selection for day"
         },
         {
             action: "WallpaperPolicy.night",
+            dayNightOnly: true,
             title: "Use selection for night"
         },
         {
             action: "WallpaperPolicy.dayEarlier",
+            dayNightOnly: true,
             title: "Day −30 min"
         },
         {
             action: "WallpaperPolicy.dayLater",
+            dayNightOnly: true,
             title: "Day +30 min"
         },
         {
             action: "WallpaperPolicy.nightEarlier",
+            dayNightOnly: true,
             title: "Night −30 min"
         },
         {
             action: "WallpaperPolicy.nightLater",
+            dayNightOnly: true,
             title: "Night +30 min"
         },
         {
             action: "WallpaperPolicy.next",
+            intervalOnly: true,
             title: "Rotate now"
         },
         {
@@ -207,7 +220,7 @@ Item {
             active: policy.mode !== "off",
             title: "Back to wallpapers"
         }
-    ]
+    ].filter(entry => (!entry.intervalOnly || policy.mode === "interval") && (!entry.dayNightOnly || policy.mode === "dayNight") && (!entry.activeOnly || policy.mode !== "off"))
     function policyActionEnabled(action: string): bool {
         if (action === "WallpaperPanel.rotation")
             return true;
@@ -1106,7 +1119,7 @@ Item {
                 }
             }
         }
-        Flow {
+        CenteredActionFlow {
             id: scheduleGrid
             width: parent.width
             spacing: panel.theme.spacing2
@@ -1123,6 +1136,9 @@ Item {
                     compact: true
                     horizontalCompact: true
                     title: modelData.title
+                    icon: modelData.glyph || ""
+                    active: !!modelData.active
+                    activeColor: panel.theme.roleColor("wallpaper")
                     shortcut: panel.runtime.shellHint(modelData.action)
                     enabled: panel.policyActionEnabled(modelData.action)
                     onActivated: panel.invokePolicyAction(scheduleAction.modelData.action)

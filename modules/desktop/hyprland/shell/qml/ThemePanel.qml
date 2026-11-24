@@ -29,6 +29,40 @@ Item {
         property var favorites: []
     }
     readonly property var favoriteNames: savedGallery.favorites
+    readonly property var galleryActions: [
+        {
+            action: "ThemePanel.favorite",
+            glyph: panel.selectedTheme() && panel.favoriteNames.includes(panel.selectedTheme().name) ? "󰋑" : "󰋕",
+            iconOnly: true,
+            title: panel.selectedTheme() && panel.favoriteNames.includes(panel.selectedTheme().name) ? "Remove favourite" : "Favourite",
+            enabled: !!panel.selectedTheme()
+        },
+        {
+            action: "ThemePanel.favorites",
+            glyph: "󰓎",
+            active: panel.favoritesOnly,
+            title: panel.favoritesOnly ? "Favourites only" : "All themes",
+            enabled: true
+        },
+        {
+            action: "ThemePanel.polarity",
+            glyph: panel.polarityFilter === 1 ? "󰖔" : panel.polarityFilter === 2 ? "󰖙" : "󰔎",
+            title: ["Any polarity", "Dark", "Light"][panel.polarityFilter],
+            enabled: true
+        },
+        {
+            action: "ThemePanel.previous",
+            glyph: DesktopIcons.actionGlyph("revert"),
+            title: "Previous theme",
+            enabled: !!panel.previousTheme && !panel.operationRunning && panel.previousTheme !== panel.currentTheme
+        },
+        {
+            action: "ThemePanel.defaults",
+            glyph: DesktopIcons.actionGlyph("reset"),
+            title: "Default theme",
+            enabled: !!panel.defaultTheme && !panel.operationRunning && panel.defaultTheme !== panel.currentTheme
+        }
+    ]
     function toggleFavorite(): void {
         const selected = selectedTheme();
         if (!selected)
@@ -38,11 +72,11 @@ Item {
         savedGallery.sync();
     }
     function handleGalleryKey(key: int, modifiers: int, repeat: bool): bool {
-        for (const action of ["ThemePanel.favorite", "ThemePanel.favorites", "ThemePanel.polarity", "ThemePanel.previous", "ThemePanel.defaults"]) {
-            if (!runtime.shellMatchesHint(action, key, modifiers))
+        for (const entry of galleryActions) {
+            if (!runtime.shellMatchesHint(entry.action, key, modifiers))
                 continue;
-            if (!repeat)
-                galleryAction(action);
+            if (!repeat && entry.enabled)
+                galleryAction(entry.action);
             return true;
         }
         return false;
@@ -441,39 +475,7 @@ Item {
         }
         spacing: panel.theme.spacing2
         Repeater {
-            model: [
-                {
-                    action: "ThemePanel.favorite",
-                    glyph: panel.selectedTheme() && panel.favoriteNames.includes(panel.selectedTheme().name) ? "󰋑" : "󰋕",
-                    title: panel.selectedTheme() && panel.favoriteNames.includes(panel.selectedTheme().name) ? "Remove favourite" : "Favourite",
-                    enabled: !!panel.selectedTheme()
-                },
-                {
-                    action: "ThemePanel.favorites",
-                    glyph: "󰓎",
-                    active: panel.favoritesOnly,
-                    title: panel.favoritesOnly ? "Favourites only" : "All themes",
-                    enabled: true
-                },
-                {
-                    action: "ThemePanel.polarity",
-                    glyph: panel.polarityFilter === 1 ? "󰖔" : panel.polarityFilter === 2 ? "󰖙" : "󰔎",
-                    title: ["Any polarity", "Dark", "Light"][panel.polarityFilter],
-                    enabled: true
-                },
-                {
-                    action: "ThemePanel.previous",
-                    glyph: DesktopIcons.actionGlyph("revert"),
-                    title: "Previous theme",
-                    enabled: !!panel.previousTheme && !panel.operationRunning && panel.previousTheme !== panel.currentTheme
-                },
-                {
-                    action: "ThemePanel.defaults",
-                    glyph: DesktopIcons.actionGlyph("reset"),
-                    title: "Default theme",
-                    enabled: !!panel.defaultTheme && !panel.operationRunning && panel.defaultTheme !== panel.currentTheme
-                }
-            ]
+            model: panel.galleryActions
             delegate: ShellAction {
                 required property var modelData
                 width: Math.min(galleryButtons.width, implicitWidth)

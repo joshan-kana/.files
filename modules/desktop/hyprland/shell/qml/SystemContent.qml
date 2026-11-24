@@ -190,6 +190,18 @@ FocusScope {
             action: "Adjust selected parameter"
         },
         {
+            key: root.runtime.shellHint("SettingsDetail.select"),
+            action: "Select parameter"
+        },
+        {
+            key: root.runtime.shellHint("SettingsDetail.reset"),
+            action: "Restore capability defaults"
+        },
+        {
+            key: root.runtime.shellHint("SettingsDetail.resetParameter"),
+            action: "Restore selected parameter"
+        },
+        {
             key: root.runtime.shellHint("SystemContent.legend.back"),
             action: "Back to Controls"
         }
@@ -205,6 +217,14 @@ FocusScope {
         {
             key: root.runtime.shellHint("VhsPanel.toggle"),
             action: "Toggle VHS"
+        },
+        {
+            key: root.runtime.shellHint("VhsPanel.defaults"),
+            action: "Restore VHS defaults"
+        },
+        {
+            key: root.runtime.shellHint("VhsPanel.reset"),
+            action: "Restore selected parameter"
         },
         {
             key: root.runtime.shellHint("SystemContent.legend.back"),
@@ -269,6 +289,10 @@ FocusScope {
             key: root.runtime.shellHint("SystemContent.legend.fit_fill_reset"),
             action: "Fit/fill / reset"
         },
+        ...(wallpaperPanel.panel?.policyView ? wallpaperPanel.panel.scheduleActions : wallpaperPanel.panel?.galleryPolicyActions || []).map(entry => ({
+                    key: root.runtime.shellHint(entry.action),
+                    action: entry.title
+                })),
         {
             key: root.runtime.shellHint("SystemContent.legend.esc_13"),
             action: root.returnToControls ? "Back to Controls" : "Close"
@@ -370,6 +394,10 @@ FocusScope {
                     key: root.runtime.shellHint("SystemContent.legend.apply_selected_theme_cancel_applying"),
                     action: "Apply selected theme / cancel applying"
                 },
+                ...(themePanel.panel?.galleryActions || []).map(entry => ({
+                            key: root.runtime.shellHint(entry.action),
+                            action: entry.title
+                        })),
                 {
                     key: root.runtime.shellHint("SystemContent.legend.esc_37"),
                     action: root.returnToControls ? "Back to Controls" : "Close"
@@ -386,6 +414,10 @@ FocusScope {
                     {
                         key: root.runtime.shellHint("SystemContent.legend.activate_confirm"),
                         action: "Activate / confirm"
+                    },
+                    {
+                        key: root.runtime.shellHint("SessionPanel.defaults"),
+                        action: "Restore session defaults"
                     },
                     {
                         key: root.runtime.shellHint("SystemContent.legend.esc"),
