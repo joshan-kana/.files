@@ -1,22 +1,28 @@
 #!/usr/bin/env python3
 """Single session service owner for manual, scheduled and solar colour temperature."""
 
+import contextlib
 import datetime as dt
 import fcntl
 import json
 import os
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 SERVICE = "desktop-shell-night-light.service"
 TIMER = "desktop-shell-night-light-apply.timer"
 DEFAULTS = {
-    "mode": "off", "temperature": 4500, "startMinute": 1140,
-    "endMinute": 420, "days": 127, "transitionMinutes": 15,
-    "latitude": None, "longitude": None,
+    "mode": "off",
+    "temperature": 4500,
+    "startMinute": 1140,
+    "endMinute": 420,
+    "days": 127,
+    "transitionMinutes": 15,
+    "latitude": None,
+    "longitude": None,
 }
 DEFAULTS.update(json.loads(os.environ.get("DESKTOP_NIGHT_LIGHT_DEFAULTS", "{}")))
 STATE_DIR = Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local/state"))) / "desktop-shell"
@@ -25,6 +31,7 @@ RUNTIME = Path(os.environ.get("XDG_RUNTIME_DIR", str(STATE_DIR))) / "desktop-she
 
 
 def local_zone():
+    """Read the host's timezone with daylight-saving rules."""
     try:
         with open("/etc/localtime", "rb") as source:
             return ZoneInfo.from_file(source)
@@ -33,6 +40,7 @@ def local_zone():
 
 
 def atomic_write(path, value):
+    """Replace state atomically with private permissions."""
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, name = tempfile.mkstemp(prefix=path.name + "-", dir=path.parent)
     try:
@@ -46,6 +54,7 @@ def atomic_write(path, value):
 
 
 def read_json(path):
+    """Read a valid object or return an empty state."""
     try:
         value = json.loads(path.read_text())
         return value if isinstance(value, dict) else {}
@@ -54,18 +63,25 @@ def read_json(path):
 
 
 def validated(key, value):
+    """Validate a single persisted policy setting."""
     if key == "mode":
         if value in ("off", "manual", "custom", "solar"):
             return value
     elif key in ("temperature", "startMinute", "endMinute", "days", "transitionMinutes"):
-        ranges = {"temperature": (2500, 6500), "startMinute": (0, 1439),
-                  "endMinute": (0, 1439), "days": (0, 127), "transitionMinutes": (0, 60)}
+        ranges = {
+            "temperature": (2500, 6500),
+            "startMinute": (0, 1439),
+            "endMinute": (0, 1439),
+            "days": (0, 127),
+            "transitionMinutes": (0, 60),
+        }
         if isinstance(value, int) and not isinstance(value, bool) and ranges[key][0] <= value <= ranges[key][1]:
             return value
     raise ValueError("Invalid Night Light " + key)
 
 
 def read_overrides(now):
+    """Read overrides and migrate the previous state format."""
     try:
         text = STATE.read_text().strip()
     except FileNotFoundError:
@@ -77,10 +93,8 @@ def read_overrides(now):
         result = {}
         for key in DEFAULTS:
             if key in saved and key not in ("latitude", "longitude"):
-                try:
+                with contextlib.suppress(ValueError):
                     result[key] = validated(key, saved[key])
-                except ValueError:
-                    pass
         if saved.get("override") in ("on", "off") and isinstance(saved.get("until"), (int, float)):
             result.update(override=saved["override"], until=saved["until"])
         return result
@@ -99,9 +113,9 @@ def read_overrides(now):
 
 
 def solar_available(config):
+    """Check whether explicitly configured solar coordinates are valid."""
     lat, lon = config["latitude"], config["longitude"]
-    return (isinstance(lat, (int, float)) and isinstance(lon, (int, float))
-            and -90 <= lat <= 90 and -180 <= lon <= 180)
+    return isinstance(lat, (int, float)) and isinstance(lon, (int, float)) and -90 <= lat <= 90 and -180 <= lon <= 180
 
 
 def intervals(now, config):
@@ -115,6 +129,7 @@ def intervals(now, config):
             return result
         from astral import Observer
         from astral.sun import sunrise, sunset
+
         observer = Observer(latitude=config["latitude"], longitude=config["longitude"])
     for offset in range(-1, 9):
         day = now.date() + dt.timedelta(days=offset)
@@ -138,6 +153,7 @@ def intervals(now, config):
 
 
 def effective(now, config, saved):
+    """Calculate the target temperature, next boundary and active override."""
     current = now.timestamp()
     mode = config["mode"]
     windows = intervals(now, config)
@@ -159,26 +175,35 @@ def effective(now, config, saved):
 
 
 def run_command(*args, check=True):
+    """Run a service command and capture its reply."""
     return subprocess.run(args, check=check, capture_output=True, text=True)
 
 
 def service_active():
+    """Check the service's current activation state."""
     return run_command("systemctl", "--user", "--quiet", "is-active", SERVICE, check=False).returncode == 0
 
 
 def status(now, config, saved):
+    """Return the resolved policy and applied runtime status."""
     target, next_change, override = effective(now, config, saved)
     running = service_active()
     applied = read_json(RUNTIME)
     return {
-        **config, "active": running and applied.get("effectiveTemperature", target) < 6500,
+        **config,
+        "active": running and applied.get("effectiveTemperature", target) < 6500,
         "effectiveTemperature": applied.get("effectiveTemperature", target) if running else 6500,
-        "nextTransition": int(next_change), "override": override, "until": int(saved.get("until", 0)) if override else 0,
-        "solarAvailable": solar_available(config), "supported": True, "error": applied.get("error", ""),
+        "nextTransition": int(next_change),
+        "override": override,
+        "until": int(saved.get("until", 0)) if override else 0,
+        "solarAvailable": solar_available(config),
+        "supported": True,
+        "error": applied.get("error", ""),
     }
 
 
 def apply(now, config, saved):
+    """Reconcile the service and schedule with the effective policy."""
     target, _, override = effective(now, config, saved)
     previous = read_json(RUNTIME)
     try:
@@ -195,12 +220,18 @@ def apply(now, config, saved):
             run_command("systemctl", "--user", "stop", SERVICE)
         atomic_write(RUNTIME, {"effectiveTemperature": target, "error": ""})
     except subprocess.CalledProcessError as error:
-        atomic_write(RUNTIME, {"effectiveTemperature": previous.get("effectiveTemperature", 6500),
-                              "error": (error.stderr or "Night Light apply failed").strip()[:300]})
+        atomic_write(
+            RUNTIME,
+            {
+                "effectiveTemperature": previous.get("effectiveTemperature", 6500),
+                "error": (error.stderr or "Night Light apply failed").strip()[:300],
+            },
+        )
         raise
 
 
 def main(argv):
+    """Dispatch a command, serializing all policy mutations."""
     now = dt.datetime.now(local_zone())
     command = argv[0] if argv else "state"
     saved = read_overrides(now)
@@ -250,8 +281,9 @@ def main(argv):
             saved.pop("override", None)
             saved.pop("until", None)
         elif command in ("set", "start", "end", "days", "transition"):
-            key = {"set": "temperature", "start": "startMinute", "end": "endMinute",
-                   "days": "days", "transition": "transitionMinutes"}[command]
+            key = {"set": "temperature", "start": "startMinute", "end": "endMinute", "days": "days", "transition": "transitionMinutes"}[
+                command
+            ]
             saved[key] = validated(key, int(argv[1]))
         elif command in ("warmer", "cooler"):
             saved["temperature"] = max(2500, min(6500, config["temperature"] + (-500 if command == "warmer" else 500)))

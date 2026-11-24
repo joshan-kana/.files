@@ -212,12 +212,45 @@ Item {
                 }
             ];
         if (kind === "nightLight") {
-            const items = [{ key: "temperature", title: "Colour temperature", description: "Warmer at lower Kelvin values", minimum: 2500, maximum: 6500, step: 100, suffix: " K" }];
+            const items = [
+                {
+                    key: "temperature",
+                    title: "Colour temperature",
+                    description: "Warmer at lower Kelvin values",
+                    minimum: 2500,
+                    maximum: 6500,
+                    step: 100,
+                    suffix: " K"
+                }
+            ];
             if (nightLight.mode === "custom")
-                items.push({ key: "nightStart", title: "Schedule start", description: "Local time", minimum: 0, maximum: 1425, step: 15, suffix: "time" },
-                    { key: "nightEnd", title: "Schedule end", description: "Local time", minimum: 0, maximum: 1425, step: 15, suffix: "time" });
+                items.push({
+                    key: "nightStart",
+                    title: "Schedule start",
+                    description: "Local time",
+                    minimum: 0,
+                    maximum: 1425,
+                    step: 15,
+                    suffix: "time"
+                }, {
+                    key: "nightEnd",
+                    title: "Schedule end",
+                    description: "Local time",
+                    minimum: 0,
+                    maximum: 1425,
+                    step: 15,
+                    suffix: "time"
+                });
             if (nightLight.mode === "custom" || nightLight.mode === "solar")
-                items.push({ key: "nightTransition", title: "Transition duration", description: "Gradual colour change", minimum: 0, maximum: 60, step: 5, suffix: " min" });
+                items.push({
+                    key: "nightTransition",
+                    title: "Transition duration",
+                    description: "Gradual colour change",
+                    minimum: 0,
+                    maximum: 60,
+                    step: 5,
+                    suffix: " min"
+                });
             return items;
         }
         return [];
@@ -785,7 +818,24 @@ Item {
                 height: 40
                 spacing: panel.theme.spacing2
                 Repeater {
-                    model: [{id: "off", title: "Off"}, {id: "manual", title: "Manual"}, {id: "custom", title: "Schedule"}, {id: "solar", title: "Sunset"}]
+                    model: [
+                        {
+                            id: "off",
+                            title: "Off"
+                        },
+                        {
+                            id: "manual",
+                            title: "Manual"
+                        },
+                        {
+                            id: "custom",
+                            title: "Schedule"
+                        },
+                        {
+                            id: "solar",
+                            title: "Sunset"
+                        }
+                    ]
                     delegate: ShellAction {
                         required property int index
                         required property var modelData
@@ -820,7 +870,20 @@ Item {
                 height: visible ? 40 : 0
                 spacing: panel.theme.spacing2
                 Repeater {
-                    model: [{title: "Every day", days: 127}, {title: "Weekdays", days: 62}, {title: "Weekends", days: 65}]
+                    model: [
+                        {
+                            title: "Every day",
+                            days: 127
+                        },
+                        {
+                            title: "Weekdays",
+                            days: 62
+                        },
+                        {
+                            title: "Weekends",
+                            days: 65
+                        }
+                    ]
                     delegate: ShellAction {
                         required property int index
                         required property var modelData

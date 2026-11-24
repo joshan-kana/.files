@@ -1,16 +1,16 @@
 """Executable regression tests for the desktop's isolated service adapters."""
 
-import os
 import datetime as dt
 import importlib.util
 import json
-import sys
-from unittest import mock
+import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "scripts/desktop-shell"
@@ -80,7 +80,7 @@ class DesktopScriptTests(unittest.TestCase):
         night = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(night)
         config = dict(night.DEFAULTS, mode="custom", days=2, temperature=4300, transitionMinutes=15)
-        monday = dt.datetime(2026, 11, 23, 19, 0, tzinfo=dt.timezone.utc)
+        monday = dt.datetime(2026, 11, 23, 19, 0, tzinfo=dt.UTC)
         self.assertEqual(night.effective(monday, config, {})[0], 6500)
         self.assertEqual(night.effective(monday + dt.timedelta(minutes=15), config, {})[0], 4300)
         tuesday = monday + dt.timedelta(hours=10)
@@ -101,19 +101,30 @@ class DesktopScriptTests(unittest.TestCase):
 
     def test_night_light_service_controls(self):
         """Check real adapter transitions through an isolated mock systemd/Hyprland."""
-        self.executable("systemctl", """
+        self.executable(
+            "systemctl",
+            """
 case "$*" in
   *"is-active desktop-shell-night-light.service") test -f "$XDG_RUNTIME_DIR/light-running";;
   *"start desktop-shell-night-light.service") touch "$XDG_RUNTIME_DIR/light-running";;
   *"stop desktop-shell-night-light.service") rm -f "$XDG_RUNTIME_DIR/light-running";;
   *) exit 0;;
 esac
-""")
+""",
+        )
         self.executable("hyprctl", 'printf "%s\\n" "$*" > "$XDG_RUNTIME_DIR/light-command"; echo ok')
+
         def run(*args):
-            result = subprocess.run([sys.executable, str(SCRIPTS / "night-light.py"), *args], env=self.env,
-                                    text=True, capture_output=True, check=True, timeout=8)
+            result = subprocess.run(
+                [sys.executable, str(SCRIPTS / "night-light.py"), *args],
+                env=self.env,
+                text=True,
+                capture_output=True,
+                check=True,
+                timeout=8,
+            )
             return result.stdout
+
         run("mode", "manual")
         self.assertTrue(json.loads(run("state"))["active"])
         run("set", "4100")

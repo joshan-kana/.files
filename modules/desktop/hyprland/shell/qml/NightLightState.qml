@@ -21,10 +21,7 @@ QtObject {
     property string temporaryOverride: ""
     property double overrideUntil: 0
     readonly property string scheduleLabel: mode === "custom" ? "Custom schedule" : mode === "solar" ? "Sunset to sunrise" : mode === "manual" ? "Manual" : "Off"
-    readonly property string statusLabel: error.length > 0 ? error : scheduleLabel
-        + (active ? " · " + effectiveTemperature + " K" : " · neutral")
-        + (temporaryOverride.length > 0 ? " · temporary " + temporaryOverride : "")
-        + (nextTransition > 0 ? " · next " + Qt.formatDateTime(new Date(nextTransition * 1000), "ddd HH:mm") : "")
+    readonly property string statusLabel: error.length > 0 ? error : scheduleLabel + (active ? " · " + effectiveTemperature + " K" : " · neutral") + (temporaryOverride.length > 0 ? " · temporary " + temporaryOverride : "") + (nextTransition > 0 ? " · next " + Qt.formatDateTime(new Date(nextTransition * 1000), "ddd HH:mm") : "")
     property FileView liveStatus: FileView {
         path: Quickshell.env("XDG_RUNTIME_DIR") + "/desktop-shell-night-light.json"
         watchChanges: true
@@ -139,7 +136,9 @@ QtObject {
         } else {
             return;
         }
-        queuedSchedule = Object.assign({}, queuedSchedule, { [field]: value });
+        queuedSchedule = Object.assign({}, queuedSchedule, {
+            [field]: value
+        });
         temperatureDebounce.restart();
     }
 

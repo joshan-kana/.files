@@ -561,7 +561,12 @@ in
     type = lib.types.submodule {
       options = {
         mode = lib.mkOption {
-          type = lib.types.enum [ "off" "manual" "custom" "solar" ];
+          type = lib.types.enum [
+            "off"
+            "manual"
+            "custom"
+            "solar"
+          ];
           default = "off";
           description = "Default Night Light operating mode.";
         };
