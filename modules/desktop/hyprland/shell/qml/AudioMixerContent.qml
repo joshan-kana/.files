@@ -41,6 +41,7 @@ FocusScope {
     signal closeRequested
     signal keyboardRequested
     signal expandRequested
+    signal streamAdjustmentRequested(int index)
 
     EasyEffectsState {
         id: effectsState
@@ -106,12 +107,16 @@ FocusScope {
 
     function adjustSelected(delta: real): void {
         const target = selectedTarget;
-        if (target?.kind === "output")
+        if (target?.kind === "output") {
+            outputDevice.pulseAdjustment();
             system.adjustVolume(delta);
-        else if (target?.kind === "input")
+        } else if (target?.kind === "input") {
+            inputDevice.pulseAdjustment();
             system.setMicrophoneVolume(system.microphoneVolume + delta);
-        else if (target?.node)
+        } else if (target?.node) {
+            streamAdjustmentRequested(selectedStreamIndex);
             system.adjustStreamVolume(target.node, delta);
+        }
     }
 
     function toggleSelectedMute(): void {
@@ -453,6 +458,14 @@ FocusScope {
                     borderWidth: mixer.selectedStreamIndex === streamRow.index ? mixer.theme.borderFocus : 0
 
                     AudioStreamControl {
+                        id: streamControl
+                        Connections {
+                            target: mixer
+                            function onStreamAdjustmentRequested(index: int): void {
+                                if (index === streamRow.index)
+                                    streamControl.pulseAdjustment();
+                            }
+                        }
                         anchors {
                             fill: parent
                             margins: mixer.theme.spacing2

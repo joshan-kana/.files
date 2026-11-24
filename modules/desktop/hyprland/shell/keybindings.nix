@@ -92,6 +92,8 @@
     "SystemContent.windowsDetails" = "ALT+SHIFT+D";
     "SystemContent.glassDetails" = "ALT+SHIFT+R";
     "SystemContent.nightLightDetails" = "ALT+T";
+    "SystemContent.wallpaperSpectrumDetails" = "ALT+SHIFT+F";
+    "SystemContent.musicReactiveDetails" = "ALT+SHIFT+G";
 
   };
 
@@ -205,6 +207,7 @@
           "SettingsDetail.adjust" = "NAV_HORIZONTAL";
           "SettingsDetail.presentation" = "P";
           "SettingsDetail.history" = "Y";
+          "SettingsDetail.quietHours" = "Q";
           "SystemContent.alerts" = "A";
           "SystemContent.audioAdjust" = "NAV_HORIZONTAL";
           "SystemContent.audioLevel" = "NAV_HORIZONTAL";
@@ -278,7 +281,6 @@
           "SystemContent.legend.toggle_wi_fi_saved_connections" = "W / P";
           "SystemContent.motion" = "SHIFT+E";
           "SystemContent.musicReactive" = "SHIFT+G";
-          "SystemContent.musicReactiveDetails" = "ALT+SHIFT+G";
           "SystemContent.network" = "F";
           "SystemContent.powerProfile" = "V";
           "SystemContent.reset" = "SHIFT+C";
@@ -295,9 +297,9 @@
           "SystemContent.trayOpen" = "ENTER";
           "SystemContent.wallpaper" = "W";
           "SystemContent.wallpaperSpectrum" = "SHIFT+F";
-          "SystemContent.wallpaperSpectrumDetails" = "ALT+SHIFT+F";
           "VhsPanel.adjust" = "NAV_HORIZONTAL";
           "VhsPanel.toggle" = "T";
+          "VhsPanel.reset" = "R";
           "VhsPanel.select" = "NAV_VERTICAL · TAB/SHIFT+TAB";
           "SystemContent.windowTransparency" = "SHIFT+D";
           "ThemePanel.apply" = "ENTER";
