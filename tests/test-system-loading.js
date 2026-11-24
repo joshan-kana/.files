@@ -78,7 +78,10 @@ test("frame and floating hub share one busy-state source and semantic colour", (
 
 test("background operations show only on their owning visible dashboard tiles", () => {
   const controls = source("SystemContent.qml");
-  assert.match(controls, /dashboardExposed: engaged && !detailsVisible/);
+  assert.match(
+    controls,
+    /dashboardExposed: presentationActive && engaged && !detailsVisible/,
+  );
   for (const owner of [
     "themePanel.foregroundBusy",
     "wallpaperPanel.foregroundBusy",
@@ -105,7 +108,7 @@ test("background operations show only on their owning visible dashboard tiles", 
   );
   assert.match(
     source("WeatherSummary.qml"),
-    /foregroundBusy: summary.weather.loading && summary.weather.foregroundLoading/,
+    /foregroundBusy: summary.presentationActive && summary.weather.loading && summary.weather.foregroundLoading/,
   );
   const surface = source("ShellSurface.qml");
   assert.match(surface, /active: root.visible && root.foregroundBusy/);

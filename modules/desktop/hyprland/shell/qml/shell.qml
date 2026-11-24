@@ -134,6 +134,7 @@ ShellRoot {
             motion: root.motionRef
             weather: root.weatherRef
             engaged: qmlExpansionState.currentName === "calendar"
+            presentationActive: qmlExpansionState.hasCurrent && qmlExpansionState.currentName === "calendar"
             onForecastRequested: actions.toggleWeather()
             onCloseRequested: qmlExpansionState.close()
         }
@@ -179,6 +180,7 @@ ShellRoot {
             windowTransparencyEnabled: qmlAppearance.windowTransparencyEnabled
             shellGlassEnabled: qmlAppearance.shellGlassEnabled
             engaged: qmlExpansionState.currentName === "system"
+            presentationActive: qmlExpansionState.hasCurrent && qmlExpansionState.currentName === "system"
             onWallpaperSpectrumToggleRequested: qmlAppearance.toggleWallpaperSpectrum()
             onMusicReactiveToggleRequested: qmlAppearance.toggleMusicReactive()
             onBarToggleRequested: qmlAppearance.toggleBar()

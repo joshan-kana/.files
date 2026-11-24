@@ -17,7 +17,7 @@ test("all hub views reveal progressively while geometry expands", () => {
   );
   assert.match(
     qml,
-    /const fraction = Math\.min\(width \/ Math\.max\(1, host\.closing \? host\.closeLayoutWidth : host\.contentWidth\), height \/ Math\.max\(1, host\.closing \? host\.closeLayoutHeight : host\.contentHeight\)\)/,
+    /const fraction = Math\.min\(width \/ widthGoal, height \/ heightGoal\)/,
   );
   assert.match(qml, /\(fraction - 0\.68\) \/ 0\.30/);
   for (const id of ["hubFooter", "contentViewport"])
@@ -122,5 +122,48 @@ test("hub header follows live painted width independently of the destination lay
   assert.match(
     tabs,
     /x: root\.theme\.spacing1 \+ width \* root\.animatedIndex/,
+  );
+});
+
+test("tab changes retain a complete measurement and never shrink the outgoing content to the next page", () => {
+  assert.match(qml, /property size measuredContentSize: Qt.size\(0, 0\)/);
+  assert.match(qml, /measuredContentSize = Qt.size\(width, height\)/);
+  assert.match(
+    qml,
+    /target: host.controlsContent\s+property: "dashboardWidthBudget"/,
+  );
+  assert.match(
+    qml,
+    /target: host.controlsContent\s+property: "detailWidthLimit"/,
+  );
+  assert.match(qml, /host.contentRevealed \? 1 : Math.max/);
+  assert.match(
+    qml,
+    /onContentRevealChanged:[\s\S]*?host.contentRevealed = true/,
+  );
+  assert.doesNotMatch(
+    qml,
+    /scale: Math.min\(1, contentViewport.width|incoming.opacity = 0|id: contentEnter/,
+  );
+  assert.equal(
+    [...qml.matchAll(/x: \(contentViewport.width - width\) \/ 2/g)].length,
+    5,
+  );
+  assert.match(qml, /clip: !host.pageCrossfading/);
+  const controls = fs.readFileSync(
+    path.join(
+      __dirname,
+      "../modules/desktop/hyprland/shell/qml/SystemContent.qml",
+    ),
+    "utf8",
+  );
+  assert.match(controls, /geometryReady: !requestedViewTimer.running/);
+  assert.match(
+    controls,
+    /requestedView.length > 0 && requestedView === presentedDetail/,
+  );
+  assert.match(
+    controls,
+    /onVisibleChanged: if \(!visible && !engaged\)\s*closeDetails\(\)/,
   );
 });

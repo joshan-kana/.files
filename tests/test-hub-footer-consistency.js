@@ -108,19 +108,16 @@ test("nested panels share canonical I/O navigation and preserve text-entry owner
   );
 });
 
-test("footer inset and panel height agree for both measured and live geometry", () => {
+test("footer inset contributes to the atomic measured panel geometry", () => {
   const host = source("ShellExpansionHost.qml");
   assert.match(
     host,
     /id: hubFooter[\s\S]*?y: Math\.max\(0, host\.visibleFooterBottom - height - host\.footerBottomClearance\)/,
   );
+  assert.match(host, /contentHeight: measuredContentSize\.height/);
   assert.match(
     host,
-    /contentHeight:.*tabs\.anchors\.topMargin \+ contentViewport\.anchors\.topMargin \+ contentViewport\.anchors\.bottomMargin \+ footerBottomClearance/,
-  );
-  assert.match(
-    host,
-    /measuredContentHeight = .*tabs\.anchors\.topMargin \+ contentViewport\.anchors\.topMargin \+ contentViewport\.anchors\.bottomMargin \+ footerBottomClearance/,
+    /const height = .*tabs\.anchors\.topMargin \+ contentViewport\.anchors\.topMargin \+ contentViewport\.anchors\.bottomMargin \+ footerBottomClearance/,
   );
   assert.match(host, /scrollBudget: .*host\.footerBottomClearance/);
 });

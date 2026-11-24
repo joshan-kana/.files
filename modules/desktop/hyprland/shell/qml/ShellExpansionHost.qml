@@ -26,7 +26,7 @@ PanelWindow {
     property Component activityComponent: null
     property bool contentExpanded: false
     property bool closing: false
-    property int transitionEpoch: 0
+    property bool contentRevealed: false
     // The measured center island remains the single docking target for all
     // hub pages, regardless of the island that originally opened the page.
     property var dockOrigin: ({
@@ -93,7 +93,10 @@ PanelWindow {
     property int activeSlot: -1
     readonly property Loader activeLoader: activeSlot === 0 ? contentLoaderA : activeSlot === 1 ? contentLoaderB : activeSlot === 2 ? contentLoaderC : activeSlot === 3 ? contentLoaderD : activeSlot === 4 ? contentLoaderE : null
     readonly property Item loadedContent: activeLoader ? activeLoader.item as Item : null
+    // Prewarmed Controls retains the same width constraints while hidden.
+    readonly property SystemContent controlsContent: contentLoaderB.item as SystemContent
     readonly property SystemContent systemContent: expansionState.currentName === "system" ? loadedContent as SystemContent : null
+    readonly property bool pageCrossfading: [contentLoaderA, contentLoaderB, contentLoaderC, contentLoaderD, contentLoaderE].some(loader => loader !== activeLoader && loader.opacity > 0.01)
     readonly property NotificationContent activityContent: expansionState.currentName === "activity" ? loadedContent as NotificationContent : null
     readonly property CalendarContent calendarContent: expansionState.currentName === "calendar" ? loadedContent as CalendarContent : null
     // The operation owner survives navigation; the contour belongs only
@@ -218,7 +221,6 @@ PanelWindow {
 
     function presentComponent(next: Component): void {
         if (!next) {
-            contentEnter.stop();
             if (activeLoader)
                 activeLoader.opacity = 0;
             activeSlot = -1;
@@ -231,27 +233,19 @@ PanelWindow {
         const incoming = next === calendarComponent ? contentLoaderA : next === systemComponent ? contentLoaderB : next === activityComponent ? contentLoaderC : next === mediaComponent ? contentLoaderD : contentLoaderE;
         const previous = activeLoader;
         const outgoing = contentExpanded && !closing && expansionState.hasCurrent ? previous : null;
-        contentEnter.stop();
-        incoming.opacity = 0;
         // Enable the destination before constructing its FocusScope. Its
         // onEngagedChanged requests keyboard focus during instantiation.
         activeSlot = incoming === contentLoaderA ? 0 : incoming === contentLoaderB ? 1 : incoming === contentLoaderC ? 2 : incoming === contentLoaderD ? 3 : 4;
         incoming.sourceComponent = next;
+        // If startup incubation has not finished, finish this one loader
+        // before fading away the last painted page.
+        if (!incoming.item)
+            incoming.asynchronous = false;
         contentViewport.contentY = 0;
-        if (!outgoing && previous)
+        if (previous)
             previous.opacity = 0;
-        if (outgoing) {
-            // Overlap just the tails of the fades: a fully sequential handoff
-            // leaves an empty squircle for a frame, while a full crossfade
-            // ghosts two readable pages over the morph.
-            outgoing.opacity = 0;
-            if (motion.enabled)
-                contentEnter.restart();
-            else
-                incoming.opacity = 1;
-        } else {
-            incoming.opacity = 1;
-        }
+        // Retarget the current opacity on reversal; do not reset to zero.
+        incoming.opacity = 1;
         geometryUpdate.restart();
         // A tab switch may displace the destination's nested keyboard sink.
         // Do not defer this work on a closed-to-open transition: the view's
@@ -293,19 +287,6 @@ PanelWindow {
         });
     }
 
-    // Begin the incoming fade within one or two frames of the outgoing fade.
-    // A longer sequential wait strands otherwise-ready Home/Controls/Activity
-    // content behind an empty surface, especially after reopening another tab.
-    Timer {
-        id: contentEnter
-        interval: Math.max(1, Math.round(host.motion.effectsFast * 0.20))
-        repeat: false
-        onTriggered: {
-            if (host.activeLoader)
-                host.activeLoader.opacity = 1;
-        }
-    }
-
     readonly property Component currentComponent: {
         switch (expansionState.currentName) {
         case "media":
@@ -323,22 +304,22 @@ PanelWindow {
         }
     }
     readonly property string currentTab: expansionState.currentName === "activity" ? "activity" : expansionState.currentName === "calendar" || expansionState.currentName === "weather" ? "home" : "controls"
-    // Keep the last valid dimensions while Loader replaces one tab with another.
-    // Otherwise the inner squircle briefly shrinks to the bar origin before the
-    // new tab's dimensions are ready.
-    property real measuredContentWidth: 0
-    property real measuredContentHeight: 0
-    // Derive the destination geometry from the live view, not only the cache:
-    // a temporary initial implicitHeight can otherwise strand the host at
-    // the height of a previously loaded detail panel.
-    readonly property real contentWidth: loadedContent && loadedContent.implicitWidth > 0 ? Math.max(loadedContent.implicitWidth, 600) + theme.spacing4 * 2 : (measuredContentWidth > 0 ? measuredContentWidth : expansionState.originWidth)
-    readonly property real contentHeight: loadedContent && loadedContent.implicitHeight > 0 ? loadedContent.implicitHeight + tabs.implicitHeight + hubFooter.implicitHeight + tabs.anchors.topMargin + contentViewport.anchors.topMargin + contentViewport.anchors.bottomMargin + footerBottomClearance : (measuredContentHeight > 0 ? measuredContentHeight : expansionState.originHeight)
+    // Commit a measured width/height pair once per layout pass. Holding the
+    // last valid pair avoids retargeting the contour at temporary implicit
+    // sizes while a prewarmed page or nested detail changes its layout.
+    property size measuredContentSize: Qt.size(0, 0)
+    readonly property real contentWidth: measuredContentSize.width > 0 ? measuredContentSize.width : expansionState.originWidth
+    readonly property real contentHeight: measuredContentSize.height > 0 ? measuredContentSize.height : expansionState.originHeight
 
     function updateContentGeometry(): void {
-        if (!loadedContent || loadedContent.implicitWidth <= 0 || loadedContent.implicitHeight <= 0)
+        if (!expansionState.hasCurrent || closing || !loadedContent || loadedContent.geometryReady === false || loadedContent.implicitWidth <= 0 || loadedContent.implicitHeight <= 0)
             return;
-        measuredContentWidth = Math.max(loadedContent.implicitWidth, 600) + theme.spacing4 * 2;
-        measuredContentHeight = loadedContent.implicitHeight + tabs.implicitHeight + hubFooter.implicitHeight + tabs.anchors.topMargin + contentViewport.anchors.topMargin + contentViewport.anchors.bottomMargin + footerBottomClearance;
+        const width = Math.max(loadedContent.implicitWidth, 600) + theme.spacing4 * 2;
+        const height = loadedContent.implicitHeight + tabs.implicitHeight + hubFooter.implicitHeight + tabs.anchors.topMargin + contentViewport.anchors.topMargin + contentViewport.anchors.bottomMargin + footerBottomClearance;
+        measuredContentSize = Qt.size(width, height);
+        // First reveal waits for real destination geometry, never a compact
+        // or partially measured fallback. Ordinary page changes stay expanded.
+        contentExpanded = true;
     }
 
     Timer {
@@ -349,17 +330,17 @@ PanelWindow {
     }
 
     Binding {
-        target: host.systemContent
+        target: host.controlsContent
         property: "dashboardWidthBudget"
         value: Math.max(1, Math.min(host.controlsPreferredWidth, host.viewportWidth - host.theme.spacing4 * 2))
-        when: !!host.systemContent
+        when: !!host.controlsContent
     }
 
     Binding {
-        target: host.systemContent
+        target: host.controlsContent
         property: "detailWidthLimit"
         value: Math.max(1, host.viewportWidth - host.theme.spacing4 * 2)
-        when: !!host.systemContent
+        when: !!host.controlsContent
     }
 
     Connections {
@@ -374,6 +355,10 @@ PanelWindow {
 
     Connections {
         target: host.loadedContent
+        ignoreUnknownSignals: true
+        function onGeometryReadyChanged(): void {
+            geometryUpdate.restart();
+        }
         function onImplicitWidthChanged(): void {
             geometryUpdate.restart();
         }
@@ -700,8 +685,8 @@ PanelWindow {
         }
         closing = false;
         expansionState.finishClose();
-        measuredContentWidth = 0;
-        measuredContentHeight = 0;
+        measuredContentSize = Qt.size(0, 0);
+        contentRevealed = false;
     }
 
     Timer {
@@ -715,7 +700,6 @@ PanelWindow {
         target: host.expansionState
 
         function onHasCurrentChanged(): void {
-            const epoch = ++host.transitionEpoch;
             host.keyboardFocusReady = false;
             if (!host.expansionState.hasCurrent) {
                 host.otherHelpOpen = false;
@@ -731,13 +715,7 @@ PanelWindow {
                 // Reversals expand directly from the geometry on screen;
                 // toggling through the compact target introduces a snap.
                 host.contentExpanded = reversingClose;
-                if (!reversingClose) {
-                    geometryUpdate.restart();
-                    Qt.callLater(() => {
-                        if (host.transitionEpoch === epoch && host.expansionState.hasCurrent)
-                            host.contentExpanded = true;
-                    });
-                }
+                geometryUpdate.restart();
             } else if (host.visible) {
                 host.closeStartWidth = shellSurface.width;
                 host.closeStartHeight = shellSurface.height;
@@ -834,11 +812,17 @@ PanelWindow {
             return host.chromeOpacity * Math.max(0, Math.min(1, (fraction - 0.68) / 0.30));
         }
 
-        // The prewarmed page grows with the viewport, including Themes and
-        // Wallpaper. Do not wait until the outer squircle is nearly full size.
+        // Geometry-gated reveal is only for the first opening. Once revealed,
+        // the page crossfade owns opacity independently of destination size.
         readonly property real contentReveal: {
-            const fraction = Math.min(width / Math.max(1, host.closing ? host.closeLayoutWidth : host.contentWidth), height / Math.max(1, host.closing ? host.closeLayoutHeight : host.contentHeight));
-            return host.chromeOpacity * Math.max(0, Math.min(1, (fraction - 0.68) / 0.30));
+            const widthGoal = Math.max(1, Math.min(host.viewportWidth, host.contentWidth));
+            const heightGoal = Math.max(1, Math.min(host.viewportHeight, host.contentHeight));
+            const fraction = Math.min(width / widthGoal, height / heightGoal);
+            return host.chromeOpacity * (host.contentRevealed ? 1 : Math.max(0, Math.min(1, (fraction - 0.68) / 0.30)));
+        }
+        onContentRevealChanged: {
+            if (host.expansionState.hasCurrent && host.measuredContentSize.width > 0 && contentReveal >= 0.99)
+                host.contentRevealed = true;
         }
     }
 
@@ -914,6 +898,7 @@ PanelWindow {
                 // the shorter Home, Now Playing and Activity panels.
                 y: Math.max(0, host.visibleFooterBottom - height - host.footerBottomClearance)
                 spacing: host.theme.spacing1
+                onImplicitHeightChanged: geometryUpdate.restart()
 
                 // Global navigation lives here; local widget hints remain
                 // next to their controls in each view.
@@ -1008,9 +993,9 @@ PanelWindow {
                     // Every view clears the shared navigation footer by the same amount.
                     bottomMargin: host.theme.spacing3 + host.theme.spacing4
                 }
-                // During a detail crossfade the outgoing grid retains its
-                // width; the outer ContentClipItem owns the moving contour.
-                clip: !host.systemContent || !host.systemContent.detailTransitioning
+                // During any page or detail crossfade the outgoing layout
+                // retains its width; the outer clip owns the moving contour.
+                clip: !host.pageCrossfading && (!host.systemContent || !host.systemContent.detailTransitioning)
                 // Blur the viewport's own composited output. An offscreen copy
                 // drawn elsewhere changes the relative geometry of scaled and
                 // scrolling children, and can expose the hub's corner contour.
@@ -1024,11 +1009,11 @@ PanelWindow {
                     maskSource: helpBlurMask
                     autoPaddingEnabled: false
                 }
-                // Retain the last two views while the hub is open, so returning to
-                // Home or Controls does not reconstruct their expensive models.
-                // Scaling only compensates while the animated viewport narrows.
+                // Each prewarmed page keeps its own measured layout. The live
+                // contour clips the crossfade; never miniaturise the outgoing
+                // page to fit a different destination.
                 contentWidth: width
-                contentHeight: Math.max(height, host.activeLoader ? host.activeLoader.height * host.activeLoader.scale : 0)
+                contentHeight: Math.max(height, host.activeLoader ? host.activeLoader.height : 0)
                 boundsBehavior: Flickable.StopAtBounds
                 // Nested detail galleries and the Activity/Calendar pages own
                 // their own scrolling. The host Flickable must not steal their
@@ -1046,8 +1031,7 @@ PanelWindow {
                     width: Math.max(1, Math.min(host.viewportWidth - host.theme.spacing4 * 2, Math.max(600, contentItem ? contentItem.implicitWidth : 600)))
                     height: Math.max(1, contentItem ? contentItem.implicitHeight : 0)
                     transformOrigin: Item.TopLeft
-                    scale: Math.min(1, contentViewport.width / Math.max(1, width))
-                    x: (contentViewport.width - width * scale) / 2
+                    x: (contentViewport.width - width) / 2
                     opacity: 0
                     enabled: host.activeSlot === 0
                     visible: host.activeSlot === 0 || opacity > 0.01
@@ -1069,8 +1053,7 @@ PanelWindow {
                     width: Math.max(1, Math.min(host.viewportWidth - host.theme.spacing4 * 2, Math.max(600, contentItem ? contentItem.implicitWidth : 600)))
                     height: Math.max(1, contentItem ? contentItem.implicitHeight : 0)
                     transformOrigin: Item.TopLeft
-                    scale: Math.min(1, contentViewport.width / Math.max(1, width))
-                    x: (contentViewport.width - width * scale) / 2
+                    x: (contentViewport.width - width) / 2
                     opacity: 0
                     enabled: host.activeSlot === 1
                     visible: host.activeSlot === 1 || opacity > 0.01
@@ -1092,8 +1075,7 @@ PanelWindow {
                     width: Math.max(1, Math.min(host.viewportWidth - host.theme.spacing4 * 2, Math.max(600, contentItem ? contentItem.implicitWidth : 600)))
                     height: Math.max(1, contentItem ? contentItem.implicitHeight : 0)
                     transformOrigin: Item.TopLeft
-                    scale: Math.min(1, contentViewport.width / Math.max(1, width))
-                    x: (contentViewport.width - width * scale) / 2
+                    x: (contentViewport.width - width) / 2
                     opacity: 0
                     enabled: host.activeSlot === 2
                     visible: host.activeSlot === 2 || opacity > 0.01
@@ -1115,8 +1097,7 @@ PanelWindow {
                     width: Math.max(1, Math.min(host.viewportWidth - host.theme.spacing4 * 2, Math.max(600, contentItem ? contentItem.implicitWidth : 600)))
                     height: Math.max(1, contentItem ? contentItem.implicitHeight : 0)
                     transformOrigin: Item.TopLeft
-                    scale: Math.min(1, contentViewport.width / Math.max(1, width))
-                    x: (contentViewport.width - width * scale) / 2
+                    x: (contentViewport.width - width) / 2
                     opacity: 0
                     enabled: host.activeSlot === 3
                     visible: host.activeSlot === 3 || opacity > 0.01
@@ -1138,8 +1119,7 @@ PanelWindow {
                     width: Math.max(1, Math.min(host.viewportWidth - host.theme.spacing4 * 2, Math.max(600, contentItem ? contentItem.implicitWidth : 600)))
                     height: Math.max(1, contentItem ? contentItem.implicitHeight : 0)
                     transformOrigin: Item.TopLeft
-                    scale: Math.min(1, contentViewport.width / Math.max(1, width))
-                    x: (contentViewport.width - width * scale) / 2
+                    x: (contentViewport.width - width) / 2
                     opacity: 0
                     enabled: host.activeSlot === 4
                     visible: host.activeSlot === 4 || opacity > 0.01

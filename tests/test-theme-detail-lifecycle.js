@@ -34,11 +34,17 @@ test("Controls restores detail focus only while engaged", () => {
 
 test("a stale queued expansion cannot reopen a closing or replaced hub", () => {
   const source = qml("ShellExpansionHost.qml");
-  assert.match(source, /property int transitionEpoch: 0/);
-  assert.match(source, /const epoch = \+\+host\.transitionEpoch/);
   assert.match(
     source,
-    /if \(host\.transitionEpoch === epoch && host\.expansionState\.hasCurrent\)\s*host\.contentExpanded = true/,
+    /function updateContentGeometry\(\): void \{\s*if \(!expansionState\.hasCurrent \|\| closing \|\| !loadedContent \|\| loadedContent\.geometryReady === false/,
+  );
+  assert.match(
+    source,
+    /measuredContentSize = Qt\.size\(width, height\);[\s\S]*?contentExpanded = true;/,
+  );
+  assert.doesNotMatch(
+    source,
+    /Qt\.callLater\(\(\) => \{[^}]*?contentExpanded = true/,
   );
 });
 

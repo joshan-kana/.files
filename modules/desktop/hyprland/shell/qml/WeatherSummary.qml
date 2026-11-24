@@ -7,6 +7,7 @@ Item {
     required property Motion motion
 
     required property WeatherState weather
+    property bool presentationActive: false
     signal forecastRequested
 
     implicitHeight: theme.textScale >= 1.5 ? 238 : 202
@@ -32,7 +33,7 @@ Item {
         ShellSurface {
             z: -1
             anchors.fill: parent
-            foregroundBusy: summary.weather.loading && summary.weather.foregroundLoading
+            foregroundBusy: summary.presentationActive && summary.weather.loading && summary.weather.foregroundLoading
             foregroundColor: summary.theme.roleColor("weather")
             theme: summary.theme
             motion: summary.motion

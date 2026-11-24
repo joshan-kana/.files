@@ -437,7 +437,7 @@ test("Dashboard controls retain direct keys and no additional focus navigation m
   const controls = read("SystemContent.qml");
   assert.match(
     controls,
-    /shortcut: root\.runtime\.shellHint\("SystemContent.themes"\)\s+onActivated: root.openTheme\(\)/,
+    /shortcut: root\.runtime\.shellHint\("SystemContent.themes"\)[\s\S]*?onActivated: root.openTheme\(\)/,
   );
   assert.match(
     controls,
@@ -812,8 +812,11 @@ test("hub expansion accounts for the actual inner viewport margins", () => {
     "footerBottomClearance",
   ])
     assert.ok(host.includes(fragment), fragment);
-  assert.match(host, /readonly property real contentHeight: loadedContent/);
-  assert.match(host, /measuredContentHeight = loadedContent.implicitHeight/);
+  assert.match(
+    host,
+    /readonly property real contentHeight: measuredContentSize\.height/,
+  );
+  assert.match(host, /const height = loadedContent\.implicitHeight/);
   assert.doesNotMatch(host, /PR211_TEMP_GEOMETRY/);
 });
 
@@ -1014,7 +1017,7 @@ test("detail transitions preserve source and destination layout during the cross
   assert.doesNotMatch(detail, /transform: Translate/);
   assert.match(
     host,
-    /clip: !host\.systemContent \|\| !host\.systemContent\.detailTransitioning/,
+    /clip: !host\.pageCrossfading && \(!host\.systemContent \|\| !host\.systemContent\.detailTransitioning\)/,
   );
 });
 

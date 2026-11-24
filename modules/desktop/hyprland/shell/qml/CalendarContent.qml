@@ -11,6 +11,7 @@ FocusScope {
     required property Motion motion
     required property WeatherState weather
     property bool engaged: false
+    property bool presentationActive: false
     property int monthShift: 0
     property int selectedDay: 0
     readonly property var selectedDate: selectedDay > 0 ? new Date(viewingDate.getFullYear(), viewingDate.getMonth(), selectedDay) : viewingDate
@@ -253,6 +254,7 @@ FocusScope {
                     theme: calendar.theme
                     motion: calendar.motion
                     weather: calendar.weather
+                    presentationActive: calendar.presentationActive
                     height: 174
                     onForecastRequested: calendar.forecastRequested()
                 }

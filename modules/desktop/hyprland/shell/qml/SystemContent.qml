@@ -39,6 +39,8 @@ FocusScope {
     signal restoreDefaultsRequested
 
     property bool engaged: false
+    property bool presentationActive: false
+    readonly property bool geometryReady: !requestedViewTimer.running
     property bool mixerOpen: false
     property real dashboardWidthBudget: theme.controlsDetailWidth
     property real detailWidthLimit: theme.controlsDetailWidth
@@ -49,6 +51,7 @@ FocusScope {
     // text scales without shortening icons or truncating the last row.
     readonly property int dashboardBrightnessHeight: Math.max(90, theme.fontSize(66) + theme.spacing3 * 2)
     property string settingKind: ""
+    readonly property string presentedDetail: settingsPanel.open ? settingKind : vhsPanel.open ? "vhs" : themePanel.open ? "theme" : wallpaperPanel.open ? "wallpaper" : networkPanel.open ? "network" : bluetoothPanel.open ? "bluetooth" : sessionPanel.open ? "session" : resourcesPanel.open ? "resources" : statusOpen ? "status" : mixerOpen ? "mixer" : recordingsPanel.open ? "recordings" : ""
     readonly property bool detailsVisible: settingsPanel.open || vhsPanel.open || trayMenu.open || networkPanel.open || bluetoothPanel.open || themePanel.open || wallpaperPanel.open || sessionPanel.open || resourcesPanel.open || statusOpen || mixerOpen || recordingsPanel.open
     property bool resetConfirmPending: false
     property bool resetRunning: false
@@ -164,7 +167,7 @@ FocusScope {
     // exposed detail can drive the panel contour. The dashboard uses its
     // owning tiles instead, including when several operations overlap.
     readonly property var foregroundSource: Array.from(viewStack.children).find(source => source.exposed === true && source.foregroundBusy === true) || null
-    readonly property bool dashboardExposed: engaged && !detailsVisible
+    readonly property bool dashboardExposed: presentationActive && engaged && !detailsVisible
     readonly property bool foregroundBusy: !!foregroundSource || (mixerOpen && audioDeck.foregroundBusy)
     readonly property string foregroundRole: foregroundSource?.foregroundRole || (mixerOpen && audioDeck.foregroundBusy ? "audio" : "")
     readonly property bool displayBusy: !!settingsPanel.panel?.displayOperationBusy
@@ -582,6 +585,10 @@ FocusScope {
     function applyRequestedView(): void {
         if (!engaged)
             return;
+        // A direct tile action already opened its destination. Synchronising
+        // the navigation state must not close and reopen the same panel.
+        if (requestedView.length > 0 && requestedView === presentedDetail)
+            return;
 
         if (["windows", "glass", "nightLight", "alerts", "stay", "power", "reactive", "spectrum", "bar", "frame", "motion", "displays"].includes(requestedView))
             openSetting(requestedView);
@@ -672,9 +679,14 @@ FocusScope {
             root.motion.endKeyboardAdjustment();
             helpOpen = false;
             selectedSlider = "";
-            closeDetails();
+            if (!visible)
+                closeDetails();
         }
     }
+
+    // An outgoing detail keeps its layout until the page fade completes.
+    onVisibleChanged: if (!visible && !engaged)
+        closeDetails()
 
     onRequestedViewChanged: requestedViewTimer.restart()
 
@@ -691,45 +703,21 @@ FocusScope {
 
     function openNetwork(): void {
         helpOpen = false;
-        settingsPanel.closeView();
-        recordingsPanel.closeView();
-        mixerOpen = false;
-        resourcesPanel.closeView();
-        trayMenu.closeMenu();
-        wallpaperPanel.closeView();
-        bluetoothPanel.closeView();
-        themePanel.closeView();
-        sessionPanel.closeView();
+        closeDetails();
         networkPanel.openView();
         markDetail("network");
     }
 
     function openBluetooth(): void {
         helpOpen = false;
-        settingsPanel.closeView();
-        recordingsPanel.closeView();
-        mixerOpen = false;
-        resourcesPanel.closeView();
-        trayMenu.closeMenu();
-        wallpaperPanel.closeView();
-        networkPanel.closeView();
-        themePanel.closeView();
-        sessionPanel.closeView();
+        closeDetails();
         bluetoothPanel.openView();
         markDetail("bluetooth");
     }
 
     function openWallpaper(): void {
         helpOpen = false;
-        settingsPanel.closeView();
-        recordingsPanel.closeView();
-        mixerOpen = false;
-        resourcesPanel.closeView();
-        trayMenu.closeMenu();
-        networkPanel.closeView();
-        bluetoothPanel.closeView();
-        themePanel.closeView();
-        sessionPanel.closeView();
+        closeDetails();
         wallpaperPanel.openView();
         markDetail("wallpaper");
     }
@@ -744,15 +732,7 @@ FocusScope {
 
     function openTheme(): void {
         helpOpen = false;
-        settingsPanel.closeView();
-        recordingsPanel.closeView();
-        mixerOpen = false;
-        resourcesPanel.closeView();
-        trayMenu.closeMenu();
-        wallpaperPanel.closeView();
-        networkPanel.closeView();
-        bluetoothPanel.closeView();
-        sessionPanel.closeView();
+        closeDetails();
         themePanel.openView();
         markDetail("theme");
     }
@@ -763,15 +743,7 @@ FocusScope {
 
     function openSession(): void {
         helpOpen = false;
-        settingsPanel.closeView();
-        recordingsPanel.closeView();
-        mixerOpen = false;
-        resourcesPanel.closeView();
-        trayMenu.closeMenu();
-        wallpaperPanel.closeView();
-        networkPanel.closeView();
-        bluetoothPanel.closeView();
-        themePanel.closeView();
+        closeDetails();
         sessionPanel.openView();
         markDetail("session");
     }
@@ -782,15 +754,7 @@ FocusScope {
 
     function openResources(): void {
         helpOpen = false;
-        settingsPanel.closeView();
-        recordingsPanel.closeView();
-        mixerOpen = false;
-        trayMenu.closeMenu();
-        wallpaperPanel.closeView();
-        networkPanel.closeView();
-        bluetoothPanel.closeView();
-        themePanel.closeView();
-        sessionPanel.closeView();
+        closeDetails();
         resourcesPanel.openView();
         markDetail("resources");
     }
@@ -802,7 +766,6 @@ FocusScope {
 
     function openStatus(): void {
         helpOpen = false;
-        settingsPanel.closeView();
         closeDetails();
         statusPanel.openView();
         markDetail("status");
@@ -811,30 +774,14 @@ FocusScope {
 
     function openMixer(): void {
         helpOpen = false;
-        settingsPanel.closeView();
-        recordingsPanel.closeView();
-        trayMenu.closeMenu();
-        wallpaperPanel.closeView();
-        resourcesPanel.closeView();
-        networkPanel.closeView();
-        bluetoothPanel.closeView();
-        themePanel.closeView();
-        sessionPanel.closeView();
+        closeDetails();
         mixerOpen = true;
         markDetail("mixer");
     }
 
     function openRecordings(): void {
         helpOpen = false;
-        settingsPanel.closeView();
-        mixerOpen = false;
-        trayMenu.closeMenu();
-        wallpaperPanel.closeView();
-        resourcesPanel.closeView();
-        networkPanel.closeView();
-        bluetoothPanel.closeView();
-        themePanel.closeView();
-        sessionPanel.closeView();
+        closeDetails();
         recordingsPanel.openView();
         if (!requestedView.startsWith("recordings:"))
             markDetail("recordings");
@@ -1551,6 +1498,7 @@ FocusScope {
                     AudioMixerContent {
                         id: audioDeck
                         destinationBusy: mixerView.foregroundBusy
+                        foregroundOutlineVisible: root.dashboardExposed
                         appearance: root.appearance
                         width: parent.width
                         height: Math.max(implicitHeight, mediaCard.implicitHeight)
