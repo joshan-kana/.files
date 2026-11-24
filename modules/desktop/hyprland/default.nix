@@ -108,18 +108,13 @@ in
   };
 
   tofi = _: {
-    home = { config, ... }: {
+    home = _: {
       home.packages = [ pkgs.tofi ];
       home.file.".config/tofi/config".text = ''
-        font = ${config.stylix.fonts.monospace.name}
         font-size = 18
-        background-color = #${config.lib.stylix.colors.base00}
-        text-color = #${config.lib.stylix.colors.base07}
-        selection-color = #${config.lib.stylix.colors.base0A}
         width = 45%
         height = 35%
         border-width = 5
-        border-color = #${config.lib.stylix.colors.base03}
         corner-radius = 20
       '';
     };

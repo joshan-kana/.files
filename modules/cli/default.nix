@@ -24,42 +24,6 @@ let
     commit.verbose = true;
   };
   gitSigningFormat = "openpgp";
-  toml = pkgs.formats.toml { };
-  tuicrConfig = toml.generate "tuicr-config.toml" {
-    theme = "stylix";
-    diff_view = "side-by-side";
-    show_file_list = true;
-    mouse = true;
-    wrap = false;
-    relative_line_numbers = false;
-    cursor_line = true;
-    transparent_background = false;
-    review_watch_interval_ms = 1000;
-    no_update_check = true;
-    username = primary.fullName;
-    comment_types = [
-      {
-        id = "issue";
-        definition = "problem that should be fixed before merge";
-      }
-      {
-        id = "suggestion";
-        definition = "possible improvement";
-      }
-      {
-        id = "note";
-        definition = "context or clarification";
-      }
-      {
-        id = "explain";
-        definition = "Explain what the selected code does, how it works, and why it is required here.";
-      }
-      {
-        id = "praise";
-        definition = "positive observation";
-      }
-    ];
-  };
 
   # Module-shaped common fragments intentionally keep native option paths in
   # the let block so nixd can provide completion/hover there in both the NixOS
@@ -443,11 +407,47 @@ in
       };
 
       tuicr = _: {
-        home = _: {
+        home = { config, ... }: {
           home.packages = [ pkgs.tuicr ];
           home.shellAliases.tre = "tuicr -r origin/HEAD..HEAD -w";
           programs.git.settings.alias.review = "!tuicr -w";
-          xdg.configFile."tuicr/config.toml".source = tuicrConfig;
+          xdg.configFile."tuicr/config.toml".source = (pkgs.formats.toml { }).generate "tuicr-config.toml" (
+            {
+              diff_view = "side-by-side";
+              show_file_list = true;
+              mouse = true;
+              wrap = false;
+              relative_line_numbers = false;
+              cursor_line = true;
+              transparent_background = false;
+              review_watch_interval_ms = 1000;
+              no_update_check = true;
+              username = primary.fullName;
+              comment_types = [
+                {
+                  id = "issue";
+                  definition = "problem that should be fixed before merge";
+                }
+                {
+                  id = "suggestion";
+                  definition = "possible improvement";
+                }
+                {
+                  id = "note";
+                  definition = "context or clarification";
+                }
+                {
+                  id = "explain";
+                  definition = "Explain what the selected code does, how it works, and why it is required here.";
+                }
+                {
+                  id = "praise";
+                  definition = "positive observation";
+                }
+              ];
+            }
+            // lib.optionalAttrs config.stylix.enable { theme = "stylix"; }
+          );
         };
       };
 
@@ -516,7 +516,7 @@ in
   };
 
   gh = _: {
-    home = _: {
+    home = { config, ... }: {
       home.shellAliases.dh = "gh dash";
       home.packages = [ pkgs.gh-dash ];
       programs.gh.extensions = [
@@ -524,48 +524,50 @@ in
         pkgs.gh-stack
       ];
       xdg.configFile."gh-dash/config.yml" = {
-        source = (pkgs.formats.yaml { }).generate "gh-dash-config.yml" {
-          defaults = {
-            view = "issues";
-            layout = {
-              issues = {
-                repo.hidden = true;
-                creator.hidden = true;
-                reactions.hidden = true;
-                comments.hidden = true;
-                updatedAt.hidden = true;
-                createdAt.hidden = true;
-              };
-              projects = {
-                enabled = true;
-                fields = [
-                  {
-                    name = "Status";
-                    width = 12;
-                  }
-                  {
-                    name = "Priority";
-                    width = 10;
-                  }
-                  {
-                    name = "Area";
-                    width = 14;
-                  }
-                  {
-                    name = "Kind";
-                    width = 12;
-                  }
-                ];
+        source = (pkgs.formats.yaml { }).generate "gh-dash-config.yml" (
+          {
+            defaults = {
+              view = "issues";
+              layout = {
+                issues = {
+                  repo.hidden = true;
+                  creator.hidden = true;
+                  reactions.hidden = true;
+                  comments.hidden = true;
+                  updatedAt.hidden = true;
+                  createdAt.hidden = true;
+                };
+                projects = {
+                  enabled = true;
+                  fields = [
+                    {
+                      name = "Status";
+                      width = 12;
+                    }
+                    {
+                      name = "Priority";
+                      width = 10;
+                    }
+                    {
+                      name = "Area";
+                      width = 14;
+                    }
+                    {
+                      name = "Kind";
+                      width = 12;
+                    }
+                  ];
+                };
               };
             };
-          };
-          include = [ "stylix.yml" ];
-          pager.diff = ''sh -c 'pager="$(git config --get pager.diff || git config --get core.pager)"; [ -n "$pager" ] || exec cat; exec sh -c "$pager"' '';
-          repoPaths = {
-            "joshan-kana/.files" = repoPath;
-          };
-          theme.ui.table.compact = true;
-        };
+            pager.diff = ''sh -c 'pager="$(git config --get pager.diff || git config --get core.pager)"; [ -n "$pager" ] || exec cat; exec sh -c "$pager"' '';
+            repoPaths = {
+              "joshan-kana/.files" = repoPath;
+            };
+            theme.ui.table.compact = true;
+          }
+          // lib.optionalAttrs config.stylix.enable { include = [ "stylix.yml" ]; }
+        );
       };
     };
   };

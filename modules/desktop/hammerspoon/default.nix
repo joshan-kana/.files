@@ -14,7 +14,7 @@ let
 in
 {
   home =
-    _:
+    { config, ... }:
     let
       runtime = ''
         return {
@@ -45,7 +45,7 @@ in
         // {
           ".hammerspoon/nix_runtime.lua".text = runtime;
           ".hammerspoon/.nix-config-hash" = {
-            text = builtins.hashString "sha256" "${configHash}\n${runtime}";
+            text = builtins.hashString "sha256" "${configHash}\n${runtime}\n${lib.boolToString config.stylix.enable}";
             onChange = ''
               if /usr/bin/pgrep -x Hammerspoon > /dev/null; then
                 ${pkgs.hammerspoon}/Applications/Hammerspoon.app/Contents/Frameworks/hs/hs -q -c 'hs.reload()'
