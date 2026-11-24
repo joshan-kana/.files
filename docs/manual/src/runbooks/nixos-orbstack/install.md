@@ -34,6 +34,14 @@ orb -m "$HOST_NAME" -u root nixos-rebuild switch \
   --flake "$DOTFILES_REPO#$HOST_NAME"
 ```
 
+Check the primary account before using password-based `run0` authentication. For a new or locked account, set its local password from the OrbStack root session; preserve an existing account password unless intentionally rotating it:
+
+```sh
+orb -m "$HOST_NAME" -u root passwd -S "$PRIMARY_USER"
+# If the account is locked (L) or has no password (NP), set one:
+orb -m "$HOST_NAME" -u root passwd "$PRIMARY_USER"
+```
+
 Verify the profile and the vendored OrbStack integration:
 
 ```sh

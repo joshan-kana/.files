@@ -24,7 +24,6 @@ in
       "networkmanager"
       "wheel"
     ];
-    initialPassword = "test";
   };
 }
 // lib.optionalAttrs isDarwin {

@@ -10,3 +10,11 @@ if [[ -e "/mnt$USER_SECRETS_DIR" ]]; then
   sudo nixos-enter --root /mnt -c "chown -R -- '$PRIMARY_USER:users' '$USER_SECRETS_DIR'"
 fi
 ```
+
+Set a local password for a new or locked primary account before rebooting. Existing restored account passwords remain unchanged. The password is entered interactively and is not part of the Nix configuration:
+
+```sh
+sudo nixos-enter --root /mnt -c "passwd -S '$PRIMARY_USER'"
+# If the account is locked (L) or has no password (NP), set one:
+sudo nixos-enter --root /mnt -c "passwd '$PRIMARY_USER'"
+```
