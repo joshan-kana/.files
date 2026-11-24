@@ -44,9 +44,16 @@ FocusScope {
         return grouped;
     }
 
+    readonly property var rows: NotificationSemantics.presentationRows(groups, expandedGroupKey)
+    readonly property int selectedRowIndex: {
+        const group = selectedGroup();
+        const member = group && group.key === expandedGroupKey ? selectedMemberIndex : 0;
+        return rows.findIndex(row => row.groupIndex === selectedIndex && row.memberIndex === member);
+    }
+
     signal closeRequested
     implicitWidth: 620
-    implicitHeight: (groups.length === 0 ? 295 : Math.max(360, 235 + Math.min(groups.length, 5) * 116)) + footer.implicitHeight + theme.spacing2
+    implicitHeight: header.implicitHeight + footer.implicitHeight + theme.spacing4 + theme.spacing2 * 2 + (groups.length === 0 ? theme.fontSize(100) : Math.min(theme.fontSize(510), Math.max(theme.fontSize(80), list.contentHeight)))
     focus: engaged
 
     function focusRequested(): void {
@@ -59,6 +66,8 @@ FocusScope {
         restoringSelection = true;
         selectedIndex = match.groupIndex;
         selectedMemberIndex = match.memberIndex;
+        if (match.memberIndex > 0)
+            expandedGroupKey = groups[match.groupIndex].key;
         selectedNotificationAnchor = selected;
         restoringSelection = false;
         Qt.callLater(ensureSelectedVisible);
@@ -142,20 +151,16 @@ FocusScope {
         }
     }
 
-    function ensureSelectedVisible(): void {
-        const groupItem = list.itemAtIndex(selectedIndex);
-        if (!groupItem || !groupItem.expanded)
-            return;
+    function selectedCard(): var {
+        const item = list.itemAtIndex(selectedRowIndex);
+        return item ? item.card : null;
+    }
 
-        const card = groupItem.memberAt(selectedMemberIndex);
-        if (!card)
-            return;
-        const top = card.mapToItem(list.contentItem, 0, 0).y;
-        const bottom = top + card.height;
-        if (bottom > list.contentY + list.height)
-            list.contentY = Math.min(Math.max(0, list.contentHeight - list.height), bottom - list.height);
-        else if (top < list.contentY)
-            list.contentY = Math.max(0, top);
+    function ensureSelectedVisible(): void {
+        if (selectedRowIndex >= 0) {
+            list.forceLayout();
+            list.positionViewAtIndex(selectedRowIndex, ListView.Contain);
+        }
     }
 
     onSelectedMemberIndexChanged: {
@@ -213,8 +218,8 @@ FocusScope {
             return;
         expandedGroupKey = group.key;
         Qt.callLater(() => {
-            const groupItem = list.itemAtIndex(selectedIndex);
-            const card = groupItem ? groupItem.memberAt(selectedMemberIndex) : null;
+            ensureSelectedVisible();
+            const card = selectedCard();
             if (card && card.notification === notification)
                 card.focusReply();
         });
@@ -234,8 +239,7 @@ FocusScope {
         const notification = selectedNotification();
         if (!notification)
             return;
-        const groupItem = list.itemAtIndex(selectedIndex);
-        const card = groupItem ? groupItem.memberAt(expandedGroupKey === groupItem.modelData.key ? selectedMemberIndex : 0) : null;
+        const card = selectedCard();
         if (card && card.notification === notification)
             card.dismissAnimated();
         else
@@ -451,10 +455,11 @@ FocusScope {
                 topMargin: center.theme.spacing4
                 bottomMargin: center.theme.spacing2
             }
-            model: center.groups
+            model: center.rows
+            cacheBuffer: 120
             spacing: center.theme.spacing3
             clip: true
-            currentIndex: center.selectedIndex
+            currentIndex: center.selectedRowIndex
             boundsBehavior: Flickable.StopAtBounds
 
             remove: Transition {
@@ -478,47 +483,24 @@ FocusScope {
             delegate: Item {
                 id: groupItem
                 required property var modelData
-                required property int index
-                readonly property bool expanded: center.expandedGroupKey === modelData.key
+                readonly property var group: modelData.group
+                readonly property bool expanded: center.expandedGroupKey === group.key
+                readonly property var card: modelData.memberIndex >= 0 && rowLoader.item ? rowLoader.item.card : null
                 width: ListView.view.width
-                implicitHeight: groupColumn.implicitHeight
+                implicitHeight: rowLoader.item ? rowLoader.item.height : center.theme.fontSize(80)
                 height: implicitHeight
-                clip: true
 
-                function memberAt(index: int): var {
-                    const member = members.itemAt(index);
-                    return member ? member.card : null;
-                }
-                onHeightChanged: {
-                    if (expanded && center.selectedIndex === index && center.selectedMemberIndex > 0)
-                        center.ensureSelectedVisible();
-                }
-
-                Behavior on height {
-                    Anim {
-                        motion: center.motion
-                        type: Anim.FastSpatial
-                    }
-                }
-
-                Column {
-                    id: groupColumn
+                Loader {
+                    id: rowLoader
                     width: parent.width
-                    spacing: center.theme.spacing2
+                    sourceComponent: groupItem.modelData.memberIndex < 0 ? groupHeader : groupMember
+                }
 
-                    move: Transition {
-                        NumberAnimation {
-                            properties: "x,y"
-                            duration: center.motion.spatialFast
-                            easing.type: center.motion.spatialType
-                            easing.bezierCurve: center.motion.spatialCurve
-                        }
-                    }
-
+                Component {
+                    id: groupHeader
                     Item {
                         width: parent.width
-                        height: visible ? Math.max(34, groupLabel.implicitHeight + center.theme.spacing2) : 0
-                        visible: groupItem.modelData.notifications.length > 1 && groupItem.expanded
+                        height: Math.max(34, groupLabel.implicitHeight + center.theme.spacing2)
 
                         Row {
                             anchors.verticalCenter: parent.verticalCenter
@@ -526,14 +508,14 @@ FocusScope {
 
                             Text {
                                 id: groupLabel
-                                text: groupItem.modelData.name
+                                text: groupItem.group.name
                                 color: center.theme.readableRoleColor("notifications")
                                 font.family: center.runtime.fontSans
                                 font.pixelSize: center.theme.fontSize(10)
                                 font.weight: Font.DemiBold
                             }
                             Text {
-                                text: groupItem.modelData.notifications.length + " notifications · " + groupItem.modelData.notifications.filter(item => !center.notificationState.isRead(item)).length + " unread " + (groupItem.expanded ? "󰅃" : "󰅀")
+                                text: groupItem.group.notifications.length + " notifications · " + groupItem.group.notifications.filter(item => !center.notificationState.isRead(item)).length + " unread " + (groupItem.expanded ? "󰅃" : "󰅀")
                                 color: center.theme.textMuted
                                 font.family: center.runtime.fontSans
                                 font.pixelSize: center.theme.fontSize(9)
@@ -544,108 +526,107 @@ FocusScope {
                             motion: center.motion
                             cornerRadius: center.theme.radiusSmall
                             Accessible.role: Accessible.Button
-                            Accessible.name: (groupItem.modelData.name || "Notifications") + ", " + groupItem.modelData.notifications.length + " notifications"
+                            Accessible.name: (groupItem.group.name || "Notifications") + ", " + groupItem.group.notifications.length + " notifications"
                             Accessible.description: groupItem.expanded ? "Collapse notification group" : "Expand notification group"
                             onActivated: {
-                                center.selectedIndex = groupItem.index;
+                                center.selectedIndex = groupItem.modelData.groupIndex;
                                 center.selectedMemberIndex = 0;
                                 center.toggleExpanded();
                             }
                         }
                     }
+                }
 
-                    Repeater {
-                        id: members
-                        model: !groupItem || !groupItem.modelData ? [] : groupItem.expanded ? groupItem.modelData.notifications : groupItem.modelData.notifications.slice(0, 1)
+                Component {
+                    id: groupMember
+                    Item {
+                        id: member
+                        readonly property var modelData: groupItem.modelData.notification
+                        readonly property int index: groupItem.modelData.memberIndex
+                        readonly property bool stacked: !groupItem.expanded && groupItem.group.notifications.length > 1
+                        width: groupItem.width
+                        height: notificationCard.implicitHeight + (stacked ? center.theme.spacing3 + center.theme.spacing1 : 0)
+                        property alias card: notificationCard
 
-                        delegate: Item {
-                            id: member
-                            required property var modelData
-                            required property int index
-                            readonly property bool stacked: !groupItem.expanded && groupItem.modelData.notifications.length > 1
-                            width: groupColumn.width
-                            height: notificationCard.implicitHeight + (stacked ? center.theme.spacing3 + center.theme.spacing1 : 0)
-                            property alias card: notificationCard
+                        Repeater {
+                            model: member.stacked ? 2 : 0
+                            delegate: SquircleSurface {
+                                required property int index
+                                x: center.theme.spacing2 * (2 - index)
+                                y: notificationCard.height - center.theme.spacing3 * 2 + center.theme.spacing2 * (2 - index)
+                                width: member.width - x * 2
+                                height: center.theme.spacing3 * 2
+                                cornerRadius: center.theme.radiusSmall
+                                exponent: center.theme.squircleExponent
+                                fillColor: index === 0 ? center.theme.layer2 : center.theme.layer3
+                                borderColor: center.theme.subtleBorder
+                                borderWidth: center.theme.borderThin
+                            }
+                        }
 
-                            Repeater {
-                                model: member.stacked ? 2 : 0
-                                delegate: SquircleSurface {
-                                    required property int index
-                                    x: center.theme.spacing2 * (2 - index)
-                                    y: notificationCard.height - center.theme.spacing3 * 2 + center.theme.spacing2 * (2 - index)
-                                    width: member.width - x * 2
-                                    height: center.theme.spacing3 * 2
-                                    cornerRadius: center.theme.radiusSmall
-                                    exponent: center.theme.squircleExponent
-                                    fillColor: index === 0 ? center.theme.layer2 : center.theme.layer3
-                                    borderColor: center.theme.subtleBorder
-                                    borderWidth: center.theme.borderThin
+                        NotificationCard {
+                            id: notificationCard
+                            width: member.width
+                            height: implicitHeight
+                            notification: member.modelData
+                            replyDraft: center.replyDraftFor(member.modelData)
+                            read: center.notificationState.isRead(member.modelData)
+                            runtime: center.runtime
+                            theme: center.theme
+                            motion: center.motion
+                            notificationState: center.notificationState
+                            groupCount: !groupItem || !groupItem.modelData ? 1 : groupItem.expanded ? 1 : groupItem.group.notifications.length
+                            selected: !!groupItem && center.selectedIndex === groupItem.modelData.groupIndex && center.selectedMemberIndex === member.index
+                            expanded: !!groupItem && groupItem.expanded && selected
+                            onActivated: {
+                                const sameSelection = center.selectedIndex === groupItem.modelData.groupIndex && center.selectedMemberIndex === member.index;
+                                center.selectedIndex = groupItem.modelData.groupIndex;
+                                center.selectedMemberIndex = member.index;
+                                if (sameSelection)
+                                    center.toggleExpanded();
+                                else
+                                    center.expandedGroupKey = groupItem.group.key;
+                                center.rememberSelection();
+                                center.focusKeyboard();
+                            }
+                            onDefaultRequested: {
+                                if (!center.notificationState.invokeDefault(member.modelData))
+                                    center.toggleExpanded();
+                            }
+                            onActionRequested: action => center.notificationState.invokeAction(member.modelData, action)
+                            onReplyRequested: message => {
+                                center.storeReplyDraft(member.modelData, "");
+                                center.replyOwner = null;
+                                center.replyEditing = false;
+                                center.notificationState.sendReply(member.modelData, message);
+                                center.focusKeyboard();
+                            }
+                            onReplyTextEdited: message => center.storeReplyDraft(member.modelData, message)
+                            onReplyFocusRequested: {
+                                center.selectedIndex = groupItem.modelData.groupIndex;
+                                center.selectedMemberIndex = member.index;
+                                center.rememberSelection();
+                                center.focusReply();
+                            }
+                            onReplyFocusChanged: focused => {
+                                if (focused) {
+                                    center.replyOwner = member.modelData;
+                                    center.replyEditing = true;
                                 }
                             }
-
-                            NotificationCard {
-                                id: notificationCard
-                                width: member.width
-                                height: implicitHeight
-                                notification: member.modelData
-                                replyDraft: center.replyDraftFor(member.modelData)
-                                read: center.notificationState.isRead(member.modelData)
-                                runtime: center.runtime
-                                theme: center.theme
-                                motion: center.motion
-                                notificationState: center.notificationState
-                                groupCount: !groupItem || !groupItem.modelData ? 1 : groupItem.expanded ? 1 : groupItem.modelData.notifications.length
-                                selected: !!groupItem && center.selectedIndex === groupItem.index && center.selectedMemberIndex === member.index
-                                expanded: !!groupItem && groupItem.expanded && selected
-                                onActivated: {
-                                    const sameSelection = center.selectedIndex === groupItem.index && center.selectedMemberIndex === member.index;
-                                    center.selectedIndex = groupItem.index;
-                                    center.selectedMemberIndex = member.index;
-                                    if (sameSelection)
-                                        center.toggleExpanded();
-                                    else
-                                        center.expandedGroupKey = groupItem.modelData.key;
-                                    center.rememberSelection();
-                                    center.focusKeyboard();
-                                }
-                                onDefaultRequested: {
-                                    if (!center.notificationState.invokeDefault(member.modelData))
-                                        center.toggleExpanded();
-                                }
-                                onActionRequested: action => center.notificationState.invokeAction(member.modelData, action)
-                                onReplyRequested: message => {
-                                    center.storeReplyDraft(member.modelData, "");
-                                    center.replyOwner = null;
-                                    center.replyEditing = false;
-                                    center.notificationState.sendReply(member.modelData, message);
-                                    center.focusKeyboard();
-                                }
-                                onReplyTextEdited: message => center.storeReplyDraft(member.modelData, message)
-                                onReplyFocusRequested: {
-                                    center.selectedIndex = groupItem.index;
-                                    center.selectedMemberIndex = member.index;
-                                    center.rememberSelection();
-                                    center.focusReply();
-                                }
-                                onReplyFocusChanged: focused => {
-                                    if (focused) {
-                                        center.replyOwner = member.modelData;
-                                        center.replyEditing = true;
-                                    }
-                                }
-                                onReplyFinished: {
-                                    center.replyOwner = null;
-                                    center.replyEditing = false;
-                                    center.focusKeyboard();
-                                }
-                                onReadToggled: center.notificationState.toggleRead(member.modelData)
-                                onDismissRequested: center.dismissNotification(member.modelData)
+                            onReplyFinished: {
+                                center.replyOwner = null;
+                                center.replyEditing = false;
+                                center.focusKeyboard();
                             }
+                            onReadToggled: center.notificationState.toggleRead(member.modelData)
+                            onDismissRequested: center.dismissNotification(member.modelData)
                         }
                     }
                 }
             }
-            onCurrentIndexChanged: positionViewAtIndex(currentIndex, ListView.Contain)
+            onCurrentIndexChanged: if (currentIndex >= 0)
+                positionViewAtIndex(currentIndex, ListView.Contain)
         }
 
         FocusScope {

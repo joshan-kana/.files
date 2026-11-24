@@ -38,7 +38,7 @@ test("wall clock formats midnight, noon and overnight schedule boundaries consis
 test("collapsed groups have real stack geometry and a single selected expansion action", () => {
   assert.match(
     qml("NotificationContent.qml"),
-    /stacked: !groupItem.expanded && groupItem.modelData.notifications.length > 1/,
+    /stacked: !groupItem.expanded && groupItem.group.notifications.length > 1/,
   );
   assert.match(
     qml("NotificationContent.qml"),

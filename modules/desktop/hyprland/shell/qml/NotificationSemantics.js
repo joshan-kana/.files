@@ -46,3 +46,25 @@ function findNotification(groups, notification) {
   }
   return null;
 }
+
+// Group headers and members share a single scroll model. Expansion creates
+// data rows, not live visual delegates for the entire history.
+function presentationRows(groups, expandedKey) {
+  const rows = [];
+  groups.forEach((group, groupIndex) => {
+    const expanded = group.key === expandedKey;
+    if (expanded && group.notifications.length > 1)
+      rows.push({ group, groupIndex, memberIndex: -1, notification: null });
+    const count = expanded
+      ? group.notifications.length
+      : Math.min(1, group.notifications.length);
+    for (let memberIndex = 0; memberIndex < count; memberIndex++)
+      rows.push({
+        group,
+        groupIndex,
+        memberIndex,
+        notification: group.notifications[memberIndex],
+      });
+  });
+  return rows;
+}

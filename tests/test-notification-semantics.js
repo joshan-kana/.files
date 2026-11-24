@@ -211,3 +211,23 @@ test("reply draft and focus follow the notification across incoming alerts", () 
     /else if \(center\.selectedNotification\(\) === modelData\)\s+center\.replyEditing = false/,
   );
 });
+
+test("expanded notification rows are flat and keep group/member identities", () => {
+  const messages = Array.from({ length: 85 }, (_, i) => ({
+    summary: String(i),
+  }));
+  const groups = [
+    { key: "a", notifications: [{}] },
+    { key: "b", notifications: messages },
+  ];
+  const collapsed = ctx.presentationRows(groups, "");
+  assert.equal(collapsed.length, 2);
+  const expanded = ctx.presentationRows(groups, "b");
+  assert.equal(expanded.length, 87);
+  assert.equal(expanded[1].memberIndex, -1);
+  assert.equal(expanded[86].notification, messages[84]);
+  assert.equal(expanded[86].groupIndex, 1);
+  assert.equal(expanded[86].memberIndex, 84);
+  assert.match(qml("NotificationContent.qml"), /model: center.rows/);
+  assert.doesNotMatch(qml("NotificationContent.qml"), /id: members/);
+});
