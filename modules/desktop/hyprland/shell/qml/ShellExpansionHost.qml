@@ -96,9 +96,9 @@ PanelWindow {
     readonly property SystemContent systemContent: expansionState.currentName === "system" ? loadedContent as SystemContent : null
     readonly property NotificationContent activityContent: expansionState.currentName === "activity" ? loadedContent as NotificationContent : null
     readonly property CalendarContent calendarContent: expansionState.currentName === "calendar" ? loadedContent as CalendarContent : null
-    // All prewarmed views use the same foreground-operation contract.
-    // An operation can finish after navigating away from its original view.
-    readonly property var operationOwner: [contentLoaderA.item, contentLoaderB.item, contentLoaderC.item, contentLoaderD.item, contentLoaderE.item].find(owner => owner && owner.foregroundBusy === true) || null
+    // The operation owner survives navigation; the contour belongs only
+    // to the currently presented page, never another prewarmed loader.
+    readonly property var operationOwner: loadedContent && loadedContent.foregroundBusy === true ? loadedContent : null
     readonly property bool loadingOperationVisible: expansionState.hasCurrent && !!operationOwner
     readonly property color loadingOperationColor: theme.roleColor(operationOwner?.foregroundRole || "")
     readonly property MediaContent mediaContent: expansionState.currentName === "media" ? loadedContent as MediaContent : null

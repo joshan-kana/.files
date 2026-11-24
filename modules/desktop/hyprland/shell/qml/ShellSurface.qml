@@ -25,6 +25,23 @@ SquircleSurface {
     // Their connected outline is painted by DesktopFrame, not by each island.
     property bool reactiveSurface: false
     property bool frameConnected: false
+    property bool foregroundBusy: false
+    property color foregroundColor: theme.accent
+
+    Loader {
+        anchors.fill: parent
+        z: 100
+        active: root.visible && root.foregroundBusy
+        sourceComponent: Component {
+            LoadingOutline {
+                surface: root
+                active: true
+                motionEnabled: root.motion.enabled
+                highlightColor: root.foregroundColor
+                lineWidth: 2
+            }
+        }
+    }
 
     // Change fill alpha, not the Item opacity: children, icons and text stay
     // fully legible while the compositor blurs only the shaped backdrop.

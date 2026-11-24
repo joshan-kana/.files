@@ -32,6 +32,8 @@ Item {
         ShellSurface {
             z: -1
             anchors.fill: parent
+            foregroundBusy: summary.weather.loading && summary.weather.foregroundLoading
+            foregroundColor: summary.theme.roleColor("weather")
             theme: summary.theme
             motion: summary.motion
             surfaceLayer: ShellSurface.Group

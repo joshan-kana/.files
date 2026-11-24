@@ -160,11 +160,15 @@ FocusScope {
     readonly property bool bluetoothOpen: bluetoothPanel.open
     readonly property bool themeOpen: themePanel.open
     readonly property bool wallpaperOpen: wallpaperPanel.open
-    // Each view owns its operation state. Discover busy detail owners through
-    // the shared view stack, rather than maintaining a list of operations.
-    readonly property var foregroundSource: Array.from(viewStack.children).find(source => source.foregroundBusy === true) || null
-    readonly property bool foregroundBusy: resetRunning || nightLight.busy || audioDeck.foregroundBusy || !!foregroundSource
-    readonly property string foregroundRole: foregroundSource?.foregroundRole || (nightLight.busy ? "display" : audioDeck.foregroundBusy ? "audio" : "")
+    // Detail loaders retain their operation state, but only the logically
+    // exposed detail can drive the panel contour. The dashboard uses its
+    // owning tiles instead, including when several operations overlap.
+    readonly property var foregroundSource: Array.from(viewStack.children).find(source => source.exposed === true && source.foregroundBusy === true) || null
+    readonly property bool dashboardExposed: engaged && !detailsVisible
+    readonly property bool foregroundBusy: !!foregroundSource || (mixerOpen && audioDeck.foregroundBusy)
+    readonly property string foregroundRole: foregroundSource?.foregroundRole || (mixerOpen && audioDeck.foregroundBusy ? "audio" : "")
+    readonly property bool displayBusy: !!settingsPanel.panel?.displayOperationBusy
+    readonly property bool nightLightBusy: nightLight.foregroundBusy
     readonly property bool sessionOpen: sessionPanel.open
     readonly property bool sessionConfirmationPending: sessionPanel.open && sessionPanel.armedAction.length > 0
     readonly property bool resourcesOpen: resourcesPanel.open
@@ -949,6 +953,8 @@ FocusScope {
                     icon: DesktopIcons.glyphFor("theme")
                     title: "Themes"
                     shortcut: root.runtime.shellHint("SystemContent.themes")
+                    foregroundBusy: root.dashboardExposed && themePanel.foregroundBusy
+                    foregroundColor: root.theme.roleColor("theme")
                     onActivated: root.openTheme()
                 }
                 ShellAction {
@@ -965,6 +971,8 @@ FocusScope {
                     icon: DesktopIcons.glyphFor("wallpaper")
                     title: "Wallpaper"
                     shortcut: root.runtime.shellHint("SystemContent.wallpaper")
+                    foregroundBusy: root.dashboardExposed && wallpaperPanel.foregroundBusy
+                    foregroundColor: root.theme.roleColor("wallpaper")
                     onActivated: root.openWallpaper()
                 }
                 ShellAction {
@@ -1084,6 +1092,8 @@ FocusScope {
                                 networkConnected: root.system.networkConnected
                             })
                             shortcut: root.runtime.shellHint("SystemContent.network")
+                            foregroundBusy: root.dashboardExposed && networkPanel.foregroundBusy
+                            foregroundColor: root.theme.roleColor("connectivity")
                             detailShortcut: root.runtime.shellHint("SystemContent.networkDetails")
                             connected: root.system.networkConnected
                             primaryAvailable: root.system.wifiAvailable
@@ -1110,6 +1120,8 @@ FocusScope {
                                 active: root.system.bluetoothEnabled
                             })
                             shortcut: root.runtime.shellHint("SystemContent.bluetooth")
+                            foregroundBusy: root.dashboardExposed && bluetoothPanel.foregroundBusy
+                            foregroundColor: root.theme.roleColor("connectivity")
                             detailShortcut: root.runtime.shellHint("SystemContent.bluetoothDetails")
                             connected: root.system.bluetoothEnabled
                             scanning: root.system.bluetoothDiscovering
@@ -1223,6 +1235,8 @@ FocusScope {
                             icon: DesktopIcons.glyphFor("captures")
                             title: "Captures"
                             detailShortcut: root.runtime.shellHint("SystemContent.captures")
+                            foregroundBusy: root.dashboardExposed && recordingsPanel.foregroundBusy
+                            foregroundColor: root.theme.roleColor("capture")
                             activeColor: root.theme.roleColor("capture")
                             onDetailsRequested: root.openRecordings()
                         }
@@ -1236,6 +1250,8 @@ FocusScope {
                             icon: DesktopIcons.glyphFor("displays")
                             title: "Displays"
                             detailShortcut: root.runtime.shellHint("SystemContent.displays")
+                            foregroundBusy: root.dashboardExposed && root.displayBusy
+                            foregroundColor: root.theme.roleColor("display")
                             activeColor: root.theme.roleColor("display")
                             enabled: root.runtime.displaySettings.length > 0
                             onDetailsRequested: root.openSetting("displays")
@@ -1263,6 +1279,8 @@ FocusScope {
                             icon: "󰑓"
                             title: root.resetRunning ? "Restoring…" : "Restore defaults"
                             shortcut: root.runtime.shellHint("SystemContent.reset")
+                            foregroundBusy: root.dashboardExposed && root.resetRunning
+                            foregroundColor: root.theme.roleColor("warning")
                             active: root.resetConfirmPending
                             enabled: !root.resetRunning
                             activeColor: root.theme.roleColor("warning")
@@ -1489,6 +1507,8 @@ FocusScope {
                             })
                             title: root.nightLight.supported ? "Night " + root.nightLight.temperature + " K" : "Night unavailable"
                             shortcut: root.runtime.shellHint("SystemContent.nightLight")
+                            foregroundBusy: root.dashboardExposed && root.nightLightBusy
+                            foregroundColor: root.theme.roleColor("display")
                             detailShortcut: root.runtime.shellHint("SystemContent.nightLightDetails")
                             detailName: "Night Light details"
                             active: root.nightLight.active
@@ -1530,6 +1550,7 @@ FocusScope {
 
                     AudioMixerContent {
                         id: audioDeck
+                        destinationBusy: mixerView.foregroundBusy
                         appearance: root.appearance
                         width: parent.width
                         height: Math.max(implicitHeight, mediaCard.implicitHeight)

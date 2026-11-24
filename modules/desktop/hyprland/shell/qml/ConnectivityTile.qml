@@ -28,6 +28,9 @@ Item {
     readonly property color signalColor: failed ? theme.critical : pending || scanning ? theme.warning : connected ? theme.roleColor("connectivity") : theme.textMuted
     readonly property color foreground: theme.textStrong
 
+    property bool foregroundBusy: false
+    property color foregroundColor: theme.accent
+
     signal activated
 
     implicitHeight: 92
@@ -36,6 +39,8 @@ Item {
 
     ShellSurface {
         id: tileBody
+        foregroundBusy: tile.foregroundBusy
+        foregroundColor: tile.foregroundColor
         scale: interaction.defaultEffectScale
         anchors.fill: parent
         theme: tile.theme

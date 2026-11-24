@@ -23,6 +23,9 @@ Item {
     property bool inlineIconHint: false
     property int horizontalPadding: headerEntry ? theme.spacing4 + theme.spacing2 : compact ? theme.spacing3 : theme.spacing4
 
+    property bool foregroundBusy: false
+    property color foregroundColor: theme.accent
+
     signal activated
 
     implicitWidth: iconOnly ? 44 : Math.max(96, content.implicitWidth + horizontalPadding * 2)
@@ -77,6 +80,8 @@ Item {
         }
         ShellSurface {
             id: buttonSurface
+            foregroundBusy: root.foregroundBusy
+            foregroundColor: root.foregroundColor
             anchors.fill: parent
             theme: root.theme
             motion: root.motion

@@ -120,8 +120,6 @@ Item {
         listingSignature = "";
         deletePending = "";
         statusText = "";
-        editorRequestRunning = false;
-        editorRequestTimeout.stop();
         closeText();
         refresh();
         locationAction("status", "");
@@ -167,8 +165,6 @@ Item {
         if (!open)
             return;
         open = false;
-        editorRequestRunning = false;
-        editorRequestTimeout.stop();
         deletePending = "";
         previewName = "";
         previewPath = "";

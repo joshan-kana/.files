@@ -17,6 +17,9 @@ Item {
     property bool active: false
     property color activeColor: theme.accent
 
+    property bool foregroundBusy: false
+    property color foregroundColor: theme.accent
+
     signal activated
 
     implicitHeight: 78
@@ -25,6 +28,8 @@ Item {
 
     ShellSurface {
         id: chipSurface
+        foregroundBusy: chip.foregroundBusy
+        foregroundColor: chip.foregroundColor
         scale: press.defaultEffectScale
         anchors.fill: parent
         theme: chip.theme

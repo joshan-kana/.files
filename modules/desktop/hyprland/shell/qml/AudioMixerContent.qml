@@ -13,6 +13,7 @@ FocusScope {
     required property AppearancePreferences appearance
 
     property bool compact: false
+    property bool destinationBusy: false
     property bool active: false
     property int selectedIndex: 0
     property int selectedNodeId: -1
@@ -375,6 +376,8 @@ FocusScope {
             z: -1
             anchors.fill: parent
             visible: mixer.compact
+            foregroundBusy: mixer.compact && mixer.active && (mixer.foregroundBusy || mixer.destinationBusy)
+            foregroundColor: mixer.theme.roleColor("audio")
             theme: mixer.theme
             motion: mixer.motion
             surfaceLayer: ShellSurface.Group

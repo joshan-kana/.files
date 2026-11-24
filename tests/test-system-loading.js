@@ -17,11 +17,11 @@ test("busy views participate in the shared outline by default, with explicit pas
   );
   assert.match(
     controls,
-    /Array\.from\(viewStack\.children\)\.find\(source => source\.foregroundBusy === true\)/,
+    /Array\.from\(viewStack\.children\)\.find\(source => source\.exposed === true && source\.foregroundBusy === true\)/,
   );
   assert.match(
     controls,
-    /foregroundBusy: resetRunning \|\| nightLight\.busy \|\| audioDeck\.foregroundBusy \|\| !!foregroundSource/,
+    /foregroundBusy: !!foregroundSource \|\| \(mixerOpen && audioDeck\.foregroundBusy\)/,
   );
   assert.match(
     source("DisplaySettings.qml"),
@@ -59,7 +59,7 @@ test("frame and floating hub share one busy-state source and semantic colour", (
   );
   assert.match(
     host,
-    /\.find\(owner => owner && owner\.foregroundBusy === true\)/,
+    /operationOwner: loadedContent && loadedContent\.foregroundBusy === true \? loadedContent : null/,
   );
   assert.match(
     host,
@@ -73,5 +73,80 @@ test("frame and floating hub share one busy-state source and semantic colour", (
   assert.match(
     frame,
     /active: output\.exposed && output\.busyHere && !frame\.motion\.enabled/,
+  );
+});
+
+test("background operations show only on their owning visible dashboard tiles", () => {
+  const controls = source("SystemContent.qml");
+  assert.match(controls, /dashboardExposed: engaged && !detailsVisible/);
+  for (const owner of [
+    "themePanel.foregroundBusy",
+    "wallpaperPanel.foregroundBusy",
+    "networkPanel.foregroundBusy",
+    "bluetoothPanel.foregroundBusy",
+    "recordingsPanel.foregroundBusy",
+    "root.displayBusy",
+    "root.resetRunning",
+    "root.nightLightBusy",
+  ]) {
+    assert.ok(
+      controls.includes("foregroundBusy: root.dashboardExposed && " + owner),
+      owner,
+    );
+  }
+  assert.match(controls, /destinationBusy: mixerView.foregroundBusy/);
+  assert.match(
+    source("SettingsDetail.qml"),
+    /displayOperationBusy: displayDetails.foregroundBusy/,
+  );
+  assert.match(
+    source("SettingsDetail.qml"),
+    /foregroundBusy: kind === "displays" \? displayOperationBusy : kind === "nightLight" && nightLight.foregroundBusy/,
+  );
+  assert.match(
+    source("WeatherSummary.qml"),
+    /foregroundBusy: summary.weather.loading && summary.weather.foregroundLoading/,
+  );
+  const surface = source("ShellSurface.qml");
+  assert.match(surface, /active: root.visible && root.foregroundBusy/);
+  assert.match(
+    surface,
+    /LoadingOutline \{[\s\S]*?surface: root[\s\S]*?motionEnabled: root.motion.enabled/,
+  );
+  assert.match(
+    source("LoadingOutline.qml"),
+    /active: outline.active && !outline.motionEnabled/,
+  );
+  for (const [name, owner] of [
+    ["ShellAction.qml", "root"],
+    ["QuickSettingChip.qml", "chip"],
+    ["ConnectivityTile.qml", "tile"],
+  ]) {
+    assert.ok(
+      source(name).includes("foregroundBusy: " + owner + ".foregroundBusy"),
+      name,
+    );
+  }
+});
+
+test("navigation cannot clear ongoing operation state", () => {
+  const network = source("NetworkPanel.qml");
+  assert.match(
+    network,
+    /foregroundBusy: .*detailPending \|\| networks.some\(network => network.stateChanging\)/,
+  );
+  const recording = source("RecordingLibrary.qml");
+  for (const name of ["openView", "closeView"]) {
+    const body = recording
+      .split("function " + name + "(): void {")[1]
+      .split("\n    }")[0];
+    assert.doesNotMatch(
+      body,
+      /editorRequestRunning = false|editorRequestTimeout.stop/,
+    );
+  }
+  assert.match(
+    source("NightLightState.qml"),
+    /foregroundBusy: busy \|\| queuedTemperature >= 0/,
   );
 });

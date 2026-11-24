@@ -9,6 +9,7 @@ QtObject {
     property bool supported: runtime.nightLightControl.length > 0
     property bool active: false
     property bool busy: false
+    readonly property bool foregroundBusy: busy || queuedTemperature >= 0 || Object.keys(queuedSchedule).length > 0
     property string mode: "off"
     property int temperature: 4500
     property int effectiveTemperature: 6500
