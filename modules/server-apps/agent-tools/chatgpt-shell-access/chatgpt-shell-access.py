@@ -1,6 +1,7 @@
 """Provide bounded shell execution on explicitly configured hosts."""
 
 import asyncio
+import base64
 import json
 import os
 import shlex
@@ -12,6 +13,7 @@ from dataclasses import dataclass, field
 from pathlib import PurePosixPath
 from typing import Literal
 
+import authorization
 from mcp.server import MCPServer
 
 MAX_OUTPUT_BYTES = 512 * 1024
@@ -22,30 +24,36 @@ JOB_RETENTION_SECONDS = 30 * 60
 WAIT_SECONDS = 10.0
 MAX_WAIT_SECONDS = 30.0
 CANCEL_GRACE_SECONDS = 2.0
+HERDR_EXEC_TIMEOUT_SECONDS = 600
 
 
 @dataclass(frozen=True)
 class RemoteTarget:
-    """Connection and agent-forwarding settings for a remote host."""
+    """SSH connection settings for a configured remote host."""
 
     ssh_target: str
     credential: str
     shell: str
-    forwardAgent: bool  # noqa: N815 - matches the serialized remote target schema
+    execution: Literal["ssh", "systemd-user"] = "ssh"
+    elevation: Literal["deny", "run0"] = "deny"
+
+    def __post_init__(self) -> None:
+        """Reject unsupported remote execution modes before starting the gateway."""
+        if self.execution not in ("ssh", "systemd-user") or self.elevation not in ("deny", "run0"):
+            raise ValueError("unsupported remote execution or elevation mode")
 
 
 CREDENTIALS = os.environ["CREDENTIALS_DIRECTORY"]
-SUDO_AGENT = os.environ["SSH_AUTH_SOCK"]
 REMOTE_AUTH_AGENT = os.environ["CHATGPT_SHELL_REMOTE_AUTH_AGENT"]
-COMMAND_PATH = os.environ["CHATGPT_SHELL_COMMAND_PATH"]
 LOCAL = [os.environ["CHATGPT_SHELL_BASH"], "-lc"]
+COMMAND_PATH = os.environ["CHATGPT_SHELL_COMMAND_PATH"]
 SSH = [
     "ssh",
     "-oBatchMode=yes",
     "-oConnectTimeout=5",
     "-oIdentitiesOnly=yes",
     "-oStrictHostKeyChecking=yes",
-    f"-oUserKnownHostsFile={CREDENTIALS}/chatgpt-shell-known-hosts",
+    f"-oUserKnownHostsFile={os.environ.get('CHATGPT_SHELL_KNOWN_HOSTS', f'{CREDENTIALS}/chatgpt-shell-known-hosts')}",
 ]
 LOCAL_HOST = os.environ["CHATGPT_SHELL_LOCAL_HOST"]
 REMOTE_TARGETS = {name: RemoteTarget(**target) for name, target in json.loads(os.environ["CHATGPT_SHELL_REMOTE_TARGETS"]).items()}
@@ -66,11 +74,111 @@ _ALLOWED_ENV = {
     "TZ",
 }
 COMMAND_ENV = {key: value for key, value in os.environ.items() if key in _ALLOWED_ENV or key.startswith("LC_")}
+HERDR_LOCAL = os.environ.get("CHATGPT_SHELL_HC", "hc")
+WORKER_ENV = json.loads(os.environ["CHATGPT_SHELL_WORKER_ENV"])
+HERDR_SESSION = WORKER_ENV["HC_SESSION"]
+WORKER_USER = os.environ["CHATGPT_SHELL_WORKER"]
+RUN0 = os.environ.get("CHATGPT_SHELL_RUN0", "run0")
+SYSTEMCTL = os.path.join(os.path.dirname(RUN0), "systemctl")
 
 
-def _command_env(host: Host) -> dict[str, str]:
-    environment = COMMAND_ENV.copy()
-    if host != LOCAL_HOST and REMOTE_TARGETS[host].forwardAgent:
+def _require_local_herdr(host: Host) -> None:
+    """Reject attempts to treat existing SSH targets as Herdr Core servers."""
+    if host != LOCAL_HOST:
+        raise ValueError(f"Herdr sessions are hosted on {LOCAL_HOST}; remote commands use SSH")
+
+
+def _herdr_argv(host: Host, arguments: list[str], *, unit_name: str | None = None) -> list[str]:
+    """Herdr Core lives only on the server, under its restricted worker identity."""
+    _require_local_herdr(host)
+    command = f"unset SSH_AUTH_SOCK GH_TOKEN; export HC_SESSION={shlex.quote(HERDR_SESSION)}; exec {shlex.join([HERDR_LOCAL, *arguments])}"
+    return _build_argv(LOCAL_HOST, command, unit_name=unit_name)
+
+
+async def _interrupt_worker_unit(unit_name: str) -> None:
+    """Send SIGINT to the actual Core CLI process, not its run0 client."""
+    process = await asyncio.create_subprocess_exec(
+        RUN0,
+        "--non-interactive",
+        "--pipe",
+        SYSTEMCTL,
+        "kill",
+        "--signal=SIGINT",
+        "--kill-whom=main",
+        f"{unit_name}.service",
+        stdin=asyncio.subprocess.DEVNULL,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    try:
+        _, stderr = await asyncio.wait_for(process.communicate(), timeout=5)
+    except TimeoutError:
+        process.kill()
+        await process.wait()
+        raise RuntimeError("Core worker interruption timed out") from None
+    if process.returncode != 0:
+        raise RuntimeError(f"Core worker interruption failed: {stderr.decode(errors='replace')[:1024]}")
+
+
+async def _herdr(host: Host, arguments: list[str], *, stdin: str | None = None) -> dict[str, object]:
+    """Invoke the native Herdr CLI with a bounded response and no privileged agent forwarding."""
+    unit_name = f"chatgpt-hc-{uuid.uuid4().hex}" if arguments[0] == "exec" else None
+    process = await asyncio.create_subprocess_exec(
+        *_herdr_argv(host, arguments, unit_name=unit_name),
+        stdin=asyncio.subprocess.PIPE if stdin is not None else asyncio.subprocess.DEVNULL,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        env={
+            **{key: value for key, value in _command_env(host).items() if key not in ("SSH_AUTH_SOCK", "GH_TOKEN")},
+            **{key: value for key, value in os.environ.items() if key.startswith("XDG_")},
+        },
+    )
+    try:
+        stdout, stderr = await asyncio.wait_for(
+            process.communicate(stdin.encode() if stdin is not None else None),
+            timeout=HERDR_EXEC_TIMEOUT_SECONDS + 20 if arguments[0] == "exec" else 20,
+        )
+    except asyncio.CancelledError:
+        # run0 runs the Core CLI in a separate service. Signalling only the
+        # gateway's run0 client leaves the Core-owned command running.
+        try:
+            if unit_name is not None:
+                await _interrupt_worker_unit(unit_name)
+            else:
+                with suppress(ProcessLookupError):
+                    process.send_signal(signal.SIGINT)
+            await asyncio.wait_for(process.wait(), timeout=CANCEL_GRACE_SECONDS)
+        except (RuntimeError, TimeoutError) as exc:
+            process.kill()
+            await process.wait()
+            raise RuntimeError("Core command cancellation was not confirmed") from exc
+        raise
+    except TimeoutError:
+        process.kill()
+        await process.wait()
+        raise RuntimeError("Herdr did not respond before its execution deadline") from None
+    if process.returncode != 0:
+        raise RuntimeError(f"Herdr failed: {stderr.decode(errors='replace')[:4096]}")
+    try:
+        return json.loads(stdout)
+    except (ValueError, UnicodeDecodeError) as exc:
+        raise RuntimeError("Herdr returned an invalid response") from exc
+
+
+def _managed_remote(host: Host) -> bool:
+    """Whether an SSH target executes ordinary commands in named user units."""
+    return host in REMOTE_TARGETS and REMOTE_TARGETS[host].execution == "systemd-user"
+
+
+def _can_elevate(host: Host) -> bool:
+    """Only configured native run0 targets can accept privileged operations."""
+    return host == LOCAL_HOST or (host in REMOTE_TARGETS and REMOTE_TARGETS[host].elevation == "run0")
+
+
+def _command_env(host: Host, *, elevated: bool = False) -> dict[str, str]:
+    """Keep credential forwarding separate from ordinary remote SSH commands."""
+    environment = {key: value for key, value in COMMAND_ENV.items() if key not in ("SSH_AUTH_SOCK", "GH_TOKEN")}
+    if elevated and host in REMOTE_TARGETS and REMOTE_TARGETS[host].elevation == "run0":
         environment["SSH_AUTH_SOCK"] = REMOTE_AUTH_AGENT
     return environment
 
@@ -122,6 +230,9 @@ class Job:
     error: str | None = None
     completed_at: float | None = None
     cancel_requested: bool = False
+    awaiting_approval: bool = False
+    elevated: bool = False
+    core_truncated: bool = False
 
 
 jobs: dict[str, Job] = {}
@@ -140,39 +251,120 @@ def _validate_cwd(cwd: str | None) -> str | None:
     return cwd
 
 
-def _build_argv(host: Host, script: str) -> list[str]:
+def _worker_command(script: str, unit_name: str | None = None) -> str:
+    """Enter the server's restricted identity before interpreting an agent script."""
+    arguments = [
+        RUN0,
+        "--non-interactive",
+        "--pipe",
+        *([f"--unit={unit_name}"] if unit_name else []),
+        f"--user={WORKER_USER}",
+        f"--chdir={WORKER_ENV['HOME']}",
+        *(f"--setenv={key}={value}" for key, value in WORKER_ENV.items()),
+        f"--setenv=PATH={COMMAND_PATH}",
+        "--",
+        "bash",
+        "-c",
+        script,
+    ]
+    return shlex.join(arguments)
+
+
+def _build_argv(host: Host, script: str, *, unit_name: str | None = None) -> list[str]:
+    """Run server commands in Herdr's worker; other hosts use existing SSH targets."""
     if host == LOCAL_HOST:
-        environment = "\n".join(
-            [
-                f"export PATH={shlex.quote(COMMAND_PATH)}:$PATH",
-                f"export SSH_AUTH_SOCK={shlex.quote(SUDO_AGENT)}",
-            ]
-        )
-        return [*LOCAL, f"{environment}\n{script}"]
+        return [
+            *LOCAL,
+            f"export PATH={shlex.quote(COMMAND_PATH)}:$PATH\nexec {_worker_command(script, unit_name)}",
+        ]
     target = REMOTE_TARGETS[host]
+    if target.execution == "systemd-user":
+        # Use the configured remote account without additional host services.
+        unit = [f"--unit=chatgpt-shell-{unit_name}"] if unit_name else []
+        options = [
+            "systemd-run",
+            "--user",
+            "--quiet",
+            "--wait",
+            "--pipe",
+            "--collect",
+            *unit,
+            "--property=NoNewPrivileges=yes",
+            "--property=PrivateTmp=yes",
+            "--property=PrivatePIDs=yes",
+            "--property=ProtectSystem=full",
+            "--property=TemporaryFileSystem=/run/user:ro",
+        ]
+        # Expose the Wayland display only, not the compositor's control socket.
+        # Hyprland control IPC could launch commands outside the isolated unit.
+        # Keep SSH agents and the session bus hidden from ordinary jobs.
+        # Discover an active desktop at execution time; headless jobs still work.
+        desktop = """
+runtime=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
+wayland=$(systemctl --user show-environment | sed -n 's/^WAYLAND_DISPLAY=//p' | head -1)
+set --
+case "$wayland" in
+  wayland-[0-9]*)
+    if [ -S "$runtime/$wayland" ]; then
+      set -- "--property=BindReadOnlyPaths=$runtime/$wayland"
+    fi
+    ;;
+esac
+"""
+        # Expand HOME in the remote login shell before systemd validates paths.
+        private_paths = '--property="InaccessiblePaths=$HOME/.ssh $HOME/.secrets"'
+        remote_command = desktop + f'exec {shlex.join(options)} {private_paths} "$@" {shlex.join([target.shell, "-lc", script])}'
+    else:
+        remote_command = f"exec {shlex.join([target.shell, '-lc', script])}"
     return [
         *SSH,
-        f"-oForwardAgent={'yes' if target.forwardAgent else 'no'}",
+        "-oForwardAgent=no",
         "-i",
         f"{CREDENTIALS}/{target.credential}",
         target.ssh_target,
-        f"exec {target.shell} -lc {shlex.quote(script)}",
+        remote_command,
     ]
 
 
-def _command_script(command: str, cwd: str | None, marker: str) -> str:
-    return "\n".join(
+def _build_elevated_argv(host: Host, script: str) -> list[str]:
+    """Reach the trusted controller identity, never the unprivileged worker."""
+    if host == LOCAL_HOST:
+        return [
+            *LOCAL,
+            f"export PATH={shlex.quote(COMMAND_PATH)}:$PATH\n{script}",
+        ]
+    if not _can_elevate(host):
+        raise PermissionError(f"elevation broker unavailable on {host}")
+    return [
+        *SSH,
+        "-oForwardAgent=yes",
+        "-i",
+        f"{CREDENTIALS}/{REMOTE_TARGETS[host].credential}",
+        REMOTE_TARGETS[host].ssh_target,
+        f"exec {REMOTE_TARGETS[host].shell} -lc {shlex.quote(script)}",
+    ]
+
+
+def _command_script(command: str, cwd: str | None, marker: str | None) -> str:
+    lines = []
+    if marker is not None:
+        lines.append(f"printf '%s%s\\n' {shlex.quote(marker)} \"$$\"")
+    lines.extend(
         [
-            f"printf '%s%s\\n' {shlex.quote(marker)} \"$$\"",
             f"cd -- {shlex.quote(cwd)} || exit 125" if cwd else 'cd -- "$HOME" || exit 125',
             command,
         ]
     )
+    return "\n".join(lines)
 
 
-async def _read_output(job: Job, marker: str) -> None:
+async def _read_output(job: Job, marker: str | None) -> None:
     assert job.process is not None
     assert job.process.stdout is not None
+    if marker is None:
+        while chunk := await job.process.stdout.read(64 * 1024):
+            job.output.append(chunk)
+        return
     marker_bytes = marker.encode()
 
     while line := await job.process.stdout.readline():
@@ -204,18 +396,74 @@ async def _write_stdin(process: asyncio.subprocess.Process, stdin: str | None) -
             await process.stdin.wait_closed()
 
 
+async def _run_herdr_exec(job: Job, command: str, cwd: str | None, stdin: str | None) -> None:
+    """Use Core's exact process streams for ordinary commands, not PTY snapshots."""
+    arguments = ["exec", "--json"]
+    if stdin is not None:
+        arguments.append("--stdin")
+    arguments.extend(
+        [
+            "--timeout",
+            str(HERDR_EXEC_TIMEOUT_SECONDS),
+            "--cwd",
+            cwd or WORKER_ENV["HOME"],
+            "bash",
+            "-c",
+            "exec 2>&1\n" + command,
+        ]
+    )
+    response = await _herdr(job.host, arguments, stdin=stdin)
+    for stream in ("stdout", "stderr"):
+        encoded = response.get(stream)
+        if not isinstance(encoded, str):
+            raise RuntimeError("Herdr returned an invalid exec response")
+        job.output.append(base64.b64decode(encoded, validate=True))
+    code = response.get("code")
+    if not isinstance(code, int):
+        raise RuntimeError("Herdr did not return an exit code")
+    job.exit_code = code
+    if response.get("truncated"):
+        job.core_truncated = True
+        job.output.append(b"\n[Herdr truncated the exec output]\n")
+
+
 async def _run(job: Job, command: str, cwd: str | None, stdin: str | None) -> None:
     marker = f"__CHATGPT_SHELL_PID_{job.request_id}__="
+    target_identity = "root" if job.elevated else WORKER_USER
+    if not job.elevated and job.host in REMOTE_TARGETS:
+        target_identity = REMOTE_TARGETS[job.host].ssh_target.split("@", 1)[0]
     try:
+        job.awaiting_approval = True
+        await authorization.authorize(
+            job.request_id,
+            job.host,
+            "elevation" if job.elevated else "commands",
+            command,
+            cwd,
+            stdin,
+            target_identity=target_identity,
+        )
+        job.awaiting_approval = False
+        if job.host == LOCAL_HOST and not job.elevated:
+            await _run_herdr_exec(job, command, cwd, stdin)
+            return
+        named_remote_unit = _managed_remote(job.host) and not job.elevated
+        output_marker = None if named_remote_unit else marker
+        script = _command_script(command, cwd, output_marker)
+        if named_remote_unit:
+            argv = _build_argv(job.host, script, unit_name=job.request_id)
+        else:
+            build = _build_elevated_argv if job.elevated else _build_argv
+            argv = build(job.host, script)
         job.process = await asyncio.create_subprocess_exec(
-            *_build_argv(job.host, _command_script(command, cwd, marker)),
+            *argv,
             stdin=asyncio.subprocess.PIPE if stdin is not None else asyncio.subprocess.DEVNULL,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,
-            env=_command_env(job.host),
+            env=_command_env(job.host, elevated=job.elevated),
             start_new_session=True,
         )
-        reader = asyncio.create_task(_read_output(job, marker))
+        reader = asyncio.create_task(_read_output(job, output_marker))
         writer = asyncio.create_task(_write_stdin(job.process, stdin))
         job.exit_code = await job.process.wait()
         await writer
@@ -230,17 +478,18 @@ async def _run(job: Job, command: str, cwd: str | None, stdin: str | None) -> No
     except Exception as exc:
         job.error = str(exc)
     finally:
+        job.awaiting_approval = False
         job.completed_at = time.monotonic()
 
 
 def _payload(job: Job, *, include_output: bool = True) -> dict[str, object]:
     end = job.completed_at or time.monotonic()
     if job.completed_at is None:
-        status = "running"
-    elif job.cancel_requested:
-        status = "cancelled"
+        status = "awaiting_approval" if job.awaiting_approval else "running"
     elif job.error:
         status = "failed"
+    elif job.cancel_requested:
+        status = "cancelled"
     else:
         status = "completed"
     payload: dict[str, object] = {
@@ -251,10 +500,12 @@ def _payload(job: Job, *, include_output: bool = True) -> dict[str, object]:
     }
     if include_output:
         output, truncated, omitted = job.output.drain()
-        payload.update(output=output, output_truncated=truncated)
+        payload.update(output=output, output_truncated=truncated or job.core_truncated)
         if omitted:
             payload["omitted_bytes"] = omitted
-    if job.target_pid is not None:
+    if job.awaiting_approval:
+        payload["approval_id"] = job.request_id
+    if job.target_pid is not None and not _managed_remote(job.host):
         payload["pid"] = job.target_pid
     payload["request_id"] = job.request_id
     if job.exit_code is not None:
@@ -279,11 +530,44 @@ def _prune_jobs() -> None:
 
 
 async def _signal_target(job: Job, sig: str) -> None:
-    if job.host == LOCAL_HOST:
-        if job.process is None:
-            return
-        # Signal from the configured user, not the unprivileged MCP service.
-        script = f"kill -s {sig} -- -{job.process.pid} 2>/dev/null || true"
+    if job.elevated:
+        script = shlex.join(
+            [
+                "run0",
+                "--non-interactive",
+                "--pipe",
+                "systemctl",
+                "kill",
+                f"--signal={sig}",
+                "--kill-whom=all",
+                f"chatgpt-shell-{job.request_id}.service",
+            ]
+        )
+        argv = _build_elevated_argv(job.host, script)
+    elif _managed_remote(job.host):
+        # The PID namespace prevents external PID signalling. Kill the entire
+        # named unit: TERM may only stop a shell's current child, allowing its
+        # following commands to run before the shell itself exits.
+        target = REMOTE_TARGETS[job.host]
+        unit = f"chatgpt-shell-{job.request_id}.service"
+        # Wait for the named user unit to start before signalling it. This
+        # covers SSH startup races without a forced-command hook on the host.
+        cancel = f"""for attempt in $(seq 1 50); do
+  mainpid=$(systemctl --user show --property=MainPID --value {unit} 2>/dev/null || :)
+  if [[ $mainpid =~ ^[1-9][0-9]*$ ]]; then
+    exec systemctl --user kill --kill-whom=all --signal=KILL {unit}
+  fi
+  sleep 0.1
+done
+exit 1"""
+        argv = [
+            *SSH,
+            "-oForwardAgent=no",
+            "-i",
+            f"{CREDENTIALS}/{target.credential}",
+            target.ssh_target,
+            f"exec {shlex.join([target.shell, '-lc', cancel])}",
+        ]
     elif job.target_pid is not None:
         script = f"""
 descendants() {{
@@ -295,21 +579,133 @@ descendants() {{
 children=$(descendants {job.target_pid})
 kill -s {sig} {job.target_pid} $children 2>/dev/null || true
 """
+        argv = _build_argv(job.host, script)
     else:
         return
 
     try:
         process = await asyncio.create_subprocess_exec(
-            *_build_argv(job.host, script),
+            *argv,
             stdin=asyncio.subprocess.DEVNULL,
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.DEVNULL,
-            env=_command_env(job.host),
+            env=_command_env(job.host, elevated=job.elevated),
             start_new_session=True,
         )
-        await asyncio.wait_for(process.wait(), timeout=5)
+        await asyncio.wait_for(
+            process.wait(),
+            timeout=8 if _managed_remote(job.host) and not job.elevated else 5,
+        )
+        if (job.elevated or _managed_remote(job.host)) and process.returncode != 0:
+            raise RuntimeError("Command interruption was not confirmed")
     except Exception:
-        pass
+        if job.elevated or _managed_remote(job.host):
+            raise
+
+
+@mcp.tool()
+async def session_start(
+    host: Host,
+    command: str,
+    cwd: str | None = None,
+) -> dict[str, object]:
+    """Start an observable persistent Herdr terminal on a configured host.
+
+    The server owns every Herdr terminal; remote hosts use the existing SSH
+    command path instead. This is a normal-user shell, not a privileged approval.
+    """
+    cwd = _validate_cwd(cwd)
+    _require_local_herdr(host)
+    session_name = f"chatgpt-{uuid.uuid4().hex[:12]}"
+    arguments = [
+        "run",
+        "--bg",
+        "--json",
+        "--name",
+        session_name,
+        "--label",
+        "origin=chatgpt-shell",
+        "--no-parent",
+    ]
+    if cwd is not None:
+        arguments.extend(["--cwd", cwd])
+    arguments.extend(["bash", "-c", command])
+    await authorization.authorize(
+        uuid.uuid4().hex,
+        host,
+        "commands",
+        shlex.join(arguments),
+        cwd,
+        session=session_name,
+        target_identity=WORKER_USER,
+    )
+    result = await _herdr(host, arguments)
+    address = result.get("address")
+    if not isinstance(address, str):
+        raise RuntimeError("Herdr did not return a terminal address")
+    try:
+        metadata = await _herdr(host, ["get", "--json", address])
+        authorization.register_terminal(address, session_name, metadata)
+    except (Exception, asyncio.CancelledError):
+        # Do not leave an untracked command running when registration fails.
+        with suppress(Exception):
+            await _herdr(host, ["kill", "--json", address])
+        raise
+    return {"host": host, "session": HERDR_SESSION, **result}
+
+
+@mcp.tool()
+async def session_list(host: Host) -> dict[str, object]:
+    """List all terminals within the server worker's Herdr core."""
+    _require_local_herdr(host)
+    return await _herdr(host, ["ls", "--all", "--json"])
+
+
+@mcp.tool()
+async def session_read(host: Host, terminal: str, lines: int = 100) -> dict[str, object]:
+    """Read a Herdr terminal's current screen and scrollback."""
+    if not 0 <= lines <= 2000:
+        raise ValueError("lines must be between 0 and 2000")
+    _require_local_herdr(host)
+    return await _herdr(host, ["read", "--json", "--lines", str(lines), terminal])
+
+
+async def _managed_session_action(host: Host, terminal: str, action: str) -> dict[str, object]:
+    """Allow only recorded agent terminals through the approval broker."""
+    _require_local_herdr(host)
+    metadata = await _herdr(host, ["get", "--json", terminal])
+    if not authorization.owns_terminal(terminal, metadata):
+        raise PermissionError("terminal is not an agent-managed workspace")
+    arguments = [action, "--json", terminal]
+    await authorization.authorize(
+        uuid.uuid4().hex,
+        host,
+        "commands",
+        shlex.join(arguments),
+        None,
+        session=metadata["name"],
+        target_identity=WORKER_USER,
+    )
+    # An operator approval may take minutes; reject replacement sessions.
+    current = await _herdr(host, ["get", "--json", terminal])
+    if not authorization.owns_terminal(terminal, current):
+        raise PermissionError("terminal identity changed during approval")
+    result = await _herdr(host, arguments)
+    if action == "kill":
+        authorization.release_terminal(terminal)
+    return result
+
+
+@mcp.tool()
+async def session_interrupt(host: Host, terminal: str) -> dict[str, object]:
+    """Interrupt an agent-managed terminal subject to its scoped command policy."""
+    return await _managed_session_action(host, terminal, "interrupt")
+
+
+@mcp.tool()
+async def session_kill(host: Host, terminal: str) -> dict[str, object]:
+    """Terminate an agent-managed terminal subject to its scoped command policy."""
+    return await _managed_session_action(host, terminal, "kill")
 
 
 @mcp.tool()
@@ -320,14 +716,17 @@ async def shell_exec(
     wait_seconds: float = WAIT_SECONDS,
     stdin: str | None = None,
 ) -> dict[str, object]:
-    """Run a command on an allowed host as the configured user.
+    """Run on the server's restricted worker or a configured remote SSH host.
 
+    Remote SSH commands retain their configured user identity and are not
+    Herdr-backed; only server commands get persistent terminal addresses.
     Use cwd (an absolute path) instead of prepending cd; default is the user's home.
     Pass multiline input via stdin, not shell interpolation. wait_seconds (0-30)
     bounds the wait for both startup and completion; 0 returns immediately.
     A running result has a request_id for shell_result or shell_cancel.
     Check success or exit_code, not status='completed', for command success.
-    Stdout and stderr are combined; output is bounded and drained per result.
+    Stdout and stderr are combined and bounded. Server Core exec replies
+    contain exact output after completion; use sessions for live PTY output.
     """
     cwd = _validate_cwd(cwd)
     wait_seconds = _validate_wait_seconds(wait_seconds)
@@ -340,9 +739,52 @@ async def shell_exec(
         jobs.pop(finished.request_id, None)
 
     request_id = uuid.uuid4().hex
-    job = Job(request_id=request_id, host=host)
+    job = Job(
+        request_id=request_id,
+        host=host,
+        awaiting_approval=authorization.effective(host, "commands") == "ask",
+    )
     jobs[request_id] = job
     job.task = asyncio.create_task(_run(job, command, cwd, stdin))
+    return await _result(job, wait_seconds)
+
+
+@mcp.tool()
+async def shell_elevated_exec(
+    host: Host,
+    argv: list[str],
+    cwd: str | None = None,
+    wait_seconds: float = WAIT_SECONDS,
+) -> dict[str, object]:
+    """Run an explicitly approved native Linux run0 operation.
+
+    Exact argv values are shell-quoted before reaching run0. The operating
+    system independently authorizes the elevated transient service.
+    """
+    cwd = _validate_cwd(cwd)
+    wait_seconds = _validate_wait_seconds(wait_seconds)
+    if not _can_elevate(host):
+        raise PermissionError(f"elevation broker unavailable on {host}")
+    if not argv or any(not item or "\0" in item for item in argv):
+        raise ValueError("argv must contain non-empty arguments without NUL bytes")
+    _prune_jobs()
+    if len(jobs) >= MAX_JOBS and all(item.completed_at is None for item in jobs.values()):
+        raise RuntimeError("too many active jobs")
+    if len(jobs) >= MAX_JOBS:
+        finished = next(item for item in jobs.values() if item.completed_at is not None)
+        jobs.pop(finished.request_id)
+
+    job = Job(
+        request_id=uuid.uuid4().hex,
+        host=host,
+        elevated=True,
+        awaiting_approval=authorization.effective(host, "elevation") == "ask",
+    )
+    jobs[job.request_id] = job
+    run0_args = ["run0", "--non-interactive", "--pipe", f"--unit=chatgpt-shell-{job.request_id}"]
+    if cwd:
+        run0_args.append(f"--chdir={cwd}")
+    job.task = asyncio.create_task(_run(job, shlex.join([*run0_args, "--", *argv]), cwd, None))
     return await _result(job, wait_seconds)
 
 
@@ -390,12 +832,25 @@ async def shell_cancel(request_id: str) -> dict[str, object]:
         return _payload(job)
 
     job.cancel_requested = True
-    await _signal_target(job, "TERM")
-    if job.task is not None and not job.task.done():
-        try:
-            await asyncio.wait_for(asyncio.shield(job.task), timeout=CANCEL_GRACE_SECONDS)
-        except TimeoutError:
-            await _signal_target(job, "KILL")
+    if job.process is None and job.task is not None:
+        job.task.cancel()
+        with suppress(asyncio.CancelledError):
+            await job.task
+        # A job cancelled before its coroutine first runs has no _run finalizer.
+        if job.completed_at is None:
+            job.awaiting_approval = False
+            job.completed_at = time.monotonic()
+        return _payload(job)
+    try:
+        await _signal_target(job, "TERM")
+        if job.task is not None and not job.task.done():
+            try:
+                await asyncio.wait_for(asyncio.shield(job.task), timeout=CANCEL_GRACE_SECONDS)
+            except TimeoutError:
+                await _signal_target(job, "KILL")
+    except Exception:
+        job.cancel_requested = False
+        raise
 
     if job.task is not None and not job.task.done() and job.process is not None:
         with suppress(ProcessLookupError, PermissionError):

@@ -9,7 +9,7 @@ import time
 import types
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, Mock, patch
 
 
 class MCPServer:
@@ -31,15 +31,26 @@ sys.modules["mcp.server"] = mcp.server
 
 os.environ.update(
     CREDENTIALS_DIRECTORY="/tmp",
-    SSH_AUTH_SOCK="/tmp/agent.sock",
     CHATGPT_SHELL_REMOTE_AUTH_AGENT="/tmp/remote-agent.sock",
     CHATGPT_SHELL_COMMAND_PATH="/bin",
     CHATGPT_SHELL_BASH="bash",
     CHATGPT_SHELL_LOCAL_HOST="local",
-    CHATGPT_SHELL_REMOTE_TARGETS="{}",
+    CHATGPT_SHELL_REMOTE_TARGETS=(
+        '{"mac":{"ssh_target":"owner@mac.home","credential":"mac-key","shell":"/bin/zsh"},'
+        '"nixos-arm-parallels":{"ssh_target":"owner@parallels.home","credential":"parallels-key",'
+        '"shell":"/bin/bash","execution":"systemd-user","elevation":"run0"}}'
+    ),
+    CHATGPT_SHELL_APPROVAL_DIR="/tmp/shell-gateway-test-approvals",
+    CHATGPT_SHELL_OPERATOR_STATE_DIR="/tmp/shell-operator-test-state",
+    CHATGPT_SHELL_STATE_DIR="/tmp/shell-gateway-test-state",
+    CHATGPT_SHELL_POLICIES_FILE="/tmp/shell-gateway-test-policies",
+    CHATGPT_SHELL_WORKER="agent-workspaces",
+    CHATGPT_SHELL_WORKER_ENV='{"HOME":"/var/lib/apps/agent-workspaces","HC_SESSION":"chatgpt-shell","XDG_RUNTIME_DIR":"/run/agent-workspaces","XDG_CONFIG_HOME":"/var/lib/apps/agent-workspaces/.config","XDG_STATE_HOME":"/var/lib/apps/agent-workspaces/.local/state"}',
 )
 
-spec = importlib.util.spec_from_file_location("shell_access", Path(sys.argv.pop(1)))
+shell_path = Path(sys.argv.pop(1)).resolve()
+sys.path.insert(0, str(shell_path.parent))
+spec = importlib.util.spec_from_file_location("shell_access", shell_path)
 shell = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = shell
 spec.loader.exec_module(shell)
@@ -51,33 +62,52 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         """Prepare an isolated shell server for each test."""
         shell.jobs.clear()
-        self.argv = patch.object(shell, "_build_argv", side_effect=lambda _host, script: ["bash", "-c", script])
+        self.argv = patch.object(shell, "_build_argv", side_effect=lambda _host, script, **_kwargs: ["bash", "-c", script])
         self.argv.start()
-        self.env = patch.object(shell, "_command_env", side_effect=lambda _host: {**shell.COMMAND_ENV, "HOME": os.environ["HOME"]})
+        self.env = patch.object(
+            shell, "_command_env", side_effect=lambda _host, **_kwargs: {**shell.COMMAND_ENV, "HOME": os.environ["HOME"]}
+        )
         self.env.start()
+        self.auth = patch.object(shell.authorization, "authorize", new_callable=AsyncMock)
+        self.auth.start()
+        self.effective = patch.object(shell.authorization, "effective", return_value="automatic")
+        self.effective.start()
 
     def tearDown(self):
         """Restore patched process and server state after each test."""
+        self.effective.stop()
+        self.auth.stop()
         self.env.stop()
         self.argv.stop()
 
     async def test_cwd_and_stdin(self):
         """Pass the requested working directory and standard input."""
         with patch.dict(os.environ, {"HOME": "/tmp"}):
-            result = await shell.shell_exec("local", "printf '%s\\n' \"$PWD\"; cat", cwd="/tmp", stdin="hello\n")
+            result = await shell.shell_exec("remote", "printf '%s\\n' \"$PWD\"; cat", cwd="/tmp", stdin="hello\n")
         self.assertTrue(result["success"])
         self.assertEqual(result["output"], "/tmp\nhello\n")
 
+    async def test_isolated_parallels_command_has_exact_output_without_pid_marker(self):
+        """Named remote units already identify a command, so do not print an internal PID."""
+        with patch.dict(
+            shell.REMOTE_TARGETS,
+            {"nixos-arm-parallels": shell.RemoteTarget("owner@parallels", "key", "/bin/bash", execution="systemd-user", elevation="run0")},
+        ):
+            result = await shell.shell_exec("nixos-arm-parallels", "cat", stdin="exact\nsecond line\n")
+        self.assertTrue(result["success"])
+        self.assertEqual(result["output"], "exact\nsecond line\n")
+        self.assertNotIn("pid", result)
+
     async def test_nonzero_exit_is_not_success(self):
         """Report failed command exit statuses accurately."""
-        result = await shell.shell_exec("local", "exit 17")
+        result = await shell.shell_exec("remote", "exit 17")
         self.assertEqual(result["status"], "completed")
         self.assertFalse(result["success"])
         self.assertEqual(result["exit_code"], 17)
 
     async def test_missing_cwd_stops_execution(self):
         """Reject execution when the working directory is unavailable."""
-        result = await shell.shell_exec("local", "echo should-not-run", cwd="/not-a-real-working-directory")
+        result = await shell.shell_exec("remote", "echo should-not-run", cwd="/not-a-real-working-directory")
         self.assertEqual(result["exit_code"], 125)
         self.assertFalse(result["success"])
         self.assertNotIn("should-not-run", result["output"])
@@ -101,7 +131,7 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_job_listing_does_not_consume_output(self):
         """List jobs without draining their buffered output."""
-        started = await shell.shell_exec("local", "printf payload", wait_seconds=0)
+        started = await shell.shell_exec("remote", "printf payload", wait_seconds=0)
         await shell.jobs[started["request_id"]].task
         listing = await shell.shell_jobs()
         self.assertEqual(listing[0]["request_id"], started["request_id"])
@@ -111,7 +141,7 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_job_recovery_and_expiration(self):
         """Recover running jobs and expire completed job records."""
-        started = await shell.shell_exec("local", "sleep 0.15; printf 'done'", wait_seconds=0)
+        started = await shell.shell_exec("remote", "sleep 0.15; printf 'done'", wait_seconds=0)
         self.assertEqual(started["status"], "running")
         self.assertIn(started["request_id"], [j["request_id"] for j in await shell.shell_jobs()])
         result = await shell.shell_result(started["request_id"], wait_seconds=1)
@@ -124,7 +154,7 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
     async def test_detached_child_does_not_hold_completed_job(self):
         """Finish a job even when detached children retain output pipes."""
         started = time.monotonic()
-        result = await shell.shell_exec("local", "sleep 5 & echo child=$!", wait_seconds=3)
+        result = await shell.shell_exec("remote", "sleep 5 & echo child=$!", wait_seconds=3)
         try:
             self.assertTrue(result["success"])
             self.assertLess(time.monotonic() - started, 3)
@@ -136,7 +166,7 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_cancel_after_shell_exits_does_not_change_success(self):
         """Keep completed results intact after a late cancellation request."""
-        started = await shell.shell_exec("local", "sleep 5 & echo child=$!", wait_seconds=0)
+        started = await shell.shell_exec("remote", "sleep 5 & echo child=$!", wait_seconds=0)
         job = shell.jobs[started["request_id"]]
 
         async def wait_for_exit():
@@ -152,9 +182,23 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
             if "child=" in result["output"]:
                 os.kill(int(result["output"].split("child=")[1].splitlines()[0]), signal.SIGTERM)
 
+    async def test_cancel_before_command_task_starts(self):
+        """Immediate cancellation is terminal even if the job never starts."""
+        started = await shell.shell_exec("remote", "printf should-not-run", wait_seconds=0)
+        job = shell.jobs[started["request_id"]]
+        self.assertIsNone(job.process)
+        self.assertFalse(job.task.done())
+        stopped = await shell.shell_cancel(started["request_id"])
+        self.assertEqual(stopped["status"], "cancelled")
+        self.assertFalse(stopped["success"])
+        self.assertNotIn("should-not-run", stopped["output"])
+        self.assertIsNotNone(job.completed_at)
+        self.assertTrue(job.task.done())
+        self.assertEqual((await shell.shell_result(started["request_id"]))["status"], "cancelled")
+
     async def test_cancel_running_tree(self):
         """Cancel the running process tree rather than its leader alone."""
-        started = await shell.shell_exec("local", "sleep 60; printf unsafe-continuation", wait_seconds=0)
+        started = await shell.shell_exec("remote", "sleep 60; printf unsafe-continuation", wait_seconds=0)
         job = shell.jobs[started["request_id"]]
 
         async def wait_for_pid():
@@ -173,27 +217,551 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("HOME", shell._ALLOWED_ENV)
         self.assertEqual(shell.COMMAND_ENV["HOME"], os.environ["HOME"])
 
-    def test_local_command_uses_unprivileged_shell(self):
-        """Execute local commands without accidental privilege escalation."""
-        command = shell.LOCAL
-        self.assertEqual(command[0], "bash")
-        self.assertEqual(command[1], "-lc")
-        self.assertNotIn("sudo", command)
+    def test_local_command_uses_run0_worker_boundary(self):
+        """Interpret ordinary scripts only after entering the restricted identity."""
+        self.argv.stop()
+        try:
+            argv = shell._build_argv("local", "id -u; touch should-not-be-interpreted")
+        finally:
+            self.argv.start()
+        self.assertEqual(argv[:2], ["bash", "-lc"])
+        self.assertIn("--user=agent-workspaces", argv[-1])
+        self.assertIn("--setenv=PATH=/bin", argv[-1])
+        self.assertIn("--non-interactive", argv[-1])
+        self.assertNotIn("SSH_AUTH_SOCK", argv[-1])
+        self.assertIn("id -u; touch should-not-be-interpreted", argv[-1])
 
-    def test_remote_agent_forwarding_is_explicit(self):
-        """Forward the authentication agent only when configured."""
+    def test_core_exec_uses_named_run0_unit_for_interruption(self):
+        """A Core exec has one named worker unit that can receive SIGINT."""
+        self.assertIn("--unit=chatgpt-hc-test", shell._worker_command("true", "chatgpt-hc-test"))
+
+    def test_remote_command_uses_existing_ssh_without_extra_workers(self):
+        """Remote commands use the configured SSH identity, without extra Herdr daemons."""
         self.argv.stop()
         try:
             with patch.dict(
                 shell.REMOTE_TARGETS,
                 {
-                    "remote": shell.RemoteTarget("joshan@example", "key", "/bin/bash", True),
+                    "mac": shell.RemoteTarget("owner@mac.home", "mac-key", "/bin/zsh"),
+                    "nixos-arm-parallels": shell.RemoteTarget(
+                        "owner@parallels.home", "parallels-key", "/bin/bash", execution="systemd-user", elevation="run0"
+                    ),
                 },
             ):
-                argv = shell._build_argv("remote", "id -u")
+                mac = shell._build_argv("mac", "id -u")
+                linux = shell._build_argv("nixos-arm-parallels", "id -u")
+                managed = shell._build_argv("nixos-arm-parallels", "id -u", unit_name="a" * 32)
         finally:
             self.argv.start()
-        self.assertIn("-oForwardAgent=yes", argv)
+        self.assertIn("-oForwardAgent=no", mac)
+        self.assertIn("-oForwardAgent=no", linux)
+        self.assertIn("owner@mac.home", mac)
+        self.assertIn("owner@parallels.home", linux)
+        self.assertIn("exec /bin/zsh -lc", mac[-1])
+        self.assertIn(" /bin/bash -lc ", linux[-1])
+        self.assertIn("exec systemd-run --user --quiet --wait --pipe --collect ", managed[-1])
+        self.assertIn(f"--unit=chatgpt-shell-{'a' * 32}", managed[-1])
+        self.assertIn("--property=PrivatePIDs=yes", managed[-1])
+        self.assertIn("--property=NoNewPrivileges=yes", managed[-1])
+        self.assertIn("InaccessiblePaths=$HOME/.ssh $HOME/.secrets", managed[-1])
+        self.assertIn("TemporaryFileSystem=/run/user:ro", managed[-1])
+        self.assertIn("BindReadOnlyPaths=$runtime/$wayland", managed[-1])
+        self.assertNotIn("$runtime/hypr", managed[-1])
+        self.assertNotIn("BindReadOnlyPaths=$runtime/bus", managed[-1])
+        self.assertIn("systemd-run --user", linux[-1])
+        self.assertNotIn("systemd-run --user", mac[-1])
+        self.assertNotIn("chatgpt-shell-run", managed[-1])
+        self.assertNotIn("agent-workspaces", " ".join(mac + linux))
+        self.assertNotIn("run0", " ".join(mac + linux))
+        self.assertNotIn("sudo", " ".join(mac + linux))
+
+    def test_additional_remote_target_requires_no_host_specific_code(self):
+        """A new Linux host uses its declared transport, signer and SSH identity."""
+        host = "new-linux-host"
+        target = shell.RemoteTarget(
+            "operator@new-host.example",
+            "new-host-key",
+            "/bin/bash",
+            execution="systemd-user",
+            elevation="run0",
+        )
+        self.argv.stop()
+        self.env.stop()
+        try:
+            with patch.dict(shell.REMOTE_TARGETS, {host: target}):
+                ordinary = shell._build_argv(host, "printf 'ready\n'", unit_name="c" * 32)
+                elevated = shell._build_elevated_argv(host, "run0 --non-interactive --pipe id -u")
+                command_env = shell._command_env(host)
+                elevated_env = shell._command_env(host, elevated=True)
+                self.assertTrue(shell._managed_remote(host))
+                self.assertTrue(shell._can_elevate(host))
+        finally:
+            self.env.start()
+            self.argv.start()
+        self.assertEqual(ordinary[ordinary.index("-i") + 1], f"{shell.CREDENTIALS}/new-host-key")
+        self.assertIn("operator@new-host.example", ordinary)
+        self.assertIn("--unit=chatgpt-shell-" + "c" * 32, ordinary[-1])
+        self.assertIn("PrivatePIDs=yes", ordinary[-1])
+        self.assertIn("-oForwardAgent=no", ordinary)
+        self.assertIn("-oForwardAgent=yes", elevated)
+        self.assertIn("operator@new-host.example", elevated)
+        self.assertNotIn("SSH_AUTH_SOCK", command_env)
+        self.assertEqual(elevated_env["SSH_AUTH_SOCK"], shell.REMOTE_AUTH_AGENT)
+
+    async def test_new_host_named_unit_cancellation_is_generic(self):
+        """Cancellation uses the configured unit type, not a known hostname."""
+        host = "new-linux-host"
+        target = shell.RemoteTarget("operator@new-host.example", "new-host-key", "/bin/bash", execution="systemd-user")
+        job = shell.Job(request_id="a" * 32, host=host)
+        process = AsyncMock()
+        process.returncode = 0
+        with (
+            patch.dict(shell.REMOTE_TARGETS, {host: target}),
+            patch.object(shell.asyncio, "create_subprocess_exec", return_value=process) as spawn,
+        ):
+            await shell._signal_target(job, "TERM")
+        self.assertIn(f"chatgpt-shell-{job.request_id}.service", spawn.call_args.args[-1])
+        self.assertNotIn("run0", spawn.call_args.args[-1])
+        self.assertEqual(job.target_pid, None)
+
+    def test_unconfigured_remote_capabilities_fail_closed(self):
+        """Unsupported transports and undeclared native privilege must not run."""
+        with self.assertRaisesRegex(ValueError, "unsupported remote execution"):
+            shell.RemoteTarget("operator@host", "key", "/bin/sh", execution="unknown")
+        with self.assertRaisesRegex(ValueError, "unsupported remote execution"):
+            shell.RemoteTarget("operator@host", "key", "/bin/sh", elevation="unknown")
+        with patch.dict(shell.REMOTE_TARGETS, {"new-host": shell.RemoteTarget("owner@new", "key", "/bin/sh")}):
+            self.assertFalse(shell._managed_remote("new-host"))
+            self.assertFalse(shell._can_elevate("new-host"))
+            with self.assertRaises(PermissionError):
+                shell._build_elevated_argv("new-host", "id -u")
+
+    async def test_approval_uses_configured_execution_identity(self):
+        """The review record must identify the account that executes a command."""
+        await shell.shell_exec("local", "printf local", wait_seconds=2)
+        self.assertEqual(shell.authorization.authorize.await_args.kwargs["target_identity"], shell.WORKER_USER)
+        shell.authorization.authorize.reset_mock()
+        with patch.dict(
+            shell.REMOTE_TARGETS,
+            {
+                "nixos-arm-parallels": shell.RemoteTarget(
+                    "review-user@parallels.example", "key", "/bin/bash", execution="systemd-user", elevation="run0"
+                )
+            },
+        ):
+            result = await shell.shell_exec("nixos-arm-parallels", "printf remote", cwd=os.getcwd(), wait_seconds=2)
+        self.assertTrue(result["success"])
+        self.assertEqual(shell.authorization.authorize.await_args.kwargs["target_identity"], "review-user")
+        shell.authorization.authorize.reset_mock()
+        with patch.object(shell, "_build_elevated_argv", return_value=["bash", "-c", "printf elevated"]):
+            await shell.shell_elevated_exec("nixos-arm-parallels", ["/bin/true"], wait_seconds=2)
+        self.assertEqual(shell.authorization.authorize.await_args.kwargs["target_identity"], "root")
+
+    async def test_managed_remote_cancellation_targets_the_named_unit(self):
+        """Remote cancellation must not send PIDs across isolated namespaces."""
+        job = shell.Job(request_id="b" * 32, host="nixos-arm-parallels", target_pid=7)
+        self.assertNotIn("pid", shell._payload(job))
+        process = AsyncMock()
+        process.returncode = 0
+        with patch.dict(
+            shell.REMOTE_TARGETS,
+            {
+                "nixos-arm-parallels": shell.RemoteTarget(
+                    "owner@parallels", "parallels-key", "/bin/bash", execution="systemd-user", elevation="run0"
+                )
+            },
+        ):
+            with patch.object(shell.asyncio, "create_subprocess_exec", return_value=process) as spawn:
+                await shell._signal_target(job, "TERM")
+            argv = spawn.call_args.args
+            self.assertIn(f"chatgpt-shell-{job.request_id}.service", argv[-1])
+            self.assertIn("systemctl --user kill --kill-whom=all --signal=KILL", argv[-1])
+            self.assertNotIn("chatgpt-shell-cancel", argv[-1])
+            self.assertIn("-oForwardAgent=no", argv)
+            self.assertNotIn("run0", argv)
+            process.returncode = 1
+            with (
+                patch.object(shell.asyncio, "create_subprocess_exec", return_value=process),
+                self.assertRaisesRegex(RuntimeError, "not confirmed"),
+            ):
+                await shell._signal_target(job, "KILL")
+
+    async def test_elevated_cancellation_requires_positive_confirmation(self):
+        """Never claim a privileged operation stopped when its signal failed."""
+        job = shell.Job(request_id="f" * 32, host="local", elevated=True)
+        process = AsyncMock()
+        process.returncode = 1
+        with (
+            patch.object(shell.asyncio, "create_subprocess_exec", return_value=process),
+            self.assertRaisesRegex(RuntimeError, "not confirmed"),
+        ):
+            await shell._signal_target(job, "TERM")
+        process.returncode = 0
+        with patch.object(shell.asyncio, "create_subprocess_exec", return_value=process):
+            await shell._signal_target(job, "TERM")
+
+    def test_remote_ssh_does_not_receive_controller_elevation_credentials(self):
+        """Never put the privileged agent socket in an ordinary SSH environment."""
+        self.env.stop()
+        try:
+            with patch.dict(
+                shell.REMOTE_TARGETS,
+                {
+                    "nixos-arm-parallels": shell.RemoteTarget(
+                        "owner@parallels", "key", "/bin/bash", execution="systemd-user", elevation="run0"
+                    )
+                },
+            ):
+                env = shell._command_env("nixos-arm-parallels")
+                elevated = shell._command_env("nixos-arm-parallels", elevated=True)
+        finally:
+            self.env.start()
+        self.assertNotIn("SSH_AUTH_SOCK", env)
+        self.assertEqual(elevated["SSH_AUTH_SOCK"], shell.REMOTE_AUTH_AGENT)
+
+    async def test_local_core_failure_never_falls_back_to_unobserved_shell(self):
+        """Fail closed when the Core runtime is unavailable."""
+        with patch.object(shell, "_herdr", new_callable=AsyncMock, side_effect=RuntimeError("Core unavailable")):
+            result = await shell.shell_exec("local", "printf 'should-not-run'", wait_seconds=2)
+        self.assertEqual(result["status"], "failed")
+        self.assertFalse(result["success"])
+        self.assertNotIn("should-not-run", result["output"])
+
+    async def test_native_herdr_command_tracks_exact_output(self):
+        """Use Core's exact streams instead of losing PTY history and redraws."""
+        import base64
+
+        data = b"".join(f"{number:04d}\n".encode() for number in range(1, 3501))
+
+        async def native(_host, arguments, *, stdin):
+            self.assertIsNone(stdin)
+            self.assertEqual(arguments[:2], ["exec", "--json"])
+            self.assertEqual(arguments[arguments.index("--cwd") + 1], "/tmp")
+            self.assertEqual(arguments[-3:], ["bash", "-c", "exec 2>&1\nprintf all; exit 9"])
+            return {"code": 9, "stdout": base64.b64encode(data).decode(), "stderr": "", "truncated": False}
+
+        job = shell.Job(request_id="a" * 32, host="local")
+        with patch.object(shell, "_herdr", side_effect=native):
+            await shell._run_herdr_exec(job, "printf all; exit 9", "/tmp", None)
+        self.assertEqual(job.exit_code, 9)
+        self.assertEqual(job.output.drain()[0], data.decode())
+        self.assertFalse(job.core_truncated)
+
+    async def test_native_core_output_truncation_is_reported(self):
+        """An upstream truncation flag must not be presented as complete output."""
+        import base64
+
+        reply = {"code": 0, "stdout": base64.b64encode(b"partial").decode(), "stderr": "", "truncated": True}
+        with patch.object(shell, "_herdr", new_callable=AsyncMock, return_value=reply):
+            result = await shell.shell_exec("local", "printf partial")
+        self.assertTrue(result["success"])
+        self.assertTrue(result["output_truncated"])
+        self.assertIn("[Herdr truncated", result["output"])
+
+    async def test_shell_exec_uses_native_exact_output_without_stdin(self):
+        """Ordinary commands use the same exact-output path as commands with stdin."""
+
+        async def native(job, command, cwd, stdin):
+            self.assertEqual(command, "printf session")
+            self.assertEqual(cwd, "/tmp")
+            self.assertIsNone(stdin)
+            job.exit_code = 0
+            job.output.append(b"session")
+
+        with patch.object(shell, "_run_herdr_exec", side_effect=native) as operation:
+            result = await shell.shell_exec("local", "printf session", cwd="/tmp")
+        operation.assert_awaited_once()
+        self.assertNotIn("terminal", result)
+        self.assertEqual(result["output"], "session")
+        self.assertTrue(result["success"])
+
+    async def test_cancel_running_core_exec_cancels_client(self):
+        """Cancellation unwinds the Core client without a second execution path."""
+        started = asyncio.Event()
+        cancelled = asyncio.Event()
+
+        async def native(_host, _args, *, stdin):
+            self.assertIsNone(stdin)
+            started.set()
+            try:
+                await asyncio.Event().wait()
+            finally:
+                cancelled.set()
+
+        with patch.object(shell, "_herdr", side_effect=native):
+            job = await shell.shell_exec("local", "sleep 60", wait_seconds=0)
+            await asyncio.wait_for(started.wait(), timeout=2)
+            result = await asyncio.wait_for(shell.shell_cancel(job["request_id"]), timeout=3)
+        self.assertEqual(result["status"], "cancelled")
+        self.assertTrue(cancelled.is_set())
+
+    async def test_core_exec_cancellation_interrupts_client(self):
+        """A kill would orphan a Core exec; send SIGINT before falling back."""
+        process = AsyncMock()
+        process.send_signal = Mock()
+        process.kill = Mock()
+        process.communicate.side_effect = asyncio.CancelledError()
+        with (
+            patch.object(shell.asyncio, "create_subprocess_exec", return_value=process),
+            patch.object(shell, "_interrupt_worker_unit", new_callable=AsyncMock) as interrupt,
+            self.assertRaises(asyncio.CancelledError),
+        ):
+            await shell._herdr("local", ["exec", "--json"])
+        interrupt.assert_awaited_once()
+        self.assertTrue(interrupt.call_args.args[0].startswith("chatgpt-hc-"))
+        process.send_signal.assert_not_called()
+        process.kill.assert_not_called()
+
+    async def test_failed_core_interruption_is_not_reported_as_cancelled(self):
+        """A failed kill must not be mistaken for an acknowledged cancellation."""
+        started = asyncio.Event()
+
+        async def native(_host, _args, *, stdin):
+            started.set()
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                raise RuntimeError("Core command cancellation was not confirmed") from None
+
+        with patch.object(shell, "_herdr", side_effect=native):
+            job = await shell.shell_exec("local", "sleep 60", wait_seconds=0)
+            await asyncio.wait_for(started.wait(), timeout=2)
+            result = await shell.shell_cancel(job["request_id"])
+        self.assertEqual(result["status"], "failed")
+        self.assertIn("not confirmed", result["error"])
+
+    async def test_remote_shell_exec_uses_ssh_not_herdr(self):
+        """Remote operations keep working even if the host has no Herdr installed."""
+        with (
+            patch.object(shell, "_run_herdr_exec", new_callable=AsyncMock) as terminal,
+        ):
+            result = await shell.shell_exec("remote", "printf remote", wait_seconds=2)
+        self.assertTrue(result["success"])
+        self.assertEqual(result["output"], "remote")
+        self.assertNotIn("terminal", result)
+        terminal.assert_not_awaited()
+
+    async def test_elevation_keeps_exact_arguments_and_independent_policy(self):
+        """Privileged argv must be passed unchanged to the separately reviewed run0 path."""
+        captured = []
+
+        async def fake_run(job, command, cwd, stdin):
+            captured.append((job.elevated, job.host, command, cwd, stdin))
+            job.exit_code = 0
+            job.completed_at = time.monotonic()
+
+        argv = ["/bin/printf", "%s", "quoted ' argument"]
+        with patch.object(shell, "_run", side_effect=fake_run):
+            result = await shell.shell_elevated_exec("nixos-arm-parallels", argv, cwd="/tmp")
+        self.assertTrue(result["success"])
+        self.assertEqual(len(captured), 1)
+        elevated, host, command, cwd, stdin = captured[0]
+        self.assertTrue(elevated)
+        self.assertEqual(host, "nixos-arm-parallels")
+        self.assertEqual(cwd, "/tmp")
+        self.assertIsNone(stdin)
+        self.assertEqual(
+            shell.shlex.split(command),
+            [
+                "run0",
+                "--non-interactive",
+                "--pipe",
+                f"--unit=chatgpt-shell-{result['request_id']}",
+                "--chdir=/tmp",
+                "--",
+                *argv,
+            ],
+        )
+
+    async def test_elevation_rejects_unsupported_hosts_and_unsafe_argv(self):
+        """Only configured Linux elevation routes accept nonempty argv elements."""
+        for host in ("mac", "unconfigured"):
+            with self.assertRaises(PermissionError):
+                await shell.shell_elevated_exec(host, ["/bin/true"])
+        for argv in ([], [""], ["/bin/true", "bad\x00arg"]):
+            with self.assertRaises(ValueError):
+                await shell.shell_elevated_exec("nixos-arm-parallels", argv)
+
+    async def test_herdr_native_stdin_preserves_output_and_exit_status(self):
+        """Use Core-owned execution for exact input rather than an unsandboxed worker."""
+        import base64
+
+        async def native(_host, arguments, *, stdin):
+            self.assertEqual(stdin, "hello\n")
+            self.assertEqual(arguments[:3], ["exec", "--json", "--stdin"])
+            self.assertEqual(arguments[-3:], ["bash", "-c", "exec 2>&1\ncat; exit 23"])
+            return {"code": 23, "stdout": base64.b64encode(b"hello\n").decode(), "stderr": "", "truncated": False}
+
+        with patch.object(shell, "_herdr", side_effect=native):
+            result = await shell.shell_exec("local", "cat; exit 23", stdin="hello\n")
+        self.assertEqual(result["exit_code"], 23)
+        self.assertEqual(result["output"], "hello\n")
+        self.assertFalse(result["success"])
+
+    async def test_stdin_keeps_exact_pipe_semantics(self):
+        """Keep exact input available over the existing remote SSH command path."""
+        with (
+            patch.object(shell, "_run_herdr_exec", new_callable=AsyncMock) as terminal,
+        ):
+            result = await shell.shell_exec("remote", "cat", stdin="line\n")
+        terminal.assert_not_awaited()
+        self.assertEqual(result["output"], "line\n")
+        self.assertTrue(result["success"])
+
+    async def test_herdr_session_start_uses_native_runtime(self):
+        """Create a native session and register the verified identity privately."""
+        session_name = None
+
+        async def native(_host, arguments):
+            nonlocal session_name
+            if arguments[0] == "run":
+                session_name = arguments[arguments.index("--name") + 1]
+                return {"address": "t8", "state": "live"}
+            self.assertEqual(arguments, ["get", "--json", "t8"])
+            return {"address": "t8", "name": session_name, "created_ms": 100}
+
+        with (
+            patch.object(shell, "_herdr", side_effect=native) as invoke,
+            patch.object(shell.authorization, "register_terminal") as register,
+        ):
+            result = await shell.session_start("local", "printf test", cwd="/tmp")
+        self.assertEqual(result["address"], "t8")
+        self.assertEqual(result["session"], shell.HERDR_SESSION)
+        args = invoke.call_args_list[0].args[1]
+        self.assertIn("--bg", args)
+        self.assertIn("origin=chatgpt-shell", args)
+        self.assertEqual(args[-3:], ["bash", "-c", "printf test"])
+        self.assertEqual(args[args.index("--cwd") + 1], "/tmp")
+        register.assert_called_once_with("t8", session_name, {"address": "t8", "name": session_name, "created_ms": 100})
+
+    async def test_herdr_registration_failure_terminates_untracked_terminal(self):
+        """An invalid native terminal identity cannot leave a managed shell running."""
+
+        async def native(_host, arguments):
+            if arguments[0] == "run":
+                return {"address": "t9"}
+            if arguments[0] == "get":
+                return {"address": "t9", "name": "not-the-created-session", "created_ms": 1}
+            return {"killed": "t9"}
+
+        with (
+            patch.object(shell, "_herdr", side_effect=native) as invoke,
+            patch.object(shell.authorization, "register_terminal", side_effect=ValueError("invalid identity")),
+            self.assertRaisesRegex(ValueError, "invalid identity"),
+        ):
+            await shell.session_start("local", "sleep 30")
+        self.assertEqual(invoke.call_args.args[1], ["kill", "--json", "t9"])
+
+    async def test_remote_sessions_are_rejected_without_remote_core(self):
+        """Do not manufacture remote terminal addresses for SSH-only hosts."""
+        with patch.object(shell, "_herdr", new_callable=AsyncMock) as invoke:
+            with self.assertRaisesRegex(ValueError, "hosted on local"):
+                await shell.session_start("remote", "true")
+            with self.assertRaisesRegex(ValueError, "hosted on local"):
+                await shell.session_list("remote")
+            invoke.assert_not_awaited()
+
+    async def test_herdr_session_start_rejects_relative_cwd(self):
+        """Reject non-absolute working directories before spawning a terminal."""
+        with patch.object(shell, "_herdr", new_callable=AsyncMock) as invoke:
+            with self.assertRaises(ValueError):
+                await shell.session_start("local", "true", cwd="../parent")
+            invoke.assert_not_awaited()
+
+    async def test_herdr_mutations_only_target_managed_sessions(self):
+        """Mutation requires controller-registered ownership, not metadata labels."""
+
+        async def native(_host, arguments):
+            if arguments[0] == "get":
+                return {"address": "t1", "name": "chatgpt-test", "created_ms": 100, "labels": {}}
+            return {"address": "t1"}
+
+        with (
+            patch.object(shell, "_herdr", side_effect=native) as invoke,
+            patch.object(shell.authorization, "owns_terminal", return_value=True) as owns,
+            patch.object(shell.authorization, "release_terminal") as released,
+        ):
+            await shell.session_read("local", "t1")
+            invoke.assert_awaited_once_with("local", ["read", "--json", "--lines", "100", "t1"])
+            invoke.reset_mock()
+            await shell.session_interrupt("local", "t1")
+            self.assertEqual(invoke.await_args_list[-1].args[1], ["interrupt", "--json", "t1"])
+            released.assert_not_called()
+            invoke.reset_mock()
+            await shell.session_kill("local", "t1")
+            self.assertEqual(invoke.await_args_list[-1].args[1], ["kill", "--json", "t1"])
+            released.assert_called_once_with("t1")
+        self.assertEqual(owns.call_count, 4)
+        self.assertEqual(shell.authorization.authorize.await_count, 2)
+        self.assertEqual(shell.authorization.authorize.call_args.kwargs["session"], "chatgpt-test")
+
+    async def test_herdr_mutations_reject_other_terminals(self):
+        """A forged ChatGPT name and origin label do not confer controller ownership."""
+        spoof = {"address": "t2", "name": "chatgpt-forged", "created_ms": 200, "labels": {"origin": "chatgpt-shell"}}
+        with (
+            patch.object(shell, "_herdr", new_callable=AsyncMock, return_value=spoof) as invoke,
+            patch.object(shell.authorization, "owns_terminal", return_value=False),
+            self.assertRaisesRegex(PermissionError, "not an agent-managed"),
+        ):
+            await shell.session_kill("local", "t2")
+        invoke.assert_awaited_once_with("local", ["get", "--json", "t2"])
+        shell.authorization.authorize.assert_not_awaited()
+
+    async def test_terminal_replacement_during_approval_is_denied(self):
+        """Mutation rechecks identity after an asynchronous approval delay."""
+
+        async def native(_host, arguments):
+            return {"address": "t1", "name": "chatgpt-test", "created_ms": 100}
+
+        with (
+            patch.object(shell, "_herdr", side_effect=native) as invoke,
+            patch.object(shell.authorization, "owns_terminal", side_effect=[True, False]),
+            self.assertRaisesRegex(PermissionError, "identity changed"),
+        ):
+            await shell.session_kill("local", "t1")
+        self.assertEqual(invoke.await_count, 2)
+        shell.authorization.authorize.assert_awaited_once()
+
+    async def test_herdr_mutations_respect_denied_approvals(self):
+        """A strict host policy requires actual approval for all terminal mutations."""
+
+        async def native(_host, arguments):
+            return {"name": "chatgpt-test", "labels": {"origin": "chatgpt-shell"}}
+
+        with (
+            patch.object(shell.authorization, "authorize", new_callable=AsyncMock, side_effect=PermissionError("not approved")),
+            patch.object(shell.authorization, "owns_terminal", return_value=True),
+            patch.object(shell, "_herdr", side_effect=native) as invoke,
+        ):
+            with self.assertRaises(PermissionError):
+                await shell.session_interrupt("local", "t1")
+            with self.assertRaises(PermissionError):
+                await shell.session_kill("local", "t1")
+            with self.assertRaises(PermissionError):
+                await shell.session_start("local", "true")
+            self.assertEqual(len(invoke.await_args_list), 2)
+
+    async def test_herdr_read_bounds_scrollback(self):
+        """Bound requested scrollback so a tool cannot request an unlimited response."""
+        with patch.object(shell, "_herdr", new_callable=AsyncMock) as invoke:
+            with self.assertRaises(ValueError):
+                await shell.session_read("local", "t1", lines=100000)
+            invoke.assert_not_awaited()
+
+    def test_herdr_runs_only_on_server_worker(self):
+        """Herdr CLI is never launched over the pre-existing remote SSH accounts."""
+        self.argv.stop()
+        try:
+            local = shell._herdr_argv("local", ["ls", "--json"])
+            with (
+                patch.dict(shell.REMOTE_TARGETS, {"mac": shell.RemoteTarget("owner@mac", "key", "/bin/zsh")}),
+                self.assertRaisesRegex(ValueError, "hosted on local"),
+            ):
+                shell._herdr_argv("mac", ["ls", "--json"])
+        finally:
+            self.argv.start()
+        self.assertIn("unset SSH_AUTH_SOCK GH_TOKEN", local[-1])
+        self.assertIn("--user=agent-workspaces", local[-1])
 
     def test_output_buffer_bounds(self):
         """Cap retained output without dropping the final result."""
