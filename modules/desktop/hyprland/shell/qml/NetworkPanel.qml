@@ -589,7 +589,7 @@ Item {
             currentIndex: panel.selectedIndex
             boundsBehavior: Flickable.StopAtBounds
 
-            delegate: ShellSurface {
+            delegate: ShellListRow {
                 id: networkRow
 
                 required property var modelData
@@ -599,16 +599,18 @@ Item {
                 height: 88
                 theme: panel.theme
                 motion: panel.motion
-                surfaceLayer: ShellSurface.Control
                 selected: index === panel.selectedIndex
-                cornerRadius: theme.radiusLarge
                 fillColor: networkRow.modelData.connected ? panel.theme.blend(panel.theme.groupBase, panel.theme.positive, panel.theme.dark ? 0.11 : 0.07) : panel.theme.layer3
 
+                pressedFeedback: networkPress.visualPressed
+                selectionColor: panel.theme.roleColor("connectivity")
+
                 StateLayer {
+                    id: networkPress
                     theme: panel.theme
                     motion: panel.motion
                     selected: networkRow.index === panel.selectedIndex
-                    cornerRadius: panel.theme.radiusLarge
+                    cornerRadius: networkRow.cornerRadius
                     onActivated: {
                         panel.selectedIndex = networkRow.index;
                         panel.activateSelected();
@@ -728,7 +730,7 @@ Item {
             boundsBehavior: Flickable.StopAtBounds
             onCurrentIndexChanged: positionViewAtIndex(currentIndex, ListView.Contain)
 
-            delegate: ShellSurface {
+            delegate: ShellListRow {
                 id: profileRow
                 required property var modelData
                 required property int index
@@ -736,14 +738,16 @@ Item {
                 height: 68
                 theme: panel.theme
                 motion: panel.motion
-                surfaceLayer: ShellSurface.Control
-                cornerRadius: theme.radiusMedium
                 selected: index === panel.savedIndex
 
+                pressedFeedback: profilePress.visualPressed
+                selectionColor: panel.theme.roleColor("connectivity")
+
                 StateLayer {
+                    id: profilePress
                     theme: panel.theme
                     motion: panel.motion
-                    cornerRadius: panel.theme.radiusMedium
+                    cornerRadius: profileRow.cornerRadius
                     selected: profileRow.index === panel.savedIndex
                     onActivated: {
                         panel.savedIndex = profileRow.index;

@@ -273,7 +273,7 @@ Item {
             currentIndex: panel.selectedIndex
             boundsBehavior: Flickable.StopAtBounds
 
-            delegate: ShellSurface {
+            delegate: ShellListRow {
                 id: deviceRow
 
                 required property var modelData
@@ -283,16 +283,18 @@ Item {
                 height: 92
                 theme: panel.theme
                 motion: panel.motion
-                surfaceLayer: ShellSurface.Control
                 selected: index === panel.selectedIndex
-                cornerRadius: theme.radiusLarge
                 fillColor: deviceRow.modelData.connected ? panel.theme.blend(panel.theme.groupBase, panel.theme.positive, panel.theme.dark ? 0.11 : 0.07) : panel.theme.layer3
 
+                pressedFeedback: devicePress.visualPressed
+                selectionColor: panel.theme.roleColor("connectivity")
+
                 StateLayer {
+                    id: devicePress
                     theme: panel.theme
                     motion: panel.motion
                     selected: deviceRow.index === panel.selectedIndex
-                    cornerRadius: panel.theme.radiusLarge
+                    cornerRadius: deviceRow.cornerRadius
 
                     onActivated: {
                         panel.selectedIndex = deviceRow.index;
