@@ -339,9 +339,58 @@ Item {
             wrapMode: Text.WordWrap
         }
 
-        ShellSurface {
+        CenteredActionFlow {
             width: parent.width
-            height: historyContent.implicitHeight + panel.theme.spacing3 * 2
+            spacing: panel.theme.spacing2
+            ShellAction {
+                width: Math.min(parent.width, implicitWidth)
+                height: implicitHeight
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                compact: true
+                horizontalCompact: true
+                icon: "󰍛"
+                title: "Logical cores"
+                active: panel.showCores
+                activeColor: panel.theme.roleColor("resources")
+                shortcut: panel.runtime.shellHint("ResourceDashboard.toggleCores")
+                onActivated: panel.toggleCoreView()
+            }
+            ShellAction {
+                width: Math.min(parent.width, implicitWidth)
+                height: implicitHeight
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                compact: true
+                horizontalCompact: true
+                icon: "󰓅"
+                title: "Processes"
+                active: panel.showProcesses
+                activeColor: panel.theme.roleColor("resources")
+                shortcut: panel.runtime.shellHint("ResourceDashboard.processes")
+                onActivated: panel.activateAction("ResourceDashboard.processes")
+            }
+            ShellAction {
+                visible: panel.showProcesses
+                width: Math.min(parent.width, implicitWidth)
+                height: implicitHeight
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                compact: true
+                horizontalCompact: true
+                title: panel.resourceState.sortByMemory ? "Sort: memory" : "Sort: CPU"
+                shortcut: panel.runtime.shellHint("ResourceDashboard.sort")
+                onActivated: panel.activateAction("ResourceDashboard.sort")
+            }
+        }
+
+        ShellSurface {
+            visible: panel.showCores || panel.showProcesses
+            width: parent.width
+            height: visible ? historyContent.implicitHeight + panel.theme.spacing3 * 2 : 0
             theme: panel.theme
             motion: panel.motion
             surfaceLayer: ShellSurface.Group
@@ -355,35 +404,13 @@ Item {
                 anchors.margins: panel.theme.spacing3
                 spacing: panel.theme.spacing2
 
-                Row {
+                ShellText {
                     width: parent.width
-                    height: Math.max(viewToggle.implicitHeight, panel.theme.fontSection)
-                    spacing: panel.theme.spacing3
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: Math.max(1, parent.width - viewToggle.width - parent.spacing)
-                        text: panel.showProcesses ? (panel.resourceState.sortByMemory ? "Top processes · memory" : "Top processes · CPU average") : panel.showCores ? "Logical cores · " + panel.resourceState.coreUsage.length + " active counters" : "History · " + panel.resourceState.historySeconds + "s"
-                        color: panel.theme.textStrong
-                        font.family: panel.runtime.fontSans
-                        font.pixelSize: panel.theme.fontSection
-                        font.weight: Font.DemiBold
-                        elide: Text.ElideRight
-                    }
-                    ShellAction {
-                        id: viewToggle
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: implicitWidth
-                        height: implicitHeight
-                        runtime: panel.runtime
-                        theme: panel.theme
-                        motion: panel.motion
-                        compact: true
-                        horizontalCompact: true
-                        icon: panel.showCores ? "󰥔" : "󰍛"
-                        title: panel.showCores ? "History" : "Cores"
-                        shortcut: panel.runtime.shellHint("ResourceDashboard.toggleCores")
-                        onActivated: panel.toggleCoreView()
-                    }
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    text: panel.showProcesses ? (panel.resourceState.sortByMemory ? "Top processes · memory" : "Top processes · CPU average") : "Logical cores · " + panel.resourceState.coreUsage.length + " active counters"
+                    textRole: ShellText.Section
+                    wrapMode: Text.WordWrap
                 }
 
                 Column {
@@ -454,7 +481,7 @@ Item {
                     id: coreGrid
                     visible: panel.showCores
                     width: parent.width
-                    columns: Math.min(8, Math.max(1, panel.resourceState.coreUsage.length))
+                    columns: Math.min(8, Math.max(1, panel.resourceState.coreUsage.length), Math.max(1, Math.floor(width / panel.theme.fontSize(88))))
                     readonly property int rowCount: Math.max(1, Math.ceil(Math.min(32, panel.resourceState.coreUsage.length) / columns))
                     columnSpacing: panel.theme.spacing2
                     rowSpacing: panel.theme.spacing2
@@ -466,7 +493,7 @@ Item {
                             readonly property bool hasSample: modelData.utilisation >= 0
                             readonly property real usage: hasSample ? modelData.utilisation : 0
                             width: (coreGrid.width - (coreGrid.columns - 1) * coreGrid.columnSpacing) / coreGrid.columns
-                            height: Math.min(59, Math.max(26, Math.floor((126 - (coreGrid.rowCount - 1) * coreGrid.rowSpacing) / coreGrid.rowCount)))
+                            height: panel.theme.fontSize(36)
                             theme: panel.theme
                             motion: panel.motion
                             surfaceLayer: ShellSurface.Control
@@ -486,7 +513,7 @@ Item {
                                     font.pixelSize: panel.theme.fontUtility
                                 }
                                 Item {
-                                    width: Math.max(0, parent.width - 58)
+                                    width: Math.max(0, parent.width - panel.theme.fontSize(66))
                                     height: 1
                                 }
                                 Text {
@@ -514,9 +541,8 @@ Item {
             }
         }
 
-        Flow {
+        CenteredActionFlow {
             width: parent.width
-            height: implicitHeight
             spacing: panel.theme.spacing2
             Repeater {
                 model: [
@@ -534,14 +560,6 @@ Item {
                         title: panel.resourceState.historyLength + " samples"
                     },
                     {
-                        action: "ResourceDashboard.processes",
-                        title: panel.showProcesses ? "History" : "Processes"
-                    },
-                    {
-                        action: "ResourceDashboard.sort",
-                        title: panel.resourceState.sortByMemory ? "Sort: memory" : "Sort: CPU"
-                    },
-                    {
                         action: "ResourceDashboard.defaults",
                         glyph: DesktopIcons.actionGlyph("reset"),
                         title: "Restore defaults"
@@ -550,7 +568,7 @@ Item {
                 delegate: ShellAction {
                     required property var modelData
                     width: Math.min(parent.width, implicitWidth)
-                    height: 40
+                    height: implicitHeight
                     runtime: panel.runtime
                     theme: panel.theme
                     motion: panel.motion
@@ -559,7 +577,6 @@ Item {
                     title: modelData.title
                     icon: modelData.glyph || ""
                     shortcut: panel.runtime.shellHint(modelData.action)
-                    enabled: modelData.action !== "ResourceDashboard.sort" || panel.showProcesses
                     onActivated: panel.activateAction(modelData.action)
                 }
             }
