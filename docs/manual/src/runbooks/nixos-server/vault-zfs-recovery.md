@@ -58,6 +58,8 @@ zfs get mounted,mountpoint,compression,atime,recordsize -r "$VAULT_POOL"
 systemctl list-timers --all | grep -E 'sanoid|zfs-scrub|snapper'
 ```
 
+The setup script creates the primary data dataset only. Before starting dependent services, verify their configured mount requirements and provision any additional datasets using the intended storage layout. Preserve existing ZFS dataset properties when importing or restoring a pool.
+
 Do not rerun the creation script as a recovery mechanism for an existing pool.
 
 ## Routine health checks
