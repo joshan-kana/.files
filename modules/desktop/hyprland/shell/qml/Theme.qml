@@ -73,10 +73,10 @@ QtObject {
     // music-reactive treatment. Theme remains the only visual style owner.
     property bool musicReactiveEnabled: false
     property bool shellGlassEnabled: false
-    property real glassOpacity: 0.70
+    property real glassOpacity: runtime.appearanceDefaults.glassOpacity
     property real musicReactiveEnergy: 0
     property real musicReactiveBeat: 0
-    property real musicReactiveIntensity: 1.0
+    property real musicReactiveIntensity: runtime.appearanceDefaults.musicReactiveIntensity
     // Share the spectrum's red/blue/cyan ramp with the shell, without
     // creating per-frame colour arrays or a second audio signal pipeline.
     // Music changes tint strength; the palette stays anchored to bass/treble.
@@ -117,11 +117,11 @@ QtObject {
     readonly property int radiusLarge: 42
     readonly property int radiusPanel: 62
     // The visible islands are vertically centred inside the reserved bar.
-    property int barIslandHeight: 50
+    property int barIslandHeight: runtime.appearanceDefaults.barIslandHeight
     readonly property int barInsetTop: 16
     readonly property int barInsetBottom: barInsetTop
     readonly property int barHeight: barIslandHeight + barInsetTop + barInsetBottom
-    property int frameThickness: 26
+    property int frameThickness: runtime.appearanceDefaults.frameThickness
     // Use the same large squircle family as the rest of the shell. The
     // bigger panel radius made the monitor outline look excessively bulbous.
     readonly property int frameRounding: radiusLarge

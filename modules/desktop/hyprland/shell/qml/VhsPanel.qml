@@ -25,8 +25,8 @@ Item {
             key: "vhsIntensity",
             title: "Intensity",
             description: "Overall signal degradation",
-            minimum: 0,
-            maximum: 1,
+            minimum: runtime.constraints.appearance.vhsIntensity.min,
+            maximum: runtime.constraints.appearance.vhsIntensity.max,
             step: 0.05,
             unit: "%"
         },
@@ -34,8 +34,8 @@ Item {
             key: "vhsTracking",
             title: "Tracking",
             description: "Rolling tears and horizontal instability",
-            minimum: 0,
-            maximum: 1,
+            minimum: runtime.constraints.appearance.vhsTracking.min,
+            maximum: runtime.constraints.appearance.vhsTracking.max,
             step: 0.05,
             unit: "%"
         },
@@ -43,8 +43,8 @@ Item {
             key: "vhsChroma",
             title: "Colour bleed",
             description: "Red and blue channel separation",
-            minimum: 0,
-            maximum: 1,
+            minimum: runtime.constraints.appearance.vhsChroma.min,
+            maximum: runtime.constraints.appearance.vhsChroma.max,
             step: 0.05,
             unit: "%"
         },
@@ -52,8 +52,8 @@ Item {
             key: "vhsNoise",
             title: "Tape noise",
             description: "Moving grain and brightness flicker",
-            minimum: 0,
-            maximum: 1,
+            minimum: runtime.constraints.appearance.vhsNoise.min,
+            maximum: runtime.constraints.appearance.vhsNoise.max,
             step: 0.05,
             unit: "%"
         },
@@ -61,8 +61,8 @@ Item {
             key: "vhsScanlines",
             title: "Scanlines",
             description: "Alternating horizontal line darkness",
-            minimum: 0,
-            maximum: 1,
+            minimum: runtime.constraints.appearance.vhsScanlines.min,
+            maximum: runtime.constraints.appearance.vhsScanlines.max,
             step: 0.05,
             unit: "%"
         },
@@ -70,8 +70,8 @@ Item {
             key: "vhsDropouts",
             title: "Dropouts",
             description: "Irregular dark horizontal tape streaks",
-            minimum: 0,
-            maximum: 1,
+            minimum: runtime.constraints.appearance.vhsDropouts.min,
+            maximum: runtime.constraints.appearance.vhsDropouts.max,
             step: 0.05,
             unit: "%"
         },
@@ -79,8 +79,8 @@ Item {
             key: "vhsSpeed",
             title: "Tape speed",
             description: "Rate of animated tracking and noise",
-            minimum: 0.25,
-            maximum: 2.5,
+            minimum: runtime.constraints.appearance.vhsSpeed.min,
+            maximum: runtime.constraints.appearance.vhsSpeed.max,
             step: 0.05,
             unit: "×"
         }

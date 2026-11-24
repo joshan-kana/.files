@@ -22,14 +22,21 @@ test("window and glass opacity persist independently from 20% to 100%", () => {
     );
     assert.ok(
       prefs.includes(
-        setting + ': Math.max(0.20, Math.min(1, effective("' + setting + '"))',
+        setting +
+          ': runtime.bounded("appearance", "' +
+          setting +
+          '", effective("' +
+          setting +
+          '"))',
       ),
     );
     assert.match(
       prefs,
       new RegExp('storeOverride\\("' + setting + '", next\\)'),
     );
-    assert.match(prefs, /Math\.max\(0\.20, Math\.min\(1, value\)\)/);
+    assert.ok(
+      prefs.includes('runtime.bounded("appearance", "' + setting + '", value)'),
+    );
   }
   const nix = fs.readFileSync(
     path.join(__dirname, "../modules/desktop/hyprland/shell/default.nix"),
@@ -67,7 +74,10 @@ test("frosted-glass percentage maps directly to actual pane alpha", () => {
   const surface = qml("ShellSurface.qml");
   const frame = qml("DesktopFrame.qml");
   assert.match(root, /glassOpacity: qmlAppearance\.glassOpacity/);
-  assert.match(theme, /property real glassOpacity: 0\.70/);
+  assert.match(
+    theme,
+    /property real glassOpacity: runtime\.appearanceDefaults\.glassOpacity/,
+  );
   assert.match(
     surface,
     /fillOpacity: frameConnected \? 0 : !glassAllowed \|\| !theme\.shellGlassEnabled \|\| surfaceLayer === ShellSurface\.Background \? 1 : theme\.glassOpacity/,

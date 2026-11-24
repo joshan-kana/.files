@@ -55,27 +55,27 @@ QtObject {
 
     readonly property var overrideKeys: parseOverrideKeys(saved.userOverrides)
     readonly property bool wallpaperSpectrumEnabled: effective("wallpaperSpectrumEnabled")
-    readonly property string wallpaperResizeMode: ["fit", "crop"].includes(effective("wallpaperResizeMode")) ? effective("wallpaperResizeMode") : runtime.appearanceDefaults.wallpaperResizeMode
+    readonly property string wallpaperResizeMode: runtime.constraints.appearance.wallpaperResizeMode.values.includes(effective("wallpaperResizeMode")) ? effective("wallpaperResizeMode") : runtime.appearanceDefaults.wallpaperResizeMode
     readonly property string wallpaperTargetOutput: effective("wallpaperTargetOutput")
     readonly property bool musicReactiveEnabled: effective("musicReactiveEnabled")
-    readonly property real musicReactiveSensitivity: Math.max(0.4, Math.min(3.0, effective("musicReactiveSensitivity")))
-    readonly property real musicReactiveAttack: Math.max(0.5, Math.min(2.5, effective("musicReactiveAttack")))
-    readonly property real musicReactiveRelease: Math.max(0.4, Math.min(2.5, effective("musicReactiveRelease")))
-    readonly property real musicReactiveSmoothing: Math.max(0, Math.min(0.9, effective("musicReactiveSmoothing")))
-    readonly property real musicReactiveIntensity: Math.max(0.25, Math.min(2.0, effective("musicReactiveIntensity")))
-    readonly property string musicReactiveEmphasis: ["balanced", "bass", "mid", "treble"].includes(effective("musicReactiveEmphasis")) ? effective("musicReactiveEmphasis") : runtime.appearanceDefaults.musicReactiveEmphasis
-    readonly property real spectrumSensitivity: Math.max(0.4, Math.min(3.0, effective("spectrumSensitivity")))
-    readonly property real spectrumAttack: Math.max(0.25, Math.min(2.5, effective("spectrumAttack")))
-    readonly property real spectrumRelease: Math.max(0.25, Math.min(2.5, effective("spectrumRelease")))
-    readonly property int wallpaperSpectrumBars: Math.max(24, Math.min(96, effective("wallpaperSpectrumBars")))
-    readonly property real wallpaperSpectrumOpacity: Math.max(0.2, Math.min(1.0, effective("wallpaperSpectrumOpacity")))
+    readonly property real musicReactiveSensitivity: runtime.bounded("appearance", "musicReactiveSensitivity", effective("musicReactiveSensitivity"))
+    readonly property real musicReactiveAttack: runtime.bounded("appearance", "musicReactiveAttack", effective("musicReactiveAttack"))
+    readonly property real musicReactiveRelease: runtime.bounded("appearance", "musicReactiveRelease", effective("musicReactiveRelease"))
+    readonly property real musicReactiveSmoothing: runtime.bounded("appearance", "musicReactiveSmoothing", effective("musicReactiveSmoothing"))
+    readonly property real musicReactiveIntensity: runtime.bounded("appearance", "musicReactiveIntensity", effective("musicReactiveIntensity"))
+    readonly property string musicReactiveEmphasis: runtime.constraints.appearance.musicReactiveEmphasis.values.includes(effective("musicReactiveEmphasis")) ? effective("musicReactiveEmphasis") : runtime.appearanceDefaults.musicReactiveEmphasis
+    readonly property real spectrumSensitivity: runtime.bounded("appearance", "spectrumSensitivity", effective("spectrumSensitivity"))
+    readonly property real spectrumAttack: runtime.bounded("appearance", "spectrumAttack", effective("spectrumAttack"))
+    readonly property real spectrumRelease: runtime.bounded("appearance", "spectrumRelease", effective("spectrumRelease"))
+    readonly property int wallpaperSpectrumBars: runtime.bounded("appearance", "wallpaperSpectrumBars", effective("wallpaperSpectrumBars"))
+    readonly property real wallpaperSpectrumOpacity: runtime.bounded("appearance", "wallpaperSpectrumOpacity", effective("wallpaperSpectrumOpacity"))
     readonly property var reactiveParameters: [
         {
             key: "musicReactiveSensitivity",
             title: "Sensitivity",
             description: "Response to quiet audio",
-            minimum: 40,
-            maximum: 300,
+            minimum: runtime.constraints.appearance.musicReactiveSensitivity.min * 100,
+            maximum: runtime.constraints.appearance.musicReactiveSensitivity.max * 100,
             step: 5,
             suffix: "%"
         },
@@ -83,8 +83,8 @@ QtObject {
             key: "musicReactiveAttack",
             title: "Attack",
             description: "Strength of beat transients",
-            minimum: 50,
-            maximum: 250,
+            minimum: runtime.constraints.appearance.musicReactiveAttack.min * 100,
+            maximum: runtime.constraints.appearance.musicReactiveAttack.max * 100,
             step: 5,
             suffix: "%"
         },
@@ -92,8 +92,8 @@ QtObject {
             key: "musicReactiveRelease",
             title: "Release speed",
             description: "Higher values settle sooner",
-            minimum: 40,
-            maximum: 250,
+            minimum: runtime.constraints.appearance.musicReactiveRelease.min * 100,
+            maximum: runtime.constraints.appearance.musicReactiveRelease.max * 100,
             step: 5,
             suffix: "%"
         },
@@ -101,8 +101,8 @@ QtObject {
             key: "musicReactiveSmoothing",
             title: "Smoothing",
             description: "Smooth the sustained envelope",
-            minimum: 0,
-            maximum: 90,
+            minimum: runtime.constraints.appearance.musicReactiveSmoothing.min * 100,
+            maximum: runtime.constraints.appearance.musicReactiveSmoothing.max * 100,
             step: 5,
             suffix: "%"
         },
@@ -110,28 +110,36 @@ QtObject {
             key: "musicReactiveIntensity",
             title: "Tint intensity",
             description: "Strength of the shared shell tint",
-            minimum: 25,
-            maximum: 200,
+            minimum: runtime.constraints.appearance.musicReactiveIntensity.min * 100,
+            maximum: runtime.constraints.appearance.musicReactiveIntensity.max * 100,
             step: 5,
             suffix: "%"
         }
     ]
     readonly property var musicReactiveParameterKeys: ["musicReactiveSensitivity", "musicReactiveAttack", "musicReactiveRelease", "musicReactiveSmoothing", "musicReactiveIntensity", "musicReactiveEmphasis"]
+    readonly property var reactivePresets: ({
+            Subtle: [0.75, 0.8, 1.3, 0.5, 0.65, "balanced"],
+            Energetic: [1.6, 1.6, 0.75, 0.2, 1.5, "bass"]
+        })
     readonly property string musicReactivePreset: {
         if (musicReactiveParameterKeys.every(key => !hasOverride(key)))
             return "Default";
-        if (Math.abs(musicReactiveSensitivity - 0.75) <= 0.005 && Math.abs(musicReactiveAttack - 0.8) <= 0.005 && Math.abs(musicReactiveRelease - 1.3) <= 0.005 && Math.abs(musicReactiveSmoothing - 0.5) <= 0.005 && Math.abs(musicReactiveIntensity - 0.65) <= 0.005 && musicReactiveEmphasis === "balanced")
-            return "Subtle";
-        if (Math.abs(musicReactiveSensitivity - 1.6) <= 0.005 && Math.abs(musicReactiveAttack - 1.6) <= 0.005 && Math.abs(musicReactiveRelease - 0.75) <= 0.005 && Math.abs(musicReactiveSmoothing - 0.2) <= 0.005 && Math.abs(musicReactiveIntensity - 1.5) <= 0.005 && musicReactiveEmphasis === "bass")
-            return "Energetic";
+        for (const name of Object.keys(reactivePresets)) {
+            if (musicReactiveParameterKeys.every((key, index) => {
+                const value = effective(key);
+                const expected = reactivePresets[name][index];
+                return typeof expected === "number" ? Math.abs(value - expected) <= 0.005 : value === expected;
+            }))
+                return name;
+        }
         return "Custom";
     }
-    readonly property int barIslandHeight: Math.max(44, Math.min(60, effective("barIslandHeight")))
-    readonly property int frameThickness: Math.max(18, Math.min(36, effective("frameThickness")))
+    readonly property int barIslandHeight: runtime.bounded("appearance", "barIslandHeight", effective("barIslandHeight"))
+    readonly property int frameThickness: runtime.bounded("appearance", "frameThickness", effective("frameThickness"))
     function setGeometryPreference(key: string, value: real): void {
-        const bounds = key === "barIslandHeight" ? [44, 60] : key === "frameThickness" ? [18, 36] : null;
+        const bounds = ["barIslandHeight", "frameThickness"].includes(key);
         if (bounds && Number.isFinite(value)) {
-            storeOverride(key, Math.round(Math.max(bounds[0], Math.min(bounds[1], value))));
+            storeOverride(key, Math.round(runtime.bounded("appearance", key, value)));
             saved.sync();
         }
     }
@@ -139,8 +147,8 @@ QtObject {
     readonly property bool frameVisible: effective("frameVisible")
     readonly property bool windowTransparencyEnabled: effective("windowTransparencyEnabled")
     readonly property bool shellGlassEnabled: effective("shellGlassEnabled")
-    readonly property real windowOpacity: Math.max(0.20, Math.min(1, effective("windowOpacity")))
-    readonly property real glassOpacity: Math.max(0.20, Math.min(1, effective("glassOpacity")))
+    readonly property real windowOpacity: runtime.bounded("appearance", "windowOpacity", effective("windowOpacity"))
+    readonly property real glassOpacity: runtime.bounded("appearance", "glassOpacity", effective("glassOpacity"))
     readonly property bool blurEnabled: effective("blurEnabled")
     readonly property int blurSize: Math.max(5, Math.min(25, effective("blurSize")))
     readonly property var vhsParameterKeys: ["vhsIntensity", "vhsTracking", "vhsChroma", "vhsNoise", "vhsScanlines", "vhsSpeed", "vhsDropouts"]
@@ -159,19 +167,19 @@ QtObject {
         return "Custom";
     }
     readonly property bool vhsEnabled: effective("vhsEnabled")
-    readonly property real vhsIntensity: Math.max(0, Math.min(1, effective("vhsIntensity")))
-    readonly property real vhsTracking: Math.max(0, Math.min(1, effective("vhsTracking")))
-    readonly property real vhsChroma: Math.max(0, Math.min(1, effective("vhsChroma")))
-    readonly property real vhsNoise: Math.max(0, Math.min(1, effective("vhsNoise")))
-    readonly property real vhsScanlines: Math.max(0, Math.min(1, effective("vhsScanlines")))
-    readonly property real vhsSpeed: Math.max(0.25, Math.min(2.5, effective("vhsSpeed")))
-    readonly property real vhsDropouts: Math.max(0, Math.min(1, effective("vhsDropouts")))
+    readonly property real vhsIntensity: runtime.bounded("appearance", "vhsIntensity", effective("vhsIntensity"))
+    readonly property real vhsTracking: runtime.bounded("appearance", "vhsTracking", effective("vhsTracking"))
+    readonly property real vhsChroma: runtime.bounded("appearance", "vhsChroma", effective("vhsChroma"))
+    readonly property real vhsNoise: runtime.bounded("appearance", "vhsNoise", effective("vhsNoise"))
+    readonly property real vhsScanlines: runtime.bounded("appearance", "vhsScanlines", effective("vhsScanlines"))
+    readonly property real vhsSpeed: runtime.bounded("appearance", "vhsSpeed", effective("vhsSpeed"))
+    readonly property real vhsDropouts: runtime.bounded("appearance", "vhsDropouts", effective("vhsDropouts"))
     function hasOverride(key: string): bool {
         return overrideKeys.includes(key);
     }
-    readonly property string mediaVisualizerMode: ["curve", "bars"].includes(effective("mediaVisualizerMode")) ? effective("mediaVisualizerMode") : runtime.appearanceDefaults.mediaVisualizerMode
+    readonly property string mediaVisualizerMode: runtime.constraints.appearance.mediaVisualizerMode.values.includes(effective("mediaVisualizerMode")) ? effective("mediaVisualizerMode") : runtime.appearanceDefaults.mediaVisualizerMode
     readonly property bool mediaLyricsVisible: effective("mediaLyricsVisible")
-    readonly property var seekIntervals: [5, 10, 15, 30, 60]
+    readonly property var seekIntervals: runtime.constraints.appearance.mediaSeekSeconds.values
     readonly property string mediaPreferredPlayer: effective("mediaPreferredPlayer")
     readonly property int mediaSeekSeconds: seekIntervals.includes(effective("mediaSeekSeconds")) ? effective("mediaSeekSeconds") : runtime.appearanceDefaults.mediaSeekSeconds
 
@@ -282,21 +290,9 @@ QtObject {
     }
 
     function setVisualParameter(key: string, value: real): void {
-        const bounds = {
-            musicReactiveSensitivity: [0.4, 3.0],
-            musicReactiveAttack: [0.5, 2.5],
-            musicReactiveRelease: [0.4, 2.5],
-            musicReactiveSmoothing: [0.0, 0.9],
-            musicReactiveIntensity: [0.25, 2.0],
-            spectrumSensitivity: [0.4, 3.0],
-            spectrumAttack: [0.25, 2.5],
-            spectrumRelease: [0.25, 2.5],
-            wallpaperSpectrumOpacity: [0.2, 1.0]
-        };
-        const range = bounds[key];
-        if (!range || !isFinite(value))
+        if (!reactiveParameters.some(parameter => parameter.key === key) && !["spectrumSensitivity", "spectrumAttack", "spectrumRelease", "wallpaperSpectrumOpacity"].includes(key) || !isFinite(value))
             return;
-        const next = Math.round(Math.max(range[0], Math.min(range[1], value)) * 100) / 100;
+        const next = Math.round(runtime.bounded("appearance", key, value) * 100) / 100;
         if (next === effective(key))
             return;
         storeOverride(key, next);
@@ -304,14 +300,14 @@ QtObject {
     }
 
     function setReactiveEmphasis(value: string): void {
-        if (!["balanced", "bass", "mid", "treble"].includes(value) || musicReactiveEmphasis === value)
+        if (!runtime.constraints.appearance.musicReactiveEmphasis.values.includes(value) || musicReactiveEmphasis === value)
             return;
         storeOverride("musicReactiveEmphasis", value);
         saved.sync();
     }
 
     function setSpectrumBars(value: int): void {
-        storeOverride("wallpaperSpectrumBars", Math.max(24, Math.min(96, value)));
+        storeOverride("wallpaperSpectrumBars", runtime.bounded("appearance", "wallpaperSpectrumBars", value));
         saved.sync();
     }
 
@@ -325,11 +321,7 @@ QtObject {
             resetReactiveTuning();
             return;
         }
-        const presets = {
-            Subtle: [0.75, 0.8, 1.3, 0.5, 0.65, "balanced"],
-            Energetic: [1.6, 1.6, 0.75, 0.2, 1.5, "bass"]
-        };
-        const values = presets[name];
+        const values = reactivePresets[name];
         if (!values)
             return;
         for (let i = 0; i < musicReactiveParameterKeys.length; ++i)
@@ -451,9 +443,7 @@ QtObject {
     function setVhsParameter(key: string, value: real): void {
         if (!["vhsTracking", "vhsChroma", "vhsNoise", "vhsScanlines", "vhsSpeed", "vhsDropouts"].includes(key))
             return;
-        const lower = key === "vhsSpeed" ? 0.25 : 0;
-        const upper = key === "vhsSpeed" ? 2.5 : 1;
-        const next = Math.round(Math.max(lower, Math.min(upper, value)) * 100) / 100;
+        const next = Math.round(runtime.bounded("appearance", key, value) * 100) / 100;
         if (next === effective(key) && vhsEnabled)
             return;
         storeOverride(key, next);
@@ -463,7 +453,7 @@ QtObject {
     }
 
     function setVhsIntensity(value: real): void {
-        const next = Math.round(Math.max(0, Math.min(1, value)) * 100) / 100;
+        const next = Math.round(runtime.bounded("appearance", "vhsIntensity", value) * 100) / 100;
         if (next === vhsIntensity && vhsEnabled)
             return;
         saved.vhsIntensity = next;
@@ -515,7 +505,7 @@ QtObject {
     }
 
     function setWindowOpacity(value: real): void {
-        const next = Math.round(Math.max(0.20, Math.min(1, value)) * 100) / 100;
+        const next = Math.round(runtime.bounded("appearance", "windowOpacity", value) * 100) / 100;
         if (next === windowOpacity && windowTransparencyEnabled)
             return;
         saved.windowOpacity = next;
@@ -527,7 +517,7 @@ QtObject {
     }
 
     function setGlassOpacity(value: real): void {
-        const next = Math.round(Math.max(0.20, Math.min(1, value)) * 100) / 100;
+        const next = Math.round(runtime.bounded("appearance", "glassOpacity", value) * 100) / 100;
         if (next === glassOpacity && shellGlassEnabled)
             return;
         const wasEnabled = shellGlassEnabled;

@@ -47,16 +47,16 @@ QtObject {
         property int intervalOverride: 0
         property int historyOverride: 0
     }
-    readonly property int intervalSeconds: [1, 2, 5].includes(saved.intervalOverride) ? saved.intervalOverride : runtime.resourceSampling.intervalSeconds
-    readonly property int historyLength: [30, 60, 120].includes(saved.historyOverride) ? saved.historyOverride : runtime.resourceSampling.historyLength
+    readonly property int intervalSeconds: runtime.constraints.resourceSampling.intervalSeconds.values.includes(saved.intervalOverride) ? saved.intervalOverride : runtime.resourceSampling.intervalSeconds
+    readonly property int historyLength: runtime.constraints.resourceSampling.historyLength.values.includes(saved.historyOverride) ? saved.historyOverride : runtime.resourceSampling.historyLength
     readonly property int historySeconds: historyLength * intervalSeconds
     function cycleInterval(): void {
-        const choices = [1, 2, 5];
+        const choices = runtime.constraints.resourceSampling.intervalSeconds.values;
         saved.intervalOverride = choices[(choices.indexOf(intervalSeconds) + 1) % choices.length];
         saved.sync();
     }
     function cycleHistory(): void {
-        const choices = [30, 60, 120];
+        const choices = runtime.constraints.resourceSampling.historyLength.values;
         saved.historyOverride = choices[(choices.indexOf(historyLength) + 1) % choices.length];
         saved.sync();
     }

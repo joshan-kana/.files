@@ -6,6 +6,274 @@
 }:
 
 let
+  # Option constraints also govern runtime controls and backend validation.
+  constraints = {
+    appearance = {
+      wallpaperResizeMode = {
+        values = [
+          "fit"
+          "crop"
+        ];
+      };
+      musicReactiveSensitivity = {
+        min = 0.4;
+        max = 3.0;
+      };
+      musicReactiveAttack = {
+        min = 0.5;
+        max = 2.5;
+      };
+      musicReactiveRelease = {
+        min = 0.4;
+        max = 2.5;
+      };
+      musicReactiveSmoothing = {
+        min = 0.0;
+        max = 0.9;
+      };
+      musicReactiveIntensity = {
+        min = 0.25;
+        max = 2.0;
+      };
+      musicReactiveEmphasis = {
+        values = [
+          "balanced"
+          "bass"
+          "mid"
+          "treble"
+        ];
+      };
+      spectrumSensitivity = {
+        min = 0.4;
+        max = 3.0;
+      };
+      spectrumAttack = {
+        min = 0.25;
+        max = 2.5;
+      };
+      spectrumRelease = {
+        min = 0.25;
+        max = 2.5;
+      };
+      wallpaperSpectrumBars = {
+        min = 24;
+        max = 96;
+      };
+      wallpaperSpectrumOpacity = {
+        min = 0.2;
+        max = 1.0;
+      };
+      barIslandHeight = {
+        min = 44;
+        max = 60;
+      };
+      frameThickness = {
+        min = 18;
+        max = 36;
+      };
+      windowOpacity = {
+        min = 0.2;
+        max = 1.0;
+      };
+      glassOpacity = {
+        min = 0.2;
+        max = 1.0;
+      };
+      vhsIntensity = {
+        min = 0.0;
+        max = 1.0;
+      };
+      vhsTracking = {
+        min = 0.0;
+        max = 1.0;
+      };
+      vhsChroma = {
+        min = 0.0;
+        max = 1.0;
+      };
+      vhsNoise = {
+        min = 0.0;
+        max = 1.0;
+      };
+      vhsScanlines = {
+        min = 0.0;
+        max = 1.0;
+      };
+      vhsDropouts = {
+        min = 0.0;
+        max = 1.0;
+      };
+      vhsSpeed = {
+        min = 0.25;
+        max = 2.5;
+      };
+      mediaVisualizerMode = {
+        values = [
+          "bars"
+          "curve"
+        ];
+      };
+      mediaSeekSeconds = {
+        values = [
+          5
+          10
+          15
+          30
+          60
+        ];
+      };
+    };
+    wallpaperRotation = {
+      mode = {
+        values = [
+          "off"
+          "interval"
+          "dayNight"
+        ];
+      };
+      intervalMinutes = {
+        values = [
+          5
+          15
+          30
+          60
+          120
+        ];
+      };
+      dayStart = {
+        min = 0;
+        max = 1439;
+      };
+      nightStart = {
+        min = 0;
+        max = 1439;
+      };
+    };
+    captureEncoding = {
+      imageFormat = {
+        values = [
+          "png"
+          "jpg"
+        ];
+      };
+      jpegQuality = {
+        values = [
+          75
+          85
+          95
+        ];
+      };
+      videoFormat = {
+        values = [
+          "mp4"
+          "mkv"
+        ];
+      };
+      codec = {
+        values = [
+          "libx264"
+          "libx265"
+        ];
+      };
+      frameRate = {
+        values = [
+          0
+          30
+          60
+          120
+        ];
+      };
+      videoQuality = {
+        values = [
+          18
+          23
+          28
+        ];
+      };
+      countdown = {
+        values = [
+          0
+          3
+          5
+          10
+        ];
+      };
+      audio = {
+        values = [
+          "none"
+          "system"
+          "microphone"
+        ];
+      };
+    };
+    notificationQuietHours = {
+      startMinute = {
+        min = 0;
+        max = 1439;
+      };
+      endMinute = {
+        min = 0;
+        max = 1439;
+      };
+      days = {
+        min = 0;
+        max = 127;
+      };
+    };
+    nightLight = {
+      mode = {
+        values = [
+          "off"
+          "manual"
+          "custom"
+          "solar"
+        ];
+      };
+      temperature = {
+        min = 2500;
+        max = 6500;
+      };
+      startMinute = {
+        min = 0;
+        max = 1439;
+      };
+      endMinute = {
+        min = 0;
+        max = 1439;
+      };
+      days = {
+        min = 0;
+        max = 127;
+      };
+      transitionMinutes = {
+        min = 0;
+        max = 60;
+      };
+    };
+    resourceSampling = {
+      intervalSeconds = {
+        values = [
+          1
+          2
+          5
+        ];
+      };
+      historyLength = {
+        values = [
+          30
+          60
+          120
+        ];
+      };
+    };
+    motion = {
+      durationMultiplier = {
+        min = 0.75;
+        max = 1.5;
+      };
+    };
+  };
+
   sessionTarget = "wayland-session@hyprland.desktop.target";
 
   resourceProbe = pkgs.writeShellApplication {
@@ -346,10 +614,7 @@ in
           description = "Enable the audio spectrum visualizer over the wallpaper.";
         };
         wallpaperResizeMode = lib.mkOption {
-          type = lib.types.enum [
-            "fit"
-            "crop"
-          ];
+          type = lib.types.enum constraints.appearance.wallpaperResizeMode.values;
           default = "crop";
           description = "Scale selected wallpaper images to fit within the display or crop them to fill it.";
         };
@@ -364,73 +629,68 @@ in
           description = "Tint desktop shell surfaces in response to the currently playing audio.";
         };
         musicReactiveSensitivity = lib.mkOption {
-          type = lib.types.numbers.between 0.4 3.0;
+          type = lib.types.numbers.between constraints.appearance.musicReactiveSensitivity.min constraints.appearance.musicReactiveSensitivity.max;
           default = 1.0;
           description = "Sensitivity multiplier for the single shared audio-reactive envelope.";
         };
         musicReactiveAttack = lib.mkOption {
-          type = lib.types.numbers.between 0.5 2.5;
+          type = lib.types.numbers.between constraints.appearance.musicReactiveAttack.min constraints.appearance.musicReactiveAttack.max;
           default = 1.0;
           description = "Multiplier for how strongly beat transients respond.";
         };
         musicReactiveRelease = lib.mkOption {
-          type = lib.types.numbers.between 0.4 2.5;
+          type = lib.types.numbers.between constraints.appearance.musicReactiveRelease.min constraints.appearance.musicReactiveRelease.max;
           default = 1.0;
           description = "Speed of the reactive beat-pulse release.";
         };
         musicReactiveSmoothing = lib.mkOption {
-          type = lib.types.numbers.between 0.0 0.9;
+          type = lib.types.numbers.between constraints.appearance.musicReactiveSmoothing.min constraints.appearance.musicReactiveSmoothing.max;
           default = 0.0;
           description = "Smoothing coefficient for the sustained reactive envelope; zero preserves direct response.";
         };
         musicReactiveIntensity = lib.mkOption {
-          type = lib.types.numbers.between 0.25 2.0;
+          type = lib.types.numbers.between constraints.appearance.musicReactiveIntensity.min constraints.appearance.musicReactiveIntensity.max;
           default = 1.0;
           description = "Visual intensity multiplier of the shell's existing music-reactive tint.";
         };
         musicReactiveEmphasis = lib.mkOption {
-          type = lib.types.enum [
-            "balanced"
-            "bass"
-            "mid"
-            "treble"
-          ];
+          type = lib.types.enum constraints.appearance.musicReactiveEmphasis.values;
           default = "balanced";
           description = "Frequency region emphasized by the reactive visual response.";
         };
         spectrumSensitivity = lib.mkOption {
-          type = lib.types.numbers.between 0.4 3.0;
+          type = lib.types.numbers.between constraints.appearance.spectrumSensitivity.min constraints.appearance.spectrumSensitivity.max;
           default = 1.0;
           description = "Visual amplitude without changing the reactive tint.";
         };
         spectrumAttack = lib.mkOption {
-          type = lib.types.numbers.between 0.25 2.5;
+          type = lib.types.numbers.between constraints.appearance.spectrumAttack.min constraints.appearance.spectrumAttack.max;
           default = 1.0;
           description = "Rise speed of visualizer bands.";
         };
         spectrumRelease = lib.mkOption {
-          type = lib.types.numbers.between 0.25 2.5;
+          type = lib.types.numbers.between constraints.appearance.spectrumRelease.min constraints.appearance.spectrumRelease.max;
           default = 1.0;
           description = "Fall speed of visualizer bands.";
         };
         wallpaperSpectrumBars = lib.mkOption {
-          type = lib.types.ints.between 24 96;
+          type = lib.types.ints.between constraints.appearance.wallpaperSpectrumBars.min constraints.appearance.wallpaperSpectrumBars.max;
           default = 64;
           description = "Number of visible wallpaper spectrum bars, bounded by available analyser bands.";
         };
         wallpaperSpectrumOpacity = lib.mkOption {
-          type = lib.types.numbers.between 0.2 1.0;
+          type = lib.types.numbers.between constraints.appearance.wallpaperSpectrumOpacity.min constraints.appearance.wallpaperSpectrumOpacity.max;
           default = 0.8;
           description = "Opacity of the existing wallpaper spectrum bars.";
         };
 
         barIslandHeight = lib.mkOption {
-          type = lib.types.ints.between 44 60;
+          type = lib.types.ints.between constraints.appearance.barIslandHeight.min constraints.appearance.barIslandHeight.max;
           default = 50;
           description = "Height of the desktop bar islands in logical pixels.";
         };
         frameThickness = lib.mkOption {
-          type = lib.types.ints.between 18 36;
+          type = lib.types.ints.between constraints.appearance.frameThickness.min constraints.appearance.frameThickness.max;
           default = 26;
           description = "Desktop frame thickness in logical pixels.";
         };
@@ -455,12 +715,12 @@ in
           description = "Use translucent shell surfaces with compositor backdrop blur.";
         };
         windowOpacity = lib.mkOption {
-          type = lib.types.numbers.between 0.2 1.0;
+          type = lib.types.numbers.between constraints.appearance.windowOpacity.min constraints.appearance.windowOpacity.max;
           default = 0.82;
           description = "Opacity of application windows when transparency is enabled, from 0.2 to 1.0 inclusive.";
         };
         glassOpacity = lib.mkOption {
-          type = lib.types.numbers.between 0.2 1.0;
+          type = lib.types.numbers.between constraints.appearance.glassOpacity.min constraints.appearance.glassOpacity.max;
           default = 0.70;
           description = "Opacity of translucent shell surfaces, from 0.2 to 1.0 inclusive.";
         };
@@ -470,45 +730,42 @@ in
           description = "Apply the VHS tape screen effect.";
         };
         vhsIntensity = lib.mkOption {
-          type = lib.types.numbers.between 0.0 1.0;
+          type = lib.types.numbers.between constraints.appearance.vhsIntensity.min constraints.appearance.vhsIntensity.max;
           default = 0.45;
           description = "Strength of the VHS tape effect.";
         };
         vhsTracking = lib.mkOption {
-          type = lib.types.numbers.between 0.0 1.0;
+          type = lib.types.numbers.between constraints.appearance.vhsTracking.min constraints.appearance.vhsTracking.max;
           default = 1.0;
           description = "Amount of rolling tracking distortion in the VHS effect.";
         };
         vhsChroma = lib.mkOption {
-          type = lib.types.numbers.between 0.0 1.0;
+          type = lib.types.numbers.between constraints.appearance.vhsChroma.min constraints.appearance.vhsChroma.max;
           default = 1.0;
           description = "Strength of red-blue colour separation in the VHS effect.";
         };
         vhsNoise = lib.mkOption {
-          type = lib.types.numbers.between 0.0 1.0;
+          type = lib.types.numbers.between constraints.appearance.vhsNoise.min constraints.appearance.vhsNoise.max;
           default = 1.0;
           description = "Strength of moving tape grain and luminance flicker.";
         };
         vhsScanlines = lib.mkOption {
-          type = lib.types.numbers.between 0.0 1.0;
+          type = lib.types.numbers.between constraints.appearance.vhsScanlines.min constraints.appearance.vhsScanlines.max;
           default = 1.0;
           description = "Strength of VHS scanline darkening.";
         };
         vhsDropouts = lib.mkOption {
-          type = lib.types.numbers.between 0.0 1.0;
+          type = lib.types.numbers.between constraints.appearance.vhsDropouts.min constraints.appearance.vhsDropouts.max;
           default = 0.0;
           description = "Strength of irregular horizontal black tape dropouts.";
         };
         vhsSpeed = lib.mkOption {
-          type = lib.types.numbers.between 0.25 2.5;
+          type = lib.types.numbers.between constraints.appearance.vhsSpeed.min constraints.appearance.vhsSpeed.max;
           default = 1.0;
           description = "Playback speed multiplier for animated VHS distortion.";
         };
         mediaVisualizerMode = lib.mkOption {
-          type = lib.types.enum [
-            "bars"
-            "curve"
-          ];
+          type = lib.types.enum constraints.appearance.mediaVisualizerMode.values;
           default = "bars";
           description = "Choose the media visualizer presentation: animated bars or a continuous curve.";
         };
@@ -523,13 +780,7 @@ in
           description = "Preferred MPRIS desktop entry or stable application identity; empty selects automatically.";
         };
         mediaSeekSeconds = lib.mkOption {
-          type = lib.types.enum [
-            5
-            10
-            15
-            30
-            60
-          ];
+          type = lib.types.enum constraints.appearance.mediaSeekSeconds.values;
           default = 10;
           description = "Number of seconds to move forward or backward with the media seek actions.";
         };
@@ -543,11 +794,7 @@ in
     type = lib.types.submodule {
       options = {
         mode = lib.mkOption {
-          type = lib.types.enum [
-            "off"
-            "interval"
-            "dayNight"
-          ];
+          type = lib.types.enum constraints.wallpaperRotation.mode.values;
           default = "off";
         };
         target = lib.mkOption {
@@ -555,13 +802,7 @@ in
           default = "all";
         };
         intervalMinutes = lib.mkOption {
-          type = lib.types.enum [
-            5
-            15
-            30
-            60
-            120
-          ];
+          type = lib.types.enum constraints.wallpaperRotation.intervalMinutes.values;
           default = 60;
         };
         favoritesOnly = lib.mkOption {
@@ -573,11 +814,11 @@ in
           default = "";
         };
         dayStart = lib.mkOption {
-          type = lib.types.ints.between 0 1439;
+          type = lib.types.ints.between constraints.wallpaperRotation.dayStart.min constraints.wallpaperRotation.dayStart.max;
           default = 420;
         };
         nightStart = lib.mkOption {
-          type = lib.types.ints.between 0 1439;
+          type = lib.types.ints.between constraints.wallpaperRotation.nightStart.min constraints.wallpaperRotation.nightStart.max;
           default = 1140;
         };
         dayWallpaper = lib.mkOption {
@@ -623,18 +864,11 @@ in
     type = lib.types.submodule {
       options = {
         imageFormat = lib.mkOption {
-          type = lib.types.enum [
-            "png"
-            "jpg"
-          ];
+          type = lib.types.enum constraints.captureEncoding.imageFormat.values;
           default = "png";
         };
         jpegQuality = lib.mkOption {
-          type = lib.types.enum [
-            75
-            85
-            95
-          ];
+          type = lib.types.enum constraints.captureEncoding.jpegQuality.values;
           default = 95;
         };
         cursor = lib.mkOption {
@@ -642,51 +876,27 @@ in
           default = false;
         };
         videoFormat = lib.mkOption {
-          type = lib.types.enum [
-            "mp4"
-            "mkv"
-          ];
+          type = lib.types.enum constraints.captureEncoding.videoFormat.values;
           default = "mp4";
         };
         codec = lib.mkOption {
-          type = lib.types.enum [
-            "libx264"
-            "libx265"
-          ];
+          type = lib.types.enum constraints.captureEncoding.codec.values;
           default = "libx264";
         };
         frameRate = lib.mkOption {
-          type = lib.types.enum [
-            0
-            30
-            60
-            120
-          ];
+          type = lib.types.enum constraints.captureEncoding.frameRate.values;
           default = 0;
         };
         videoQuality = lib.mkOption {
-          type = lib.types.enum [
-            18
-            23
-            28
-          ];
+          type = lib.types.enum constraints.captureEncoding.videoQuality.values;
           default = 23;
         };
         countdown = lib.mkOption {
-          type = lib.types.enum [
-            0
-            3
-            5
-            10
-          ];
+          type = lib.types.enum constraints.captureEncoding.countdown.values;
           default = 0;
         };
         audio = lib.mkOption {
-          type = lib.types.enum [
-            "none"
-            "system"
-            "microphone"
-          ];
+          type = lib.types.enum constraints.captureEncoding.audio.values;
           default = "none";
         };
       };
@@ -746,17 +956,17 @@ in
           description = "Enable scheduled quiet hours for ordinary notification popups.";
         };
         startMinute = lib.mkOption {
-          type = lib.types.ints.between 0 1439;
+          type = lib.types.ints.between constraints.notificationQuietHours.startMinute.min constraints.notificationQuietHours.startMinute.max;
           default = 1320;
           description = "Local minute of day when quiet hours start.";
         };
         endMinute = lib.mkOption {
-          type = lib.types.ints.between 0 1439;
+          type = lib.types.ints.between constraints.notificationQuietHours.endMinute.min constraints.notificationQuietHours.endMinute.max;
           default = 420;
           description = "Local minute of day when quiet hours end.";
         };
         days = lib.mkOption {
-          type = lib.types.ints.between 0 127;
+          type = lib.types.ints.between constraints.notificationQuietHours.days.min constraints.notificationQuietHours.days.max;
           default = 127;
           description = "Quiet-hour start-day mask, Sunday in bit zero.";
         };
@@ -782,37 +992,32 @@ in
     type = lib.types.submodule {
       options = {
         mode = lib.mkOption {
-          type = lib.types.enum [
-            "off"
-            "manual"
-            "custom"
-            "solar"
-          ];
+          type = lib.types.enum constraints.nightLight.mode.values;
           default = "off";
           description = "Default Night Light operating mode.";
         };
         temperature = lib.mkOption {
-          type = lib.types.ints.between 2500 6500;
+          type = lib.types.ints.between constraints.nightLight.temperature.min constraints.nightLight.temperature.max;
           default = 4500;
           description = "Target colour temperature in Kelvin.";
         };
         startMinute = lib.mkOption {
-          type = lib.types.ints.between 0 1439;
+          type = lib.types.ints.between constraints.nightLight.startMinute.min constraints.nightLight.startMinute.max;
           default = 1140;
           description = "Local start minute for custom Night Light.";
         };
         endMinute = lib.mkOption {
-          type = lib.types.ints.between 0 1439;
+          type = lib.types.ints.between constraints.nightLight.endMinute.min constraints.nightLight.endMinute.max;
           default = 420;
           description = "Local end minute for custom Night Light.";
         };
         days = lib.mkOption {
-          type = lib.types.ints.between 0 127;
+          type = lib.types.ints.between constraints.nightLight.days.min constraints.nightLight.days.max;
           default = 127;
           description = "Custom schedule start-day mask, Sunday in bit zero.";
         };
         transitionMinutes = lib.mkOption {
-          type = lib.types.ints.between 0 60;
+          type = lib.types.ints.between constraints.nightLight.transitionMinutes.min constraints.nightLight.transitionMinutes.max;
           default = 15;
           description = "Duration of gradual colour-temperature transitions.";
         };
@@ -854,7 +1059,7 @@ in
   };
 
   scopeOptions.shellMotionSpeed = lib.mkOption {
-    type = lib.types.numbers.between 0.75 1.5;
+    type = lib.types.numbers.between constraints.motion.durationMultiplier.min constraints.motion.durationMultiplier.max;
     default = 1.0;
     description = "Duration multiplier for animated shell transitions, independent of compositor animation rules.";
   };
@@ -863,19 +1068,11 @@ in
     type = lib.types.submodule {
       options = {
         intervalSeconds = lib.mkOption {
-          type = lib.types.enum [
-            1
-            2
-            5
-          ];
+          type = lib.types.enum constraints.resourceSampling.intervalSeconds.values;
           default = 2;
         };
         historyLength = lib.mkOption {
-          type = lib.types.enum [
-            30
-            60
-            120
-          ];
+          type = lib.types.enum constraints.resourceSampling.historyLength.values;
           default = 30;
         };
       };
@@ -963,6 +1160,7 @@ in
         text = ''
           export DESKTOP_WALLPAPER_LIBRARY=${lib.escapeShellArg (lib.getExe wallpaperLibrary)}
           export DESKTOP_WALLPAPER_POLICY_DEFAULTS=${lib.escapeShellArg (builtins.toJSON scopeConfig.wallpaperRotation)}
+          export DESKTOP_WALLPAPER_POLICY_CONSTRAINTS=${lib.escapeShellArg (builtins.toJSON constraints.wallpaperRotation)}
           exec python3 ${./scripts/wallpaper-policy.py} "$@"
         '';
       };
@@ -1116,6 +1314,7 @@ in
       };
 
       runtimeConfig = json.generate "desktop-shell-runtime.json" {
+        inherit constraints;
         wallpaperVideoDefault = scopeConfig.videoWallpaper;
         defaults = {
           terminal = osConfig.dotfiles.defaults.terminal;
@@ -1284,6 +1483,7 @@ in
         ];
         text = ''
           export DESKTOP_NIGHT_LIGHT_DEFAULTS=${lib.escapeShellArg (builtins.toJSON scopeConfig.nightLight)}
+          export DESKTOP_NIGHT_LIGHT_CONSTRAINTS=${lib.escapeShellArg (builtins.toJSON constraints.nightLight)}
           exec python3 ${./scripts/night-light.py} "$@"
         '';
       };

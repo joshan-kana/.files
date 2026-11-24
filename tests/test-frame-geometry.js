@@ -745,15 +745,15 @@ test("bar and media controls use shared island height and inset", () => {
     "utf8",
   );
   const system = fs.readFileSync(path.join(root, "SystemIsland.qml"), "utf8");
-  const islandHeight = Number(
-    theme.match(/property int barIslandHeight: (\d+)/)?.[1],
+  assert.match(
+    theme,
+    /property int barIslandHeight: runtime\.appearanceDefaults\.barIslandHeight/,
   );
   const selectionInset = Number(
     theme.match(/property int barSelectionInset: (\d+)/)?.[1],
   );
-  assert.equal(islandHeight, 50);
   assert.ok(selectionInset >= 5);
-  assert.ok(2 * selectionInset < islandHeight);
+  assert.ok(2 * selectionInset < 44);
   assert.equal(
     (bar.match(/height: bars\.theme\.barIslandHeight(?!\s*-)/g) || []).length,
     5,

@@ -121,8 +121,8 @@ Item {
                     key: "barIslandHeight",
                     title: "Island height",
                     description: "Shared bar density",
-                    minimum: 44,
-                    maximum: 60,
+                    minimum: runtime.constraints.appearance.barIslandHeight.min,
+                    maximum: runtime.constraints.appearance.barIslandHeight.max,
                     step: 2,
                     suffix: " px"
                 }
@@ -133,8 +133,8 @@ Item {
                     key: "frameThickness",
                     title: "Frame thickness",
                     description: "Shared edge geometry",
-                    minimum: 18,
-                    maximum: 36,
+                    minimum: runtime.constraints.appearance.frameThickness.min,
+                    maximum: runtime.constraints.appearance.frameThickness.max,
                     step: 2,
                     suffix: " px"
                 }
@@ -145,8 +145,8 @@ Item {
                     key: "motionDuration",
                     title: "Transition duration",
                     description: "Shell transitions only; key-down remains immediate",
-                    minimum: 75,
-                    maximum: 150,
+                    minimum: runtime.constraints.motion.durationMultiplier.min * 100,
+                    maximum: runtime.constraints.motion.durationMultiplier.max * 100,
                     step: 5,
                     suffix: "%"
                 }
@@ -157,8 +157,8 @@ Item {
                     key: "windowOpacity",
                     title: "Window opacity",
                     description: "Opacity of active and inactive windows",
-                    minimum: 20,
-                    maximum: 100,
+                    minimum: runtime.constraints.appearance.windowOpacity.min * 100,
+                    maximum: runtime.constraints.appearance.windowOpacity.max * 100,
                     step: 5,
                     suffix: "%"
                 },
@@ -178,8 +178,8 @@ Item {
                     key: "glassOpacity",
                     title: "Shell opacity",
                     description: "Translucency of shell surfaces",
-                    minimum: 20,
-                    maximum: 100,
+                    minimum: runtime.constraints.appearance.glassOpacity.min * 100,
+                    maximum: runtime.constraints.appearance.glassOpacity.max * 100,
                     step: 5,
                     suffix: "%"
                 },
@@ -201,8 +201,8 @@ Item {
                     key: "spectrumSensitivity",
                     title: "Sensitivity",
                     description: "Visual amplitude without changing the reactive tint",
-                    minimum: 40,
-                    maximum: 300,
+                    minimum: runtime.constraints.appearance.spectrumSensitivity.min * 100,
+                    maximum: runtime.constraints.appearance.spectrumSensitivity.max * 100,
                     step: 5,
                     suffix: "%"
                 },
@@ -210,8 +210,8 @@ Item {
                     key: "spectrumAttack",
                     title: "Attack speed",
                     description: "Rise speed of visualizer bands",
-                    minimum: 25,
-                    maximum: 250,
+                    minimum: runtime.constraints.appearance.spectrumAttack.min * 100,
+                    maximum: runtime.constraints.appearance.spectrumAttack.max * 100,
                     step: 5,
                     suffix: "%"
                 },
@@ -219,8 +219,8 @@ Item {
                     key: "spectrumRelease",
                     title: "Release speed",
                     description: "Fall speed of visualizer bands",
-                    minimum: 25,
-                    maximum: 250,
+                    minimum: runtime.constraints.appearance.spectrumRelease.min * 100,
+                    maximum: runtime.constraints.appearance.spectrumRelease.max * 100,
                     step: 5,
                     suffix: "%"
                 },
@@ -228,8 +228,8 @@ Item {
                     key: "wallpaperSpectrumOpacity",
                     title: "Spectrum opacity",
                     description: "Strength of wallpaper spectrum bars",
-                    minimum: 20,
-                    maximum: 100,
+                    minimum: runtime.constraints.appearance.wallpaperSpectrumOpacity.min * 100,
+                    maximum: runtime.constraints.appearance.wallpaperSpectrumOpacity.max * 100,
                     step: 5,
                     suffix: "%"
                 },
@@ -237,8 +237,8 @@ Item {
                     key: "wallpaperSpectrumBars",
                     title: "Bar density",
                     description: "Number of spectrum bars",
-                    minimum: 24,
-                    maximum: 96,
+                    minimum: runtime.constraints.appearance.wallpaperSpectrumBars.min,
+                    maximum: runtime.constraints.appearance.wallpaperSpectrumBars.max,
                     step: 8,
                     suffix: " bars"
                 }
@@ -270,8 +270,8 @@ Item {
                     key: "temperature",
                     title: "Colour temperature",
                     description: "Warmer at lower Kelvin values",
-                    minimum: 2500,
-                    maximum: 6500,
+                    minimum: runtime.constraints.nightLight.temperature.min,
+                    maximum: runtime.constraints.nightLight.temperature.max,
                     step: 100,
                     suffix: " K"
                 }
@@ -299,8 +299,8 @@ Item {
                     key: "nightTransition",
                     title: "Transition duration",
                     description: "Gradual colour change",
-                    minimum: 0,
-                    maximum: 60,
+                    minimum: runtime.constraints.nightLight.transitionMinutes.min,
+                    maximum: runtime.constraints.nightLight.transitionMinutes.max,
                     step: 5,
                     suffix: " min"
                 });

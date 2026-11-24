@@ -19,6 +19,7 @@ STATE = STATE_DIR / "policy.json"
 PROGRESS = STATE_DIR / "rotation.json"
 TIMER = "desktop-shell-wallpaper-rotation.timer"
 DEFAULTS = json.loads(os.environ["DESKTOP_WALLPAPER_POLICY_DEFAULTS"])
+CONSTRAINTS = json.loads(os.environ["DESKTOP_WALLPAPER_POLICY_CONSTRAINTS"])
 
 
 def read(path):
@@ -67,15 +68,15 @@ def relative(value):
 
 def validate(key, value):
     """Validate one policy field."""
-    if key == "mode" and value in ("off", "interval", "dayNight"):
+    if key == "mode" and value in CONSTRAINTS["mode"]["values"]:
         return value
     if key == "target" and isinstance(value, str) and re.fullmatch(r"[A-Za-z0-9_.-]+", value):
         return value
-    if key == "intervalMinutes" and value in (5, 15, 30, 60, 120):
+    if key == "intervalMinutes" and type(value) is int and value in CONSTRAINTS[key]["values"]:
         return int(value)
     if key == "favoritesOnly" and isinstance(value, bool):
         return value
-    if key in ("dayStart", "nightStart") and isinstance(value, int) and 0 <= value <= 1439:
+    if key in ("dayStart", "nightStart") and type(value) is int and CONSTRAINTS[key]["min"] <= value <= CONSTRAINTS[key]["max"]:
         return value
     if key in ("collection", "dayWallpaper", "nightWallpaper") and isinstance(value, str):
         return relative(value)

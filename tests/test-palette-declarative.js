@@ -279,6 +279,7 @@ test("QML consumes evaluated runtime values without its own default adapter", ()
     .split("\n    }")[0];
   const parseConfig = new Function("text", "Qt", "console", body);
   const groups = [
+    "constraints",
     "accessibility",
     "defaults",
     "motion",
@@ -364,4 +365,27 @@ test("parameter confirmation text follows the palette shortcut registry", () => 
     palette,
     /Press Enter again to confirm|Enter confirms clipboard sharing/,
   );
+});
+
+test("runtime bounds follow the supplied configuration instead of fixed literals", () => {
+  const qml = read("qml/RuntimeConfig.qml");
+  const body = qml
+    .split(
+      "function bounded(group: string, key: string, value: real): real {",
+    )[1]
+    .split("\n    }")[0];
+  const bounded = new Function("group", "key", "value", "constraints", body);
+  for (const max of [2, 4]) {
+    const constraints = {
+      appearance: { musicReactiveSensitivity: { min: 0.4, max } },
+    };
+    assert.equal(
+      bounded("appearance", "musicReactiveSensitivity", 5, constraints),
+      max,
+    );
+    assert.equal(
+      bounded("appearance", "musicReactiveSensitivity", 0, constraints),
+      0.4,
+    );
+  }
 });

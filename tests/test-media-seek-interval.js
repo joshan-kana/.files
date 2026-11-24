@@ -17,7 +17,7 @@ test("seek interval has one validated persistent preference and a declarative de
   );
   assert.match(
     appearance,
-    /readonly property var seekIntervals: \[5, 10, 15, 30, 60\]/,
+    /readonly property var seekIntervals: runtime\.constraints\.appearance\.mediaSeekSeconds\.values/,
   );
   assert.match(
     appearance,

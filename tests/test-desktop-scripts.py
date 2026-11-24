@@ -65,6 +65,24 @@ class DesktopScriptTests(unittest.TestCase):
                         "nightWallpaper": "",
                     }
                 ),
+                "DESKTOP_NIGHT_LIGHT_CONSTRAINTS": json.dumps(
+                    {
+                        "mode": {"values": ["off", "manual", "custom", "solar"]},
+                        "temperature": {"min": 2500, "max": 6500},
+                        "startMinute": {"min": 0, "max": 1439},
+                        "endMinute": {"min": 0, "max": 1439},
+                        "days": {"min": 0, "max": 127},
+                        "transitionMinutes": {"min": 0, "max": 60},
+                    }
+                ),
+                "DESKTOP_WALLPAPER_POLICY_CONSTRAINTS": json.dumps(
+                    {
+                        "mode": {"values": ["off", "interval", "dayNight"]},
+                        "intervalMinutes": {"values": [5, 15, 30, 60, 120]},
+                        "dayStart": {"min": 0, "max": 1439},
+                        "nightStart": {"min": 0, "max": 1439},
+                    }
+                ),
                 "DESKTOP_SHELL_SCREENSHOT_DIR": "",
                 "DESKTOP_SHELL_RECORDING_DIR": "",
             }

@@ -18,9 +18,9 @@ QtObject {
     }
     readonly property bool enabled: qmlPreferences.preferenceSource === "default" ? runtime.animationsEnabled : qmlPreferences.animationsEnabled
 
-    readonly property real durationMultiplier: qmlPreferences.durationOverride > 0 ? Math.max(0.75, Math.min(1.5, qmlPreferences.durationOverride)) : runtime.motionDurationMultiplier
+    readonly property real durationMultiplier: qmlPreferences.durationOverride > 0 ? runtime.bounded("motion", "durationMultiplier", qmlPreferences.durationOverride) : runtime.motionDurationMultiplier
     function setDurationMultiplier(value: real): void {
-        qmlPreferences.durationOverride = Math.max(0.75, Math.min(1.5, value));
+        qmlPreferences.durationOverride = runtime.bounded("motion", "durationMultiplier", value);
         qmlPreferences.sync();
     }
     function resetDurationMultiplier(): void {

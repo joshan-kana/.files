@@ -268,7 +268,7 @@ Item {
         switch (action) {
         case "WallpaperPolicy.mode":
             {
-                const modes = ["off", "interval", "dayNight"];
+                const modes = runtime.constraints.wallpaperRotation.mode.values;
                 setPolicy("mode", modes[(modes.indexOf(policy.mode) + 1) % modes.length]);
                 break;
             }
@@ -277,7 +277,7 @@ Item {
             break;
         case "WallpaperPolicy.period":
             {
-                const choices = [5, 15, 30, 60, 120];
+                const choices = runtime.constraints.wallpaperRotation.intervalMinutes.values;
                 setPolicy("intervalMinutes", choices[(choices.indexOf(policy.intervalMinutes) + 1) % choices.length]);
                 break;
             }

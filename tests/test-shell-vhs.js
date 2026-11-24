@@ -307,7 +307,7 @@ test("VHS tuning exposes correct keyboard focus, pointer and navigation paths", 
   assert.match(preferences, /vhsApply\.restart\(\)/);
   assert.match(
     defaults,
-    /vhsDropouts = lib\.mkOption \{\s*type = lib\.types\.numbers\.between 0\.0 1\.0;\s*default = 0\.0;/,
+    /vhsDropouts = lib\.mkOption \{\s*type = lib\.types\.numbers\.between constraints\.appearance\.vhsDropouts\.min constraints\.appearance\.vhsDropouts\.max;\s*default = 0\.0;/,
   );
   assert.match(
     panel,

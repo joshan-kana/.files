@@ -86,44 +86,44 @@ Item {
                 key: "videoFormat",
                 action: "ScreenshotPicker.format",
                 title: String(encoding("videoFormat")).toUpperCase(),
-                values: ["mp4", "mkv"]
+                values: runtime.constraints.captureEncoding.videoFormat.values
             },
             {
                 key: "codec",
                 action: "ScreenshotPicker.codec",
                 title: encoding("codec") === "libx265" ? "HEVC" : "H.264",
-                values: ["libx264", "libx265"]
+                values: runtime.constraints.captureEncoding.codec.values
             },
             {
                 key: "frameRate",
                 action: "ScreenshotPicker.fps",
                 title: encoding("frameRate") === 0 ? "AUTO FPS" : encoding("frameRate") + " FPS",
-                values: [0, 30, 60, 120]
+                values: runtime.constraints.captureEncoding.frameRate.values
             },
             {
                 key: "videoQuality",
                 action: "ScreenshotPicker.quality",
                 title: "CRF " + encoding("videoQuality"),
-                values: [18, 23, 28]
+                values: runtime.constraints.captureEncoding.videoQuality.values
             },
             {
                 key: "countdown",
                 action: "ScreenshotPicker.countdown",
                 title: "DELAY " + encoding("countdown") + "s",
-                values: [0, 3, 5, 10]
+                values: runtime.constraints.captureEncoding.countdown.values
             }
         ] : [
             {
                 key: "imageFormat",
                 action: "ScreenshotPicker.format",
                 title: lossless ? "PNG EXPORT" : String(encoding("imageFormat")).toUpperCase(),
-                values: ["png", "jpg"]
+                values: runtime.constraints.captureEncoding.imageFormat.values
             },
             {
                 key: "jpegQuality",
                 action: "ScreenshotPicker.quality",
                 title: "JPEG " + encoding("jpegQuality") + "%",
-                values: [75, 85, 95]
+                values: runtime.constraints.captureEncoding.jpegQuality.values
             },
             {
                 key: "cursor",
@@ -484,8 +484,10 @@ Item {
     }
 
     function cycleAudio(): void {
-        if (selectionMode === "record")
-            setEncoding("audio", audioMode === "none" ? "system" : audioMode === "system" ? "microphone" : "none");
+        if (selectionMode === "record") {
+            const choices = runtime.constraints.captureEncoding.audio.values;
+            setEncoding("audio", choices[(choices.indexOf(audioMode) + 1) % choices.length]);
+        }
     }
 
     function nextMonitor(): void {

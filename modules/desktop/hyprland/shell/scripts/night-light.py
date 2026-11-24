@@ -15,6 +15,7 @@ from zoneinfo import ZoneInfo
 SERVICE = "desktop-shell-night-light.service"
 TIMER = "desktop-shell-night-light-apply.timer"
 DEFAULTS = json.loads(os.environ["DESKTOP_NIGHT_LIGHT_DEFAULTS"])
+CONSTRAINTS = json.loads(os.environ["DESKTOP_NIGHT_LIGHT_CONSTRAINTS"])
 STATE_DIR = Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local/state"))) / "desktop-shell"
 STATE = STATE_DIR / "night-light"
 RUNTIME = Path(os.environ.get("XDG_RUNTIME_DIR", str(STATE_DIR))) / "desktop-shell-night-light.json"
@@ -54,19 +55,11 @@ def read_json(path):
 
 def validated(key, value):
     """Validate a single persisted policy setting."""
-    if key == "mode":
-        if value in ("off", "manual", "custom", "solar"):
-            return value
-    elif key in ("temperature", "startMinute", "endMinute", "days", "transitionMinutes"):
-        ranges = {
-            "temperature": (2500, 6500),
-            "startMinute": (0, 1439),
-            "endMinute": (0, 1439),
-            "days": (0, 127),
-            "transitionMinutes": (0, 60),
-        }
-        if isinstance(value, int) and not isinstance(value, bool) and ranges[key][0] <= value <= ranges[key][1]:
-            return value
+    rule = CONSTRAINTS.get(key, {})
+    if "values" in rule and value in rule["values"]:
+        return value
+    if "min" in rule and type(value) is int and rule["min"] <= value <= rule["max"]:
+        return value
     raise ValueError("Invalid Night Light " + key)
 
 
@@ -280,7 +273,10 @@ def main(argv):
             ]
             saved[key] = validated(key, int(argv[1]))
         elif command in ("warmer", "cooler"):
-            saved["temperature"] = max(2500, min(6500, config["temperature"] + (-500 if command == "warmer" else 500)))
+            saved["temperature"] = max(
+                CONSTRAINTS["temperature"]["min"],
+                min(CONSTRAINTS["temperature"]["max"], config["temperature"] + (-500 if command == "warmer" else 500)),
+            )
         elif command != "apply":
             raise ValueError("Unknown Night Light action")
         if saved.get("until", 0) <= now.timestamp():

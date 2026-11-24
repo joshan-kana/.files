@@ -90,6 +90,12 @@ QtObject {
     readonly property var shellBindings: root.configData.shellBindings
     readonly property var paletteQuicklinks: root.configData.palette.quicklinks
     readonly property var paletteSnippets: root.configData.palette.snippets
+    readonly property var constraints: root.configData.constraints
+    function bounded(group: string, key: string, value: real): real {
+        const range = constraints[group][key];
+        return Math.max(range.min, Math.min(range.max, value));
+    }
+
     readonly property var appearanceDefaults: root.configData.appearance
     readonly property var captureEncoding: root.configData.capture.encoding
     readonly property bool captureFreezeEnabled: root.configData.capture.freezeEnabled
@@ -244,7 +250,7 @@ QtObject {
     function parseConfig(text: string): var {
         try {
             const config = JSON.parse(text);
-            for (const key of ["accessibility", "defaults", "motion", "resourceSampling", "session", "palette", "appearance", "capture", "notifications", "weather", "tools", "shortcuts", "shortcutHints", "shellBindings", "nightLight", "wallpaperRotation"]) {
+            for (const key of ["constraints", "accessibility", "defaults", "motion", "resourceSampling", "session", "palette", "appearance", "capture", "notifications", "weather", "tools", "shortcuts", "shortcutHints", "shellBindings", "nightLight", "wallpaperRotation"]) {
                 if (!config[key] || typeof config[key] !== "object" || Array.isArray(config[key]))
                     throw new Error("Missing runtime configuration object: " + key);
             }

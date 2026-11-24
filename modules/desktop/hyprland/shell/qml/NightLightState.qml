@@ -127,13 +127,13 @@ QtObject {
         if (!supported || !isFinite(value))
             return;
         if (field === "start") {
-            startMinute = Math.round(Math.max(0, Math.min(1439, value)));
+            startMinute = Math.round(runtime.bounded("nightLight", field === "start" ? "startMinute" : "endMinute", value));
             value = startMinute;
         } else if (field === "end") {
-            endMinute = Math.round(Math.max(0, Math.min(1439, value)));
+            endMinute = Math.round(runtime.bounded("nightLight", field === "start" ? "startMinute" : "endMinute", value));
             value = endMinute;
         } else if (field === "transition") {
-            transitionMinutes = Math.round(Math.max(0, Math.min(60, value)));
+            transitionMinutes = Math.round(runtime.bounded("nightLight", "transitionMinutes", value));
             value = transitionMinutes;
         } else {
             return;
@@ -156,7 +156,7 @@ QtObject {
     function adjustTemperature(delta: int): void {
         if (!supported)
             return;
-        const target = Math.max(2500, Math.min(6500, temperature + delta));
+        const target = runtime.bounded("nightLight", "temperature", temperature + delta);
         if (target === temperature)
             return;
         temperature = target;
@@ -166,7 +166,7 @@ QtObject {
     function setTemperature(target: real): void {
         if (!supported || !isFinite(target))
             return;
-        adjustTemperature(Math.round(Math.max(2500, Math.min(6500, target)) / 100) * 100 - temperature);
+        adjustTemperature(Math.round(runtime.bounded("nightLight", "temperature", target) / 100) * 100 - temperature);
     }
     function warmer(): void {
         adjustTemperature(-500);
