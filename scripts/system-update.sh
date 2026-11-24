@@ -213,19 +213,21 @@ if ((${#packages[@]})); then
   if [[ ${packages[0]} == "*" ]]; then
     declare -A updated=()
     native="$(nix eval --raw --impure --expr builtins.currentSystem)"
-    while IFS=$'\t' read -r packageSystem packageName; do
-      if [[ -z ${updated[$packageName]-} ]]; then
-        update_package "$packageName" "$packageSystem"
-        updated[$packageName]=1
-      fi
-    done < <(
+    routine_updates="$(
       nix eval --json .#lib.routinePackageUpdates |
         jq -r --arg native "$native" '
           to_entries | sort_by(.key != $native)
           | .[] | .key as $system | .value[]
           | [$system, .] | @tsv
         '
-    )
+    )"
+    while IFS=$'\t' read -r packageSystem packageName; do
+      [[ -n $packageName ]] || continue
+      if [[ -z ${updated[$packageName]-} ]]; then
+        update_package "$packageName" "$packageSystem"
+        updated[$packageName]=1
+      fi
+    done <<<"$routine_updates"
   else
     for choice in "${packages[@]}"; do
       update_package "${choice#*/}" "${choice%%/*}"
