@@ -25,6 +25,6 @@ An unexpected derivation change warrants investigation. A matching derivation is
 
 ## Tests and reporting
 
-Test behavior by exercising the component or executable. Use source assertions for stable structural invariants, rather than as substitutes for behavioral tests or subjective style checks.
+Test behavior by exercising the component or executable. For shared scope changes, check both enabled and disabled configurations and any dependent scopes. Derive fleet-wide validation targets from the configuration outputs; use explicit host fixtures only for host-specific requirements. Use source assertions for stable structural invariants, rather than as substitutes for behavioral tests or subjective style checks.
 
 Report which evaluations, builds, and live tests actually passed. A merged change, a successful build, and a successful deployment are distinct outcomes.

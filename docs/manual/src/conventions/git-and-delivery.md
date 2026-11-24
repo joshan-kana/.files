@@ -9,7 +9,7 @@ Use a topic branch for changes intended for review. Keep unrelated changes separ
 ## History and review
 
 - Keep a pull request focused on one coherent change. Separate mechanical moves from behavioral changes where practical.
-- Keep commits focused on one coherent change. Use the handbook's issue, relationship and review workflow.
+- Give each commit a single reviewable purpose.
 - Reconcile with the target branch without discarding concurrent changes. Use lease-protected force pushes after an intentional rebase.
 - Preserve published default-branch history; make corrections through reviewable follow-up changes.
 
