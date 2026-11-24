@@ -161,7 +161,7 @@ Item {
             required property int index
 
             width: ListView.view.width
-            height: modelData.isSeparator ? 12 : 42
+            height: modelData.isSeparator ? view.theme.spacing3 : Math.max(view.theme.minActionTarget, view.theme.fontSize(24) + view.theme.spacing2 * 2)
 
             Rectangle {
                 visible: entryDelegate.modelData.isSeparator
@@ -184,7 +184,7 @@ Item {
                 selected: false
                 cornerRadius: theme.radiusSmall
                 outlined: entryDelegate.index === view.selectedIndex
-                fillColor: entryDelegate.index === view.selectedIndex ? view.theme.blend(view.theme.controlBase, view.theme.accent, view.theme.dark ? 0.08 : 0.05) : view.theme.controlBase
+                fillColor: entryDelegate.index === view.selectedIndex ? view.theme.blend(view.theme.controlBase, view.theme.accent, view.theme.dark ? 0.08 : 0.05) : "transparent"
                 borderColor: entryDelegate.index === view.selectedIndex ? Qt.rgba(view.theme.accent.r, view.theme.accent.g, view.theme.accent.b, 0.64) : "transparent"
                 opacity: entryDelegate.modelData.enabled ? 1 : 0.42
 
@@ -199,8 +199,8 @@ Item {
                     Image {
                         anchors.verticalCenter: parent.verticalCenter
                         visible: entryDelegate.modelData.icon.length > 0
-                        width: 20
-                        height: 20
+                        width: view.theme.iconRegular
+                        height: width
                         source: entryDelegate.modelData.icon.length > 0 ? entryDelegate.modelData.icon : Quickshell.iconPath("application-x-executable")
                         fillMode: Image.PreserveAspectFit
                         asynchronous: true
@@ -209,6 +209,8 @@ Item {
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         visible: entryDelegate.modelData.buttonType !== QsMenuButtonType.None
+                        width: view.theme.iconRegular
+                        horizontalAlignment: Text.AlignHCenter
                         text: entryDelegate.modelData.checkState === Qt.Checked ? (entryDelegate.modelData.buttonType === QsMenuButtonType.RadioButton ? "●" : "✓") : "○"
                         color: view.theme.accent
                         font.family: view.runtime.fontSans
@@ -217,7 +219,7 @@ Item {
 
                     MarqueeText {
                         anchors.verticalCenter: parent.verticalCenter
-                        width: parent.width - (entryDelegate.modelData.icon.length > 0 ? 20 + parent.spacing : 0) - (entryDelegate.modelData.buttonType !== QsMenuButtonType.None ? 18 + parent.spacing : 0) - (entryDelegate.modelData.hasChildren ? 18 : 0)
+                        width: parent.width - (entryDelegate.modelData.icon.length > 0 ? view.theme.iconRegular + parent.spacing : 0) - (entryDelegate.modelData.buttonType !== QsMenuButtonType.None ? view.theme.iconRegular + parent.spacing : 0) - (entryDelegate.modelData.hasChildren ? view.theme.iconRegular + parent.spacing : 0)
                         text: entryDelegate.modelData.text
                         color: view.theme.text
                         font.family: view.runtime.fontSans
@@ -227,6 +229,8 @@ Item {
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         visible: entryDelegate.modelData.hasChildren
+                        width: view.theme.iconRegular
+                        horizontalAlignment: Text.AlignHCenter
                         text: "›"
                         color: view.theme.textMuted
                         font.family: view.runtime.fontSans

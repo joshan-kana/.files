@@ -697,7 +697,7 @@ Item {
             topMargin: picker.theme.spacing5
         }
         width: Math.min(picker.width - 48, 1000)
-        height: 37 * 2 + picker.theme.spacing2 * 4 + pickerLegend.implicitHeight
+        height: toolbarContent.implicitHeight + picker.theme.spacing3 * 2
         z: 5
         theme: picker.theme
         motion: picker.motion
@@ -705,80 +705,85 @@ Item {
         cornerRadius: picker.theme.radiusLarge
 
         Column {
-            anchors {
-                fill: parent
-                margins: picker.theme.spacing2
-            }
+            id: toolbarContent
+            width: parent.width - picker.theme.spacing3 * 2
+            anchors.centerIn: parent
             spacing: picker.theme.spacing2
 
-            Row {
+            Flow {
+                id: captureHeader
                 width: parent.width
-                height: 37
                 spacing: picker.theme.spacing2
 
                 Column {
-                    width: Math.max(1, parent.width - actions.width - parent.spacing)
-                    anchors.verticalCenter: parent.verticalCenter
+                    width: actions.preferredWidth + picker.theme.fontSize(250) + captureHeader.spacing <= captureHeader.width ? captureHeader.width - actions.preferredWidth - captureHeader.spacing : captureHeader.width
                     spacing: 3
                     Text {
                         width: parent.width
-                        text: picker.selectionMode === "record" ? "VIDEO · " + picker.audioLabel : (picker.frozenForCapture ? "FROZEN IMAGE" : "LIVE IMAGE")
+                        text: picker.selectionMode === "record" ? "Record · " + picker.audioLabel : (picker.frozenForCapture ? "Frozen screenshot" : "Live screenshot")
                         color: picker.theme.readableRoleColor("capture")
                         font.family: picker.runtime.fontSans
-                        font.pixelSize: picker.theme.fontSize(12)
+                        font.pixelSize: picker.theme.fontSize(16)
                         font.weight: Font.DemiBold
-                        elide: Text.ElideRight
+                        wrapMode: Text.Wrap
                     }
                     Text {
                         width: parent.width
                         text: picker.countingDown ? "STARTING IN " + picker.remaining + "s · ESC CANCEL" : picker.statusText.length > 0 ? picker.statusText : "DRAG TO SELECT · RELEASE TO ADJUST"
                         color: picker.theme.textMuted
                         font.family: picker.runtime.fontSans
-                        font.pixelSize: picker.theme.fontSize(9)
-                        elide: Text.ElideRight
+                        font.pixelSize: picker.theme.fontSize(11)
+                        wrapMode: Text.Wrap
                     }
                 }
 
-                Row {
+                Flow {
                     id: actions
+                    readonly property real preferredWidth: captureAction.implicitWidth + modeAction.implicitWidth + spacing + (picker.selectionMode !== "record" ? editAction.implicitWidth + spacing : 0)
+                    width: Math.min(captureHeader.width, preferredWidth)
                     spacing: picker.theme.spacing1
                     ShellAction {
-                        width: 126
-                        height: 37
+                        id: captureAction
+                        width: Math.min(actions.width, implicitWidth)
+                        height: implicitHeight
+                        prominentAction: true
+                        activeColor: picker.theme.readableRoleColor("capture")
                         runtime: picker.runtime
                         theme: picker.theme
                         motion: picker.motion
                         compact: true
                         horizontalCompact: true
                         icon: picker.selectionMode === "record" ? "󰕧" : "󰹑"
-                        title: picker.selectionMode === "record" ? "START" : picker.annotateAfterCapture ? "MARKUP" : picker.copying ? "COPY" : "SAVE"
+                        title: picker.selectionMode === "record" ? "Start recording" : picker.annotateAfterCapture ? "Markup" : picker.copying ? "Copy" : "Save"
                         shortcut: picker.runtime.shellHint("ScreenshotPicker.capture")
                         onActivated: picker.capture("")
                     }
                     ShellAction {
+                        id: editAction
                         visible: picker.selectionMode !== "record"
-                        width: visible ? Math.max(136, picker.theme.fontSize(110)) : 0
-                        height: 37
+                        width: visible ? Math.min(actions.width, implicitWidth) : 0
+                        height: implicitHeight
                         runtime: picker.runtime
                         theme: picker.theme
                         motion: picker.motion
                         compact: true
                         horizontalCompact: true
                         icon: "󰏫"
-                        title: picker.annotateAfterCapture ? "EDIT ON" : "EDIT OFF"
+                        title: picker.annotateAfterCapture ? "Markup on" : "Markup off"
                         active: picker.annotateAfterCapture
                         shortcut: picker.runtime.shellHint("ScreenshotPicker.edit")
                         onActivated: picker.toggleAnnotation()
                     }
                     ShellAction {
-                        width: 103
-                        height: 37
+                        id: modeAction
+                        width: Math.min(actions.width, implicitWidth)
+                        height: implicitHeight
                         runtime: picker.runtime
                         theme: picker.theme
                         motion: picker.motion
                         compact: true
                         horizontalCompact: true
-                        title: picker.selectionMode === "record" ? picker.audioLabel : picker.frozenForCapture ? "FROZEN" : "LIVE"
+                        title: picker.selectionMode === "record" ? picker.audioLabel : picker.frozenForCapture ? "Frozen" : "Live"
                         shortcut: picker.selectionMode === "record" ? picker.runtime.shellHint("ScreenshotPicker.edit") : picker.runtime.shellHint("ScreenshotPicker.toggleRecord")
                         onActivated: {
                             if (picker.selectionMode === "record")
@@ -790,16 +795,15 @@ Item {
                 }
             }
 
-            Row {
+            Flow {
                 width: parent.width
-                height: 37
                 spacing: picker.theme.spacing1
                 Repeater {
                     model: picker.encodingControls
                     delegate: ShellAction {
                         required property var modelData
-                        width: (parent.width - (picker.encodingControls.length - 1) * picker.theme.spacing1) / picker.encodingControls.length
-                        height: 37
+                        width: Math.min(parent.width, implicitWidth)
+                        height: implicitHeight
                         runtime: picker.runtime
                         theme: picker.theme
                         motion: picker.motion

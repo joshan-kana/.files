@@ -98,7 +98,7 @@ Scope {
         ShellSurface {
             id: authenticationCard
             anchors.centerIn: parent
-            width: Math.min(470, Math.max(280, popup.width - 48))
+            width: Math.min(auth.theme.fontSize(470), Math.max(280, popup.width - 48))
             height: body.implicitHeight + auth.theme.spacing5 * 2
             theme: auth.theme
             motion: auth.motion
@@ -122,12 +122,15 @@ Scope {
                         text: "󰒃"
                         color: auth.theme.warning
                         font.family: "Symbols Nerd Font"
-                        font.pixelSize: auth.theme.fontSize(30)
+                        font.pixelSize: auth.theme.fontSize(36)
                     }
                     Column {
-                        spacing: 4
+                        width: Math.max(1, parent.width - parent.children[0].implicitWidth - parent.spacing)
+                        spacing: auth.theme.spacing1
                         Text {
-                            text: "AUTHENTICATION"
+                            width: parent.width
+                            text: "System authentication"
+                            wrapMode: Text.Wrap
                             color: auth.theme.warning
                             font.family: auth.runtime.fontSans
                             font.pixelSize: auth.theme.fontSize(10)
@@ -135,25 +138,35 @@ Scope {
                             font.letterSpacing: 1.2
                         }
                         Text {
+                            width: parent.width
                             text: "Authorization required"
+                            wrapMode: Text.Wrap
                             color: auth.theme.textStrong
                             font.family: auth.runtime.fontSans
-                            font.pixelSize: auth.theme.fontSize(18)
+                            font.pixelSize: auth.theme.fontSize(22)
                             font.weight: Font.DemiBold
                         }
                     }
                 }
 
-                Text {
+                Flickable {
                     width: parent.width
-                    text: auth.flow ? auth.flow.message : ""
-                    textFormat: Text.PlainText
-                    wrapMode: Text.Wrap
-                    maximumLineCount: 4
-                    elide: Text.ElideRight
-                    color: auth.theme.text
-                    font.family: auth.runtime.fontSans
-                    font.pixelSize: auth.theme.fontSize(12)
+                    height: Math.min(requestMessage.implicitHeight, popup.height * 0.28)
+                    contentWidth: width
+                    contentHeight: requestMessage.implicitHeight
+                    clip: true
+                    boundsBehavior: Flickable.StopAtBounds
+
+                    Text {
+                        id: requestMessage
+                        width: parent.width
+                        text: auth.flow ? auth.flow.message : ""
+                        textFormat: Text.PlainText
+                        wrapMode: Text.Wrap
+                        color: auth.theme.text
+                        font.family: auth.runtime.fontSans
+                        font.pixelSize: auth.theme.fontSize(14)
+                    }
                 }
                 MarqueeText {
                     width: parent.width
@@ -177,14 +190,14 @@ Scope {
                     ShellAction {
                         id: identityButton
                         visible: !!auth.flow && auth.flow.identities.length > 1
-                        width: 96
-                        height: 31
+                        width: implicitWidth
+                        height: implicitHeight
                         runtime: auth.runtime
                         theme: auth.theme
                         motion: auth.motion
                         compact: true
                         horizontalCompact: true
-                        title: "IDENTITY"
+                        title: "Switch identity"
                         shortcut: auth.runtime.shellHint("PolkitDialog.identity")
                         onActivated: auth.switchIdentity()
                     }
@@ -201,7 +214,7 @@ Scope {
                 ShellSurface {
                     id: credentialSurface
                     width: parent.width
-                    height: 46
+                    height: Math.max(46, auth.theme.fontSize(42))
                     theme: auth.theme
                     motion: auth.motion
                     surfaceLayer: ShellSurface.Control
@@ -259,32 +272,34 @@ Scope {
                     font.pixelSize: auth.theme.fontSize(10)
                 }
 
-                Row {
+                Flow {
                     width: parent.width
                     spacing: auth.theme.spacing3
                     ShellAction {
-                        width: (parent.width - parent.spacing) / 2
-                        height: 42
+                        width: Math.min(parent.width, implicitWidth)
+                        height: implicitHeight
                         runtime: auth.runtime
                         theme: auth.theme
                         motion: auth.motion
                         compact: true
                         horizontalCompact: true
                         icon: "󰅖"
-                        title: "CANCEL"
+                        title: "Cancel"
+                        quietAction: true
                         shortcut: auth.runtime.shellHint("PolkitDialog.cancel")
                         onActivated: auth.cancel()
                     }
                     ShellAction {
-                        width: (parent.width - parent.spacing) / 2
-                        height: 42
+                        width: Math.min(parent.width, implicitWidth)
+                        height: implicitHeight
                         runtime: auth.runtime
                         theme: auth.theme
                         motion: auth.motion
                         compact: true
                         horizontalCompact: true
                         icon: "󰄬"
-                        title: auth.submitting ? "VERIFYING" : "AUTHORIZE"
+                        title: auth.submitting ? "Verifying" : "Authorize"
+                        prominentAction: true
                         shortcut: auth.runtime.shellHint("PolkitDialog.authorize")
                         enabled: !!auth.flow && auth.flow.isResponseRequired && !auth.submitting
                         active: true

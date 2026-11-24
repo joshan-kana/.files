@@ -424,13 +424,15 @@ Item {
 
                 ShellAction {
                     id: allWorkspacesAction
-                    width: 110
-                    height: 44
+                    width: implicitWidth
+                    height: Math.max(44, implicitHeight)
                     runtime: overview.runtime
                     theme: overview.theme
                     motion: overview.motion
                     compact: true
-                    title: "ALL"
+                    title: "All"
+                    icon: "󰕰"
+                    horizontalCompact: true
                     shortcut: overview.runtime.shellHint("OverviewPanel.all")
                     active: overview.showAllWorkspaces && !overview.moveMode
                     enabled: !overview.moveMode && !overview.movePending
@@ -440,13 +442,15 @@ Item {
                     model: 10
                     delegate: ShellAction {
                         required property int index
-                        width: Math.max(1, (workspaceRow.width - 110 - workspaceRow.spacing * 10) / 10)
-                        height: 44
+                        width: Math.max(1, (workspaceRow.width - allWorkspacesAction.width - workspaceRow.spacing * 10) / 10)
+                        height: allWorkspacesAction.height
                         runtime: overview.runtime
                         theme: overview.theme
                         motion: overview.motion
                         compact: true
                         title: index === 9 ? "0" : String(index + 1)
+                        quietAction: !active && !overview.allWindows.some(window => window.workspace.id === index + 1)
+                        activeColor: overview.theme.readableRoleColor("workspace")
                         active: overview.moveMode ? overview.destinationWorkspace === index + 1 : overview.showAllWorkspaces ? overview.focusedWorkspace === index + 1 : overview.browsedWorkspace === index + 1
                         enabled: !overview.movePending
                         onActivated: {
@@ -597,14 +601,14 @@ Item {
                     font.pixelSize: overview.theme.fontSize(11)
                 }
                 ShellAction {
-                    width: 126
-                    height: 40
+                    width: implicitWidth
+                    height: implicitHeight
                     runtime: overview.runtime
                     theme: overview.theme
                     motion: overview.motion
                     compact: true
                     horizontalCompact: true
-                    title: overview.chosenFloating ? "TILE" : "FLOAT"
+                    title: overview.chosenFloating ? "Tile" : "Float"
                     icon: "󰉋"
                     shortcut: overview.runtime.shellHint("OverviewPanel.toggleFloating")
                     active: overview.chosenFloating
@@ -612,14 +616,14 @@ Item {
                     onActivated: overview.toggleWindowState("float")
                 }
                 ShellAction {
-                    width: 126
-                    height: 40
+                    width: implicitWidth
+                    height: implicitHeight
                     runtime: overview.runtime
                     theme: overview.theme
                     motion: overview.motion
                     compact: true
                     horizontalCompact: true
-                    title: overview.chosenPinned ? "UNPIN" : "PIN"
+                    title: overview.chosenPinned ? "Unpin" : "Pin"
                     icon: "󰐃"
                     shortcut: overview.runtime.shellHint("OverviewPanel.togglePin")
                     active: overview.chosenPinned
