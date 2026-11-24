@@ -52,19 +52,13 @@ let
   };
 in
 {
-  # SSH and privileged shells need Kitty terminfo even on headless hosts.
-  environment.systemPackages = [ pkgs.kitty.terminfo ];
+  home = _: {
+    home.sessionVariables = sessionVariables;
+  };
 
-  home =
-    _:
-    {
-      home.sessionVariables = sessionVariables;
-    }
-    // lib.optionalAttrs isDarwin {
-      # Native login Zsh initializes terminfo before the Nix environment is sourced.
-      home.file.".terminfo/78/xterm-kitty".source =
-        "${pkgs.kitty.terminfo}/share/terminfo/78/xterm-kitty";
-    };
+  terminfo = _: {
+    environment.enableAllTerminfo = true;
+  };
 
   systemCommands =
     _:
