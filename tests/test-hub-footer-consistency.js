@@ -45,7 +45,7 @@ test("Escape label follows the actual focus owner", () => {
   assert.match(host, /systemContent\.detailSearchFocused\) \? "Exit search"/);
   assert.match(
     host,
-    /helpVisible \|\| detailVisible \|\| \(systemContent && \(systemContent\.audioChooserOpen \|\| systemContent\.selectedSlider\.length > 0\)\) \|\| \(activityContent && activityContent\.replyEditing\) \? "Back" : "Close"/,
+    /helpVisible \|\| detailVisible \|\| \(systemContent && \(systemContent\.audioChooserOpen \|\| systemContent\.selectedSlider\.length > 0\)\) \|\| \(activityContent && \(activityContent\.replyEditing \|\| activityContent\.policyOpen \|\| activityContent\.expandedGroupKey\.length > 0\)\) \? "Back" : "Close"/,
   );
   assert.match(
     controls,
