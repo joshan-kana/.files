@@ -172,7 +172,10 @@ test("native bars consume one shared full-resolution target without per-bar QML 
 
   assert.match(bars, /import DesktopShell\.Visuals 1\.0/);
   assert.match(bars, /SpectrumBarsItem\s*\{/);
-  assert.match(bars, /targetBands: root\.spectrum\.targetBands/);
+  assert.match(
+    bars,
+    /targetBands: root\.rendering \? root\.spectrum\.targetBands : \[\]/,
+  );
   assert.match(bars, /edges: root\.bandEdges/);
   assert.match(bars, /decaying: root\.spectrum\.decaying/);
   assert.doesNotMatch(bars, /\bRepeater\s*\{/);
@@ -270,8 +273,9 @@ test("spectrum tuning is persistent, resettable, and independent of reactive tin
     "spectrumRelease",
   ]) {
     assert.ok(preferences.includes(`effective("${name}")`));
-    assert.ok(preferences.includes(`clearOverride("${name}")`));
-    assert.ok(detail.includes(`key: "${name}"`));
+    assert.ok(preferences.includes(`key: "${name}"`));
+    assert.match(preferences, /saved\.resetMany\(spectrumParameters\.map/);
+    assert.match(detail, /return appearance\.spectrumParameters/);
     assert.ok(shell.includes(`qmlAppearance.${name}`));
     assert.ok(!reactive.includes(name));
   }
@@ -286,4 +290,168 @@ test("spectrum tuning is persistent, resettable, and independent of reactive tin
       ),
     );
   assert.match(qml("SpectrumCurve.qml"), /raw \* spectrum.sensitivity/);
+});
+
+test("adding or removing another curve preserves the existing interpolation frame", () => {
+  const handler = source
+    .split("onCurveSubscribersChanged: {")[1]
+    .split("\n    }")[0];
+  const change = new Function("state", "with (state) {" + handler + "}");
+  const original = [0.2, 0.4];
+  const state = {
+    bands: original,
+    targetBands: [0.9, 0.8],
+    curveSubscribers: 2,
+    hadCurveSubscribers: true,
+    active: true,
+    decaying: false,
+    smoothingSilence: false,
+    interpolating: true,
+  };
+  change(state);
+  assert.equal(state.bands, original);
+  state.curveSubscribers = 1;
+  change(state);
+  assert.equal(state.bands, original);
+  state.curveSubscribers = 0;
+  change(state);
+  assert.equal(state.hadCurveSubscribers, false);
+  state.curveSubscribers = 1;
+  change(state);
+  assert.equal(state.bands, state.targetBands);
+});
+
+test("spectrum mode changes remain local and legacy wallpaper tuning migrates once", () => {
+  const qml = (name) =>
+    fs.readFileSync(
+      path.join(__dirname, "../modules/desktop/hyprland/shell/qml", name),
+      "utf8",
+    );
+  const appearance = qml("AppearancePreferences.qml");
+  const body = (name) =>
+    appearance.match(
+      new RegExp(
+        "function " + name + "\\([^\\n]*\\): \\w+ \\{([\\s\\S]*?)\\n    \\}",
+      ),
+    )[1];
+  const migrate = new Function(
+    "saved",
+    "values",
+    body("migrateSpectrumOverrides"),
+  );
+  const valid = (key, value) =>
+    typeof value === "number" &&
+    Number.isFinite(value) &&
+    (key === "spectrumDensity"
+      ? value >= 0.375 && value <= 1.5
+      : value >= 0.25 && value <= 1.25);
+  const old = {
+    wallpaperSpectrumBars: 32,
+    wallpaperSpectrumOpacity: 0.4,
+    mediaVisualizerMode: "curve",
+  };
+  assert.deepEqual(migrate({ valid }, old), {
+    spectrumDensity: 0.5,
+    spectrumOpacity: 0.5,
+    mediaVisualizerMode: "curve",
+  });
+  assert.deepEqual(
+    migrate({ valid }, { ...old, spectrumDensity: 1.25, spectrumOpacity: 1 }),
+    { spectrumDensity: 1.25, spectrumOpacity: 1, mediaVisualizerMode: "curve" },
+  );
+  assert.deepEqual(
+    migrate(
+      { valid },
+      { wallpaperSpectrumBars: -1, wallpaperSpectrumOpacity: 8 },
+    ),
+    {},
+  );
+  assert.equal(old.wallpaperSpectrumBars, 32);
+  assert.deepEqual(migrate({ valid }, {}), {});
+  const surfaces = ["wallpaper", "island", "controls", "media", "preview"].map(
+    (name) => ({ key: name + "VisualizerMode" }),
+  );
+  const toggle = new Function(
+    "spectrumSurfaces",
+    "runtime",
+    "spectrumMode",
+    "storeOverride",
+    "key",
+    body("toggleSpectrumMode"),
+  );
+  const runtime = {
+    constraints: {
+      appearance: Object.fromEntries(
+        surfaces.map(({ key }) => [key, { values: ["bars", "curve"] }]),
+      ),
+    },
+  };
+  for (let combination = 0; combination < 2 ** surfaces.length; combination++) {
+    const state = Object.fromEntries(
+      surfaces.map(({ key }, index) => [
+        key,
+        combination & (1 << index) ? "curve" : "bars",
+      ]),
+    );
+    for (const { key } of surfaces) {
+      const before = { ...state };
+      toggle(
+        surfaces,
+        runtime,
+        (key) => state[key],
+        (key, value) => (state[key] = value),
+        key,
+      );
+      assert.equal(state[key], before[key] === "bars" ? "curve" : "bars");
+      for (const other of surfaces.filter((surface) => surface.key !== key))
+        assert.equal(state[other.key], before[other.key]);
+    }
+  }
+  const wrapper = qml("SpectrumVisualizer.qml");
+  for (const [name, key] of [
+    ["WallpaperSpectrum.qml", "wallpaperVisualizerMode"],
+    ["NowPlayingIsland.qml", "islandVisualizerMode"],
+    ["ControlsMediaCard.qml", "controlsVisualizerMode"],
+    ["MediaContent.qml", "mediaVisualizerMode"],
+    ["SettingsDetail.qml", "previewVisualizerMode"],
+  ]) {
+    assert.match(qml(name), /SpectrumVisualizer \{/);
+    assert.ok(qml(name).includes('surfaceKey: "' + key + '"'));
+  }
+  assert.match(wrapper, /baseDensity \* spectrum\.appearance\.spectrumDensity/);
+  assert.match(
+    wrapper,
+    /baseOpacity \* root\.spectrum\.appearance\.spectrumOpacity/,
+  );
+});
+
+test("visible spectrum renderers register demand exactly once and release it", () => {
+  const wrapper = fs.readFileSync(
+    path.join(
+      __dirname,
+      "../modules/desktop/hyprland/shell/qml/SpectrumVisualizer.qml",
+    ),
+    "utf8",
+  );
+  const body = wrapper
+    .split("function syncDemand(): void {")[1]
+    .split("\n    }")[0];
+  const sync = new Function("state", "with (state) {" + body + "}");
+  const state = {
+    spectrum: { visualizerSubscribers: 0 },
+    engaged: true,
+    drivesDemand: true,
+    demandRegistered: false,
+  };
+  sync(state);
+  sync(state);
+  assert.equal(state.spectrum.visualizerSubscribers, 1);
+  state.engaged = false;
+  sync(state);
+  sync(state);
+  assert.equal(state.spectrum.visualizerSubscribers, 0);
+  state.engaged = true;
+  state.drivesDemand = false;
+  sync(state);
+  assert.equal(state.spectrum.visualizerSubscribers, 0);
 });

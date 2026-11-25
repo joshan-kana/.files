@@ -35,12 +35,6 @@ Item {
 
     signal fullRequested
 
-    SpectrumScale {
-        id: spectrumScale
-        lowHz: card.spectrum.lowHz
-        highHz: card.spectrum.highHz
-    }
-
     readonly property real heroSize: 64
     readonly property real visualizerWidth: width >= 520 ? Math.min(180, width * 0.27) : 0
     // Use theme geometry, not the child Column's implicitHeight: the hub
@@ -160,7 +154,7 @@ Item {
                     }
                 }
 
-                SpectrumBars {
+                SpectrumVisualizer {
                     width: card.visualizerWidth
                     height: 56
                     anchors.verticalCenter: parent.verticalCenter
@@ -168,8 +162,9 @@ Item {
                     enabled: visible
                     spectrum: card.spectrum
                     theme: card.theme
-                    frequencyScale: spectrumScale
-                    barCount: 24
+                    motion: card.motion
+                    surfaceKey: "controlsVisualizerMode"
+                    baseDensity: 24
                 }
             }
 

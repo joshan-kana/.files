@@ -325,11 +325,12 @@ ShellRoot {
 
     SpectrumState {
         id: qmlSpectrum
+        appearance: qmlAppearance
         sensitivity: qmlAppearance.spectrumSensitivity
         attackMultiplier: qmlAppearance.spectrumAttack
         releaseMultiplier: qmlAppearance.spectrumRelease
         // No DSP client unless a visible spectrum consumer needs live audio.
-        active: (qmlMedia.playing && qmlAmbientBar.shown) || (qmlExpansionState.hasCurrent && (qmlExpansionState.currentName === "system" || qmlExpansionState.currentName === "media")) || root.wallpaperSpectrumEnabled || root.musicReactiveSurfaceVisible
+        active: visualizerSubscribers > 0 || root.wallpaperSpectrumEnabled || root.musicReactiveSurfaceVisible
     }
 
     MusicReactiveState {
@@ -348,8 +349,7 @@ ShellRoot {
         spectrum: root.spectrumRef
         theme: root.themeRef
         enabled: root.wallpaperSpectrumEnabled
-        intensity: qmlAppearance.wallpaperSpectrumOpacity
-        barCount: qmlAppearance.wallpaperSpectrumBars
+        motion: qmlMotion
     }
 
     DesktopFrame {

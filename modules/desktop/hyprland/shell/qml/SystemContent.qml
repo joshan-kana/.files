@@ -1410,10 +1410,10 @@ FocusScope {
                             theme: root.theme
                             motion: root.motion
                             icon: DesktopIcons.glyphFor("spectrum")
-                            title: root.wallpaperSpectrumEnabled ? "Wallpaper spectrum" : "Spectrum off"
+                            title: "Spectrum · wallpaper " + (root.wallpaperSpectrumEnabled ? "on" : "off")
                             actionId: "SystemContent.wallpaperSpectrum"
                             detailActionId: "SystemContent.wallpaperSpectrumDetails"
-                            detailName: "Wallpaper spectrum tuning"
+                            detailName: "Spectrum settings"
                             onDetailsRequested: root.openSetting("spectrum")
                             active: root.wallpaperSpectrumEnabled
                             activeColor: root.theme.roleColor("spectrum")

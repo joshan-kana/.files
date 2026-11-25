@@ -16,6 +16,7 @@ QtObject {
         category: store.category
         property string overridesJson: ""
     }
+    readonly property bool uninitialized: persisted.overridesJson === ""
     readonly property var overrides: objectFromJson(persisted.overridesJson)
 
     function objectFromJson(raw: string): var {

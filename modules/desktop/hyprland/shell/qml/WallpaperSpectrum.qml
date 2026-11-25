@@ -11,8 +11,7 @@ Variants {
     required property SpectrumState spectrum
     required property Theme theme
     property bool enabled: false
-    property real intensity: 0.8
-    property int barCount: 64
+    required property Motion motion
 
     model: Quickshell.screens
 
@@ -52,19 +51,16 @@ Variants {
         Item {
             anchors.fill: parent
 
-            SpectrumScale {
-                id: frequencies
-                lowHz: visuals.spectrum.lowHz
-                highHz: visuals.spectrum.highHz
-            }
-
-            SpectrumBars {
+            SpectrumVisualizer {
                 anchors.fill: parent
                 spectrum: visuals.spectrum
                 theme: visuals.theme
-                frequencyScale: frequencies
-                barCount: visuals.barCount
-                opacity: visuals.intensity
+                motion: visuals.motion
+                surfaceKey: "wallpaperVisualizerMode"
+                baseDensity: 64
+                baseOpacity: 0.8
+                drivesDemand: false
+                enabled: layer.visible
             }
         }
     }

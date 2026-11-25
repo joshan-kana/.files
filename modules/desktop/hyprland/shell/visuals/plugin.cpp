@@ -200,7 +200,7 @@ protected:
       node->setMaterial(new QSGVertexColorMaterial);
       node->setFlag(QSGNode::OwnsMaterial);
     }
-    std::vector<float> levels(count, 0);
+    levels_.resize(count);
     for (int i = 0; i < count; ++i) {
       const int lo =
           std::max(0, int(std::floor(edges_[i].toFloat() * (binCount - 1))));
@@ -209,7 +209,7 @@ protected:
                    int(std::ceil(edges_[i + 1].toFloat() * (binCount - 1))));
       const float peak =
           *std::max_element(current_.begin() + lo, current_.begin() + hi + 1);
-      levels[i] =
+      levels_[i] =
           std::pow(std::clamp(peak * float(sensitivity_), 0.0f, 1.0f), 0.88f);
     }
     QSGGeometry *g = node->geometry();
@@ -237,7 +237,7 @@ protected:
       v[pos++].set(x, y, c.red(), c.green(), c.blue(), c.alpha());
     };
     for (int i = 0; i < count; ++i) {
-      const float level = levels[i];
+      const float level = levels_[i];
       const bool audible = level > 0.003f;
       const QColor c =
           audible ? barColors_[i].value<QColor>() : QColor(Qt::transparent);
@@ -268,7 +268,7 @@ protected:
 
 private:
   QVariantList targetBands_, edges_, barColors_;
-  std::vector<float> current_;
+  std::vector<float> current_, levels_;
   double lowHz_ = 20.0, highHz_ = 20000.0;
   bool decaying_ = false;
   double sensitivity_ = 1.0, attackMultiplier_ = 1.0, releaseMultiplier_ = 1.0;

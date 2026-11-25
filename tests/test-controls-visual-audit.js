@@ -518,8 +518,8 @@ test("Compact Media shares a live spectrum, controls and full Now Playing naviga
     /Row \{\s+id: transportRow\s+width: implicitWidth[\s\S]*?anchors.horizontalCenter: parent.horizontalCenter/,
   );
   assert.doesNotMatch(card, /parent.width - shuffleButton.width/);
-  assert.match(card, /SpectrumBars \{/);
-  assert.match(card, /barCount: 24/);
+  assert.match(card, /SpectrumVisualizer \{/);
+  assert.match(card, /baseDensity: 24/);
   assert.match(
     card,
     /shortcut: card\.runtime\.shellHint\("ControlsMediaCard.shuffle"\)[\s\S]*?onActivated: card.media.toggleShuffle\(\)/,
@@ -1054,7 +1054,7 @@ test("capability headers describe their controls instead of repeating master sta
   assert.match(detail, /detail: panel.subtitleText/);
   assert.match(
     detail,
-    /title: \(panel.masterState \? "Disable " : "Enable "\) \+ panel.titleText/,
+    /title: \(panel.masterState \? "Disable " : "Enable "\) \+ \(panel.spectrumTuning \? "wallpaper spectrum" : panel.titleText\)/,
   );
 });
 

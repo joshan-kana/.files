@@ -28,8 +28,75 @@ QtObject {
     readonly property real spectrumSensitivity: effective("spectrumSensitivity")
     readonly property real spectrumAttack: effective("spectrumAttack")
     readonly property real spectrumRelease: effective("spectrumRelease")
-    readonly property int wallpaperSpectrumBars: effective("wallpaperSpectrumBars")
-    readonly property real wallpaperSpectrumOpacity: effective("wallpaperSpectrumOpacity")
+    readonly property real spectrumDensity: effective("spectrumDensity")
+    readonly property real spectrumOpacity: effective("spectrumOpacity")
+    readonly property var spectrumSurfaces: [
+        {
+            key: "wallpaperVisualizerMode",
+            title: "Wallpaper"
+        },
+        {
+            key: "islandVisualizerMode",
+            title: "Now Playing island"
+        },
+        {
+            key: "controlsVisualizerMode",
+            title: "Controls media"
+        },
+        {
+            key: "mediaVisualizerMode",
+            title: "Now Playing"
+        },
+        {
+            key: "previewVisualizerMode",
+            title: "Live preview"
+        }
+    ]
+    readonly property var spectrumParameters: [
+        {
+            key: "spectrumSensitivity",
+            title: "Sensitivity",
+            description: "Amplitude of every spectrum",
+            step: 5
+        },
+        {
+            key: "spectrumAttack",
+            title: "Attack speed",
+            description: "Rise speed of every spectrum",
+            step: 5
+        },
+        {
+            key: "spectrumRelease",
+            title: "Release speed",
+            description: "Fall speed of every spectrum",
+            step: 5
+        },
+        {
+            key: "spectrumDensity",
+            title: "Density",
+            description: "Resolution relative to available space",
+            step: 5
+        },
+        {
+            key: "spectrumOpacity",
+            title: "Opacity",
+            description: "Opacity multiplier for every spectrum",
+            step: 5
+        }
+    ].map(entry => Object.assign({}, entry, {
+            minimum: runtime.constraints.appearance[entry.key].min * 100,
+            maximum: runtime.constraints.appearance[entry.key].max * 100,
+            suffix: "%"
+        }))
+    function spectrumMode(key: string): string {
+        return effective(key);
+    }
+    function toggleSpectrumMode(key: string): void {
+        if (!spectrumSurfaces.some(surface => surface.key === key))
+            return;
+        const values = runtime.constraints.appearance[key].values;
+        storeOverride(key, values[(values.indexOf(spectrumMode(key)) + 1) % values.length]);
+    }
     readonly property var reactiveParameters: [
         {
             key: "musicReactiveSensitivity",
@@ -222,23 +289,43 @@ QtObject {
     onOsdGlassExposedChanged: applyGlassRule("desktop-shell-shell-glass-osd", "^desktop-shell-osd$", osdGlassExposed)
     onResizeGlassExposedChanged: applyGlassRule("desktop-shell-shell-glass-resize", "^desktop-shell-resize-controls$", resizeGlassExposed)
 
+    function migrateSpectrumOverrides(values: var): var {
+        const next = Object.assign({}, values);
+        // Historical wallpaper baselines were 64 bars and 80% opacity.
+        const density = next.wallpaperSpectrumBars / 64;
+        const opacity = next.wallpaperSpectrumOpacity / 0.8;
+        if (!saved.valid("spectrumDensity", next.spectrumDensity) && typeof next.wallpaperSpectrumBars === "number" && saved.valid("spectrumDensity", density))
+            next.spectrumDensity = density;
+        if (!saved.valid("spectrumOpacity", next.spectrumOpacity) && typeof next.wallpaperSpectrumOpacity === "number" && saved.valid("spectrumOpacity", opacity))
+            next.spectrumOpacity = opacity;
+        delete next.wallpaperSpectrumBars;
+        delete next.wallpaperSpectrumOpacity;
+        return next;
+    }
+
     Component.onCompleted: {
-        const old = {};
-        const marker = saved.legacy("userOverrides", "");
-        let keys = Object.keys(runtime.appearanceDefaults);
-        if (marker) {
-            try {
-                const parsed = JSON.parse(marker);
-                keys = Array.isArray(parsed) ? parsed : [];
-            } catch (_) {
-                keys = [];
+        if (saved.uninitialized) {
+            const old = {};
+            const marker = saved.legacy("userOverrides", "");
+            let keys = Object.keys(runtime.appearanceDefaults).concat(["wallpaperSpectrumBars", "wallpaperSpectrumOpacity"]);
+            if (marker) {
+                try {
+                    const parsed = JSON.parse(marker);
+                    keys = Array.isArray(parsed) ? parsed : [];
+                } catch (_) {
+                    keys = [];
+                }
             }
+            for (const key of keys) {
+                if (Object.prototype.hasOwnProperty.call(runtime.appearanceDefaults, key))
+                    old[key] = saved.legacy(key, runtime.appearanceDefaults[key]);
+                else if (key === "wallpaperSpectrumBars" || key === "wallpaperSpectrumOpacity")
+                    old[key] = saved.legacy(key, 0);
+            }
+            saved.initialize(migrateSpectrumOverrides(old));
+        } else if (["wallpaperSpectrumBars", "wallpaperSpectrumOpacity"].some(key => Object.prototype.hasOwnProperty.call(saved.overrides, key))) {
+            saved.write(migrateSpectrumOverrides(saved.overrides));
         }
-        for (const key of keys) {
-            if (Object.prototype.hasOwnProperty.call(runtime.appearanceDefaults, key))
-                old[key] = saved.legacy(key, runtime.appearanceDefaults[key]);
-        }
-        saved.initialize(old);
         applyVhs();
         applyWindowTransparency();
         applyShellGlass();
@@ -277,9 +364,10 @@ QtObject {
     }
 
     function setVisualParameter(key: string, value: real): void {
-        if (!reactiveParameters.some(parameter => parameter.key === key) && !["spectrumSensitivity", "spectrumAttack", "spectrumRelease", "wallpaperSpectrumOpacity"].includes(key) || !isFinite(value))
+        if (!reactiveParameters.some(parameter => parameter.key === key) && !spectrumParameters.some(parameter => parameter.key === key) || !isFinite(value))
             return;
-        const next = Math.round(runtime.bounded("appearance", key, value) * 100) / 100;
+        const precision = key === "spectrumDensity" ? 1000 : 100;
+        const next = runtime.bounded("appearance", key, Math.round(value * precision) / precision);
         if (next === effective(key))
             return;
         storeOverride(key, next);
@@ -289,10 +377,6 @@ QtObject {
         if (!runtime.constraints.appearance.musicReactiveEmphasis.values.includes(value) || musicReactiveEmphasis === value)
             return;
         storeOverride("musicReactiveEmphasis", value);
-    }
-
-    function setSpectrumBars(value: int): void {
-        storeOverride("wallpaperSpectrumBars", runtime.bounded("appearance", "wallpaperSpectrumBars", value));
     }
 
     function resetReactiveTuning(): void {
@@ -328,11 +412,7 @@ QtObject {
     }
 
     function resetSpectrumTuning(): void {
-        clearOverride("spectrumSensitivity");
-        clearOverride("spectrumAttack");
-        clearOverride("spectrumRelease");
-        clearOverride("wallpaperSpectrumOpacity");
-        clearOverride("wallpaperSpectrumBars");
+        saved.resetMany(spectrumParameters.map(parameter => parameter.key).concat(spectrumSurfaces.map(surface => surface.key)));
     }
 
     function toggleFrame(): void {
@@ -558,8 +638,7 @@ QtObject {
     }
 
     function toggleMediaVisualizer(): void {
-        const values = runtime.constraints.appearance.mediaVisualizerMode.values;
-        storeOverride("mediaVisualizerMode", values[(values.indexOf(mediaVisualizerMode) + 1) % values.length]);
+        toggleSpectrumMode("mediaVisualizerMode");
     }
 
     function toggleMediaLyrics(): void {

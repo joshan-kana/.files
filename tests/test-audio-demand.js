@@ -38,7 +38,7 @@ test("reactive styling is driven by observed shell surfaces, not a saved toggle 
 });
 
 test("FFT remains active for visible media and wallpaper even when reactive styling is sleeping", () => {
-  assert.match(shell, /active: \(qmlMedia\.playing && qmlAmbientBar\.shown\)/);
+  assert.match(shell, /active: visualizerSubscribers > 0/);
   assert.match(
     shell,
     /\|\| root\.wallpaperSpectrumEnabled \|\| root\.musicReactiveSurfaceVisible/,

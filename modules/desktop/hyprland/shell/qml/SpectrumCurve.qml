@@ -11,6 +11,7 @@ Item {
 
     // Keep the shared QML interpolation active only while an actual curve
     // is visible. Hidden prewarmed media pages do not drive display frames.
+    property int sampleCount: 48
     readonly property bool needsInterpolation: enabled && visible && opacity > 0 && width > 0 && height > 0
     property bool interpolationRegistered: false
 
@@ -26,6 +27,17 @@ Item {
     Component.onDestruction: {
         if (interpolationRegistered && spectrum)
             spectrum.curveSubscribers--;
+    }
+
+    readonly property int bandCount: spectrum.targetBands.length
+    readonly property var sampleEdges: {
+        const count = Math.max(2, Math.min(sampleCount, bandCount));
+        const last = Math.max(0, bandCount - 1);
+        const edges = [];
+        for (let index = 0; index < count; index++) {
+            edges.push([Math.floor(frequencyScale.toNormalized(Math.max(0, (index - 0.5) / (count - 1))) * last), Math.ceil(frequencyScale.toNormalized(Math.min(1, (index + 0.5) / (count - 1))) * last)]);
+        }
+        return edges;
     }
 
     readonly property var geometry: {
@@ -46,11 +58,16 @@ Item {
             };
 
         const points = [];
-        for (let source = 0; source < values.length; source += 2) {
-            const raw = Math.max(values[source] || 0, values[Math.min(source + 1, values.length - 1)] || 0);
+        const count = sampleEdges.length;
+        for (let index = 0; index < count; index++) {
+            const center = index / (count - 1);
+            const [lo, hi] = sampleEdges[index];
+            let raw = 0;
+            for (let band = lo; band <= hi; band++)
+                raw = Math.max(raw, values[band] || 0);
             points.push({
-                x: frequencyScale.fromNormalized(source / Math.max(1, values.length - 1)) * width,
-                y: height - Math.max(2, Math.pow(Math.max(0, Math.min(1, raw * spectrum.sensitivity)), 0.82) * height * 0.92)
+                x: center * width,
+                y: height - Math.max(2, Math.pow(Math.max(0, Math.min(1, raw * spectrum.sensitivity)), 0.88) * height * 0.92)
             });
         }
         if (points.length < 2)

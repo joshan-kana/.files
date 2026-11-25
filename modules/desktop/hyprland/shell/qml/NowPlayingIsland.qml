@@ -14,6 +14,7 @@ Item {
     // Leave the centered clock island unobstructed on narrow logical screens.
     property bool frameConnected: false
     property bool occluded: false
+    property bool surfaceShown: true
     enabled: !occluded
     readonly property real playbackWidth: playbackZone.width
     readonly property bool mainHover: mainHitArea.pointerHovered && !playbackHitArea.pointerHovered
@@ -42,12 +43,6 @@ Item {
             easing.type: island.motion.effectsType
             easing.bezierCurve: island.motion.effectsCurve
         }
-    }
-
-    SpectrumScale {
-        id: spectrumScale
-        lowHz: island.spectrum.lowHz
-        highHz: island.spectrum.highHz
     }
 
     ShellSurface {
@@ -203,12 +198,15 @@ Item {
             visible: width > 0 && (island.media.playing || island.spectrum.hasEnergy)
             opacity: island.media.playing || island.spectrum.hasEnergy ? 0.95 : 0
 
-            SpectrumBars {
+            SpectrumVisualizer {
                 anchors.fill: parent
                 spectrum: island.spectrum
                 theme: island.theme
-                frequencyScale: spectrumScale
-                barCount: 24
+                motion: island.motion
+                surfaceKey: "islandVisualizerMode"
+                drivesDemand: island.media.playing
+                enabled: island.surfaceShown
+                baseDensity: 24
             }
 
             Behavior on opacity {

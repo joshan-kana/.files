@@ -467,6 +467,7 @@ Variants {
 
             NowPlayingIsland {
                 id: mediaIsland
+                surfaceShown: bar.visible
                 occluded: bar.mediaOccluded
                 onOpacityChanged: if (bars.frameVisible)
                     Qt.callLater(bar.publishOrigins)

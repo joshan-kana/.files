@@ -10,21 +10,11 @@ const qml = (name) =>
 
 test("now-playing visualizer remains rendered below the lyrics overlay in both modes", () => {
   const media = qml("MediaContent.qml");
-  assert.match(
-    media,
-    /visible: content\.visualizerMode === "curve" \|\| opacity > 0\.01/,
-  );
-  assert.match(
-    media,
-    /visible: content\.visualizerMode === "bars" \|\| opacity > 0\.01/,
-  );
-  assert.doesNotMatch(
-    media,
-    /!content\.lyricsVisible && \(content\.visualizerMode/,
-  );
+  const visualizer = qml("SpectrumVisualizer.qml");
+  assert.match(visualizer, /root.mode === "curve" \|\| opacity > 0\.01/);
+  assert.match(visualizer, /root.mode === "bars" \|\| opacity > 0\.01/);
   assert.ok(
-    media.indexOf("SpectrumCurve {") < media.indexOf("MediaLyrics {") &&
-      media.indexOf("SpectrumBars {") < media.indexOf("MediaLyrics {"),
+    media.indexOf("SpectrumVisualizer {") < media.indexOf("MediaLyrics {"),
   );
   assert.match(media, /active: content\.engaged && content\.lyricsVisible/);
   assert.match(media, /opacity: content\.lyricsVisible \? 1 : 0/);
@@ -66,7 +56,7 @@ test("lyrics omit redundant local status labels while preserving frequency marke
   assert.match(media, /id: frequencyLabels[\s\S]*?visible: true/);
   assert.match(media, /id: frequencyLabels[\s\S]*?z: 1/);
   assert.match(
-    media,
-    /visible: content.visualizerMode === "curve" \|\| opacity > 0.01/,
+    qml("SpectrumVisualizer.qml"),
+    /root.mode === "curve" \|\| opacity > 0.01/,
   );
 });

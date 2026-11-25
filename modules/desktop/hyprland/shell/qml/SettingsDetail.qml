@@ -92,7 +92,7 @@ Item {
             alerts: "Notification controls",
             stay: "Stay awake",
             power: "Power profiles",
-            spectrum: "Wallpaper spectrum",
+            spectrum: "Spectrum",
             reactive: "Music-reactive shell",
             bar: "Desktop bar",
             frame: "Desktop frame",
@@ -107,7 +107,7 @@ Item {
             alerts: "Delivery, quiet hours and notification history",
             stay: "Idle inhibition and timeout",
             power: "Choose a system power profile",
-            spectrum: "Shared visualizer response and wallpaper appearance",
+            spectrum: "Shared response and independent visualizer styles",
             reactive: "Audio-driven tint and response",
             bar: "Desktop islands and bar layout",
             frame: "Connected desktop contour and thickness",
@@ -232,53 +232,7 @@ Item {
         if (reactiveTuning)
             return appearance.reactiveParameters;
         if (spectrumTuning)
-            return [
-                {
-                    key: "spectrumSensitivity",
-                    title: "Sensitivity",
-                    description: "Visual amplitude without changing the reactive tint",
-                    minimum: runtime.constraints.appearance.spectrumSensitivity.min * 100,
-                    maximum: runtime.constraints.appearance.spectrumSensitivity.max * 100,
-                    step: 5,
-                    suffix: "%"
-                },
-                {
-                    key: "spectrumAttack",
-                    title: "Attack speed",
-                    description: "Rise speed of visualizer bands",
-                    minimum: runtime.constraints.appearance.spectrumAttack.min * 100,
-                    maximum: runtime.constraints.appearance.spectrumAttack.max * 100,
-                    step: 5,
-                    suffix: "%"
-                },
-                {
-                    key: "spectrumRelease",
-                    title: "Release speed",
-                    description: "Fall speed of visualizer bands",
-                    minimum: runtime.constraints.appearance.spectrumRelease.min * 100,
-                    maximum: runtime.constraints.appearance.spectrumRelease.max * 100,
-                    step: 5,
-                    suffix: "%"
-                },
-                {
-                    key: "wallpaperSpectrumOpacity",
-                    title: "Spectrum opacity",
-                    description: "Strength of wallpaper spectrum bars",
-                    minimum: runtime.constraints.appearance.wallpaperSpectrumOpacity.min * 100,
-                    maximum: runtime.constraints.appearance.wallpaperSpectrumOpacity.max * 100,
-                    step: 5,
-                    suffix: "%"
-                },
-                {
-                    key: "wallpaperSpectrumBars",
-                    title: "Bar density",
-                    description: "Number of spectrum bars",
-                    minimum: runtime.constraints.appearance.wallpaperSpectrumBars.min,
-                    maximum: runtime.constraints.appearance.wallpaperSpectrumBars.max,
-                    step: 8,
-                    suffix: " bars"
-                }
-            ];
+            return appearance.spectrumParameters;
         if (kind === "alerts")
             return [
                 {
@@ -348,11 +302,11 @@ Item {
     function currentValue(key: string): real {
         if (key === "barIslandHeight" || key === "frameThickness")
             return appearance[key];
-        if (key === "wallpaperSpectrumBars")
-            return appearance.wallpaperSpectrumBars;
         if (key === "motionDuration")
             return Math.round(motion.durationMultiplier * 100);
-        if (key.startsWith("musicReactive") || key.startsWith("spectrum") || key === "wallpaperSpectrumOpacity")
+        if (key === "spectrumDensity")
+            return appearance.spectrumDensity * 100;
+        if (key.startsWith("musicReactive") || key.startsWith("spectrum"))
             return Math.round(appearance[key] * 100);
         if (key === "windowOpacity")
             return Math.round(appearance.windowOpacity * 100);
@@ -378,11 +332,9 @@ Item {
     function setValue(key: string, value: real): void {
         if (key === "barIslandHeight" || key === "frameThickness")
             appearance.setGeometryPreference(key, value);
-        else if (key === "wallpaperSpectrumBars")
-            appearance.setSpectrumBars(value);
         else if (key === "motionDuration")
             motion.setDurationMultiplier(value / 100);
-        else if (key.startsWith("musicReactive") || key.startsWith("spectrum") || key === "wallpaperSpectrumOpacity")
+        else if (key.startsWith("musicReactive") || key.startsWith("spectrum"))
             appearance.setVisualParameter(key, value / 100);
         else if (key === "windowOpacity")
             appearance.setWindowOpacity(value / 100);
@@ -398,11 +350,25 @@ Item {
             nightLight.setTemperature(value);
     }
 
+    function snappedParameter(entry: var, value: real): real {
+        if (value <= entry.minimum)
+            return entry.minimum;
+        if (value >= entry.maximum)
+            return entry.maximum;
+        return Math.max(entry.minimum, Math.min(entry.maximum, Math.round(value / entry.step) * entry.step));
+    }
+
+    function steppedParameter(entry: var, value: real, direction: int): real {
+        const index = value / entry.step;
+        const next = direction < 0 ? Math.ceil(index - 0.000001) - 1 : Math.floor(index + 0.000001) + 1;
+        return Math.max(entry.minimum, Math.min(entry.maximum, next * entry.step));
+    }
+
     function valueLabel(entry: var): string {
         const value = currentValue(entry.key);
         if (entry.suffix === "time")
             return ClockFormatting.minutesLabel(value);
-        return value + entry.suffix;
+        return Number(value.toFixed(1)) + entry.suffix;
     }
 
     function toggleMaster(): void {
@@ -511,7 +477,7 @@ Item {
         }
     }
 
-    readonly property int choiceCount: kind === "nightLight" ? nightModes.count + nightDays.count + nightPauses.count : reactiveTuning ? reactivePresets.count + reactiveEmphases.count : kind === "alerts" ? alertPauses.count + quietDays.count : kind === "power" ? powerProfiles.count : kind === "stay" ? stayDurations.count : 0
+    readonly property int choiceCount: spectrumTuning ? spectrumModes.count : kind === "nightLight" ? nightModes.count + nightDays.count + nightPauses.count : reactiveTuning ? reactivePresets.count + reactiveEmphases.count : kind === "alerts" ? alertPauses.count + quietDays.count : kind === "power" ? powerProfiles.count : kind === "stay" ? stayDurations.count : 0
 
     function activateNumber(number: int): bool {
         let repeater = null;
@@ -530,6 +496,8 @@ Item {
             repeater = number <= alertPauses.count ? alertPauses : quietDays;
             if (number > alertPauses.count)
                 index -= alertPauses.count;
+        } else if (spectrumTuning) {
+            repeater = spectrumModes;
         } else if (reactiveTuning) {
             repeater = number <= reactivePresets.count ? reactivePresets : reactiveEmphases;
             if (number > reactivePresets.count)
@@ -619,7 +587,7 @@ Item {
                 return true;
             }
         }
-        if (kind === "power" || kind === "stay" || kind === "alerts" || kind === "nightLight" || reactiveTuning) {
+        if (kind === "power" || kind === "stay" || kind === "alerts" || kind === "nightLight" || reactiveTuning || spectrumTuning) {
             const numberIndex = runtime.shellChoiceIndex(key, modifiers, choiceCount);
             if (numberIndex >= 0)
                 return activateNumber(numberIndex + 1);
@@ -641,7 +609,7 @@ Item {
                 const entry = parameters[selectedIndex];
                 if (entry) {
                     parameterAdjustmentRequested(selectedIndex);
-                    setValue(entry.key, currentValue(entry.key) + (runtime.shellNavigates("controls", "left", key) ? -1 : 1) * entry.step);
+                    setValue(entry.key, steppedParameter(entry, currentValue(entry.key), runtime.shellNavigates("controls", "left", key) ? -1 : 1));
                 }
                 return true;
             }
@@ -685,7 +653,7 @@ Item {
                     compact: true
                     iconOnly: true
                     switchControl: true
-                    title: (panel.masterState ? "Disable " : "Enable ") + panel.titleText
+                    title: (panel.masterState ? "Disable " : "Enable ") + (panel.spectrumTuning ? "wallpaper spectrum" : panel.titleText)
                     shortcut: panel.runtime.shellHint("SettingsDetail.toggle")
                     active: panel.masterState
                     enabled: panel.masterAvailable
@@ -830,15 +798,14 @@ Item {
                             textRole: ShellText.Section
                         }
                     }
-                    SpectrumBars {
+                    SpectrumVisualizer {
                         width: parent.width
                         height: panel.theme.fontSize(76)
+                        enabled: panel.open && (panel.spectrumTuning || panel.reactiveTuning)
                         theme: panel.theme
                         spectrum: panel.spectrum
-                        frequencyScale: SpectrumScale {
-                            lowHz: panel.spectrum.lowHz
-                            highHz: panel.spectrum.highHz
-                        }
+                        motion: panel.motion
+                        surfaceKey: "previewVisualizerMode"
                     }
                     Row {
                         width: parent.width
@@ -885,6 +852,37 @@ Item {
                 }
             }
 
+            ShellText {
+                visible: panel.spectrumTuning
+                runtime: panel.runtime
+                theme: panel.theme
+                text: "Visualizer styles · wallpaper " + (panel.wallpaperSpectrumEnabled ? "on" : "off")
+                textRole: ShellText.Section
+            }
+            Flow {
+                id: spectrumStyleFlow
+                visible: panel.spectrumTuning
+                width: parent.width
+                height: visible ? implicitHeight : 0
+                spacing: panel.theme.spacing2
+                Repeater {
+                    id: spectrumModes
+                    model: panel.spectrumTuning ? panel.appearance.spectrumSurfaces : []
+                    delegate: ShellAction {
+                        required property int index
+                        required property var modelData
+                        width: Math.floor((spectrumStyleFlow.width - spectrumStyleFlow.spacing) / 2)
+                        height: Math.max(44, implicitHeight)
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        motion: panel.motion
+                        title: modelData.title + " · " + (panel.appearance.spectrumMode(modelData.key) === "curve" ? "Curve" : "Bars")
+                        shortcut: panel.runtime.shellChoiceHint(index)
+                        icon: DesktopIcons.glyphFor("spectrum")
+                        onActivated: panel.appearance.toggleSpectrumMode(modelData.key)
+                    }
+                }
+            }
             ShellText {
                 visible: panel.reactiveTuning
                 runtime: panel.runtime
@@ -1003,7 +1001,7 @@ Item {
                     adjustShortcut: panel.runtime.shellHint("SettingsDetail.adjust")
                     resetShortcut: panel.parameters.length > 1 ? panel.runtime.shellHint("SettingsDetail.resetParameter") : ""
                     onSelectedRequested: panel.selectParameter(index)
-                    onValueRequested: next => panel.setValue(modelData.key, Math.round(next / modelData.step) * modelData.step)
+                    onValueRequested: next => panel.setValue(modelData.key, panel.snappedParameter(modelData, next))
                     onResetRequested: panel.resetParameter()
                     Connections {
                         target: panel

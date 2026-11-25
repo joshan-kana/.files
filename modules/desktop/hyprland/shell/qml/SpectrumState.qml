@@ -6,6 +6,8 @@ import Quickshell.Io
 QtObject {
     id: spectrum
 
+    required property AppearancePreferences appearance
+    property int visualizerSubscribers: 0
     property bool active: false
     property real sensitivity: 1.0
     property real attackMultiplier: 1.0
@@ -24,6 +26,7 @@ QtObject {
     property bool decaying: false
     property bool smoothingSilence: false
     property int curveSubscribers: 0
+    property bool hadCurveSubscribers: false
     property bool hasEnergy: false
     property real rms: 0
     property real peak: 0
@@ -35,6 +38,10 @@ QtObject {
     property real lowHz: 20
     property real highHz: 20000
     property int sequence: 0
+    property SpectrumScale frequencyScale: SpectrumScale {
+        lowHz: spectrum.lowHz
+        highHz: spectrum.highHz
+    }
 
     // Audio buffers arrive independently of display refresh. Let the scene graph
     // interpolate between samples rather than redrawing only on PipeWire callbacks.
@@ -91,12 +98,13 @@ QtObject {
     }
 
     onCurveSubscribersChanged: {
-        if (curveSubscribers > 0 && active && !decaying) {
+        if (curveSubscribers > 0 && !hadCurveSubscribers && active && !decaying && !smoothingSilence) {
             bands = targetBands;
             smoothingSilence = false;
         } else if (curveSubscribers === 0 && active && !smoothingSilence && !decaying) {
             interpolating = false;
         }
+        hadCurveSubscribers = curveSubscribers > 0;
     }
 
     function advanceBands(frameTime: real): void {

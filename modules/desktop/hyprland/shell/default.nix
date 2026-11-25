@@ -55,14 +55,13 @@ let
         min = 0.25;
         max = 2.5;
       };
-      wallpaperSpectrumBars = {
-        integer = true;
-        min = 24;
-        max = 96;
+      spectrumDensity = {
+        min = 0.375;
+        max = 1.5;
       };
-      wallpaperSpectrumOpacity = {
-        min = 0.2;
-        max = 1.0;
+      spectrumOpacity = {
+        min = 0.25;
+        max = 1.25;
       };
       barIslandHeight = {
         integer = true;
@@ -110,12 +109,14 @@ let
         min = 0.25;
         max = 2.5;
       };
-      mediaVisualizerMode = {
-        values = [
-          "bars"
-          "curve"
-        ];
-      };
+      mediaVisualizerMode.values = [
+        "bars"
+        "curve"
+      ];
+      wallpaperVisualizerMode = constraints.appearance.mediaVisualizerMode;
+      islandVisualizerMode = constraints.appearance.mediaVisualizerMode;
+      controlsVisualizerMode = constraints.appearance.mediaVisualizerMode;
+      previewVisualizerMode = constraints.appearance.mediaVisualizerMode;
       mediaSeekSeconds = {
         values = [
           5
@@ -686,15 +687,15 @@ in
           default = 1.0;
           description = "Fall speed of visualizer bands.";
         };
-        wallpaperSpectrumBars = lib.mkOption {
-          type = lib.types.ints.between constraints.appearance.wallpaperSpectrumBars.min constraints.appearance.wallpaperSpectrumBars.max;
-          default = 64;
-          description = "Number of visible wallpaper spectrum bars, bounded by available analyser bands.";
+        spectrumDensity = lib.mkOption {
+          type = lib.types.numbers.between constraints.appearance.spectrumDensity.min constraints.appearance.spectrumDensity.max;
+          default = 1.0;
+          description = "Density multiplier for all spectrum presentations, bounded by available width and analyser bands.";
         };
-        wallpaperSpectrumOpacity = lib.mkOption {
-          type = lib.types.numbers.between constraints.appearance.wallpaperSpectrumOpacity.min constraints.appearance.wallpaperSpectrumOpacity.max;
-          default = 0.8;
-          description = "Opacity of the existing wallpaper spectrum bars.";
+        spectrumOpacity = lib.mkOption {
+          type = lib.types.numbers.between constraints.appearance.spectrumOpacity.min constraints.appearance.spectrumOpacity.max;
+          default = 1.0;
+          description = "Shared spectrum opacity multiplier, capped at full opacity.";
         };
 
         barIslandHeight = lib.mkOption {
@@ -780,7 +781,27 @@ in
         mediaVisualizerMode = lib.mkOption {
           type = lib.types.enum constraints.appearance.mediaVisualizerMode.values;
           default = "bars";
-          description = "Choose the media visualizer presentation: animated bars or a continuous curve.";
+          description = "Spectrum presentation for Now Playing: bars or curve.";
+        };
+        wallpaperVisualizerMode = lib.mkOption {
+          type = lib.types.enum constraints.appearance.mediaVisualizerMode.values;
+          default = "bars";
+          description = "Spectrum presentation for the wallpaper: bars or curve.";
+        };
+        islandVisualizerMode = lib.mkOption {
+          type = lib.types.enum constraints.appearance.mediaVisualizerMode.values;
+          default = "bars";
+          description = "Spectrum presentation for the ambient media island: bars or curve.";
+        };
+        controlsVisualizerMode = lib.mkOption {
+          type = lib.types.enum constraints.appearance.mediaVisualizerMode.values;
+          default = "bars";
+          description = "Spectrum presentation for Controls media: bars or curve.";
+        };
+        previewVisualizerMode = lib.mkOption {
+          type = lib.types.enum constraints.appearance.mediaVisualizerMode.values;
+          default = "bars";
+          description = "Spectrum presentation for the live settings preview: bars or curve.";
         };
         mediaLyricsVisible = lib.mkOption {
           type = lib.types.bool;

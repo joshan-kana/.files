@@ -97,12 +97,6 @@ FocusScope {
         }
     }
 
-    SpectrumScale {
-        id: spectrumScale
-        lowHz: content.spectrum.lowHz
-        highHz: content.spectrum.highHz
-    }
-
     Timer {
         interval: 250
         repeat: true
@@ -303,7 +297,7 @@ FocusScope {
                 height: Math.max(115, content.height - header.y - header.height - spectrumSlot.anchors.topMargin - transport.anchors.topMargin - transport.implicitHeight - mediaActions.anchors.topMargin - mediaActions.implicitHeight - content.theme.spacing3)
                 clip: true
 
-                SpectrumCurve {
+                SpectrumVisualizer {
                     anchors {
                         top: parent.top
                         right: parent.right
@@ -313,48 +307,11 @@ FocusScope {
                         rightMargin: theme.spacing3
                         leftMargin: theme.spacing3
                     }
-
-                    visible: content.visualizerMode === "curve" || opacity > 0.01
-                    opacity: content.visualizerMode === "curve" ? 1 : 0
-
+                    enabled: content.engaged
                     spectrum: content.spectrum
                     theme: content.theme
-                    frequencyScale: spectrumScale
-
-                    Behavior on opacity {
-                        NumberAnimation {
-                            duration: content.scrubbing ? 0 : content.motion.fast
-                            easing.type: content.motion.enterType
-                            easing.bezierCurve: content.motion.enterCurve
-                        }
-                    }
-                }
-
-                SpectrumBars {
-                    anchors {
-                        top: parent.top
-                        right: parent.right
-                        bottom: frequencyLabels.top
-                        left: parent.left
-                        topMargin: theme.spacing3
-                        rightMargin: theme.spacing3
-                        leftMargin: theme.spacing3
-                    }
-
-                    visible: content.visualizerMode === "bars" || opacity > 0.01
-                    opacity: content.visualizerMode === "bars" ? 1 : 0
-
-                    spectrum: content.spectrum
-                    theme: content.theme
-                    frequencyScale: spectrumScale
-
-                    Behavior on opacity {
-                        NumberAnimation {
-                            duration: content.motion.fast
-                            easing.type: content.motion.enterType
-                            easing.bezierCurve: content.motion.enterCurve
-                        }
-                    }
+                    motion: content.motion
+                    surfaceKey: "mediaVisualizerMode"
                 }
 
                 MediaLyrics {
@@ -421,7 +378,7 @@ FocusScope {
                         delegate: Text {
                             required property var modelData
 
-                            x: Math.max(0, Math.min(frequencyLabels.width - implicitWidth, spectrumScale.fromFrequency(modelData.hz) * frequencyLabels.width - implicitWidth / 2))
+                            x: Math.max(0, Math.min(frequencyLabels.width - implicitWidth, content.spectrum.frequencyScale.fromFrequency(modelData.hz) * frequencyLabels.width - implicitWidth / 2))
                             text: modelData.label
                             color: content.theme.textMuted
                             opacity: 0.62
