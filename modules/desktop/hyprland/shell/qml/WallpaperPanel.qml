@@ -1088,26 +1088,22 @@ Item {
                     id: modeChoices
                     width: parent.width
                     spacing: Math.max(2, panel.theme.spacing1 / 2)
-                    readonly property int columns: width >= panel.theme.fontSize(420) ? 3 : 1
+                    readonly property int columns: width >= panel.theme.fontSize(420) ? Math.max(1, wallpaperModeChoices.count) : 1
                     Repeater {
                         id: wallpaperModeChoices
-                        model: [
-                            {
-                                id: "off",
-                                title: "Off",
-                                glyph: "󰜺"
-                            },
-                            {
-                                id: "interval",
-                                title: "Interval",
-                                glyph: "󰥔"
-                            },
-                            {
-                                id: "dayNight",
-                                title: "Day / night",
-                                glyph: "󰖔"
-                            }
-                        ]
+                        model: panel.runtime.constraints.wallpaperRotation.mode.values.map(mode => ({
+                                    id: mode,
+                                    title: ({
+                                            off: "Off",
+                                            interval: "Interval",
+                                            dayNight: "Day / night"
+                                        })[mode],
+                                    glyph: ({
+                                            off: "󰜺",
+                                            interval: "󰥔",
+                                            dayNight: "󰖔"
+                                        })[mode]
+                                }))
                         delegate: ShellChoice {
                             required property int index
                             required property var modelData

@@ -137,7 +137,7 @@ Item {
     }
 
     function handleKey(key: int, modifiers: int, autoRepeat: bool): bool {
-        const presetIndex = runtime.shellChoiceIndex(key, modifiers, 4);
+        const presetIndex = runtime.shellChoiceIndex(key, modifiers, vhsPresets.count);
         if (presetIndex >= 0) {
             if (!autoRepeat)
                 (vhsPresets.itemAt(presetIndex) as ShellAction)?.trigger();
@@ -244,17 +244,22 @@ Item {
             spacing: Math.max(2, panel.theme.spacing1 / 2)
             Repeater {
                 id: vhsPresets
-                model: ["Subtle", "Analog", "Degraded", "Default"]
+                model: panel.appearance.vhsPresetNames
                 delegate: ShellChoice {
                     required property int index
                     required property string modelData
-                    width: (panel.width - Math.max(2, panel.theme.spacing1 / 2) * 3) / 4
+                    width: (panel.width - Math.max(2, panel.theme.spacing1 / 2) * (vhsPresets.count - 1)) / Math.max(1, vhsPresets.count)
                     height: Math.max(76, implicitHeight)
                     runtime: panel.runtime
                     theme: panel.theme
                     motion: panel.motion
                     title: modelData
-                    icon: ["󰨛", "󰕧", "󰓎", DesktopIcons.actionGlyph("reset")][index]
+                    icon: ({
+                            Subtle: "󰨛",
+                            Analog: "󰕧",
+                            Degraded: "󰓎",
+                            Default: DesktopIcons.actionGlyph("reset")
+                        })[modelData] ?? ""
                     shortcut: panel.runtime.shellChoiceHint(index)
                     compact: true
                     choices: vhsPresets

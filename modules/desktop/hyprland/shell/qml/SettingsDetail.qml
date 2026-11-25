@@ -511,27 +511,29 @@ Item {
         }
     }
 
+    readonly property int choiceCount: kind === "nightLight" ? nightModes.count + nightDays.count + nightPauses.count : reactiveTuning ? reactivePresets.count + reactiveEmphases.count : kind === "alerts" ? alertPauses.count + quietDays.count : kind === "power" ? powerProfiles.count : kind === "stay" ? stayDurations.count : 0
+
     function activateNumber(number: int): bool {
         let repeater = null;
         let index = number - 1;
         if (kind === "nightLight") {
-            if (number <= 4)
+            if (number <= nightModes.count)
                 repeater = nightModes;
-            else if (number <= 7 && nightLight.mode === "custom") {
+            else if (number <= nightModes.count + nightDays.count && nightLight.mode === "custom") {
                 repeater = nightDays;
-                index -= 4;
-            } else if (number >= 8 && nightLight.mode !== "off") {
+                index -= nightModes.count;
+            } else if (number > nightModes.count + nightDays.count && nightLight.mode !== "off") {
                 repeater = nightPauses;
-                index -= 7;
+                index -= nightModes.count + nightDays.count;
             }
         } else if (kind === "alerts") {
-            repeater = number <= 3 ? alertPauses : quietDays;
-            if (number > 3)
-                index -= 3;
+            repeater = number <= alertPauses.count ? alertPauses : quietDays;
+            if (number > alertPauses.count)
+                index -= alertPauses.count;
         } else if (reactiveTuning) {
-            repeater = number <= 3 ? reactivePresets : reactiveEmphases;
-            if (number > 3)
-                index -= 3;
+            repeater = number <= reactivePresets.count ? reactivePresets : reactiveEmphases;
+            if (number > reactivePresets.count)
+                index -= reactivePresets.count;
         } else if (kind === "power") {
             repeater = powerProfiles;
         } else if (kind === "stay") {
@@ -574,7 +576,7 @@ Item {
         }
         if (autoRepeat) {
             const repeatedAction = ["SettingsDetail.toggle", "SettingsDetail.blur", "SettingsDetail.reset", "SettingsDetail.resetParameter", "SettingsDetail.presentation", "SettingsDetail.history", "SettingsDetail.quietHours", "SettingsDetail.nightResume", "SettingsDetail.nightPauseUntil"].some(name => runtime.shellMatchesHint(name, key, modifiers));
-            const choice = kind === "nightLight" ? runtime.shellChoiceIndex(key, modifiers, 9) : reactiveTuning ? runtime.shellChoiceIndex(key, modifiers, 7) : kind === "alerts" ? runtime.shellChoiceIndex(key, modifiers, 6) : kind === "power" ? runtime.shellChoiceIndex(key, modifiers, powerProfile.profiles.length) : kind === "stay" ? runtime.shellChoiceIndex(key, modifiers, 5) : -1;
+            const choice = runtime.shellChoiceIndex(key, modifiers, choiceCount);
             if (repeatedAction || choice >= 0)
                 return true;
         }
@@ -618,7 +620,7 @@ Item {
             }
         }
         if (kind === "power" || kind === "stay" || kind === "alerts" || kind === "nightLight" || reactiveTuning) {
-            const numberIndex = runtime.shellChoiceIndex(key, modifiers, kind === "nightLight" ? 9 : reactiveTuning ? 7 : kind === "alerts" ? 6 : kind === "power" ? powerProfile.profiles.length : 5);
+            const numberIndex = runtime.shellChoiceIndex(key, modifiers, choiceCount);
             if (numberIndex >= 0)
                 return activateNumber(numberIndex + 1);
         }
@@ -899,11 +901,11 @@ Item {
                 spacing: Math.max(2, panel.theme.spacing1 / 2)
                 Repeater {
                     id: reactivePresets
-                    model: ["Subtle", "Default", "Energetic"]
+                    model: panel.appearance.reactivePresetNames
                     delegate: ShellChoice {
                         required property int index
                         required property string modelData
-                        width: (panel.width - Math.max(2, panel.theme.spacing1 / 2) * 2) / 3
+                        width: (panel.width - Math.max(2, panel.theme.spacing1 / 2) * (reactivePresets.count - 1)) / Math.max(1, reactivePresets.count)
                         height: 44
                         runtime: panel.runtime
                         theme: panel.theme
@@ -936,17 +938,17 @@ Item {
                 spacing: Math.max(2, panel.theme.spacing1 / 2)
                 Repeater {
                     id: reactiveEmphases
-                    model: ["balanced", "bass", "mid", "treble"]
+                    model: panel.runtime.constraints.appearance.musicReactiveEmphasis.values
                     delegate: ShellChoice {
                         required property int index
                         required property string modelData
-                        width: (panel.width - Math.max(2, panel.theme.spacing1 / 2) * 3) / 4
+                        width: (panel.width - Math.max(2, panel.theme.spacing1 / 2) * (reactiveEmphases.count - 1)) / Math.max(1, reactiveEmphases.count)
                         height: 44
                         runtime: panel.runtime
                         theme: panel.theme
                         motion: panel.motion
                         title: modelData.charAt(0).toUpperCase() + modelData.slice(1)
-                        shortcut: panel.runtime.shellChoiceHint(index + 3)
+                        shortcut: panel.runtime.shellChoiceHint(index + reactivePresets.count)
                         compact: true
                         horizontalCompact: true
                         choices: reactiveEmphases
@@ -1032,28 +1034,19 @@ Item {
                 spacing: Math.max(2, panel.theme.spacing1 / 2)
                 Repeater {
                     id: nightModes
-                    model: [
-                        {
-                            id: "off",
-                            title: "Off"
-                        },
-                        {
-                            id: "manual",
-                            title: "Manual"
-                        },
-                        {
-                            id: "custom",
-                            title: "Schedule"
-                        },
-                        {
-                            id: "solar",
-                            title: "Sunset"
-                        }
-                    ]
+                    model: panel.runtime.constraints.nightLight.mode.values.map(mode => ({
+                                id: mode,
+                                title: ({
+                                        off: "Off",
+                                        manual: "Manual",
+                                        custom: "Schedule",
+                                        solar: "Sunset"
+                                    })[mode]
+                            }))
                     delegate: ShellChoice {
                         required property int index
                         required property var modelData
-                        width: (panel.width - Math.max(2, panel.theme.spacing1 / 2) * 3) / 4
+                        width: (panel.width - Math.max(2, panel.theme.spacing1 / 2) * (nightModes.count - 1)) / Math.max(1, nightModes.count)
                         height: 40
                         runtime: panel.runtime
                         theme: panel.theme
@@ -1115,7 +1108,7 @@ Item {
                         choices: nightDays
                         choiceIndex: index
                         active: panel.nightLight.days === modelData.days
-                        shortcut: panel.runtime.shellChoiceHint(index + 4)
+                        shortcut: panel.runtime.shellChoiceHint(index + nightModes.count)
                         enabled: panel.masterAvailable
                         onActivated: panel.nightLight.change("days", String(modelData.days))
                     }
@@ -1137,7 +1130,7 @@ Item {
                         theme: panel.theme
                         motion: panel.motion
                         title: "Pause " + modelData + " min"
-                        shortcut: panel.runtime.shellChoiceHint(index + 7)
+                        shortcut: panel.runtime.shellChoiceHint(index + nightModes.count + nightDays.count)
                         compact: true
                         horizontalCompact: true
                         enabled: panel.masterAvailable && panel.nightLight.mode !== "off"
@@ -1556,7 +1549,7 @@ Item {
                             theme: panel.theme
                             motion: panel.motion
                             title: modelData.title
-                            shortcut: panel.runtime.shellChoiceHint(index + 3)
+                            shortcut: panel.runtime.shellChoiceHint(index + alertPauses.count)
                             compact: true
                             horizontalCompact: true
                             choices: quietDays

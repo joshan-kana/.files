@@ -333,7 +333,7 @@ test("power, notifications and preset choices use positional shifted letters", (
     path.join(qmlDir, "SettingsDetail.qml"),
     "utf8",
   );
-  assert.match(detail, /shellChoiceIndex\(key, modifiers, 5\)/);
+  assert.match(detail, /shellChoiceIndex\(key, modifiers, choiceCount\)/);
   assert.match(detail, /shellChoiceHint\(index\)/);
   assert.doesNotMatch(detail, /shellNumber(?:Index|Hint)/);
   assert.equal(f.widgetChoiceHint(registry, 0), "SHIFT+Q");

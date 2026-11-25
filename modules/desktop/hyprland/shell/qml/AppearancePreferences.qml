@@ -77,24 +77,28 @@ QtObject {
             suffix: "%"
         }
     ]
-    readonly property var musicReactiveParameterKeys: ["musicReactiveSensitivity", "musicReactiveAttack", "musicReactiveRelease", "musicReactiveSmoothing", "musicReactiveIntensity", "musicReactiveEmphasis"]
+    readonly property var musicReactiveParameterKeys: reactiveParameters.map(parameter => parameter.key).concat(["musicReactiveEmphasis"])
     readonly property var reactivePresets: ({
-            Subtle: [0.75, 0.8, 1.3, 0.5, 0.65, "balanced"],
-            Energetic: [1.6, 1.6, 0.75, 0.2, 1.5, "bass"]
+            Subtle: {
+                musicReactiveSensitivity: 0.75,
+                musicReactiveAttack: 0.8,
+                musicReactiveRelease: 1.3,
+                musicReactiveSmoothing: 0.5,
+                musicReactiveIntensity: 0.65,
+                musicReactiveEmphasis: "balanced"
+            },
+            Default: null,
+            Energetic: {
+                musicReactiveSensitivity: 1.6,
+                musicReactiveAttack: 1.6,
+                musicReactiveRelease: 0.75,
+                musicReactiveSmoothing: 0.2,
+                musicReactiveIntensity: 1.5,
+                musicReactiveEmphasis: "bass"
+            }
         })
-    readonly property string musicReactivePreset: {
-        if (musicReactiveParameterKeys.every(key => !hasOverride(key)))
-            return "Default";
-        for (const name of Object.keys(reactivePresets)) {
-            if (musicReactiveParameterKeys.every((key, index) => {
-                const value = effective(key);
-                const expected = reactivePresets[name][index];
-                return typeof expected === "number" ? Math.abs(value - expected) <= 0.005 : value === expected;
-            }))
-                return name;
-        }
-        return "Custom";
-    }
+    readonly property var reactivePresetNames: presetNames(reactivePresets, musicReactiveParameterKeys)
+    readonly property string musicReactivePreset: selectedPreset(reactivePresets, musicReactiveParameterKeys)
     readonly property int barIslandHeight: effective("barIslandHeight")
     readonly property int frameThickness: effective("frameThickness")
     function setGeometryPreference(key: string, value: real): void {
@@ -113,19 +117,37 @@ QtObject {
     readonly property int blurSize: effective("blurSize")
     readonly property var vhsParameterKeys: ["vhsIntensity", "vhsTracking", "vhsChroma", "vhsNoise", "vhsScanlines", "vhsSpeed", "vhsDropouts"]
     readonly property var vhsPresets: ({
-            Subtle: [0.25, 0.15, 0.25, 0.10, 0.15, 0.8, 0.0],
-            Analog: [0.55, 0.45, 0.55, 0.3, 0.4, 1.0, 0.1],
-            Degraded: [0.85, 0.8, 0.8, 0.65, 0.7, 1.3, 0.55]
+            Subtle: {
+                vhsIntensity: 0.25,
+                vhsTracking: 0.15,
+                vhsChroma: 0.25,
+                vhsNoise: 0.10,
+                vhsScanlines: 0.15,
+                vhsSpeed: 0.8,
+                vhsDropouts: 0.0
+            },
+            Analog: {
+                vhsIntensity: 0.55,
+                vhsTracking: 0.45,
+                vhsChroma: 0.55,
+                vhsNoise: 0.3,
+                vhsScanlines: 0.4,
+                vhsSpeed: 1.0,
+                vhsDropouts: 0.1
+            },
+            Degraded: {
+                vhsIntensity: 0.85,
+                vhsTracking: 0.8,
+                vhsChroma: 0.8,
+                vhsNoise: 0.65,
+                vhsScanlines: 0.7,
+                vhsSpeed: 1.3,
+                vhsDropouts: 0.55
+            },
+            Default: null
         })
-    readonly property string vhsPreset: {
-        if (vhsParameterKeys.every(key => !hasOverride(key)))
-            return "Default";
-        for (const name of Object.keys(vhsPresets)) {
-            if (vhsParameterKeys.every((key, index) => Math.abs(effective(key) - vhsPresets[name][index]) <= 0.005))
-                return name;
-        }
-        return "Custom";
-    }
+    readonly property var vhsPresetNames: presetNames(vhsPresets, vhsParameterKeys)
+    readonly property string vhsPreset: selectedPreset(vhsPresets, vhsParameterKeys)
     readonly property bool vhsEnabled: effective("vhsEnabled")
     readonly property real vhsIntensity: effective("vhsIntensity")
     readonly property real vhsTracking: effective("vhsTracking")
@@ -242,7 +264,8 @@ QtObject {
     }
 
     function toggleWallpaperResizeMode(): void {
-        storeOverride("wallpaperResizeMode", wallpaperResizeMode === "fit" ? "crop" : "fit");
+        const values = runtime.constraints.appearance.wallpaperResizeMode.values;
+        storeOverride("wallpaperResizeMode", values[(values.indexOf(wallpaperResizeMode) + 1) % values.length]);
     }
 
     function toggleWallpaperSpectrum(): void {
@@ -277,22 +300,31 @@ QtObject {
             clearOverride(key);
     }
 
-    function setPresetValues(keys: var, values: var): void {
-        const overrides = {};
-        for (let i = 0; i < keys.length; ++i)
-            overrides[keys[i]] = values[i];
-        saved.setMany(overrides);
+    function presetNames(presets: var, keys: var): var {
+        return Object.keys(presets).filter(name => presets[name] === null || keys.every(key => saved.valid(key, presets[name][key])));
+    }
+
+    function selectedPreset(presets: var, keys: var): string {
+        if (keys.every(key => !hasOverride(key)))
+            return "Default";
+        for (const name of presetNames(presets, keys)) {
+            if (presets[name] !== null && keys.every(key => {
+                const value = effective(key);
+                const expected = presets[name][key];
+                return typeof expected === "number" ? Math.abs(value - expected) <= 0.005 : value === expected;
+            }))
+                return name;
+        }
+        return "Custom";
     }
 
     function applyReactivePreset(name: string): void {
-        if (name === "Default") {
+        if (!reactivePresetNames.includes(name))
+            return;
+        if (name === "Default")
             resetReactiveTuning();
-            return;
-        }
-        const values = reactivePresets[name];
-        if (!values)
-            return;
-        setPresetValues(musicReactiveParameterKeys, values);
+        else
+            saved.setMany(reactivePresets[name]);
     }
 
     function resetSpectrumTuning(): void {
@@ -368,14 +400,13 @@ QtObject {
     // A preset changes only VHS parameters; it does not toggle the effect
     // or modify any other appearance preference.
     function applyVhsPreset(name: string): void {
+        if (!vhsPresetNames.includes(name))
+            return;
         if (name === "Default") {
             for (const key of vhsParameterKeys)
                 clearOverride(key);
         } else {
-            const values = vhsPresets[name];
-            if (!values)
-                return;
-            setPresetValues(vhsParameterKeys, values);
+            saved.setMany(vhsPresets[name]);
         }
 
         vhsApply.restart();
@@ -527,7 +558,8 @@ QtObject {
     }
 
     function toggleMediaVisualizer(): void {
-        storeOverride("mediaVisualizerMode", mediaVisualizerMode === "bars" ? "curve" : "bars");
+        const values = runtime.constraints.appearance.mediaVisualizerMode.values;
+        storeOverride("mediaVisualizerMode", values[(values.indexOf(mediaVisualizerMode) + 1) % values.length]);
     }
 
     function toggleMediaLyrics(): void {
