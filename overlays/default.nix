@@ -13,6 +13,8 @@ _: {
     ./hypr-persist
     ./gimp
     ./gtksourceview
+    ./x42-plugins
+    ./easyeffects
     ./nh
     ./nixd
     ./nix-update
