@@ -1,0 +1,7 @@
+# Repository-specific option schema for the selected host.
+
+[languageServers.nixd.initializationOptions.options.nixos]
+expr = 'let f = builtins.getFlake "${workspaceFolder}"; configurations = f.nixosConfigurations // f.darwinConfigurations; matching = builtins.filter (host: host.pkgs.stdenv.hostPlatform.system == builtins.currentSystem) (builtins.attrValues configurations); host = configurations.${builtins.getEnv "FLK_PROFILE"} or (builtins.head (if matching == [] then builtins.attrValues configurations else matching)); in f.lib.semanticScopeOptions.nixdHostOptions configurations host'
+
+[languageServers.nixd.initializationOptions.options.home-manager]
+expr = 'let f = builtins.getFlake "${workspaceFolder}"; configurations = f.nixosConfigurations // f.darwinConfigurations; matching = builtins.filter (host: host.pkgs.stdenv.hostPlatform.system == builtins.currentSystem) (builtins.attrValues configurations); host = configurations.${builtins.getEnv "FLK_PROFILE"} or (builtins.head (if matching == [] then builtins.attrValues configurations else matching)); in host.options.home-manager.users.type.getSubOptions []'
