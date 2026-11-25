@@ -19,7 +19,6 @@ _: {
     ./paperless-ngx
     ./polkit
     ./nixos-options-doc
-    ./tuicr
     ./technitium-roaming
     ./webhook
     ./arc
