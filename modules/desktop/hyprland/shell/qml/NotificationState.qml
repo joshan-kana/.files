@@ -168,11 +168,9 @@ QtObject {
         if (key === "enabled") {
             if (typeof value !== "boolean")
                 return;
-        } else if (key === "startMinute" || key === "endMinute") {
-            if (!Number.isInteger(value) || value < 0 || value > 1439)
-                return;
-        } else if (key === "days") {
-            if (!Number.isInteger(value) || value < 0 || value > 127)
+        } else if (["startMinute", "endMinute", "days"].includes(key)) {
+            const rule = runtime.constraints.notificationQuietHours[key];
+            if (!Number.isInteger(value) || value < rule.min || value > rule.max)
                 return;
         } else {
             return;

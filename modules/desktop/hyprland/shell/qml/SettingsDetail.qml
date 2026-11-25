@@ -202,8 +202,8 @@ Item {
                     key: "blurSize",
                     title: "Backdrop blur",
                     description: "Compositor-wide shared blur radius",
-                    minimum: 5,
-                    maximum: 25,
+                    minimum: runtime.constraints.appearance.blurSize.min,
+                    maximum: runtime.constraints.appearance.blurSize.max,
                     step: 1,
                     suffix: " px"
                 }
@@ -223,8 +223,8 @@ Item {
                     key: "blurSize",
                     title: "Backdrop blur",
                     description: "Same effective blur radius as Windows",
-                    minimum: 5,
-                    maximum: 25,
+                    minimum: runtime.constraints.appearance.blurSize.min,
+                    maximum: runtime.constraints.appearance.blurSize.max,
                     step: 1,
                     suffix: " px"
                 }
@@ -285,18 +285,18 @@ Item {
                     key: "quietStart",
                     title: "Quiet hours start",
                     description: "Local time",
-                    minimum: 0,
-                    maximum: 1425,
-                    step: 15,
+                    minimum: runtime.constraints.notificationQuietHours.startMinute.min,
+                    maximum: runtime.constraints.notificationQuietHours.startMinute.max,
+                    step: runtime.constraints.notificationQuietHours.startMinute.step,
                     suffix: "time"
                 },
                 {
                     key: "quietEnd",
                     title: "Quiet hours end",
                     description: "Local time",
-                    minimum: 0,
-                    maximum: 1425,
-                    step: 15,
+                    minimum: runtime.constraints.notificationQuietHours.endMinute.min,
+                    maximum: runtime.constraints.notificationQuietHours.endMinute.max,
+                    step: runtime.constraints.notificationQuietHours.endMinute.step,
                     suffix: "time"
                 }
             ];
@@ -317,17 +317,17 @@ Item {
                     key: "nightStart",
                     title: "Schedule start",
                     description: "Local time",
-                    minimum: 0,
-                    maximum: 1425,
-                    step: 15,
+                    minimum: runtime.constraints.nightLight.startMinute.min,
+                    maximum: runtime.constraints.nightLight.startMinute.max,
+                    step: runtime.constraints.nightLight.startMinute.step,
                     suffix: "time"
                 }, {
                     key: "nightEnd",
                     title: "Schedule end",
                     description: "Local time",
-                    minimum: 0,
-                    maximum: 1425,
-                    step: 15,
+                    minimum: runtime.constraints.nightLight.endMinute.min,
+                    maximum: runtime.constraints.nightLight.endMinute.max,
+                    step: runtime.constraints.nightLight.endMinute.step,
                     suffix: "time"
                 });
             if (nightLight.mode === "custom" || nightLight.mode === "solar")
@@ -391,7 +391,7 @@ Item {
         else if (key === "blurSize")
             appearance.setBlurSize(value);
         else if (key === "quietStart" || key === "quietEnd")
-            notifications.setQuietPreference(key === "quietStart" ? "startMinute" : "endMinute", Math.max(0, Math.min(1439, Math.round(value))));
+            notifications.setQuietPreference(key === "quietStart" ? "startMinute" : "endMinute", Math.round(runtime.bounded("notificationQuietHours", key === "quietStart" ? "startMinute" : "endMinute", value)));
         else if (key === "nightStart" || key === "nightEnd" || key === "nightTransition")
             nightLight.setScheduleField(key === "nightStart" ? "start" : key === "nightEnd" ? "end" : "transition", value);
         else if (key === "temperature" && nightLight.supported)

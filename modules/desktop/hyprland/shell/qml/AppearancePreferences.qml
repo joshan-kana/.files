@@ -109,7 +109,7 @@ QtObject {
     readonly property real windowOpacity: runtime.bounded("appearance", "windowOpacity", effective("windowOpacity"))
     readonly property real glassOpacity: runtime.bounded("appearance", "glassOpacity", effective("glassOpacity"))
     readonly property bool blurEnabled: effective("blurEnabled")
-    readonly property int blurSize: Math.max(5, Math.min(25, effective("blurSize")))
+    readonly property int blurSize: runtime.bounded("appearance", "blurSize", effective("blurSize"))
     readonly property var vhsParameterKeys: ["vhsIntensity", "vhsTracking", "vhsChroma", "vhsNoise", "vhsScanlines", "vhsSpeed", "vhsDropouts"]
     readonly property var vhsPresets: ({
             Subtle: [0.25, 0.15, 0.25, 0.10, 0.15, 0.8, 0.0],
@@ -445,7 +445,7 @@ QtObject {
     }
 
     function setBlurSize(value: real): void {
-        const next = Math.round(Math.max(5, Math.min(25, value)));
+        const next = Math.round(runtime.bounded("appearance", "blurSize", value));
         if (next === blurSize)
             return;
         storeOverride("blurSize", next);

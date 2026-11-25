@@ -210,10 +210,12 @@ let
       startMinute = {
         min = 0;
         max = 1439;
+        step = 15;
       };
       endMinute = {
         min = 0;
         max = 1439;
+        step = 15;
       };
       days = {
         min = 0;
@@ -236,10 +238,12 @@ let
       startMinute = {
         min = 0;
         max = 1439;
+        step = 15;
       };
       endMinute = {
         min = 0;
         max = 1439;
+        step = 15;
       };
       days = {
         min = 0;
@@ -1314,7 +1318,15 @@ in
       };
 
       runtimeConfig = json.generate "desktop-shell-runtime.json" {
-        inherit constraints;
+        constraints = constraints // {
+          appearance = constraints.appearance // {
+            # Keep the native compositor baseline representable in the UI.
+            blurSize = {
+              min = lib.min 5 config.wayland.windowManager.hyprland.settings.config.decoration.blur.size;
+              max = lib.max 25 config.wayland.windowManager.hyprland.settings.config.decoration.blur.size;
+            };
+          };
+        };
         fallbackTheme =
           let
             registry = import ../../../theme/registry.nix { inherit lib; };
