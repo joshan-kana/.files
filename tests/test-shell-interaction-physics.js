@@ -162,17 +162,27 @@ test("whole tile visuals share one press geometry and fixed action owners", () =
   }
 });
 
-test("secondary tile hit feedback stays local and follows the owning tile without a second press transform", () => {
+test("secondary actions keep a generous hit target while the keycap owns visual feedback", () => {
   const action = qml("TileQuickAction.qml");
-  assert.match(
+  assert.match(action, /width: Math.max\(36, hint.implicitWidth/);
+  assert.match(action, /height: Math.max\(36, hint.implicitHeight/);
+  assert.match(action, /id: interaction[\s\S]*?showHover: false/);
+  assert.doesNotMatch(
     action,
-    /id: localFeedback\s*parent: action\.hint\.parent\s*x: action\.hint\.x - action\.theme\.spacing1\s*y: action\.hint\.y - action\.theme\.spacing1\s*width: action\.hint\.width \+ action\.theme\.spacing1 \* 2\s*height: action\.hint\.height \+ action\.theme\.spacing1 \* 2/,
+    /localFeedback|feedbackParent|StateLayer \{[\s\S]*?hoverOpacity:/,
   );
-  assert.match(action, /visible: action\.visible && action\.available/);
-  assert.match(action, /id: interaction\s*feedbackParent: localFeedback/);
-  assert.doesNotMatch(action, /showHover: false|Behavior on scale|KeyHint \{/);
-  assert.match(action, /hoverOpacity: 0\.09/);
-  assert.match(action, /pressOpacity: 0\.17/);
+  assert.match(
+    qml("QuickSettingChip.qml"),
+    /emphasized: chip.active \|\| quickAction.pointerHovered \|\| quickAction.visualPressed/,
+  );
+  assert.match(
+    qml("ConnectivityTile.qml"),
+    /emphasized: tile.connected \|\| quickAction.pointerHovered \|\| quickAction.visualPressed/,
+  );
+  assert.match(
+    qml("QuickSettingChip.qml"),
+    /manualPress: quickAction.visible && quickAction.visualPressed/,
+  );
 });
 
 test("direct shortcuts and accessibility use the shared feedback dispatch", () => {

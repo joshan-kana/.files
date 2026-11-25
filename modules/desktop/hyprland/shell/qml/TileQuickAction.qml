@@ -35,25 +35,11 @@ Item {
         leftMargin: Math.max(0, theme.spacing2 - (width - hint.implicitWidth) / 2)
     }
 
-    // Paint the secondary hit region inside the same transformed tile body
-    // as its keycap. The MouseArea below stays in the fixed hit geometry.
-    Item {
-        id: localFeedback
-        parent: action.hint.parent
-        x: action.hint.x - action.theme.spacing1
-        y: action.hint.y - action.theme.spacing1
-        width: action.hint.width + action.theme.spacing1 * 2
-        height: action.hint.height + action.theme.spacing1 * 2
-        z: 2
-        visible: action.visible && action.available
-    }
-
     StateLayer {
         id: interaction
-        feedbackParent: localFeedback
-        stateColor: action.theme.textStrong
-        hoverOpacity: 0.09
-        pressOpacity: 0.17
+        // The visible keycap provides feedback; a second hover surface
+        // would draw a rectangular plate outside the keycap's contour.
+        showHover: false
         theme: action.theme
         motion: action.motion
         cornerRadius: action.theme.radiusSmall

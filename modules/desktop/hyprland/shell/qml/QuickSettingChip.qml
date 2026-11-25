@@ -126,7 +126,7 @@ Item {
             motion: chip.motion
             theme: chip.theme
             available: chip.primaryAvailable
-            emphasized: chip.active
+            emphasized: chip.active || quickAction.pointerHovered || quickAction.visualPressed
             emphasisColor: chip.activeColor
         }
         TileKeyHint {

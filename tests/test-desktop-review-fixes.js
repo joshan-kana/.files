@@ -148,21 +148,18 @@ test("app history and global clear are separate, and clearing requires confirmat
   assert.match(ui, /History is off; popups may still appear/);
 });
 
-test("small tile quick actions paint just around their hints and keep the larger pointer target", () => {
+test("small tile actions highlight the existing keycap without a second painted rectangle", () => {
   const quick = source("TileQuickAction.qml");
-  const state = source("StateLayer.qml");
   assert.match(quick, /width: Math.max\(36, hint.implicitWidth/);
-  assert.match(quick, /width: action.hint.width \+ action.theme.spacing1 \* 2/);
+  assert.match(quick, /showHover: false/);
+  assert.doesNotMatch(quick, /localFeedback|feedbackParent/);
   assert.match(
-    quick,
-    /height: action.hint.height \+ action.theme.spacing1 \* 2/,
+    source("QuickSettingChip.qml"),
+    /emphasized: chip.active \|\| quickAction.pointerHovered \|\| quickAction.visualPressed/,
   );
-  assert.match(quick, /hoverOpacity: 0.09/);
-  assert.match(quick, /pressOpacity: 0.17/);
-  assert.match(state, /mapToItem\(feedbackParent, x, y\)/);
   assert.match(
-    state,
-    /feedbackWidth: feedbackParent \? feedbackParent.width : width/,
+    source("ConnectivityTile.qml"),
+    /emphasized: tile.connected \|\| quickAction.pointerHovered \|\| quickAction.visualPressed/,
   );
 });
 

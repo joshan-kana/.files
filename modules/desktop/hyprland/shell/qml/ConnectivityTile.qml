@@ -144,7 +144,8 @@ Item {
             compact: true
             runtime: tile.runtime
             theme: tile.theme
-            emphasized: tile.connected
+            emphasized: tile.connected || quickAction.pointerHovered || quickAction.visualPressed
+            emphasisColor: tile.signalColor
             available: tile.primaryAvailable && !tile.pending
         }
         TileKeyHint {
