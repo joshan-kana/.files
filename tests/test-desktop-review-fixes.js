@@ -95,13 +95,24 @@ test("Activity's app policies remain actionable without notification rows", () =
     ui,
     /id: emptyState[\s\S]*?visible: center.groups.length === 0 && !center.appSettingsOpen/,
   );
-  for (const name of ["history", "popups"])
-    assert.match(
-      editor,
-      new RegExp(
-        'setApplicationPreference\\(entry.modelData.key, "' + name + '"',
-      ),
-    );
+  const policy = source("NotificationPolicy.js");
+  for (const key of [
+    "popups",
+    "history",
+    "silent",
+    "criticalOnly",
+    "privatePreview",
+  ])
+    assert.match(policy, new RegExp('key: "' + key + '"'));
+  assert.match(editor, /model: Policy.applicationFields\(\)/);
+  assert.match(
+    editor,
+    /setApplicationPreference\(entry.modelData.key, modelData.key, !active\)/,
+  );
+  assert.match(
+    source("NotificationCard.qml"),
+    /model: Policy.applicationFields\(\)/,
+  );
   assert.match(editor, /resetApplicationPreferences\(entry.modelData.key\)/);
   assert.match(
     ui,

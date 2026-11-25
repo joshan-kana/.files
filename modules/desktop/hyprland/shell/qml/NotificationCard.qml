@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import "DesktopIcons.js" as DesktopIcons
+import "NotificationPolicy.js" as Policy
 import Quickshell.Services.Notifications
 
 SquircleSurface {
@@ -391,38 +392,7 @@ SquircleSurface {
                     }
                 }
                 Repeater {
-                    model: [
-                        {
-                            key: "popups",
-                            title: "Show popups",
-                            action: "NotificationCard.popup",
-                            inverted: true
-                        },
-                        {
-                            key: "history",
-                            title: "Save history",
-                            action: "NotificationCard.history",
-                            inverted: true
-                        },
-                        {
-                            key: "silent",
-                            title: "Quiet app",
-                            action: "NotificationCard.silent",
-                            inverted: false
-                        },
-                        {
-                            key: "criticalOnly",
-                            title: "Critical only",
-                            action: "NotificationCard.criticalOnly",
-                            inverted: false
-                        },
-                        {
-                            key: "privatePreview",
-                            title: "Hide preview",
-                            action: "NotificationCard.privatePreview",
-                            inverted: false
-                        }
-                    ]
+                    model: Policy.applicationFields()
                     delegate: Row {
                         id: policyRow
                         required property var modelData

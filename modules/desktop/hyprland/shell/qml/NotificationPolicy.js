@@ -63,3 +63,40 @@ function safeActionIcon(identifier, enabled) {
   const name = String(identifier || "");
   return enabled && /^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/.test(name) ? name : "";
 }
+
+// Application policy fields are rendered in both Activity and the persistent
+// app-settings view, so a policy never loses its recovery control.
+function applicationFields() {
+  return [
+    {
+      key: "popups",
+      title: "Show popups",
+      action: "NotificationCard.popup",
+      inverted: true,
+    },
+    {
+      key: "history",
+      title: "Save history",
+      action: "NotificationCard.history",
+      inverted: true,
+    },
+    {
+      key: "silent",
+      title: "Quiet app",
+      action: "NotificationCard.silent",
+      inverted: false,
+    },
+    {
+      key: "criticalOnly",
+      title: "Critical only",
+      action: "NotificationCard.criticalOnly",
+      inverted: false,
+    },
+    {
+      key: "privatePreview",
+      title: "Hide preview",
+      action: "NotificationCard.privatePreview",
+      inverted: false,
+    },
+  ];
+}

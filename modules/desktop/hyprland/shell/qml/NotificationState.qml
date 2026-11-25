@@ -238,7 +238,7 @@ QtObject {
     }
 
     function setApplicationPreference(notification, field: string, value: bool): void {
-        if (!["popups", "history", "silent", "criticalOnly", "privatePreview"].includes(field))
+        if (!Policy.applicationFields().some(entry => entry.key === field))
             return;
         const all = Object.assign({}, settings.value("applications"));
         const key = applicationKey(notification);

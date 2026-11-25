@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "NotificationPolicy.js" as Policy
 
 Item {
     id: panel
@@ -72,39 +73,34 @@ Item {
                     width: parent.width
                     wrapMode: Text.WordWrap
                 }
-                Row {
+                Flow {
+                    width: parent.width
                     spacing: panel.theme.spacing2
-                    ShellAction {
-                        runtime: panel.runtime
-                        theme: panel.theme
-                        motion: panel.motion
-                        compact: true
-                        horizontalCompact: true
-                        switchControl: true
-                        title: "Save history"
-                        active: entry.prefs.history !== false
-                        shortcut: entry.index === panel.selectedIndex ? panel.runtime.shellHint("NotificationCard.history") : ""
-                        onActivated: {
-                            panel.selectedIndex = entry.index;
-                            panel.notificationState.setApplicationPreference(entry.modelData.key, "history", !active);
+                    Repeater {
+                        model: Policy.applicationFields()
+                        delegate: ShellAction {
+                            id: fieldAction
+                            required property var modelData
+                            width: implicitWidth
+                            height: Math.max(40, implicitHeight)
+                            runtime: panel.runtime
+                            theme: panel.theme
+                            motion: panel.motion
+                            compact: true
+                            horizontalCompact: true
+                            switchControl: true
+                            title: modelData.title
+                            active: modelData.inverted ? entry.prefs[modelData.key] !== false : entry.prefs[modelData.key] === true
+                            shortcut: entry.index === panel.selectedIndex ? panel.runtime.shellHint(modelData.action) : ""
+                            onActivated: {
+                                panel.selectedIndex = entry.index;
+                                panel.notificationState.setApplicationPreference(entry.modelData.key, modelData.key, !active);
+                            }
                         }
                     }
                     ShellAction {
-                        runtime: panel.runtime
-                        theme: panel.theme
-                        motion: panel.motion
-                        compact: true
-                        horizontalCompact: true
-                        switchControl: true
-                        title: "Show popups"
-                        active: entry.prefs.popups !== false
-                        shortcut: entry.index === panel.selectedIndex ? panel.runtime.shellHint("NotificationCard.popup") : ""
-                        onActivated: {
-                            panel.selectedIndex = entry.index;
-                            panel.notificationState.setApplicationPreference(entry.modelData.key, "popups", !active);
-                        }
-                    }
-                    ShellAction {
+                        width: implicitWidth
+                        height: Math.max(40, implicitHeight)
                         runtime: panel.runtime
                         theme: panel.theme
                         motion: panel.motion

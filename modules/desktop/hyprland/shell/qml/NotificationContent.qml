@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import "NotificationSemantics.js" as NotificationSemantics
+import "NotificationPolicy.js" as Policy
 
 FocusScope {
     id: center
@@ -739,12 +740,12 @@ FocusScope {
                         appSettings.move(1);
                     } else if (center.runtime.shellNavigates("activity", "up", event.key)) {
                         appSettings.move(-1);
-                    } else if (!event.isAutoRepeat && center.runtime.shellMatchesHint("NotificationCard.history", event.key, event.modifiers)) {
-                        appSettings.toggle("history");
-                    } else if (!event.isAutoRepeat && center.runtime.shellMatchesHint("NotificationCard.popup", event.key, event.modifiers)) {
-                        appSettings.toggle("popups");
                     } else if (!event.isAutoRepeat && center.runtime.shellMatchesHint("NotificationCard.defaults", event.key, event.modifiers)) {
                         appSettings.reset();
+                    } else if (!event.isAutoRepeat) {
+                        const field = Policy.applicationFields().find(entry => center.runtime.shellMatchesHint(entry.action, event.key, event.modifiers));
+                        if (field)
+                            appSettings.toggle(field.key);
                     }
                     event.accepted = true;
                     return;
