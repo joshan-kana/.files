@@ -1,4 +1,5 @@
 {
+  config,
   lib,
   pkgs,
   system,
@@ -15,13 +16,22 @@ lib.optionalAttrs isLinux {
     alsa.enable = true;
     alsa.support32Bit = true;
     pulse.enable = true;
-    jack.enable = true;
   };
   services.pulseaudio.enable = false;
 
   home = _: {
     home.packages = with pkgs; [
-      qjackctl
+      config.services.pipewire.package.jack
+      (symlinkJoin {
+        name = "qjackctl-pipewire";
+        paths = [ qjackctl ];
+        nativeBuildInputs = [ makeWrapper ];
+        postBuild = ''
+          rm "$out/bin/qjackctl"
+          makeWrapper ${config.services.pipewire.package.jack}/bin/pw-jack "$out/bin/qjackctl" \
+            --add-flags ${lib.getExe qjackctl}
+        '';
+      })
       pavucontrol
     ];
   };
