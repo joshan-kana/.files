@@ -501,7 +501,7 @@ Item {
         } else if (kind === "stay") {
             repeater = stayDurations;
         }
-        const button = repeater ? repeater.itemAt(index) : null;
+        const button = repeater ? (repeater.itemAt(index) as ShellAction) : null;
         if (!button)
             return false;
         button.trigger();
@@ -544,7 +544,7 @@ Item {
             return true;
         }
         if (runtime.shellMatchesHint("SettingsDetail.resetParameter", key, modifiers) && parameters.length > 1) {
-            parameterRepeater.itemAt(selectedIndex)?.triggerReset();
+            (parameterRepeater.itemAt(selectedIndex) as ParameterCard)?.triggerReset();
             return true;
         }
         if (runtime.shellMatchesHint("SettingsDetail.reset", key, modifiers) && hasReset) {

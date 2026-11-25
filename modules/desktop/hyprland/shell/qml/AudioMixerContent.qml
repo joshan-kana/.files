@@ -6,6 +6,78 @@ import "DesktopIcons.js" as DesktopIcons
 FocusScope {
     id: mixer
 
+    component StreamRow: Item {
+        id: streamRow
+        readonly property alias control: streamControl
+        required property int index
+        readonly property var stream: mixer.streams[index] || null
+        readonly property bool capture: index >= mixer.system.audioApplicationStreams.length
+        readonly property bool sectionStart: index === 0 || index === mixer.system.audioApplicationStreams.length
+        readonly property bool inViewport: y + height > list.contentY && y < list.contentY + list.height
+        width: list.width
+        height: streamCard.height + (sectionStart && !mixer.compact ? 18 : 0)
+
+        Text {
+            visible: streamRow.sectionStart && !mixer.compact
+            height: visible ? 18 : 0
+            text: streamRow.capture ? "Capture" : "Playback"
+            color: mixer.theme.readableRoleColor("audio")
+            font.family: mixer.runtime.fontSans
+            font.pixelSize: mixer.theme.fontSize(9)
+        }
+
+        ShellSurface {
+            id: streamCard
+            anchors {
+                left: parent.left
+                right: parent.right
+                top: parent.top
+                topMargin: streamRow.sectionStart && !mixer.compact ? 18 : 0
+            }
+            height: streamControl.implicitHeight + mixer.theme.spacing2 * 2
+            theme: mixer.theme
+            motion: mixer.motion
+            surfaceLayer: ShellSurface.Control
+            cornerRadius: mixer.theme.radiusMedium
+            fillColor: mixer.selectedStreamIndex === streamRow.index ? mixer.theme.expressiveSurfaceStrong : mixer.theme.expressiveSurface
+            borderColor: mixer.selectedStreamIndex === streamRow.index ? mixer.theme.roleColor("audio") : "transparent"
+            borderWidth: mixer.selectedStreamIndex === streamRow.index ? mixer.theme.borderFocus : 0
+
+            AudioStreamControl {
+                id: streamControl
+                Connections {
+                    target: mixer
+                    function onStreamAdjustmentRequested(index: int): void {
+                        if (index === streamRow.index)
+                            streamControl.beginKeyboardAdjustment();
+                    }
+                }
+                anchors {
+                    fill: parent
+                    margins: mixer.theme.spacing2
+                }
+                compact: mixer.compact
+                selected: mixer.selectedStreamIndex === streamRow.index
+                stream: streamRow.stream
+                capture: streamRow.capture
+                system: mixer.system
+                runtime: mixer.runtime
+                theme: mixer.theme
+                motion: mixer.motion
+                monitoring: mixer.active && list.visible && streamRow.inViewport
+                readonly property var routeDevice: mixer.system.streamDevice(streamRow.stream, streamRow.capture)
+                routeLabel: (streamRow.capture ? "Input: " : "Output: ") + (routeDevice?.description || routeDevice?.name || "Not connected")
+                routeAvailable: (streamRow.capture ? mixer.system.inputDevices : mixer.system.outputDevices).length > 0 && mixer.runtime.pwMetadata !== "" && mixer.pendingRoute === ""
+                routeOpen: selected && mixer.routeOpen
+                onRouteRequested: {
+                    mixer.selectStreamIndex(streamRow.index);
+                    mixer.toggleSelectedDeviceChooser();
+                }
+                onSelectedRequested: mixer.selectStreamIndex(streamRow.index)
+            }
+        }
+    }
+
     required property SystemState system
     required property RuntimeConfig runtime
     required property Theme theme
@@ -233,7 +305,7 @@ FocusScope {
             inputDevice.triggerMute();
         else if (target?.node) {
             list.forceLayout();
-            const row = list.itemAtIndex(selectedStreamIndex);
+            const row = list.itemAtIndex(selectedStreamIndex) as StreamRow;
             if (row)
                 row.control.triggerMute();
             else
@@ -649,77 +721,7 @@ FocusScope {
                         positionViewAtIndex(currentIndex, ListView.Contain);
                 }
 
-                delegate: Item {
-                    id: streamRow
-                    readonly property alias control: streamControl
-                    required property int index
-                    readonly property var stream: mixer.streams[index] || null
-                    readonly property bool capture: index >= mixer.system.audioApplicationStreams.length
-                    readonly property bool sectionStart: index === 0 || index === mixer.system.audioApplicationStreams.length
-                    readonly property bool inViewport: y + height > list.contentY && y < list.contentY + list.height
-                    width: list.width
-                    height: streamCard.height + (sectionStart && !mixer.compact ? 18 : 0)
-
-                    Text {
-                        visible: streamRow.sectionStart && !mixer.compact
-                        height: visible ? 18 : 0
-                        text: streamRow.capture ? "Capture" : "Playback"
-                        color: mixer.theme.readableRoleColor("audio")
-                        font.family: mixer.runtime.fontSans
-                        font.pixelSize: mixer.theme.fontSize(9)
-                    }
-
-                    ShellSurface {
-                        id: streamCard
-                        anchors {
-                            left: parent.left
-                            right: parent.right
-                            top: parent.top
-                            topMargin: streamRow.sectionStart && !mixer.compact ? 18 : 0
-                        }
-                        height: streamControl.implicitHeight + mixer.theme.spacing2 * 2
-                        theme: mixer.theme
-                        motion: mixer.motion
-                        surfaceLayer: ShellSurface.Control
-                        cornerRadius: mixer.theme.radiusMedium
-                        fillColor: mixer.selectedStreamIndex === streamRow.index ? mixer.theme.expressiveSurfaceStrong : mixer.theme.expressiveSurface
-                        borderColor: mixer.selectedStreamIndex === streamRow.index ? mixer.theme.roleColor("audio") : "transparent"
-                        borderWidth: mixer.selectedStreamIndex === streamRow.index ? mixer.theme.borderFocus : 0
-
-                        AudioStreamControl {
-                            id: streamControl
-                            Connections {
-                                target: mixer
-                                function onStreamAdjustmentRequested(index: int): void {
-                                    if (index === streamRow.index)
-                                        streamControl.beginKeyboardAdjustment();
-                                }
-                            }
-                            anchors {
-                                fill: parent
-                                margins: mixer.theme.spacing2
-                            }
-                            compact: mixer.compact
-                            selected: mixer.selectedStreamIndex === streamRow.index
-                            stream: streamRow.stream
-                            capture: streamRow.capture
-                            system: mixer.system
-                            runtime: mixer.runtime
-                            theme: mixer.theme
-                            motion: mixer.motion
-                            monitoring: mixer.active && list.visible && streamRow.inViewport
-                            readonly property var routeDevice: mixer.system.streamDevice(streamRow.stream, streamRow.capture)
-                            routeLabel: (streamRow.capture ? "Input: " : "Output: ") + (routeDevice?.description || routeDevice?.name || "Not connected")
-                            routeAvailable: (streamRow.capture ? mixer.system.inputDevices : mixer.system.outputDevices).length > 0 && mixer.runtime.pwMetadata !== "" && mixer.pendingRoute === ""
-                            routeOpen: selected && mixer.routeOpen
-                            onRouteRequested: {
-                                mixer.selectStreamIndex(streamRow.index);
-                                mixer.toggleSelectedDeviceChooser();
-                            }
-                            onSelectedRequested: mixer.selectStreamIndex(streamRow.index)
-                        }
-                    }
-                }
+                delegate: StreamRow {}
             }
 
             ShellSurface {
