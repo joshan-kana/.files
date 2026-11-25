@@ -141,6 +141,16 @@
           overlays = overlaysFor system;
         };
 
+      neovimGrammarRuntimeFor =
+        pkgs:
+        let
+          grammarPackage = pkgs.vimPlugins.nvim-treesitter.withAllGrammars;
+        in
+        pkgs.buildEnv {
+          name = "neovim-grammar-runtime";
+          paths = [ grammarPackage ] ++ grammarPackage.passthru.dependencies;
+        };
+
       repoToolExcludedDirs = [
         ".direnv/"
         "patches/"
@@ -613,15 +623,10 @@
         let
           pkgs = pkgsFor system;
           treefmt = treefmtFor system;
-          neovimGrammarPackage = pkgs.vimPlugins.nvim-treesitter.withAllGrammars;
-          neovimGrammarRuntime = pkgs.buildEnv {
-            name = "neovim-grammar-runtime";
-            paths = [ neovimGrammarPackage ] ++ neovimGrammarPackage.passthru.dependencies;
-          };
           neovimRuntime = [
             pkgs.vimPlugins.otter-nvim
             pkgs.vimPlugins.nvim-lspconfig
-            neovimGrammarRuntime
+            (neovimGrammarRuntimeFor pkgs)
           ];
           preCommit = preCommitFor system;
           docsCommands = docsCommandsFor system;
@@ -768,6 +773,15 @@
                 export HOME="$TMPDIR/home"
                 mkdir -p "$HOME"
                 bash ${./tests/update-container-lock.sh} ${./scripts/update-container-lock.sh}
+                touch "$out"
+              '';
+          neovim-statement =
+            pkgs.runCommand "neovim-statement-check" { nativeBuildInputs = [ pkgs.neovim ]; }
+              ''
+                export HOME="$TMPDIR"
+                export EDITOR_GRAMMARS="${neovimGrammarRuntimeFor pkgs}"
+                export EDITOR_STATEMENT_MODULE="${./modules/cli/neovim/statement.lua}"
+                nvim --headless -l ${./tests/neovim-statement.lua}
                 touch "$out"
               '';
           git-attributes =
