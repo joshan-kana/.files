@@ -8,19 +8,29 @@
 
 let
   inherit (lib.systems.elaborate system) isDarwin isLinux isx86_64;
+  browserMimeTypes = [
+    "text/html"
+    "application/xhtml+xml"
+    "x-scheme-handler/http"
+    "x-scheme-handler/https"
+  ];
 in
 {
   home =
     _:
     lib.optionalAttrs isLinux {
-      xdg.mimeApps = {
-        enable = true;
-        defaultApplications = lib.genAttrs [
-          "text/html"
-          "application/xhtml+xml"
-          "x-scheme-handler/http"
-          "x-scheme-handler/https"
-        ] (_: "${config.dotfiles.defaults.browser}.desktop");
+      xdg = {
+        desktopEntries.default-browser = {
+          name = "Default Browser";
+          exec = "${config.dotfiles.defaults.browser} %U";
+          icon = "web-browser";
+          noDisplay = true;
+          mimeType = browserMimeTypes;
+        };
+        mimeApps = {
+          enable = true;
+          defaultApplications = lib.genAttrs browserMimeTypes (_: "default-browser.desktop");
+        };
       };
       home.sessionVariables.BROWSER = config.dotfiles.defaults.browser;
     };
