@@ -15,8 +15,9 @@
     kernelPackages = pkgs.linuxPackages_rpi4;
     # Preserve firmware-applied KMS overlays and board-specific fixups.
     loader.generic-extlinux-compatible.useGenerationDeviceTree = false;
-    # The 4K compositor and hardware HEVC decoder share contiguous buffers.
-    kernelParams = [ "cma=512M" ];
+    # Fit the shared display and decoder buffers below the Pi 4 DMA limit.
+    # U-Boot places the initrd below 512 MiB, preventing a 512 MiB reservation.
+    kernelParams = [ "cma=384M" ];
     supportedFilesystems.btrfs = true;
 
     initrd.availableKernelModules = [
