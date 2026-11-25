@@ -27,6 +27,17 @@ lib.recursiveUpdate profile {
       ];
     };
 
+  desktop = editScope profile.desktop {
+    mediaSession = _: {
+      home = _: {
+        wayland.windowManager.labwc = {
+          environment = [ "WLR_RENDERER=vulkan" ];
+          rc.core.hdr = "yes";
+        };
+      };
+    };
+  };
+
   desktopApps = editScope profile.desktopApps {
     kodi = _: {
       home = { config, pkgs, ... }: {
