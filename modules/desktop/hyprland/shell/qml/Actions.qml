@@ -133,7 +133,7 @@ QtObject {
         if (!runtime.hyprctl)
             resetErrors.push("Compositor unavailable");
         if (!runtime.vhsControl)
-            resetErrors.push("VHS backend unavailable");
+            resetErrors.push("VHS unavailable");
         const steps = appearance.resetOperations().concat(motion.resetOperations());
         if (runtime.captureLocations)
             steps.push({

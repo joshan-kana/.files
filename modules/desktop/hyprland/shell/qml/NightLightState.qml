@@ -80,7 +80,7 @@ QtObject {
             }
             if (code !== 0) {
                 root.supported = false;
-                root.error = "Night Light backend unavailable";
+                root.error = "Night Light unavailable";
                 return;
             }
             try {
@@ -150,7 +150,7 @@ QtObject {
         if (resetting || resetPending)
             return;
         if (!runtime.nightLightControl) {
-            resetFinished(false, "Night Light backend unavailable");
+            resetFinished(false, "Night Light unavailable");
             return;
         }
         resetPending = true;

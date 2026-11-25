@@ -201,7 +201,7 @@ Item {
         }
 
         if (runtime.sessionCommand.length === 0) {
-            statusText = "SESSION BACKEND UNAVAILABLE";
+            statusText = "SESSION ACTIONS UNAVAILABLE";
             statusError = true;
             return;
         }

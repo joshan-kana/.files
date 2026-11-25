@@ -114,7 +114,7 @@ Item {
             motion: "Transition timing and reduced motion",
             displays: "Output layout, resolution and refresh rate",
             scenes: "Reversible session preferences"
-        })[kind] || "Capability controls"
+        })[kind] || "Settings"
     readonly property bool masterState: {
         switch (kind) {
         case "windows":

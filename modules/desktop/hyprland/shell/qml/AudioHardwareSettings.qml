@@ -129,7 +129,7 @@ Column {
             }
             panel.updateDevices(snapshot);
             if (panel.readPurpose === "refresh" || panel.pending === null) {
-                panel.statusText = panel.devices.length ? "Native audio devices" : "No configurable hardware";
+                panel.statusText = panel.devices.length ? "Audio devices" : "No configurable hardware";
                 panel.statusError = false;
                 return;
             }
