@@ -104,7 +104,7 @@ test("every shared slider smooths external changes and holds feedback until real
     );
     assert.match(
       source,
-      /onActiveFocusChanged: if \(!activeFocus\)\s+(?:root|content)\.motion\.endKeyboardAdjustment/,
+      /onActiveFocusChanged:[\s\S]*?!activeFocus[\s\S]*?(?:root|content)\.motion\.endKeyboardAdjustment/,
     );
   }
 });

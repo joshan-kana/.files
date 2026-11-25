@@ -640,8 +640,17 @@ FocusScope {
         }
     }
 
-    onActiveFocusChanged: if (!activeFocus)
-        content.motion.endKeyboardAdjustment()
+    onActiveFocusChanged: {
+        if (!activeFocus) {
+            content.motion.endKeyboardAdjustment();
+            // Deactivating the outgoing Controls page can clear the QML
+            // window's focus after Media has already acquired it.
+            Qt.callLater(() => {
+                if (content.engaged && !content.activeFocus && content.Window.window.active)
+                    content.forceActiveFocus();
+            });
+        }
+    }
 
     Keys.onReleased: event => {
         if (!event.isAutoRepeat && content.motion.releaseAdjustmentKey(event.key))
