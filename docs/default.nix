@@ -497,6 +497,18 @@ let
     let
       inherit (host) config;
       primaryUser = config.dotfiles.users.primary;
+      home = config.home-manager.users.${primaryUser.name};
+      remotes = config.services.comin.remotes or [ ];
+      origin = lib.findFirst (remote: remote.name == "origin") null remotes;
+      userSecretFiles = lib.unique (
+        lib.filter (path: path != null && lib.hasPrefix "${config.dotfiles.secretsDir}/" (toString path)) (
+          (map (remote: remote.auth.ssh_deploy_key_path or null) remotes)
+          ++ (map (builder: builder.sshKey or null) config.nix.buildMachines)
+          ++ (map (server: server.token-file or null) (
+            lib.attrValues (home.programs.attic-client.settings.servers or { })
+          ))
+        )
+      );
       secretsBackup = lib.attrByPath [ "secrets" ] null config.services.restic.backups;
       backupValue = field: if secretsBackup == null then "" else toString secretsBackup.${field};
       filesystemValue = fs: field: if fs == null then "" else fs.${field};
@@ -524,6 +536,12 @@ let
         ''
       }
       export USER_SECRETS_DIR=${lib.escapeShellArg config.dotfiles.secretsDir}
+      export USER_RUNTIME_SECRET_FILES=${lib.escapeShellArg (lib.concatStringsSep "\n" (map toString userSecretFiles))}
+      export DOTFILES_REMOTE=${lib.escapeShellArg (if origin == null then "" else origin.url)}
+      ${lib.optionalString (home.services.wayvnc.enable or false) ''
+        export VNC_ADDRESS=${lib.escapeShellArg home.services.wayvnc.settings.address}
+        export VNC_PORT=${toString home.services.wayvnc.settings.port}
+      ''}
       export SECRETS_BACKUP_ENABLED=${
         lib.escapeShellArg (if secretsBackup == null then "false" else "true")
       }

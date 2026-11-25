@@ -2,12 +2,18 @@
 
 Build the installation image from the evaluated `nixos-pi` configuration. The image includes its boot files and root filesystem; the root partition expands on first boot.
 
+## Current evaluated target
+
+```sh
+{{#include ../../generated/hosts/nixos-pi.sh}}
+```
+
 ## Build the image
 
 Build the image from the repository root using a Linux builder that supports the host's architecture:
 
 ```sh
-nix build .#nixos-pi-image --out-link /tmp/nixos-pi-image
+nix build ".#${HOST_NAME}-image" --out-link "/tmp/${HOST_NAME}-image"
 ```
 
 On macOS, write the image using `diskutil` and `dd`. Use OrbStack USB passthrough only when mounting the Linux root filesystem to install credentials.
@@ -21,7 +27,7 @@ Writing the image erases the entire selected drive. Verify its model, capacity, 
 The OrbStack NixOS guest builds the image, but macOS writes it directly to the USB drive:
 
 ```sh
-GUEST_IMAGE=$(orb -m nixos-orbstack -u root sh -c 'find -L /tmp/nixos-pi-image/sd-image -maxdepth 1 -name "*.img" -print -quit')
+GUEST_IMAGE=$(orb -m nixos-orbstack -u root find -L "/tmp/${HOST_NAME}-image/sd-image" -maxdepth 1 -name '*.img' -print -quit)
 IMAGE="$HOME/OrbStack/nixos-orbstack$(orb -m nixos-orbstack -u root realpath "$GUEST_IMAGE")"
 test -f "$IMAGE" || exit 1
 
@@ -69,7 +75,7 @@ printf 'Type FLASH after verifying the disk model and size: '
 read -r CONFIRM
 [ "$CONFIRM" = FLASH ] || exit 1
 
-IMAGE=$(find -L /tmp/nixos-pi-image/sd-image -maxdepth 1 -name '*.img' -print -quit)
+IMAGE=$(find -L "/tmp/${HOST_NAME}-image/sd-image" -maxdepth 1 -name '*.img' -print -quit)
 test -n "$IMAGE" || exit 1
 dd if="$IMAGE" of="$SD_DISK" bs=4M status=progress conv=fsync &&
   sync &&
@@ -92,11 +98,7 @@ read -r SD_DISK
 
 ## Install host credentials on the installation drive
 
-Prepare directories containing this host's required secrets and its Restic backup bootstrap credentials. The files must remain outside Git and the Nix store. Run the generated host exports in the same root shell:
-
-```sh
-{{#include ../../generated/hosts/nixos-pi.sh}}
-```
+Prepare directories containing this host's required secrets and its Restic backup bootstrap credentials. The files must remain outside Git and the Nix store. Load the evaluated target exports in the same root shell.
 
 Use the partitions of the **verified installation drive**, not another disk that happens to have the same labels:
 
@@ -120,35 +122,34 @@ Use the partitions of the **verified installation drive**, not another disk that
 
   printf 'Host secrets directory: '
   read -r PI_SECRETS_SOURCE
-  printf 'Backup bootstrap directory: '
-  read -r PI_BACKUP_SOURCE
-  [ -s "$PI_SECRETS_SOURCE/comin-github" ]
-  [ -s "$PI_SECRETS_SOURCE/attic-token" ]
-  [ -s "$PI_BACKUP_SOURCE/$(basename "$SECRETS_RCLONE_CONFIG")" ]
-  [ -s "$PI_BACKUP_SOURCE/$(basename "$SECRETS_PASSWORD_FILE")" ]
+  test -d "$PI_SECRETS_SOURCE"
+  test -n "$PRIMARY_UID"
+  test -n "$PRIMARY_GID"
 
   umask 077
   mount -t "$ROOT_FS" "$ROOT_PART" "$MNT"
   for path in "$MNT" "$MNT/nix" "$MNT/nix/store" "$MNT/boot"; do
     [ "$(stat -c %u "$path")" = 0 ] || { echo "Incorrect root ownership: $path" >&2; exit 1; }
   done
-  [ -L "$MNT/var/run" ] && [ "$(readlink "$MNT/var/run")" = ../run ] || {
-    echo 'Missing /var/run link in the image.' >&2
-    exit 1
-  }
-  incorrect=$(find "$MNT/nix/store" -mindepth 1 -maxdepth 1 ! -uid 0 -print -quit)
-  if [ -n "$incorrect" ]; then
-    echo 'Nix store contains incorrectly owned outputs.' >&2
-    exit 1
-  fi
-  test -n "$PRIMARY_UID"
-  test -n "$PRIMARY_GID"
+  [ -L "$MNT/var/run" ] && [ "$(readlink "$MNT/var/run")" = ../run ]
+  [ -z "$(find "$MNT/nix/store" -mindepth 1 -maxdepth 1 ! -uid 0 -print -quit)" ]
+
   install -d -o "$PRIMARY_UID" -g "$PRIMARY_GID" -m 0700 "$MNT$PRIMARY_HOME" "$MNT$USER_SECRETS_DIR"
-  install -o "$PRIMARY_UID" -g "$PRIMARY_GID" -m 0600 "$PI_SECRETS_SOURCE/comin-github" "$MNT$USER_SECRETS_DIR/comin-github"
-  install -o "$PRIMARY_UID" -g "$PRIMARY_GID" -m 0600 "$PI_SECRETS_SOURCE/attic-token" "$MNT$USER_SECRETS_DIR/attic-token"
-  install -d -m 0700 "$(dirname "$MNT$SECRETS_RCLONE_CONFIG")" "$(dirname "$MNT$SECRETS_PASSWORD_FILE")"
-  install -m 0600 "$PI_BACKUP_SOURCE/$(basename "$SECRETS_RCLONE_CONFIG")" "$MNT$SECRETS_RCLONE_CONFIG"
-  install -m 0600 "$PI_BACKUP_SOURCE/$(basename "$SECRETS_PASSWORD_FILE")" "$MNT$SECRETS_PASSWORD_FILE"
+  printf '%s\n' "$USER_RUNTIME_SECRET_FILES" | while IFS= read -r path; do
+    [ -n "$path" ] || continue
+    relative=${path#"$USER_SECRETS_DIR/"}
+    test -s "$PI_SECRETS_SOURCE/$relative"
+    install -D -o "$PRIMARY_UID" -g "$PRIMARY_GID" -m 0600 "$PI_SECRETS_SOURCE/$relative" "$MNT$path"
+  done
+
+  if [ "$SECRETS_BACKUP_ENABLED" = true ]; then
+    printf 'Backup bootstrap directory: '
+    read -r PI_BACKUP_SOURCE
+    for path in "$SECRETS_RCLONE_CONFIG" "$SECRETS_PASSWORD_FILE"; do
+      test -s "$PI_BACKUP_SOURCE/$(basename "$path")"
+      install -D -m 0600 "$PI_BACKUP_SOURCE/$(basename "$path")" "$MNT$path"
+    done
+  fi
   sync
   umount "$MNT"
 )
@@ -166,81 +167,59 @@ Switch to a text console with Ctrl+Alt+F2, log in, and change the initial user p
 passwd
 ```
 
-Check the system, deployer and desktop:
+Verify the system and graphical session:
 
 ```sh
 hostname
 findmnt -T /
 lsblk -f
 systemctl --failed --no-pager
-systemctl status greetd --no-pager
-systemctl --user status media-launcher wayvnc --no-pager
-systemctl status expand-root-partition --no-pager
+systemctl --user --failed --no-pager
+loginctl session-status
 ```
 
-## Media session
+Confirm that the root filesystem has expanded to fill the installation drive.
 
-The Pi starts Labwc and Flex Launcher automatically under the primary user. Physical access to the television and attached input devices grants access to that user's session; keep the device physically secure. If the compositor exits, greetd returns to a console login. Close the active application with Alt+F4 to return to the launcher.
+## Restore and clone
 
-- Open Kodi and configure the packaged Jellyfin add-on with the media server. Jellyfin MPV Shim also runs in the graphical session for phone-initiated playback; its server authentication remains application-managed.
-- Open Chromium for normal browsing, tabs and saved sessions.
-- Open Moonlight to pair with a game-streaming host.
-- Pair KDE Connect from the Phone pairing tile. The phone can share links with Chromium. Remote input support depends on the compositor and is not assumed.
-- Select the Pi in Spotify Connect once librespot is discoverable; authentication is managed at runtime.
+Reload the evaluated target exports. Restore existing secrets from their normal backup before starting a new backup repository. Git authentication is independent of service credentials: provision the intended Git SSH identity or use an authenticated forwarded agent.
 
-For remote pointer and keyboard control, WayVNC listens only on loopback. Use an authenticated SSH tunnel from a VNC client that supports SSH forwarding, or from a trusted computer:
+As the primary user, clone the configuration if it is not already present:
 
 ```sh
-ssh -N -L 5900:127.0.0.1:5900 nixos-pi
+test -n "$DOTFILES_REMOTE"
+git clone --recurse-submodules "$DOTFILES_REMOTE" "$DOTFILES_REPO"
+cd "$DOTFILES_REPO"
+git fetch
 ```
 
-Connect the VNC client to `127.0.0.1:5900`. Do not expose the VNC listener directly to the network.
+## Media and remote access
 
-## Remote administration
+The graphical session starts automatically under the primary user. Physical access to the attached display and input devices grants access to that user's session. Keep the device physically secure. If the session fails to start, use the text console or SSH for recovery.
 
-Verify the Pi's SSH host-key fingerprint at its console:
+Configure application-managed accounts and pair remote-control or streaming clients using their normal interfaces. Validate representative media playback, HDMI audio, display mode and remote input on the physical device. See the [evaluated system reference](../../systems/nixos-pi.md) for configuration and packages.
+
+For remote access, verify the SSH host-key fingerprint at the console before accepting it on a trusted client:
 
 ```sh
 ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
 ```
 
-On the Mac, connect using the `nixos-pi` SSH host profile. Confirm that the fingerprint shown on the first connection matches the Pi's console. The profile forwards the Mac SSH agent and loads the Pi's separate elevation key:
+Verify agent-backed elevation from an authenticated SSH session with `run0 -n id -u`.
+
+If VNC is enabled, use an authenticated SSH tunnel rather than exposing its listener directly:
 
 ```sh
-ssh-add --apple-use-keychain ~/.ssh/nixos-pi-sudo
-ssh nixos-pi 'run0 -n id -u'
+ssh -N -L "$VNC_PORT:$VNC_ADDRESS:$VNC_PORT" "$HOST_NAME"
 ```
 
-A successful `run0` verification prints `0` without requesting a password.
-
-The ChatGPT shell gateway on `nixos-server` uses its own SSH login and elevation keys. Once the Pi is reachable, load the generated host exports in a server terminal and check its presented host key before trusting it:
-
-```sh
-{{#include ../../generated/hosts/nixos-pi.sh}}
-```
-
-```sh
-HOST_KEY=$(ssh-keyscan -H -t ed25519 "$HOST_NAME.home" 2>/dev/null)
-printf '%s\n' "$HOST_KEY" | ssh-keygen -lf -
-```
-
-Compare that fingerprint with the console output, then add the verified host key to the gateway account's known-hosts file:
-
-```sh
-printf '%s\n' "$HOST_KEY" >> ~/.ssh/known_hosts
-```
-
-The remote target becomes accessible through ChatGPT Shell Access after the server has deployed the configuration containing that target and its SSH keys. Keep the Pi reachable by its configured LAN hostname.
+Connect to the forwarded local port. Application settings and paired devices remain mutable runtime data.
 
 ## Recover a previous system generation
 
-The Raspberry Pi firmware boots through U-Boot and an extlinux menu. When a new generation cannot mount the USB root filesystem, interrupt U-Boot's autoboot countdown and run:
+Keep a known-working firmware partition backup before changing the boot pipeline. Firmware files are shared by boot generations, so selecting an older generation does not necessarily restore compatible firmware.
 
-```text
-bootflow scan
-```
-
-Choose the last working `NixOS - Configuration ...` menu entry instead of `NixOS - Default`. On the recovered system, make its running generation the boot default again before attempting another upgrade:
+Select the last working generation from the U-Boot extlinux menu. On the recovered system, make the running generation the boot default:
 
 ```sh
 run0 sh -c '
@@ -251,35 +230,6 @@ run0 sh -c '
 '
 ```
 
-Check `/boot/extlinux/extlinux.conf` and verify that the `nixos-default` entry points to the recovered generation's initrd. The downstream kernel uses its matching firmware device tree so firmware-applied KMS overlays and board fixups survive U-Boot. When recovering an older mainline kernel generation, restore its original extlinux entry (including its `FDTDIR`) from the saved firmware partition; the downstream firmware device tree is not compatible with that kernel. Keep the previous generation available until the replacement has booted successfully on the Pi. A successful build or bootloader installation alone is not a boot validation.
-
-## Secrets backup
-
-Reload the generated host exports before verifying or initializing its secrets backup:
-
-```sh
-{{#include ../../generated/hosts/nixos-pi.sh}}
-```
+Restore matching firmware and device-tree files from the backup if required. Reinstall by flashing a current image and restoring the host's normal credentials and backed-up runtime data.
 
 {{#include ../_shared/secrets-backup-first-boot.inc}}
-
-The Pi 4 supports a single 4K/60 Hz display on HDMI0, the micro-HDMI port next to USB-C power. The installation image enables the necessary firmware clock setting, but the connected display, HDMI input mode, and cable must also support 4K/60 Hz. The Pi hardware module manages the firmware partition and applies the 4K/60 Hz setting on system activation; reboot for the firmware and kernel changes to take effect. Firmware files are shared by boot generations, so retain a backup of the known-working FAT partition when testing changes to the boot pipeline. Verify the active HDMI mode; use `wlr-randr` from the Labwc session to inspect or change the output mode. HDR10 requires a capable display and a playback pipeline that passes HDR metadata; enabling a high-refresh-rate output does not automatically enable HDR. The Pi uses the default Labwc renderer and SDR output. The Vulkan renderer with automatic HDR enabled failed to start the physical graphical session on the Pi 4; a nested compositor probe is not sufficient validation of this path.
-
-The Pi uses the cached downstream kernel and matching GPU firmware from `nixos-raspberrypi`. Keep that input's own nixpkgs lock to preserve binary substitution. The shared Nix module trusts its signed Cachix cache, including on remote builders. Before the first upgrade from a configuration without that cache, pass its substituter and signing key to the rebuild command:
-
-```sh
-sbt --option extra-substituters https://nixos-raspberrypi.cachix.org \
-  --option extra-trusted-public-keys nixos-raspberrypi.cachix.org-1:4iMO9LXa8BqhU+Rpg6LQKiGa2lsNh/j2oiYLNOQ5sPI=
-```
-
-When changing Jellyfin MPV Shim settings, stop its user service before switching the system and start it afterward. Otherwise the old process may overwrite the new configuration as it exits:
-
-```sh
-systemctl --user stop jellyfin-mpv-shim.service
-sup
-systemctl --user start jellyfin-mpv-shim.service
-```
-
-Verify the journal reports `Using external mpv playback backend.` The Pi-specific MPV uses V4L2 hardware decoding and DMA-BUF presentation with two hardware decoder threads. Kodi uses the same MPV as its external player for common video file formats, rather than a separate downstream FFmpeg 6 build. Kodi-specific streams retain the internal player. External playback does not provide all of Kodi's native playback controls or progress tracking; use Jellyfin MPV Shim for Jellyfin library playback.
-
-Test HDMI output and audio, Kodi, Chromium, Moonlight and Jellyfin MPV Shim on the Pi. Verify the selected display mode and HDR signalling with representative media on the physical display. Video decoding and codec compatibility depend on the actual hardware and media. Reinstall by writing a current image to the drive and copying the host credentials onto its root partition. Restore additional mutable data from its normal backups where applicable.
