@@ -5,7 +5,8 @@ local yabai = require("yabai_utils")
 local M = {}
 local NEW_WINDOW_MODE_SETTING = "hs_app_switcher_new_window_mode"
 local newWindowMode = hs.settings.get(NEW_WINDOW_MODE_SETTING) == true
-local newWindowMenus = { "New Window", "New Finder Window", "New OS Window" }
+-- Prefer top-level OS windows over application-internal windows.
+local newWindowMenus = { "New OS Window", "New Window", "New Finder Window" }
 
 function M.toggleMode()
 	newWindowMode = not newWindowMode
