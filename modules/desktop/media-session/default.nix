@@ -90,6 +90,12 @@ in
       Install.WantedBy = [ "labwc-session.target" ];
     };
 
+    # HDMI hotplug can make WayVNC exit successfully with no remaining outputs.
+    systemd.user.services.wayvnc.Service = {
+      Restart = "always";
+      RestartSec = 5;
+    };
+
     services.wayvnc = {
       enable = true;
       autoStart = true;
