@@ -1303,7 +1303,7 @@ FocusScope {
                             detailActionId: "SystemContent.alertsDetails"
                             onDetailsRequested: root.openSetting("alerts")
                             active: root.notificationState.silent
-                            identityColor: root.notificationState.silent ? root.theme.roleColor("warning") : root.theme.roleColor("attention")
+                            activeColor: root.notificationState.silent ? root.theme.roleColor("warning") : root.theme.roleColor("attention")
                             onActivated: root.notificationState.toggleSilent()
                         }
 
@@ -1321,7 +1321,7 @@ FocusScope {
                             detailActionId: "SystemContent.stayDetails"
                             onDetailsRequested: root.openSetting("stay")
                             active: root.system.idleInhibited
-                            identityColor: root.theme.roleColor("inhibition")
+                            activeColor: root.theme.roleColor("inhibition")
                             onActivated: root.system.toggleIdleInhibited()
                         }
 
@@ -1341,7 +1341,7 @@ FocusScope {
                             detailActionId: "SystemContent.powerDetails"
                             onDetailsRequested: root.openSetting("power")
                             active: root.powerProfile.current === "power-saver"
-                            identityColor: root.theme.powerProfileColor(root.powerProfile.current)
+                            activeColor: root.theme.powerProfileColor(root.powerProfile.current)
                             onActivated: root.powerProfile.cycle()
                         }
 
@@ -1354,7 +1354,7 @@ FocusScope {
                             icon: DesktopIcons.glyphFor("resources")
                             title: "Resources"
                             detailActionId: "SystemContent.resources"
-                            identityColor: root.theme.roleColor("resources")
+                            activeColor: root.theme.roleColor("resources")
                             onDetailsRequested: root.openResources()
                         }
 
@@ -1368,7 +1368,7 @@ FocusScope {
                             title: "Captures"
                             detailActionId: "SystemContent.captures"
                             foregroundBusy: root.dashboardExposed && recordingsPanel.foregroundBusy
-                            identityColor: root.theme.roleColor("capture")
+                            activeColor: root.theme.roleColor("capture")
                             onDetailsRequested: root.openRecordings()
                         }
 
@@ -1382,7 +1382,7 @@ FocusScope {
                             title: "Displays"
                             detailActionId: "SystemContent.displays"
                             foregroundBusy: root.dashboardExposed && root.displayBusy
-                            identityColor: root.theme.roleColor("display")
+                            activeColor: root.theme.roleColor("display")
                             enabled: root.runtime.displaySettings.length > 0
                             onDetailsRequested: root.openSetting("displays")
                         }
@@ -1396,7 +1396,7 @@ FocusScope {
                             icon: DesktopIcons.glyphFor("status")
                             title: "Status"
                             detailActionId: "SystemContent.statusInspection"
-                            identityColor: root.theme.roleColor("resources")
+                            activeColor: root.theme.roleColor("resources")
                             onDetailsRequested: root.openStatus()
                         }
 
@@ -1412,8 +1412,7 @@ FocusScope {
                             foregroundBusy: root.dashboardExposed && root.resetRunning
                             active: root.resetConfirmPending
                             enabled: !root.resetRunning
-                            identityColor: root.theme.roleColor("warning")
-                            activeColor: root.theme.warning
+                            activeColor: root.theme.roleColor("warning")
                             onActivated: {
                                 root.resetConfirmPending = true;
                                 root.resetStatus = "";
@@ -1503,7 +1502,7 @@ FocusScope {
                             detailName: "Wallpaper spectrum tuning"
                             onDetailsRequested: root.openSetting("spectrum")
                             active: root.wallpaperSpectrumEnabled
-                            identityColor: root.theme.roleColor("spectrum")
+                            activeColor: root.theme.roleColor("spectrum")
                             onActivated: root.wallpaperSpectrumToggleRequested()
                         }
 
@@ -1520,7 +1519,7 @@ FocusScope {
                             detailName: "Reactive audio tuning"
                             onDetailsRequested: root.openSetting("reactive")
                             active: root.musicReactiveEnabled
-                            identityColor: root.theme.roleColor("reactive")
+                            activeColor: root.theme.roleColor("reactive")
                             onActivated: root.musicReactiveToggleRequested()
                         }
 
@@ -1536,7 +1535,7 @@ FocusScope {
                             detailActionId: "SystemContent.windowsDetails"
                             detailName: "Window transparency details"
                             active: root.windowTransparencyEnabled
-                            identityColor: root.theme.roleColor("display")
+                            activeColor: root.theme.roleColor("display")
                             onActivated: root.windowTransparencyToggleRequested()
                             onDetailsRequested: root.openSetting("windows")
                         }
@@ -1553,7 +1552,7 @@ FocusScope {
                             detailActionId: "SystemContent.glassDetails"
                             detailName: "Frosted glass details"
                             active: root.shellGlassEnabled
-                            identityColor: root.theme.roleColor("connectivity")
+                            activeColor: root.theme.roleColor("connectivity")
                             onActivated: root.shellGlassToggleRequested()
                             onDetailsRequested: root.openSetting("glass")
                         }
@@ -1570,7 +1569,7 @@ FocusScope {
                             detailActionId: "SystemContent.vhsTune"
                             detailName: "VHS tuning"
                             active: root.appearance.vhsEnabled
-                            identityColor: root.theme.roleColor("reactive")
+                            activeColor: root.theme.roleColor("reactive")
                             onActivated: root.appearance.toggleVhs()
                             onDetailsRequested: root.openVhs()
                         }
@@ -1588,7 +1587,7 @@ FocusScope {
                             detailName: "Bar settings"
                             onDetailsRequested: root.openSetting("bar")
                             active: root.barVisible
-                            identityColor: root.theme.roleColor("workspace")
+                            activeColor: root.theme.roleColor("workspace")
                             onActivated: root.barToggleRequested()
                         }
                         QuickSettingChip {
@@ -1606,7 +1605,7 @@ FocusScope {
                             detailName: "Frame settings"
                             onDetailsRequested: root.openSetting("frame")
                             active: root.frameVisible
-                            identityColor: root.theme.roleColor("display")
+                            activeColor: root.theme.roleColor("display")
                             onActivated: root.frameToggleRequested()
                         }
 
@@ -1625,7 +1624,7 @@ FocusScope {
                             detailName: "Motion settings"
                             onDetailsRequested: root.openSetting("motion")
                             active: root.motion.enabled
-                            identityColor: root.theme.roleColor("motion")
+                            activeColor: root.theme.roleColor("motion")
                             onActivated: root.motion.toggle()
                         }
 
@@ -1645,7 +1644,7 @@ FocusScope {
                             detailActionId: "SystemContent.nightLightDetails"
                             detailName: "Night Light details"
                             active: root.nightLight.active
-                            identityColor: root.theme.roleColor("warmth")
+                            activeColor: root.theme.roleColor("warmth")
                             onActivated: if (root.nightLight.supported && !root.nightLight.busy)
                                 root.nightLight.toggle()
                             onDetailsRequested: root.openSetting("nightLight")

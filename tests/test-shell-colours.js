@@ -54,7 +54,7 @@ test("functional roles and all tonal slots derive from the single Base16 adapter
   }
 });
 
-test("shared controls own their function colours without panel-specific overrides", () => {
+test("shared controls own their function colours while dashboard tiles follow capability identity", () => {
   assert.match(qml("ShellSlider"), /accentColor: theme.sliderColor/);
   assert.match(qml("ShellChoice"), /activeColor: theme.choiceColor/);
   assert.match(
@@ -69,7 +69,16 @@ test("shared controls own their function colours without panel-specific override
   assert.match(qml("ShellStepper"), /activeColor: stepper.theme.valueColor/);
   assert.match(
     qml("QuickSettingChip"),
-    /identityColor: theme.commandColor[\s\S]*?activeColor: theme.toggleColor/,
+    /property color activeColor: theme.commandColor/,
+  );
+  assert.match(
+    qml("QuickSettingChip"),
+    /readableColor\(chip.activeColor, chipSurface.fillColor\)/,
+  );
+  assert.match(qml("QuickSettingChip"), /luminousColor: chip.activeColor/);
+  assert.match(
+    qml("SystemContent"),
+    /activeColor: root.theme.roleColor\("spectrum"\)/,
   );
   assert.match(theme, /expressiveSurface: groupBase/);
   assert.match(theme, /expressiveSurfaceStrong: controlBase/);
