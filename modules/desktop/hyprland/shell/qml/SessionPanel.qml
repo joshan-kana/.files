@@ -11,6 +11,8 @@ Item {
     required property Motion motion
 
     signal keyboardRequested
+    signal scenesRequested
+    required property SceneState scenes
     signal revealSelection(real top, real bottom)
 
     property bool open: false
@@ -224,6 +226,10 @@ Item {
 
     function activateShortcut(key: int, modifiers: int): bool {
         const index = entries.findIndex(entry => runtime.shellMatchesHint(entry.binding, key, modifiers));
+        if (runtime.shellMatchesHint("SessionPanel.scenes", key, modifiers)) {
+            scenesAction.trigger();
+            return true;
+        }
         if (runtime.shellMatchesHint("SessionPanel.defaults", key, modifiers)) {
             if (armedAction.length === 0)
                 resetToDeclared();
@@ -376,6 +382,21 @@ Item {
             shortcut: panel.runtime.shellHint("SessionPanel.defaults")
             enabled: panel.armedAction.length === 0
             onActivated: panel.resetToDeclared()
+        }
+
+        ShellAction {
+            id: scenesAction
+            width: parent.width
+            height: Math.max(44, implicitHeight)
+            runtime: panel.runtime
+            theme: panel.theme
+            motion: panel.motion
+            compact: true
+            horizontalCompact: true
+            title: panel.scenes.active ? "Desktop scenes · " + panel.scenes.activeName : "Desktop scenes"
+            shortcut: panel.runtime.shellHint("SessionPanel.scenes")
+            enabled: panel.armedAction.length === 0
+            onActivated: panel.scenesRequested()
         }
 
         // Direct action keycaps already live on their tiles. Centre only the

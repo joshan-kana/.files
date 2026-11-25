@@ -15,7 +15,17 @@ QtObject {
                 durationMultiplier: root.runtime.motionDurationMultiplier
             })
     }
-    readonly property bool enabled: qmlPreferences.value("animationsEnabled")
+    property var sceneEnabled: null
+    readonly property bool enabled: sceneEnabled === null ? qmlPreferences.value("animationsEnabled") : sceneEnabled
+
+    function setSceneEnabled(value: var): void {
+        const before = enabled;
+        sceneEnabled = value;
+        if (before !== enabled) {
+            syncCompositorMotion();
+            syncWallpaperMotion();
+        }
+    }
     readonly property real durationMultiplier: runtime.bounded("motion", "durationMultiplier", qmlPreferences.value("durationMultiplier"))
     function setDurationMultiplier(value: real): void {
         qmlPreferences.set("durationMultiplier", runtime.bounded("motion", "durationMultiplier", value));
@@ -154,13 +164,20 @@ QtObject {
     }
 
     function resetToDeclared(): void {
-        qmlPreferences.resetAll();
+        if (sceneEnabled !== null) {
+            sceneEnabled = runtime.animationsEnabled;
+            qmlPreferences.reset("durationMultiplier");
+        } else
+            qmlPreferences.resetAll();
         syncCompositorMotion();
         syncWallpaperMotion();
     }
 
     function toggle(): void {
-        qmlPreferences.set("animationsEnabled", !enabled);
+        if (sceneEnabled !== null)
+            sceneEnabled = !enabled;
+        else
+            qmlPreferences.set("animationsEnabled", !enabled);
         syncCompositorMotion();
         syncWallpaperMotion();
     }

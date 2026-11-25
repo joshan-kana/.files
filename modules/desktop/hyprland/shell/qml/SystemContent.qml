@@ -12,6 +12,7 @@ FocusScope {
     required property Theme theme
     required property Motion motion
     required property AppearancePreferences appearance
+    required property SceneState scenes
     required property SystemState system
     required property MediaState media
     required property SpectrumState spectrum
@@ -263,7 +264,28 @@ FocusScope {
             key: root.runtime.shellHint("SystemContent.legend.back"),
             action: "Back to Controls"
         },
-        ...(settingsPanel.panel?.kind === "displays" ? [
+        ...(settingsPanel.panel?.kind === "scenes" ? [
+                {
+                    key: root.runtime.shellHint("ScenePanel.select"),
+                    action: "Select saved scene"
+                },
+                {
+                    key: root.runtime.shellHint("ScenePanel.apply"),
+                    action: "Activate scene"
+                },
+                {
+                    key: root.runtime.shellHint("ScenePanel.save"),
+                    action: "Save current switches"
+                },
+                {
+                    key: root.runtime.shellHint("ScenePanel.stop"),
+                    action: "Restore underlying preferences"
+                },
+                {
+                    key: root.runtime.shellHint("ScenePanel.remove"),
+                    action: "Remove selected inactive scene"
+                }
+            ] : []), ...(settingsPanel.panel?.kind === "displays" ? [
                 {
                     key: root.runtime.shellHint("DisplaySettings.saveProfile"),
                     action: "Save current display layout"
@@ -528,6 +550,10 @@ FocusScope {
                         action: "Activate / confirm"
                     },
                     {
+                        key: root.runtime.shellHint("SessionPanel.scenes"),
+                        action: "Desktop scenes"
+                    },
+                    {
                         key: root.runtime.shellHint("SessionPanel.defaults"),
                         action: "Restore session defaults"
                     },
@@ -650,7 +676,10 @@ FocusScope {
     }
 
     function backFromDetail(): void {
-        backRequested();
+        if (settingsPanel.open && settingKind === "scenes")
+            openSession();
+        else
+            backRequested();
         keyboardFocus.forceActiveFocus();
     }
 
@@ -734,7 +763,7 @@ FocusScope {
         if (requestedView.length > 0 && requestedView === presentedDetail)
             return;
 
-        if (["windows", "glass", "nightLight", "alerts", "stay", "power", "reactive", "spectrum", "bar", "frame", "motion", "displays"].includes(requestedView))
+        if (["windows", "glass", "nightLight", "alerts", "stay", "power", "reactive", "spectrum", "bar", "frame", "motion", "displays", "scenes"].includes(requestedView))
             openSetting(requestedView);
         else if (requestedView === "vhs")
             openVhs();
@@ -835,7 +864,7 @@ FocusScope {
     onRequestedViewChanged: requestedViewTimer.restart()
 
     function openSetting(name: string): void {
-        if (!["windows", "glass", "nightLight", "alerts", "stay", "power", "reactive", "spectrum", "bar", "frame", "motion", "displays"].includes(name))
+        if (!["windows", "glass", "nightLight", "alerts", "stay", "power", "reactive", "spectrum", "bar", "frame", "motion", "displays", "scenes"].includes(name))
             return;
         helpOpen = false;
         closeDetails();
@@ -1970,6 +1999,7 @@ FocusScope {
                     theme: root.theme
                     motion: root.motion
                     appearance: root.appearance
+                    scenes: root.scenes
                     nightLight: root.nightLight
                     notifications: root.notificationState
                     powerProfile: root.powerProfile
@@ -2035,6 +2065,8 @@ FocusScope {
             height: Math.max(1, implicitHeight)
             sourceComponent: Component {
                 SessionPanel {
+                    scenes: root.scenes
+                    onScenesRequested: root.openSetting("scenes")
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -2334,7 +2366,9 @@ FocusScope {
                 }
 
                 if (sessionPanel.open) {
-                    if (sessionPanel.invoke("activateShortcut", event.key, event.modifiers) === true) {
+                    if (root.runtime.shellMatchesHint("SessionPanel.scenes", event.key, event.modifiers) && event.isAutoRepeat) {
+                        event.accepted = true;
+                    } else if (sessionPanel.invoke("activateShortcut", event.key, event.modifiers) === true) {
                         event.accepted = true;
                     } else if (event.key === root.runtime.shellKeyCode("controls", "Backspace")) {
                         if (sessionPanel.armedAction.length > 0)

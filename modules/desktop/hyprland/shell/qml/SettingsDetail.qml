@@ -14,6 +14,7 @@ Item {
     required property Theme theme
     required property Motion motion
     required property AppearancePreferences appearance
+    required property SceneState scenes
     required property NightLightState nightLight
     required property NotificationState notifications
     required property PowerProfileState powerProfile
@@ -96,7 +97,8 @@ Item {
             bar: "Desktop bar",
             frame: "Desktop frame",
             motion: "Animations",
-            displays: "Displays"
+            displays: "Displays",
+            scenes: "Desktop scenes"
         })[kind] || "Settings"
     readonly property string subtitleText: ({
             windows: "Window opacity and compositor blur",
@@ -110,7 +112,8 @@ Item {
             bar: "Desktop islands and bar layout",
             frame: "Connected desktop contour and thickness",
             motion: "Transition timing and reduced motion",
-            displays: "Output layout, resolution and refresh rate"
+            displays: "Output layout, resolution and refresh rate",
+            scenes: "Reversible session preferences"
         })[kind] || "Capability controls"
     readonly property bool masterState: {
         switch (kind) {
@@ -556,12 +559,14 @@ Item {
     }
 
     function cancelNested(): bool {
-        return kind === "displays" && displayDetails.cancelNested();
+        return kind === "displays" && displayDetails.cancelNested() || kind === "scenes" && sceneDetails.cancelNested();
     }
 
     function handleKey(key: int, modifiers: int, autoRepeat: bool): bool {
         if (kind === "displays")
             return displayDetails.handleKey(key, modifiers, autoRepeat);
+        if (kind === "scenes")
+            return sceneDetails.handleKey(key, modifiers, autoRepeat);
         if (kind === "stay" && runtime.shellMatchesHint("SettingsDetail.inhibitorsRefresh", key, modifiers)) {
             if (!autoRepeat)
                 refreshInhibitorsAction.trigger();
@@ -733,6 +738,19 @@ Item {
                 shortcut: panel.runtime.shellHint("SettingsDetail.reset")
                 onActivated: panel.resetAppearance()
             }
+        }
+
+        ScenePanel {
+            id: sceneDetails
+            visible: panel.kind === "scenes"
+            width: parent.width
+            engaged: panel.open && visible
+            runtime: panel.runtime
+            theme: panel.theme
+            motion: panel.motion
+            scenes: panel.scenes
+            onKeyboardRequested: panel.keyboardRequested()
+            onRevealSelection: (top, bottom) => panel.revealSelection(sceneDetails.y + top, sceneDetails.y + bottom)
         }
 
         DisplaySettings {

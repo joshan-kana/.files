@@ -20,7 +20,8 @@ QtObject {
     property int popupRevision: 0
     readonly property int maxToasts: 3
     readonly property bool popupVisible: popups.count > 0 && !locked
-    readonly property bool manualSilent: settings.value("silent")
+    property var sceneDelivery: null
+    readonly property bool manualSilent: sceneDelivery === null ? settings.value("silent") : sceneDelivery.silent
     readonly property var quietDefaults: runtime.notificationQuietHours
     readonly property var quietOverrides: settings.value("quiet")
     readonly property bool quietEnabled: quietOverrides.enabled ?? quietDefaults.enabled
@@ -47,7 +48,7 @@ QtObject {
                 root.quietPauseUntil = 0;
         }
     }
-    readonly property bool presentation: settings.value("presentation")
+    readonly property bool presentation: sceneDelivery === null ? settings.value("presentation") : sceneDelivery.presentation
     readonly property bool historyEnabled: settings.value("historyEnabled")
     property bool outputFullscreen: false
     property string preferredOutput: ""
@@ -137,6 +138,12 @@ QtObject {
     }
 
     function toggleSilent(): void {
+        if (sceneDelivery !== null) {
+            sceneDelivery = Object.assign({}, sceneDelivery, {
+                silent: !manualSilent
+            });
+            return;
+        }
         clockMs = Date.now();
         const wasSilent = silent;
         const wasManual = manualSilent;
@@ -192,7 +199,12 @@ QtObject {
     }
 
     function togglePresentation(): void {
-        settings.set("presentation", !presentation);
+        if (sceneDelivery !== null)
+            sceneDelivery = Object.assign({}, sceneDelivery, {
+                presentation: !presentation
+            });
+        else
+            settings.set("presentation", !presentation);
     }
 
     function toggleHistory(): void {
@@ -254,7 +266,14 @@ QtObject {
         temporarySilentUntil = 0;
         quietPauseUntil = 0;
         clockMs = Date.now();
-        settings.resetMany(["silent", "presentation", "historyEnabled", "quiet"]);
+        if (sceneDelivery !== null) {
+            sceneDelivery = {
+                silent: runtime.notificationSilent,
+                presentation: runtime.notificationPresentation
+            };
+            settings.resetMany(["historyEnabled", "quiet"]);
+        } else
+            settings.resetMany(["silent", "presentation", "historyEnabled", "quiet"]);
     }
 
     function resetToDeclared(): void {

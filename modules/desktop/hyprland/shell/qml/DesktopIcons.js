@@ -5,6 +5,7 @@ const destinations = Object.freeze({
   theme: "󰏘",
   wallpaper: "󰸉",
   session: "󰐥",
+  scenes: "󰐩",
   resources: "󰍛",
   captures: "󰕧",
   clipboard: "󰅌",

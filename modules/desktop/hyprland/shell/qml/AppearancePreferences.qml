@@ -150,12 +150,32 @@ QtObject {
         clearOverride("mediaPreferredPlayer");
     }
 
+    // Scene-owned visual switches shadow saved preferences only for this session.
+    property var sceneValues: ({})
     function effective(key: string): var {
-        return saved.value(key);
+        return Object.prototype.hasOwnProperty.call(sceneValues, key) ? sceneValues[key] : saved.value(key);
+    }
+
+    function setSceneValues(values: var): void {
+        const before = [vhsEnabled, windowTransparencyEnabled, shellGlassEnabled, blurEnabled];
+        sceneValues = values;
+        if (before[0] !== vhsEnabled)
+            applyVhs();
+        if (before[1] !== windowTransparencyEnabled)
+            applyWindowTransparency();
+        if (before[2] !== shellGlassEnabled)
+            applyShellGlass();
+        if (before[3] !== blurEnabled)
+            applyBlurSize();
     }
 
     function storeOverride(key: string, value: var): void {
-        saved.set(key, value);
+        if (Object.prototype.hasOwnProperty.call(sceneValues, key))
+            sceneValues = Object.assign({}, sceneValues, {
+                [key]: value
+            });
+        else
+            saved.set(key, value);
     }
 
     // Preloaded panels retain their Wayland layers while closed, but an
@@ -203,6 +223,7 @@ QtObject {
     }
 
     function resetToDeclared(): void {
+        sceneValues = {};
         saved.resetAll();
         windowOpacityApply.stop();
         blurSizeApply.stop();
@@ -401,7 +422,12 @@ QtObject {
     }
 
     function clearOverride(key: string): void {
-        saved.reset(key);
+        if (Object.prototype.hasOwnProperty.call(sceneValues, key))
+            sceneValues = Object.assign({}, sceneValues, {
+                [key]: runtime.appearanceDefaults[key]
+            });
+        else
+            saved.reset(key);
     }
 
     function toggleBlur(): void {

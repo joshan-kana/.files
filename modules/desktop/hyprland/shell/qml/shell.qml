@@ -68,6 +68,13 @@ ShellRoot {
         id: qmlRuntime
     }
 
+    SceneState {
+        id: qmlScenes
+        appearance: qmlAppearance
+        motion: qmlMotion
+        notifications: qmlNotifications
+    }
+
     Theme {
         id: qmlTheme
         runtime: qmlRuntime
@@ -157,6 +164,7 @@ ShellRoot {
 
         SystemContent {
             appearance: qmlAppearance
+            scenes: qmlScenes
             runtime: root.runtimeRef
             theme: root.themeRef
             motion: root.motionRef
@@ -191,6 +199,7 @@ ShellRoot {
                     Quickshell.execDetached([qmlRuntime.displaySettings]);
             }
             onRestoreDefaultsRequested: {
+                qmlScenes.stop();
                 qmlAppearance.resetToDeclared();
                 qmlMotion.resetToDeclared();
                 screenshotPicker.resetToDeclared();

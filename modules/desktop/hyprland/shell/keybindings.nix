@@ -259,6 +259,12 @@
           "ResourceDashboard.toggleCores" = "C";
           "SessionPanel.confirm" = "ENTER";
           "SessionPanel.defaults" = "R";
+          "SessionPanel.scenes" = "C";
+          "ScenePanel.save" = "S";
+          "ScenePanel.stop" = "X";
+          "ScenePanel.remove" = "SHIFT+X";
+          "ScenePanel.apply" = "ENTER";
+          "ScenePanel.select" = "NAV_VERTICAL";
           "SessionPanel.lock" = "Q";
           "SessionPanel.logout" = "E";
           "SessionPanel.move" = "NAV_ALL";
