@@ -28,3 +28,23 @@ test("native spectrum bars reuse the scene-graph vertex buffer while audio anima
 
   assert.match(src, /node->markDirty\(QSGNode::DirtyGeometry\)/);
 });
+
+test("native curves reuse fixed geometry and avoid QML SVG path churn", () => {
+  assert.match(
+    src,
+    /const int vertexCount = segmentCount \* verticesPerSegment;/,
+  );
+  assert.match(
+    src,
+    /if \(geometry->vertexCount\(\) != vertexCount\)\s*geometry->allocate\(vertexCount\);/,
+  );
+  const wrapper = fs.readFileSync(
+    path.join(
+      __dirname,
+      "../modules/desktop/hyprland/shell/qml/SpectrumVisualizer.qml",
+    ),
+    "utf8",
+  );
+  assert.equal([...wrapper.matchAll(/SpectrumRenderer \{/g)].length, 2);
+  assert.match(wrapper, /curve: true/);
+});

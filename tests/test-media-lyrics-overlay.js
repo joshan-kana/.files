@@ -33,14 +33,23 @@ test("lyric changes scroll into the centre with the shared motion preference", (
   assert.match(lyrics, /root\.media\.lyricsPath/);
 });
 
-test("curve outline and fill share the existing spectrum gradient stops", () => {
-  const curve = qml("SpectrumCurve.qml");
-  assert.match(curve, /let ribbon = outline/);
-  assert.match(curve, /path: root\.geometry\.ribbon/);
-  for (const p of ["0", "0.5", "1"])
-    assert.ok(curve.includes(`root.theme.spectrumColor(${p})`));
-  assert.doesNotMatch(curve, /theme\.spectrumColor\(0\.68\)/);
-  assert.match(curve, /x2: root\.width/);
+test("native curve outline and fill share the same sampled theme colours as bars", () => {
+  const renderer = qml("SpectrumRenderer.qml");
+  const native = fs.readFileSync(
+    path.join(
+      __dirname,
+      "../modules/desktop/hyprland/shell/visuals/plugin.cpp",
+    ),
+    "utf8",
+  );
+  assert.match(renderer, /theme.spectrumColor\(\(i \+ 0.5\) \/ count\)/);
+  assert.match(native, /void renderCurve\(QSGGeometryNode \*node, int count\)/);
+  assert.match(native, /strip\(fillA, fillB, h, h, 0.12f, 0.12f\)/);
+  assert.match(
+    native,
+    /strip\(previous, point, fillA.y\(\), fillB.y\(\), 1, 1\)/,
+  );
+  assert.match(native, /qPremultiply\(color.rgba\(\)\)/);
 });
 
 test("lyrics omit redundant local status labels while preserving frequency markers", () => {

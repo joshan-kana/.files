@@ -21,9 +21,10 @@ public:
   void registerTypes(const char *uri) override;
 };
 
-class SpectrumBarsItem : public QQuickItem {
+class SpectrumItem : public QQuickItem {
   Q_OBJECT
-  QML_NAMED_ELEMENT(SpectrumBarsItem)
+  QML_NAMED_ELEMENT(SpectrumItem)
+  Q_PROPERTY(bool curve READ curve WRITE setCurve NOTIFY curveChanged)
   Q_PROPERTY(QVariantList targetBands READ targetBands WRITE setTargetBands
                  NOTIFY targetBandsChanged)
   Q_PROPERTY(QVariantList edges READ edges WRITE setEdges NOTIFY edgesChanged)
@@ -40,7 +41,7 @@ class SpectrumBarsItem : public QQuickItem {
   Q_PROPERTY(double releaseMultiplier READ releaseMultiplier WRITE
                  setReleaseMultiplier NOTIFY releaseMultiplierChanged)
 public:
-  explicit SpectrumBarsItem(QQuickItem *parent = nullptr) : QQuickItem(parent) {
+  explicit SpectrumItem(QQuickItem *parent = nullptr) : QQuickItem(parent) {
     setFlag(ItemHasContents, true);
     connect(this, &QQuickItem::windowChanged, this, [this](QQuickWindow *w) {
       if (frameConnection_)
@@ -54,6 +55,14 @@ public:
             },
             Qt::QueuedConnection);
     });
+  }
+  bool curve() const { return curve_; }
+  void setCurve(bool value) {
+    if (curve_ == value)
+      return;
+    curve_ = value;
+    emit curveChanged();
+    update();
   }
   QVariantList targetBands() const { return targetBands_; }
   QVariantList edges() const { return edges_; }
@@ -131,6 +140,7 @@ public:
     update();
   }
 signals:
+  void curveChanged();
   void targetBandsChanged();
   void sensitivityChanged();
   void attackMultiplierChanged();
@@ -212,6 +222,10 @@ protected:
       levels_[i] =
           std::pow(std::clamp(peak * float(sensitivity_), 0.0f, 1.0f), 0.88f);
     }
+    if (curve_) {
+      renderCurve(node, count);
+      return node;
+    }
     QSGGeometry *g = node->geometry();
     // Keep one fixed buffer for the entire spectrum. Counting only visible
     // bars would repeatedly reallocate this GPU-backed geometry as notes
@@ -267,10 +281,87 @@ protected:
   }
 
 private:
+  // Both presentations use the same interpolated levels and bin boundaries.
+  // Tessellate a quadratic outline into a fixed vertex buffer; the translucent
+  // fill and coloured ribbon retain the former curve's visual language.
+  void renderCurve(QSGGeometryNode *node, int count) {
+    constexpr int subdivisions = 6;
+    const int segmentCount = std::max(1, count - 1) * subdivisions;
+    constexpr int verticesPerSegment = 18;
+    auto *geometry = node->geometry();
+    const int vertexCount = segmentCount * verticesPerSegment;
+    if (geometry->vertexCount() != vertexCount)
+      geometry->allocate(vertexCount);
+    auto *vertices = geometry->vertexDataAsColoredPoint2D();
+    const float w = float(width()), h = float(height());
+    const float thickness = std::min(2.2f, h / 3);
+    const float feather = std::min(0.65f, thickness / 2);
+    int pos = 0;
+    auto sample = [&](int index) {
+      const float x = count > 1 ? float(index) * w / (count - 1) : 0;
+      const float amplitude = std::max(2.0f, levels_[index] * h * 0.92f);
+      return QPointF(x, std::max(0.0f, h - amplitude));
+    };
+    auto colorAt = [&](float x) {
+      // Interpolate the same theme colours used by the bars.
+      const float index =
+          std::clamp(x / w * count - 0.5f, 0.0f, float(count - 1));
+      const int left = int(index), right = std::min(count - 1, left + 1);
+      const float t = index - left;
+      const QColor a = barColors_[left].value<QColor>();
+      const QColor b = barColors_[right].value<QColor>();
+      return QColor::fromRgbF(a.redF() + (b.redF() - a.redF()) * t,
+                              a.greenF() + (b.greenF() - a.greenF()) * t,
+                              a.blueF() + (b.blueF() - a.blueF()) * t,
+                              a.alphaF() + (b.alphaF() - a.alphaF()) * t);
+    };
+    auto add = [&](float x, float y, QColor color, float alpha) {
+      color.setAlphaF(std::clamp(float(color.alphaF()) * alpha, 0.0f, 1.0f));
+      const QRgb rgba = qPremultiply(color.rgba());
+      vertices[pos++].set(x, y, qRed(rgba), qGreen(rgba), qBlue(rgba),
+                          qAlpha(rgba));
+    };
+    auto strip = [&](QPointF a, QPointF b, float ay, float by, float topAlpha,
+                     float bottomAlpha) {
+      const QColor ca = colorAt(float(a.x())), cb = colorAt(float(b.x()));
+      add(a.x(), a.y(), ca, topAlpha);
+      add(b.x(), b.y(), cb, topAlpha);
+      add(a.x(), ay, ca, bottomAlpha);
+      add(a.x(), ay, ca, bottomAlpha);
+      add(b.x(), b.y(), cb, topAlpha);
+      add(b.x(), by, cb, bottomAlpha);
+    };
+    QPointF previous = sample(0);
+    for (int i = 0; i < std::max(1, count - 1); ++i) {
+      const QPointF control = sample(i);
+      const QPointF next = count > 1 ? sample(i + 1) : QPointF(w, control.y());
+      const QPointF start = previous;
+      const QPointF end = i + 1 < count - 1 ? (control + next) * 0.5 : next;
+      for (int j = 1; j <= subdivisions; ++j) {
+        const float t = float(j) / subdivisions, u = 1 - t;
+        const QPointF point =
+            start * (u * u) + control * (2 * u * t) + end * (t * t);
+        // Fill starts below the ribbon so the stroke retains its colour.
+        const QPointF fillA(previous.x(),
+                            std::min(double(h), previous.y() + thickness));
+        const QPointF fillB(point.x(),
+                            std::min(double(h), point.y() + thickness));
+        strip(fillA, fillB, h, h, 0.12f, 0.12f);
+        strip(previous, point, fillA.y(), fillB.y(), 1, 1);
+        const QPointF outerA(previous.x(),
+                             std::max(0.0, previous.y() - feather));
+        const QPointF outerB(point.x(), std::max(0.0, point.y() - feather));
+        strip(outerA, outerB, previous.y(), point.y(), 0, 1);
+        previous = point;
+      }
+    }
+    node->markDirty(QSGNode::DirtyGeometry);
+  }
+
   QVariantList targetBands_, edges_, barColors_;
   std::vector<float> current_, levels_;
   double lowHz_ = 20.0, highHz_ = 20000.0;
-  bool decaying_ = false;
+  bool decaying_ = false, curve_ = false;
   double sensitivity_ = 1.0, attackMultiplier_ = 1.0, releaseMultiplier_ = 1.0;
   QElapsedTimer frameClock_;
   QMetaObject::Connection frameConnection_;
@@ -568,7 +659,7 @@ private:
 };
 
 void VisualsPlugin::registerTypes(const char *uri) {
-  qmlRegisterType<SpectrumBarsItem>(uri, 1, 0, "SpectrumBarsItem");
+  qmlRegisterType<SpectrumItem>(uri, 1, 0, "SpectrumItem");
   qmlRegisterType<SquircleFillItem>(uri, 1, 0, "SquircleFillItem");
   qmlRegisterType<ContentClipItem>(uri, 1, 0, "ContentClipItem");
 }

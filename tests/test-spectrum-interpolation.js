@@ -147,18 +147,11 @@ test("active animation reuses two buffers without producing identical frame iden
   assert.equal(state.frameB.length, 96);
 });
 
-test("native bars consume one shared full-resolution target without per-bar QML bindings", () => {
+test("native bars and curves consume one shared full-resolution target without per-band QML bindings", () => {
   const bars = fs.readFileSync(
     path.join(
       __dirname,
-      "../modules/desktop/hyprland/shell/qml/SpectrumBars.qml",
-    ),
-    "utf8",
-  );
-  const curve = fs.readFileSync(
-    path.join(
-      __dirname,
-      "../modules/desktop/hyprland/shell/qml/SpectrumCurve.qml",
+      "../modules/desktop/hyprland/shell/qml/SpectrumRenderer.qml",
     ),
     "utf8",
   );
@@ -171,7 +164,7 @@ test("native bars consume one shared full-resolution target without per-bar QML 
   );
 
   assert.match(bars, /import DesktopShell\.Visuals 1\.0/);
-  assert.match(bars, /SpectrumBarsItem\s*\{/);
+  assert.match(bars, /SpectrumItem\s*\{/);
   assert.match(
     bars,
     /targetBands: root\.rendering \? root\.spectrum\.targetBands : \[\]/,
@@ -183,15 +176,12 @@ test("native bars consume one shared full-resolution target without per-bar QML 
   assert.match(native, /QQuickWindow::frameSwapped/);
   for (const rate of [320, 110, 120, 45, 10])
     assert.match(native, new RegExp("-delta \\* " + rate + "\\b"));
-  assert.match(curve, /onNeedsInterpolationChanged: syncInterpolation\(\)/);
-  assert.match(curve, /spectrum\.curveSubscribers/);
-  assert.match(
-    curve,
-    /!root\.enabled \|\| !root\.visible \|\| root\.opacity <= 0/,
-  );
+  assert.match(bars, /curve: root\.curve/);
+  assert.match(native, /if \(curve_\) \{\s*renderCurve\(node, count\)/);
+  assert.doesNotMatch(source, /curveSubscribers|onCurveSubscribersChanged/);
 });
 
-test("bar-only audio updates leave QML interpolation idle while maintaining full targets", () => {
+test("native visualizer audio updates leave QML interpolation idle while maintaining full targets", () => {
   const update = qmlFunction("updateBands");
   const state = {
     bands: [],
@@ -285,40 +275,14 @@ test("spectrum tuning is persistent, resettable, and independent of reactive tin
     "releaseMultiplier",
   ])
     assert.ok(
-      qml("SpectrumBars.qml").includes(
+      qml("SpectrumRenderer.qml").includes(
         `${property}: root.spectrum.${property}`,
       ),
     );
-  assert.match(qml("SpectrumCurve.qml"), /raw \* spectrum.sensitivity/);
-});
-
-test("adding or removing another curve preserves the existing interpolation frame", () => {
-  const handler = source
-    .split("onCurveSubscribersChanged: {")[1]
-    .split("\n    }")[0];
-  const change = new Function("state", "with (state) {" + handler + "}");
-  const original = [0.2, 0.4];
-  const state = {
-    bands: original,
-    targetBands: [0.9, 0.8],
-    curveSubscribers: 2,
-    hadCurveSubscribers: true,
-    active: true,
-    decaying: false,
-    smoothingSilence: false,
-    interpolating: true,
-  };
-  change(state);
-  assert.equal(state.bands, original);
-  state.curveSubscribers = 1;
-  change(state);
-  assert.equal(state.bands, original);
-  state.curveSubscribers = 0;
-  change(state);
-  assert.equal(state.hadCurveSubscribers, false);
-  state.curveSubscribers = 1;
-  change(state);
-  assert.equal(state.bands, state.targetBands);
+  assert.match(
+    qml("SpectrumRenderer.qml"),
+    /sensitivity: root\.spectrum\.sensitivity/,
+  );
 });
 
 test("spectrum mode changes remain local and legacy wallpaper tuning migrates once", () => {

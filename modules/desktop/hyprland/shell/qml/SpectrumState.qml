@@ -25,8 +25,6 @@ QtObject {
     property bool interpolating: false
     property bool decaying: false
     property bool smoothingSilence: false
-    property int curveSubscribers: 0
-    property bool hadCurveSubscribers: false
     property bool hasEnergy: false
     property real rms: 0
     property real peak: 0
@@ -46,7 +44,7 @@ QtObject {
     // Audio buffers arrive independently of display refresh. Let the scene graph
     // interpolate between samples rather than redrawing only on PipeWire callbacks.
     property FrameAnimation interpolationFrame: FrameAnimation {
-        running: spectrum.interpolating && (spectrum.active || spectrum.decaying) && (spectrum.curveSubscribers > 0 || spectrum.smoothingSilence || spectrum.decaying)
+        running: spectrum.interpolating && (spectrum.active || spectrum.decaying) && (spectrum.smoothingSilence || spectrum.decaying)
         onTriggered: spectrum.advanceBands(frameTime)
     }
 
@@ -54,10 +52,10 @@ QtObject {
         const next = values || [];
         const incomingEnergy = next.some(value => value > 0.002);
 
-        // Bars interpolate their full 96-band source in one native Qt Quick
-        // scene-graph item. Publishing a 96-value QML array every display
-        // frame would needlessly invalidate every downstream binding.
-        if (curveSubscribers === 0 && !decaying && incomingEnergy) {
+        // Native visualisers interpolate the full target independently of
+        // the GUI thread. QML only maintains the visibility/decay envelope
+        // during silence, never publishes live per-display-frame bands.
+        if (!decaying && incomingEnergy) {
             if (bands.length !== next.length)
                 bands = next;
             targetBands = next;
@@ -69,7 +67,7 @@ QtObject {
 
         // A silent packet must not abruptly hide the visualizer. Reuse the
         // existing original QML release envelope only until energy settles.
-        if (curveSubscribers === 0 && !decaying && !incomingEnergy && hasEnergy) {
+        if (!decaying && !incomingEnergy && hasEnergy) {
             if (!smoothingSilence)
                 bands = targetBands;
             smoothingSilence = true;
@@ -97,16 +95,6 @@ QtObject {
         interpolating = false;
         if (!hasEnergy)
             smoothingSilence = false;
-    }
-
-    onCurveSubscribersChanged: {
-        if (curveSubscribers > 0 && !hadCurveSubscribers && active && !decaying && !smoothingSilence) {
-            bands = targetBands;
-            smoothingSilence = false;
-        } else if (curveSubscribers === 0 && active && !smoothingSilence && !decaying) {
-            interpolating = false;
-        }
-        hadCurveSubscribers = curveSubscribers > 0;
     }
 
     function advanceBands(frameTime: real): void {
@@ -223,7 +211,7 @@ QtObject {
             connectionGate = true;
         } else {
             reconnectTimer.stop();
-            if (curveSubscribers === 0 && !smoothingSilence)
+            if (!smoothingSilence)
                 bands = targetBands;
             smoothingSilence = false;
             // No more PipeWire work, but keep rendering the final frame until

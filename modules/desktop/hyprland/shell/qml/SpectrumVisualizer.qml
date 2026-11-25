@@ -29,7 +29,7 @@ Item {
         if (demandRegistered && spectrum)
             spectrum.visualizerSubscribers--;
     }
-    SpectrumBars {
+    SpectrumRenderer {
         anchors.fill: parent
         spectrum: root.spectrum
         theme: root.theme
@@ -45,12 +45,13 @@ Item {
             }
         }
     }
-    SpectrumCurve {
+    SpectrumRenderer {
         anchors.fill: parent
         spectrum: root.spectrum
         theme: root.theme
         frequencyScale: root.spectrum.frequencyScale
-        sampleCount: root.density
+        barCount: root.density
+        curve: true
         visible: root.engaged && (root.mode === "curve" || opacity > 0.01)
         opacity: root.mode === "curve" ? Math.min(1, root.baseOpacity * root.spectrum.appearance.spectrumOpacity) : 0
         Behavior on opacity {
