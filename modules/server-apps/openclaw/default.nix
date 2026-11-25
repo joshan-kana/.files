@@ -66,7 +66,7 @@ in
       git
       jq
       nh
-      nix
+      config.nix.package
       nodejs_24
       openssh
       python3

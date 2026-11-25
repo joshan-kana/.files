@@ -36,7 +36,7 @@ let
       docker
       jq
       nh
-      nix
+      config.nix.package
       openssh
       rsync
       systemd

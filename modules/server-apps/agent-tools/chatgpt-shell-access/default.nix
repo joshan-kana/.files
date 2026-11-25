@@ -54,7 +54,7 @@ let
     gnused
     iproute2
     jq
-    nix
+    config.nix.package
     openssh
     procps
     psmisc

@@ -137,7 +137,7 @@ in
           git
           gh
           jq
-          nix
+          config.nix.package
           systemd
         ];
         environment = {
