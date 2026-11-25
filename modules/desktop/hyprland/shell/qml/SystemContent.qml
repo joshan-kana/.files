@@ -56,6 +56,11 @@ FocusScope {
     readonly property string resetStatus: shellActions.resetStatus
 
     function findDashboardAction(key: int, modifiers: int): var {
+        if (runtime.shellMatchesHint("SystemContent.scenes", key, modifiers))
+            return {
+                item: scenesButton,
+                detail: false
+            };
         for (const section of [controlsHeading, connectionTiles, actionTiles, visualTiles]) {
             for (const item of section.children) {
                 if (item.actionId && runtime.shellMatchesHint(item.actionId, key, modifiers))
@@ -483,10 +488,6 @@ FocusScope {
                         action: "Activate / confirm"
                     },
                     {
-                        key: root.runtime.shellHint("SessionPanel.scenes"),
-                        action: "Desktop scenes"
-                    },
-                    {
                         key: root.runtime.shellHint("SessionPanel.defaults"),
                         action: "Restore session defaults"
                     },
@@ -609,10 +610,7 @@ FocusScope {
     }
 
     function backFromDetail(): void {
-        if (settingsPanel.open && settingKind === "scenes")
-            openSession();
-        else
-            backRequested();
+        backRequested();
         keyboardFocus.forceActiveFocus();
     }
 
@@ -1388,7 +1386,7 @@ FocusScope {
 
                     Row {
                         width: parent.width
-                        height: 24
+                        height: Math.max(32, scenesButton.implicitHeight)
                         spacing: root.theme.spacing2
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
@@ -1398,6 +1396,23 @@ FocusScope {
                             font.pixelSize: root.theme.fontPanelEyebrow
                             font.weight: Font.DemiBold
                             font.letterSpacing: 1.0
+                        }
+                        Item {
+                            width: Math.max(0, parent.width - scenesButton.width - parent.spacing - parent.children[0].implicitWidth)
+                            height: 1
+                        }
+                        ShellAction {
+                            id: scenesButton
+                            width: implicitWidth
+                            height: 32
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            compact: true
+                            horizontalCompact: true
+                            title: root.scenes.active ? "Scenes · " + root.scenes.activeName : "Scenes"
+                            actionId: "SystemContent.scenes"
+                            onActivated: root.openSetting("scenes")
                         }
                     }
 
@@ -1982,9 +1997,7 @@ FocusScope {
             height: Math.max(1, implicitHeight)
             sourceComponent: Component {
                 SessionPanel {
-                    scenes: root.scenes
                     system: root.system
-                    onScenesRequested: root.openSetting("scenes")
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -2286,9 +2299,7 @@ FocusScope {
                 }
 
                 if (sessionPanel.open) {
-                    if (root.runtime.shellMatchesHint("SessionPanel.scenes", event.key, event.modifiers) && event.isAutoRepeat) {
-                        event.accepted = true;
-                    } else if (sessionPanel.invoke("activateShortcut", event.key, event.modifiers, event.isAutoRepeat) === true) {
+                    if (sessionPanel.invoke("activateShortcut", event.key, event.modifiers, event.isAutoRepeat) === true) {
                         event.accepted = true;
                     } else if (event.key === root.runtime.shellKeyCode("controls", "Backspace")) {
                         if (sessionPanel.armedAction.length > 0)

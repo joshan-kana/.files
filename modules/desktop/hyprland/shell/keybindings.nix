@@ -278,7 +278,7 @@
           "ResourceDashboard.toggleCores" = "C";
           "SessionPanel.confirm" = "ENTER";
           "SessionPanel.defaults" = "R";
-          "SessionPanel.scenes" = "C";
+          "SystemContent.scenes" = "SHIFT+L";
           "ScenePanel.save" = "S";
           "ScenePanel.stop" = "X";
           "ScenePanel.remove" = "SHIFT+X";

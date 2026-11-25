@@ -111,7 +111,7 @@ Item {
             frame: "Connected desktop contour and thickness",
             motion: "Transition timing and reduced motion",
             displays: "Output layout, resolution and refresh rate",
-            scenes: "Reversible session preferences"
+            scenes: "Save and switch desktop appearance presets"
         })[kind] || "Settings"
     readonly property bool masterState: {
         switch (kind) {
