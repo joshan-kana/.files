@@ -509,26 +509,37 @@ test("hybrid media transport keeps space and punctuation in both scopes", () => 
   );
   assert.equal(f.hint(changed, "MediaTransport.next"), "T");
   assert.equal(f.matchesHint(changed, "MediaTransport.next", 84, 0, Qt), true);
-  assert.equal(
-    f.matchesHint(
-      registry,
-      "MediaContent.longer",
-      Qt.Key_Plus,
-      Qt.ShiftModifier,
-      Qt,
-    ),
-    true,
-  );
-  assert.equal(
-    f.matchesHint(
-      registry,
-      "MediaContent.longer",
-      Qt.Key_Equal,
-      Qt.ShiftModifier,
-      Qt,
-    ),
-    true,
-  );
+  // A legal reassignment must change both the keyhint and dispatch.
+  for (const [template, code, modifiers] of [
+    ["=", Qt.Key_Equal, 0],
+    ["+", Qt.Key_Plus, Qt.ShiftModifier],
+    ["/", Qt.Key_Slash, 0],
+    ["[", Qt.Key_BracketLeft, 0],
+    ["SHIFT+G", 71, Qt.ShiftModifier],
+  ]) {
+    const action = "MediaContent.longer";
+    const reassigned = {
+      ...registry,
+      hints: { ...hints, [action]: { ...hints[action], template } },
+    };
+    assert.equal(f.hint(reassigned, action), template);
+    assert.equal(f.matchesHint(reassigned, action, code, modifiers, Qt), true);
+    assert.equal(
+      f.matchesHint(reassigned, action, code, modifiers | Qt.AltModifier, Qt),
+      false,
+    );
+    if (template === "+")
+      assert.equal(
+        f.matchesHint(reassigned, action, Qt.Key_Equal, Qt.ShiftModifier, Qt),
+        true,
+      );
+    const explicit = {
+      ...registry,
+      actions: { ...actionAssignments, [action]: template },
+    };
+    assert.equal(f.matchesHint(explicit, action, code, modifiers, Qt), true);
+  }
+
   assert.equal(
     f.matchesHint(registry, "MediaContent.shorter", Qt.Key_Minus, 0, Qt),
     true,

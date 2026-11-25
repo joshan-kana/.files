@@ -156,7 +156,7 @@ function hint(registry, action) {
   // Resolve every original token once. Replacing an arrow glyph before
   // positional keys could remap its replacement a second time.
   return entry.template.replace(
-    /NAV_KEY_(?:UP|DOWN|LEFT|RIGHT)_(?:PRIMARY(?:_SHIFT)?|ARROW)|NAV_(?:HORIZONTAL|VERTICAL|ALL)(?:_PRIMARY)?(?:_ARROWS)?(?:_SHIFT)?|BACKSPACE|PGUP|PGDN|SHIFT|CTRL|ALT|ESC|ENTER|SPACE|TAB|DEL|[↑↓←→⇧]|[A-Z0-9]/g,
+    /NAV_KEY_(?:UP|DOWN|LEFT|RIGHT)_(?:PRIMARY(?:_SHIFT)?|ARROW)|NAV_(?:HORIZONTAL|VERTICAL|ALL)(?:_PRIMARY)?(?:_ARROWS)?(?:_SHIFT)?|BACKSPACE|NUMENTER|PGUP|PGDN|SHIFT|CTRL|ALT|SUPER|ESC|ENTER|SPACE|TAB|DEL|[↑↓←→⇧]|[A-Z0-9]/g,
     (token) => {
       if (token.startsWith("NAV_KEY_")) {
         const [, , direction, variant] = token.split("_");
@@ -194,6 +194,8 @@ function hint(registry, action) {
         PGDN: "PageDown",
         ESC: "Escape",
         ENTER: "Return",
+        NUMENTER: "Enter",
+        SUPER: "Meta",
         SPACE: "Space",
         TAB: "Tab",
         SHIFT: "Shift",
@@ -220,48 +222,14 @@ function sequence(registry, action) {
     .replace(/\bNUMENTER\b/g, "Enter");
 }
 
-function matchesHint(registry, action, key, modifiers, qt) {
-  const explicit = actionAssignment(registry, action);
-  if (explicit) {
-    const parts = explicit.split("+");
-    const assignedKey = parts.pop();
-    const modifiersByName = {
-      SHIFT: qt.ShiftModifier,
-      ALT: qt.AltModifier,
-      CTRL: qt.ControlModifier,
-      SUPER: qt.MetaModifier,
-    };
-    const bits =
-      qt.ShiftModifier | qt.AltModifier | qt.ControlModifier | qt.MetaModifier;
-    if (
-      codeFor(assignedKey, qt) !== key ||
-      parts.some((name) => !(name in modifiersByName))
-    )
-      return false;
-    const expected = parts.reduce(
-      (mask, name) => mask | modifiersByName[name],
-      0,
-    );
-    return (modifiers & bits) === expected;
-  }
-  const entry = registry?.hints?.[action];
-  // A single action may use a named key or a directional slot as well as
-  // a letter. Multi-action legends are display-only.
-  if (
-    !entry ||
-    !/^(?:(?:SHIFT|ALT|CTRL|SUPER)\+)*(?:[A-Z0-9]|ENTER|NUMENTER|ESC|BACKSPACE|SPACE|TAB|DEL|PGUP|PGDN|[,.+-]|NAV_KEY_(?:UP|DOWN|LEFT|RIGHT)_(?:PRIMARY(?:_SHIFT)?|ARROW))$/.test(
-      entry.template,
-    )
-  )
-    return false;
-  const rendered = hint(registry, action).toUpperCase();
-  if (rendered === "+")
-    return (
-      (key === qt.Key_Plus ||
-        (key === qt.Key_Equal && modifiers === qt.ShiftModifier)) &&
-      !(modifiers & (qt.AltModifier | qt.ControlModifier | qt.MetaModifier))
-    );
-  const parts = rendered.split("+");
+// Parse a single chord using the same key vocabulary as keyCode. A final
+// plus is a key, not a modifier separator.
+function chord(value, qt) {
+  if (!value) return null;
+  const spec = value.toUpperCase();
+  const parts = spec.endsWith("+")
+    ? [...(spec === "+" ? [] : spec.slice(0, -2).split("+")), "+"]
+    : spec.split("+");
   const assignedKey = parts.pop();
   const modifiersByName = {
     SHIFT: qt.ShiftModifier,
@@ -269,18 +237,49 @@ function matchesHint(registry, action, key, modifiers, qt) {
     CTRL: qt.ControlModifier,
     SUPER: qt.MetaModifier,
   };
-  if (
-    codeFor(assignedKey, qt) !== key ||
-    parts.some((name) => !(name in modifiersByName))
-  )
-    return false;
-  const expected = parts.reduce(
+  const key = codeFor(assignedKey, qt);
+  if (key === -1 || parts.some((name) => !(name in modifiersByName)))
+    return null;
+  const modifiers = parts.reduce(
     (mask, name) => mask | modifiersByName[name],
     0,
   );
+  return { key, modifiers, plus: assignedKey === "+" };
+}
+
+function matchesChord(value, key, modifiers, qt) {
+  const resolved = chord(value, qt);
+  if (!resolved) return false;
   const bits =
     qt.ShiftModifier | qt.AltModifier | qt.ControlModifier | qt.MetaModifier;
-  return (modifiers & bits) === expected;
+  const actual = modifiers & bits;
+  if (resolved.plus)
+    return (
+      (key === qt.Key_Plus &&
+        (actual & ~qt.ShiftModifier) ===
+          (resolved.modifiers & ~qt.ShiftModifier)) ||
+      (key === qt.Key_Equal &&
+        actual === (resolved.modifiers | qt.ShiftModifier))
+    );
+  return key === resolved.key && actual === resolved.modifiers;
+}
+
+function matchesHint(registry, action, key, modifiers, qt) {
+  const explicit = actionAssignment(registry, action);
+  const entry = registry?.hints?.[action];
+  // Composite and literal legends are never executable. Validate the
+  // original template against the shared vocabulary before resolving slots.
+  if (
+    !explicit &&
+    (!entry ||
+      entry.literal === true ||
+      (!chord(entry.template, qt) &&
+        !/^NAV_KEY_(?:UP|DOWN|LEFT|RIGHT)_(?:PRIMARY(?:_SHIFT)?|ARROW)$/.test(
+          entry.template,
+        )))
+  )
+    return false;
+  return matchesChord(hint(registry, action), key, modifiers, qt);
 }
 
 // Numbered actions can be rearranged without requiring contiguous Qt keycodes.
@@ -299,17 +298,8 @@ function widgetChoiceHint(registry, index) {
 }
 
 function widgetChoiceIndex(registry, key, modifiers, count, qt) {
-  const bits =
-    qt.ShiftModifier | qt.ControlModifier | qt.AltModifier | qt.MetaModifier;
-  for (let index = 0; index < count; ++index) {
-    const slot = widgetChoiceHint(registry, index);
-    if (!/^(?:SHIFT\+)?[A-Z]$/.test(slot)) continue;
-    const expected = slot.startsWith("SHIFT+") ? qt.ShiftModifier : 0;
-    if (
-      (modifiers & bits) === expected &&
-      key === codeFor(slot.split("+").pop(), qt)
-    )
+  for (let index = 0; index < count; ++index)
+    if (matchesChord(widgetChoiceHint(registry, index), key, modifiers, qt))
       return index;
-  }
   return -1;
 }
