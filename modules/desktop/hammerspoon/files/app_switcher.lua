@@ -100,4 +100,48 @@ function M.open(name, bundleID)
 	ui.show(name .. " has no New Window command", { kind = "warning" })
 end
 
+-- Resolve the installed executable to its owning macOS application bundle.
+local function bundleForDefault(app)
+	local executable = app.executable
+	local profileBin = require("nix_runtime").profileBin
+	local path = hs.fs.pathToAbsolute(executable:sub(1, 1) == "/" and executable or profileBin .. "/" .. executable)
+	if not path and not app.package then
+		return nil, "Application is not installed: " .. executable
+	end
+
+	local bundle = path and path:match("^(.-%.app)/Contents/")
+	if bundle then
+		return bundle
+	end
+
+	-- Some packages expose a wrapper in bin/ rather than the bundle binary.
+	local package = (path and path:match("^(.*)/bin/[^/]+$")) or app.package
+	local applications = package and package .. "/Applications"
+	if applications and hs.fs.attributes(applications, "mode") == "directory" then
+		for name in hs.fs.dir(applications) do
+			if name:sub(-4) == ".app" then
+				if bundle then
+					return nil, "Multiple application bundles for " .. executable
+				end
+				bundle = applications .. "/" .. name
+			end
+		end
+	end
+	return bundle, "No application bundle for " .. executable
+end
+
+function M.openDefault(app)
+	local bundle, err = bundleForDefault(app)
+	if not bundle then
+		ui.error(err)
+		return
+	end
+	local info = hs.application.infoForBundlePath(bundle)
+	if not info or not info.CFBundleIdentifier then
+		ui.error("Cannot read application identity for " .. app.executable)
+		return
+	end
+	M.open(info.CFBundleName or app.executable, info.CFBundleIdentifier)
+end
+
 return M

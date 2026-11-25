@@ -1,6 +1,8 @@
 {
   lib,
   pkgs,
+  browser,
+  terminal,
   ...
 }:
 
@@ -16,9 +18,26 @@ in
   home =
     { config, ... }:
     let
+      defaultApp =
+        executable:
+        let
+          packages = lib.unique (
+            map toString (
+              lib.filter (
+                package: lib.getName package == executable || (package.meta.mainProgram or null) == executable
+              ) config.home.packages
+            )
+          );
+        in
+        "{ executable = ${builtins.toJSON executable}, package = ${
+          if builtins.length packages == 1 then builtins.toJSON (builtins.head packages) else "nil"
+        } }";
       runtime = ''
         return {
           yabai = ${builtins.toJSON (lib.getExe pkgs.yabai)},
+          profileBin = ${builtins.toJSON "${config.home.profileDirectory}/bin"},
+          browser = ${defaultApp browser},
+          terminal = ${defaultApp terminal},
         }
       '';
     in
