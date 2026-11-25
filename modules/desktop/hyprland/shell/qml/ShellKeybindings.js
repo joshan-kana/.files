@@ -155,7 +155,8 @@ function resolvedActionChord(registry, action) {
   const explicit = actionAssignment(registry, action);
   if (explicit) return explicit;
   const entry = registry?.hints?.[action];
-  if (!entry || entry.literal === true) return "";
+  if (!entry || entry.literal === true || typeof entry.template !== "string")
+    return "";
   const navigation = entry.template.match(
     /^NAV_KEY_(UP|DOWN|LEFT|RIGHT)_(PRIMARY(?:_SHIFT)?|ARROW)$/,
   );
@@ -188,6 +189,11 @@ function hint(registry, action) {
   if (!entry) return "";
   const scope = entry.scope;
   if (entry.literal === true) return entry.template;
+  if (Array.isArray(entry.actions))
+    return entry.actions
+      .map((name) => hint(registry, name))
+      .filter(Boolean)
+      .join(entry.separator ?? " / ");
   const resolved = resolvedActionChord(registry, action);
   if (resolved) {
     if (entry.template.startsWith("NAV_KEY_"))
@@ -308,6 +314,14 @@ function matchesChord(value, key, modifiers, qt) {
     key = qt.Key_Tab;
     actual |= qt.ShiftModifier;
   }
+  if (key === qt.Key_Shift && resolved.symbol === "SHIFT")
+    actual &= ~qt.ShiftModifier;
+  if (key === qt.Key_Control && resolved.symbol === "CTRL")
+    actual &= ~qt.ControlModifier;
+  if (key === qt.Key_Alt && resolved.symbol === "ALT")
+    actual &= ~qt.AltModifier;
+  if (key === qt.Key_Meta && resolved.symbol === "SUPER")
+    actual &= ~qt.MetaModifier;
   // Printable shifted symbols may be reported as the symbol or its base key.
   // An explicit Shift modifier is still required when the binding requests it.
   const shiftedBase = {

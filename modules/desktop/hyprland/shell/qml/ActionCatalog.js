@@ -21,6 +21,22 @@ function commands(options) {
       ],
     },
     {
+      id: "media.spectrumSettings",
+      name: "Spectrum Settings",
+      description:
+        "Configure shared audio visualisation and independent presentation styles",
+      icon: "audio-x-generic",
+      glyph: options.glyphFor("spectrum"),
+      keywords: [
+        "spectrum",
+        "visualiser",
+        "audio",
+        "wallpaper",
+        "curve",
+        "bars",
+      ],
+    },
+    {
       id: "media.wallpaperSpectrum",
       name: options.wallpaperSpectrumEnabled
         ? "Disable Wallpaper Spectrum"
@@ -77,14 +93,14 @@ function commands(options) {
     {
       id: "nightLight.warmer",
       name: "Night Light Warmer",
-      description: "Reduce Night Light colour temperature by 500K",
+      description: `Reduce Night Light colour temperature by ${options.nightLightStep} K`,
       icon: "weather-clear-night",
       keywords: ["night", "light", "warm", "kelvin", "temperature"],
     },
     {
       id: "nightLight.cooler",
       name: "Night Light Cooler",
-      description: "Increase Night Light colour temperature by 500K",
+      description: `Increase Night Light colour temperature by ${options.nightLightStep} K`,
       icon: "weather-clear",
       keywords: ["night", "light", "cool", "kelvin", "temperature"],
     },

@@ -297,51 +297,144 @@
           "SystemContent.legend.activate_open_submenu" = "ENTER / →";
           "SystemContent.legend.activate_selected_setting_exit_parameter_focus" = "ENTER / ESC";
           "SystemContent.legend.adjust_selected_level" = "NAV_HORIZONTAL";
-          "SystemContent.legend.advanced_network_editor" = "A";
-          "SystemContent.legend.alerts_stay_awake_power_profile" = "A / S / V";
-          "SystemContent.legend.apply_selected_theme_cancel_applying" = "ENTER / X";
-          "SystemContent.legend.apply_to_selected_output" = "ENTER";
-          "SystemContent.legend.audio_selection" = "NAV_VERTICAL";
+          "SystemContent.legend.advanced_network_editor" = {
+            actions = [ "NetworkPanel.advanced" ];
+          };
+          "SystemContent.legend.alerts_stay_awake_power_profile" = {
+            actions = [
+              "SystemContent.alerts"
+              "SystemContent.stayAwake"
+              "SystemContent.powerProfile"
+            ];
+          };
+          "SystemContent.legend.apply_selected_theme_cancel_applying" = {
+            actions = [
+              "ThemePanel.apply"
+              "ThemePanel.cancel"
+            ];
+          };
+          "SystemContent.legend.apply_to_selected_output" = {
+            actions = [ "WallpaperPanel.set" ];
+          };
+          "SystemContent.legend.audio_selection" = {
+            actions = [ "SystemContent.audioSelect" ];
+          };
           "SystemContent.legend.back" = "← / ESC";
-          "SystemContent.legend.bluetooth_radio_discovery" = "B / SHIFT+D";
+          "SystemContent.legend.bluetooth_radio_discovery" = {
+            actions = [
+              "BluetoothPanel.radio"
+              "BluetoothPanel.scan"
+            ];
+          };
           "SystemContent.legend.cancel_deletion_back_to_controls" = "ESC";
-          "SystemContent.legend.choose_audio_device_mute_microphone" = "P / X";
-          "SystemContent.legend.choose_monitor_all_outputs" = "M";
+          "SystemContent.legend.choose_audio_device_mute_microphone" = {
+            actions = [
+              "AudioDeviceControl.chooser"
+              "AudioDeviceControl.muteMicrophone"
+            ];
+          };
+          "SystemContent.legend.choose_monitor_all_outputs" = {
+            actions = [ "WallpaperPanel.display" ];
+          };
           "SystemContent.legend.choose_theme_in_the_grid" = "NAV_ALL";
           "SystemContent.legend.choose_thumbnail" = "NAV_ALL";
           "SystemContent.legend.close" = "ESC";
           "SystemContent.legend.confirm_move_to_trash" = "D · ENTER";
-          "SystemContent.legend.connect_disconnect" = "ENTER";
-          "SystemContent.legend.details_refresh_current_view" = "I / R";
-          "SystemContent.legend.edit_or_copy_selected_image" = "E / C";
+          "SystemContent.legend.connect_disconnect" = {
+            actions = [ "BluetoothPanel.activate" ];
+          };
+          "SystemContent.legend.details_refresh_current_view" = {
+            actions = [
+              "NetworkPanel.detail"
+              "NetworkPanel.refresh"
+            ];
+          };
+          "SystemContent.legend.edit_or_copy_selected_image" = {
+            actions = [
+              "RecordingLibrary.edit"
+              "RecordingLibrary.copy"
+            ];
+          };
           "SystemContent.legend.esc" = "ESC";
           "SystemContent.legend.esc_13" = "ESC";
           "SystemContent.legend.esc_18" = "ESC";
           "SystemContent.legend.esc_26" = "ESC";
           "SystemContent.legend.esc_32" = "ESC";
           "SystemContent.legend.esc_37" = "ESC";
-          "SystemContent.legend.fit_fill_reset" = "F / R";
+          "SystemContent.legend.fit_fill_reset" = {
+            actions = [
+              "WallpaperPanel.fit"
+              "WallpaperPanel.default"
+            ];
+          };
           "SystemContent.legend.h_l" = "NAV_HORIZONTAL";
           "SystemContent.legend.hardware_display_brightness_and_volume_style_osd" = {
             template = "BRIGHTNESS UP/DOWN";
             literal = true;
           };
-          "SystemContent.legend.join_disconnect" = "ENTER";
+          "SystemContent.legend.join_disconnect" = {
+            actions = [ "NetworkPanel.connect" ];
+          };
           "SystemContent.legend.move_half_a_page" = "U/D · PGUP/PGDN";
           "SystemContent.legend.mute_selected_output_input_or_stream" = "M / ENTER";
-          "SystemContent.legend.mute_stream_mute_mic_choose_device" = "M / X / P";
+          "SystemContent.legend.mute_stream_mute_mic_choose_device" = {
+            actions = [
+              "AudioDeviceControl.mute"
+              "AudioDeviceControl.muteMicrophone"
+              "AudioDeviceControl.chooser"
+            ];
+          };
           "SystemContent.legend.navigate_actions" = "NAV_ALL";
-          "SystemContent.legend.night_light_warmer_cooler" = "T / SHIFT+T";
-          "SystemContent.legend.open_corresponding_system_control" = "Q/W/E/F/G/R/C/D/I";
-          "SystemContent.legend.open_selected_capture" = "ENTER / O";
+          "SystemContent.legend.night_light_warmer_cooler" = {
+            actions = [
+              "SystemContent.nightLight"
+              "SystemContent.nightLightDetails"
+            ];
+          };
+          "SystemContent.legend.open_corresponding_system_control" = {
+            actions = [
+              "SystemContent.themes"
+              "SystemContent.wallpaper"
+              "SystemContent.session"
+              "SystemContent.network"
+              "SystemContent.bluetooth"
+              "SystemContent.resources"
+              "SystemContent.captures"
+              "SystemContent.displays"
+              "SystemContent.statusInspection"
+            ];
+          };
+          "SystemContent.legend.open_selected_capture" = {
+            actions = [ "RecordingLibrary.open" ];
+          };
           "SystemContent.legend.page_selection" = "U/D · PGUP/PGDN";
-          "SystemContent.legend.pair_trust_forget" = "P / T / F";
-          "SystemContent.legend.refresh_captures" = "R";
-          "SystemContent.legend.refresh_now" = "R";
-          "SystemContent.legend.restore_defaults_then_confirm" = "SHIFT+C · ENTER";
+          "SystemContent.legend.pair_trust_forget" = {
+            actions = [
+              "BluetoothPanel.pair"
+              "BluetoothPanel.trust"
+              "BluetoothPanel.forget"
+            ];
+          };
+          "SystemContent.legend.refresh_captures" = {
+            actions = [ "RecordingLibrary.refresh" ];
+          };
+          "SystemContent.legend.refresh_now" = {
+            actions = [ "ResourceDashboard.refresh" ];
+          };
+          "SystemContent.legend.restore_defaults_then_confirm" = {
+            actions = [
+              "SystemContent.reset"
+              "SystemContent.resetConfirm"
+            ];
+            separator = " · ";
+          };
           "SystemContent.legend.scroll_controls" = "U/D · PGUP/PGDN";
-          "SystemContent.legend.search_themes" = "/";
-          "SystemContent.legend.search_wallpapers" = "/";
+          "SystemContent.legend.search_themes" = {
+            actions = [ "ThemePanel.search" ];
+          };
+          "SystemContent.legend.search_wallpapers" = {
+            actions = [ "WallpaperPanel.search" ];
+          };
           "SystemContent.legend.select_activate_tray_app" = "[ / ] · ENTER";
           "SystemContent.legend.select_clip_half_page" = "NAV_VERTICAL · U/⇧D · PGUP/PGDN";
           "SystemContent.legend.select_device" = "NAV_VERTICAL · U/D · PGUP/PGDN";
@@ -350,11 +443,33 @@
           "SystemContent.legend.select_network" = "NAV_VERTICAL · U/D · PGUP/PGDN";
           "SystemContent.legend.select_output_input_or_stream_half_page" =
             "NAV_VERTICAL · TAB/SHIFT+TAB · U/D · PGUP/PGDN";
-          "SystemContent.legend.shuffle_repeat_choose_player" = "Z / B";
+          "SystemContent.legend.shuffle_repeat_choose_player" = {
+            actions = [
+              "ControlsMediaCard.shuffle"
+              "ControlsMediaCard.repeat"
+            ];
+          };
           "SystemContent.legend.slider_selection" = "NAV_VERTICAL · TAB/SHIFT+TAB";
-          "SystemContent.legend.spectrum_reactive_windows_glass_bar_frame_motion" = "SHIFT+Y/U/D/R/Q/W/E";
-          "SystemContent.legend.switch_between_sampled_resource_history_and_per_core_cpu_activity" = "C";
-          "SystemContent.legend.toggle_wi_fi_saved_connections" = "W / P";
+          "SystemContent.legend.spectrum_reactive_windows_glass_bar_frame_motion" = {
+            actions = [
+              "SystemContent.wallpaperSpectrum"
+              "SystemContent.musicReactive"
+              "SystemContent.windowTransparency"
+              "SystemContent.shellGlass"
+              "SystemContent.bar"
+              "SystemContent.frame"
+              "SystemContent.motion"
+            ];
+          };
+          "SystemContent.legend.switch_between_sampled_resource_history_and_per_core_cpu_activity" = {
+            actions = [ "ResourceDashboard.toggleCores" ];
+          };
+          "SystemContent.legend.toggle_wi_fi_saved_connections" = {
+            actions = [
+              "NetworkPanel.toggleWifi"
+              "NetworkPanel.saved"
+            ];
+          };
           "SystemContent.motion" = "SHIFT+E";
           "SystemContent.musicReactive" = "SHIFT+U";
           "SystemContent.network" = "F";

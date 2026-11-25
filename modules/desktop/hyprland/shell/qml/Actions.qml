@@ -13,6 +13,7 @@ QtObject {
         wallpaperSpectrumEnabled: wallpaperSpectrumEnabled,
         musicReactiveEnabled: musicReactiveEnabled,
         seekSeconds: mediaState.seekSeconds,
+        nightLightStep: runtime.constraints.nightLight.temperature.shortcutStep,
         rememberRecents: launcher.rememberRecents,
         terminal: runtime.terminal,
         audioAvailable: systemState.audioAvailable,
@@ -406,6 +407,8 @@ QtObject {
             lockSession();
         else if (commandId === "audio.mixer")
             toggleAudioMixer();
+        else if (commandId === "media.spectrumSettings")
+            showSystem(null, null, "spectrum");
         else if (commandId === "media.wallpaperSpectrum")
             wallpaperSpectrumToggleRequested();
         else if (commandId === "media.reactiveShell")

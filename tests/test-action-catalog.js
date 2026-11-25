@@ -16,6 +16,7 @@ function descriptors(overrides = {}) {
     wallpaperSpectrumEnabled: false,
     musicReactiveEnabled: false,
     seekSeconds: 10,
+    nightLightStep: 500,
     rememberRecents: false,
     terminal: "kitty",
     audioAvailable: true,
@@ -62,6 +63,7 @@ test("hardware capabilities, dynamic labels and settings search stay authoritati
     musicReactiveEnabled: true,
     rememberRecents: true,
     seekSeconds: 30,
+    nightLightStep: 200,
   });
   const ids = limited.map((entry) => entry.id);
   for (const id of [
@@ -98,4 +100,17 @@ test("hardware capabilities, dynamic labels and settings search stay authoritati
         entry.id === "controls.bluetooth" && entry.keywords.includes("pair"),
     ),
   );
+});
+
+test("Spectrum and Night Light palette descriptors reflect their current owners", () => {
+  const entries = descriptors({ nightLightStep: 200 });
+  assert.match(
+    entries.find((entry) => entry.id === "nightLight.warmer").description,
+    /200 K/,
+  );
+  assert.match(
+    entries.find((entry) => entry.id === "nightLight.cooler").description,
+    /200 K/,
+  );
+  assert.ok(entries.find((entry) => entry.id === "media.spectrumSettings"));
 });

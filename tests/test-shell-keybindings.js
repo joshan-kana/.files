@@ -619,3 +619,53 @@ test("single chord resolution handles shifted symbols and Qt Backtab without int
   assert.equal(f.matchesHint(remapped, action, 71, Qt.AltModifier, Qt), true);
   assert.equal(f.matchesHint(remapped, action, Qt.Key_Slash, shift, Qt), false);
 });
+
+test("action-based help follows remaps without becoming an executable shortcut", () => {
+  const legend =
+    "SystemContent.legend.spectrum_reactive_windows_glass_bar_frame_motion";
+  const action = "SystemContent.wallpaperSpectrum";
+  const changed = {
+    ...registry,
+    actions: { ...actionAssignments, [action]: "SHIFT+X" },
+  };
+  assert.equal(f.hint(changed, action), "SHIFT+X");
+  assert.match(f.hint(changed, legend), /^SHIFT\+X \/ /);
+  assert.equal(f.matchesHint(changed, legend, 88, Qt.ShiftModifier, Qt), false);
+  for (const [name, entry] of Object.entries(hints)) {
+    if (!entry.actions) continue;
+    for (const reference of entry.actions) {
+      assert.ok(
+        hints[reference] || actionAssignments[reference],
+        name + ": " + reference,
+      );
+      assert.ok(!hints[reference]?.actions, "avoid recursive legends");
+    }
+  }
+  assert.equal(
+    f.matchesHint(
+      registry,
+      "ResizeOverlay.reverse",
+      Qt.Key_Shift,
+      Qt.ShiftModifier,
+      Qt,
+    ),
+    true,
+  );
+});
+
+test("configured discrete widget shortcuts and explicit action assignments are executable", () => {
+  const parser = vm.runInNewContext(
+    fs.readFileSync(path.join(qmlDir, "ShellKeybindings.js"), "utf8") +
+      "\n({chord})",
+  );
+  for (const [action, binding] of Object.entries(actionAssignments))
+    assert.ok(parser.chord(binding, Qt), action + " = " + binding);
+  const choices = registry.widgetChoices.map((binding) =>
+    parser.chord(binding, Qt),
+  );
+  assert.ok(choices.every(Boolean));
+  assert.equal(
+    new Set(choices.map((choice) => choice.key + ":" + choice.modifiers)).size,
+    choices.length,
+  );
+});
