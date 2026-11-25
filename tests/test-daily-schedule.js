@@ -58,5 +58,11 @@ test("notification suppression and VHS presets retain one authoritative owner", 
     preferences,
     /for \(const key of vhsParameterKeys\)\s*clearOverride\(key\)/,
   );
+  assert.match(
+    preferences,
+    /setPresetValues\(musicReactiveParameterKeys, values\)/,
+  );
+  assert.match(preferences, /setPresetValues\(vhsParameterKeys, values\)/);
+  assert.doesNotMatch(preferences, /Object\.fromEntries/);
   assert.match(preferences, /function resetVhsParameter\(key: string\): void/);
 });

@@ -276,6 +276,13 @@ QtObject {
             clearOverride(key);
     }
 
+    function setPresetValues(keys: var, values: var): void {
+        const overrides = {};
+        for (let i = 0; i < keys.length; ++i)
+            overrides[keys[i]] = values[i];
+        saved.setMany(overrides);
+    }
+
     function applyReactivePreset(name: string): void {
         if (name === "Default") {
             resetReactiveTuning();
@@ -284,7 +291,7 @@ QtObject {
         const values = reactivePresets[name];
         if (!values)
             return;
-        saved.setMany(Object.fromEntries(musicReactiveParameterKeys.map((key, index) => [key, values[index]])));
+        setPresetValues(musicReactiveParameterKeys, values);
     }
 
     function resetSpectrumTuning(): void {
@@ -367,7 +374,7 @@ QtObject {
             const values = vhsPresets[name];
             if (!values)
                 return;
-            saved.setMany(Object.fromEntries(vhsParameterKeys.map((key, index) => [key, values[index]])));
+            setPresetValues(vhsParameterKeys, values);
         }
 
         vhsApply.restart();
