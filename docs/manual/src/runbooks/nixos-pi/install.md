@@ -173,7 +173,9 @@ hostname
 findmnt -T /
 lsblk -f
 systemctl --failed --no-pager
-systemctl status display-manager --no-pager
+systemctl status greetd --no-pager
+systemctl --user status media-launcher wayvnc --no-pager
+systemctl status expand-root-partition --no-pager
 ```
 
 ## Media session
