@@ -14,13 +14,7 @@ in
 {
   services.gerrit = {
     enable = true;
-    plugins = [
-      (pkgs.fetchurl {
-        name = "gerrit-oauth-provider.jar";
-        url = "https://github.com/davido/gerrit-oauth-provider/releases/download/v3.15.0/oauth-github.jar";
-        hash = "sha256-tMkBgD486aHnFkWvQh4SmCnVUCJpKDARNaW++4RuTII=";
-      })
-    ];
+    plugins = [ pkgs.gerrit-oauth-provider ];
     serverId = "dec01ec9-55a7-4fed-bb8b-08278d06cf51";
     listenAddress = "${server.lan.serverIp}:${toString httpPort}";
 

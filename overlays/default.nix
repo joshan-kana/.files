@@ -9,6 +9,7 @@ _: {
     ./configarr
     ./cosmic-noir-icons
     ./gh-dash
+    ./gerrit-oauth-provider
     ./hypr-persist
     ./gimp
     ./gtksourceview
