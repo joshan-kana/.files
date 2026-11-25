@@ -8,24 +8,22 @@
       },
       "options": {
         "nixos": {
-          "expr": "let f = builtins.getFlake \"${workspaceFolder}\"; in f.lib.semanticScopeOptions.nixdHostOptions f.nixosConfigurations f.nixosConfigurations.nixos"
+          "expr": "let f = builtins.getFlake \"${workspaceFolder}\"; configurations = f.nixosConfigurations // f.darwinConfigurations; in f.lib.semanticScopeOptions.nixdFleetOptions configurations f.nixosConfigurations"
         },
-        "nixos-server": {
-          "expr": "let f = builtins.getFlake \"${workspaceFolder}\"; in f.lib.semanticScopeOptions.nixdHostOptions f.nixosConfigurations f.nixosConfigurations.nixos-server"
+        "darwin": {
+          "expr": "let f = builtins.getFlake \"${workspaceFolder}\"; configurations = f.nixosConfigurations // f.darwinConfigurations; in f.lib.semanticScopeOptions.nixdFleetOptions configurations f.darwinConfigurations"
         },
         "home-manager": {
-          "expr": "(builtins.getFlake \"${workspaceFolder}\").nixosConfigurations.nixos.options.home-manager.users.type.getSubOptions []"
+          "expr": "let f = builtins.getFlake \"${workspaceFolder}\"; configurations = f.nixosConfigurations // f.darwinConfigurations; in f.lib.semanticScopeOptions.nixdFleetHomeOptions configurations"
         }
       }
     }
   },
-
   "[nix]": {
     "editor.defaultFormatter": "jnoortheen.nix-ide",
     "editor.formatOnSave": true,
     "editor.formatOnPaste": true
   },
-
   "editor.autoClosingBrackets": "always",
   "editor.autoClosingQuotes": "always",
   "editor.snippetSuggestions": "top",
