@@ -29,6 +29,7 @@ QtObject {
     readonly property string lockSession: root.configData.tools.lockSession
     readonly property string networkConnectionEditor: root.configData.tools.networkConnectionEditor
     readonly property string pwMetadata: root.configData.tools.pwMetadata
+    readonly property string busctl: root.configData.tools.busctl
     readonly property string nmcli: root.configData.tools.nmcli
     readonly property string hyprctl: root.configData.tools.hyprctl
     readonly property string easyeffectsCli: root.configData.tools.easyeffectsCli

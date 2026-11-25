@@ -1378,6 +1378,7 @@ in
 
         tools = {
           pwMetadata = lib.getExe' pkgs.pipewire "pw-metadata";
+          busctl = lib.getExe' pkgs.systemd "busctl";
           bluetoothctl = lib.getExe' pkgs.bluez "bluetoothctl";
           weatherCurl = lib.getExe pkgs.curl;
           agendaQuery = lib.getExe agendaQuery;

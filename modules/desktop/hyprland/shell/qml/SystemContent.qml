@@ -263,7 +263,12 @@ FocusScope {
             key: root.runtime.shellHint("SystemContent.legend.back"),
             action: "Back to Controls"
         },
-        ...(settingsPanel.panel?.kind === "power" ? root.powerProfile.profiles.map((profile, index) => ({
+        ...(settingsPanel.panel?.kind === "stay" ? [
+                {
+                    key: root.runtime.shellHint("SettingsDetail.inhibitorsRefresh"),
+                    action: "Refresh system inhibitor locks"
+                }
+            ] : []), ...(settingsPanel.panel?.kind === "power" ? root.powerProfile.profiles.map((profile, index) => ({
                         key: root.runtime.shellChoiceHint(index),
                         action: root.powerProfile.label(profile)
                     })) : [])].filter(entry => entry.visible !== false) : vhsPanel.open ? [

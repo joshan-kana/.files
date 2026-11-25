@@ -1,5 +1,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import Quickshell.Io
+import "LogindInhibitors.js" as LogindInhibitors
 import "ClockFormatting.js" as ClockFormatting
 import "DesktopIcons.js" as DesktopIcons
 
@@ -34,6 +36,37 @@ Item {
     property bool open: false
     property int selectedIndex: 0
     property double clockMs: Date.now()
+    readonly property bool inspectingInhibitors: open && kind === "stay"
+    property var inhibitorEntries: []
+    property string inhibitorStatus: ""
+    function refreshInhibitors(): void {
+        if (!inspectingInhibitors || inhibitorQuery.running)
+            return;
+        inhibitorEntries = [];
+        inhibitorStatus = "Reading system inhibitors…";
+        inhibitorQuery.exec([runtime.busctl, "--system", "--json=short", "--timeout=5s", "call", "org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager", "ListInhibitors"]);
+    }
+    onInspectingInhibitorsChanged: {
+        if (inspectingInhibitors)
+            refreshInhibitors();
+        else {
+            inhibitorEntries = [];
+            inhibitorStatus = "";
+        }
+    }
+    Process {
+        id: inhibitorQuery
+        stdout: StdioCollector {
+            id: inhibitorOutput
+        }
+        onExited: (code, status) => {
+            if (!panel.inspectingInhibitors)
+                return;
+            const entries = code === 0 ? LogindInhibitors.parseInhibitors(inhibitorOutput.text) : null;
+            panel.inhibitorEntries = entries || [];
+            panel.inhibitorStatus = entries === null ? "System inhibitors unavailable" : entries.length === 0 ? "No system inhibitor locks" : entries.length + (entries.length === 1 ? " active system lock" : " active system locks");
+        }
+    }
     Timer {
         interval: 1000
         running: panel.open && panel.kind === "stay" && panel.system.idleInhibited && panel.system.idleInhibitDeadline > 0
@@ -529,6 +562,11 @@ Item {
     function handleKey(key: int, modifiers: int, autoRepeat: bool): bool {
         if (kind === "displays")
             return displayDetails.handleKey(key, modifiers, autoRepeat);
+        if (kind === "stay" && runtime.shellMatchesHint("SettingsDetail.inhibitorsRefresh", key, modifiers)) {
+            if (!autoRepeat)
+                refreshInhibitorsAction.trigger();
+            return true;
+        }
         if (autoRepeat) {
             const repeatedAction = ["SettingsDetail.toggle", "SettingsDetail.blur", "SettingsDetail.reset", "SettingsDetail.resetParameter", "SettingsDetail.presentation", "SettingsDetail.history", "SettingsDetail.quietHours", "SettingsDetail.nightResume", "SettingsDetail.nightPauseUntil"].some(name => runtime.shellMatchesHint(name, key, modifiers));
             const choice = kind === "nightLight" ? runtime.shellChoiceIndex(key, modifiers, 9) : reactiveTuning ? runtime.shellChoiceIndex(key, modifiers, 7) : kind === "alerts" ? runtime.shellChoiceIndex(key, modifiers, 6) : kind === "power" ? runtime.shellChoiceIndex(key, modifiers, powerProfile.profiles.length) : kind === "stay" ? runtime.shellChoiceIndex(key, modifiers, 5) : -1;
@@ -1343,6 +1381,60 @@ Item {
                             activeColor: panel.theme.roleColor("inhibition")
                             active: panel.system.idleInhibited && panel.system.idleInhibitMinutes === modelData
                             onActivated: panel.system.setIdleInhibitMinutes(modelData)
+                        }
+                    }
+                }
+            }
+            ShellSection {
+                runtime: panel.runtime
+                theme: panel.theme
+                title: "System inhibitor locks"
+                ShellText {
+                    width: parent.width
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    text: "Reported by systemd-logind; Wayland surface idle inhibition is separate."
+                    textRole: ShellText.Supporting
+                    wrapMode: Text.WordWrap
+                }
+                ShellAction {
+                    id: refreshInhibitorsAction
+                    width: parent.width
+                    height: Math.max(panel.theme.fontSize(44), implicitHeight)
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    motion: panel.motion
+                    compact: true
+                    horizontalCompact: true
+                    icon: DesktopIcons.actionGlyph("refresh")
+                    title: panel.inhibitorStatus
+                    shortcut: panel.runtime.shellHint("SettingsDetail.inhibitorsRefresh")
+                    enabled: panel.inspectingInhibitors && !inhibitorQuery.running
+                    onActivated: panel.refreshInhibitors()
+                }
+                Repeater {
+                    model: panel.inhibitorEntries
+                    delegate: Column {
+                        id: inhibitorEntry
+                        required property var modelData
+                        width: parent.width
+                        spacing: panel.theme.spacing1
+                        ShellText {
+                            width: parent.width
+                            runtime: panel.runtime
+                            theme: panel.theme
+                            textFormat: Text.PlainText
+                            text: inhibitorEntry.modelData.who + " · " + inhibitorEntry.modelData.mode
+                            wrapMode: Text.Wrap
+                        }
+                        ShellText {
+                            width: parent.width
+                            runtime: panel.runtime
+                            theme: panel.theme
+                            textFormat: Text.PlainText
+                            text: inhibitorEntry.modelData.what + " · " + inhibitorEntry.modelData.why
+                            textRole: ShellText.Supporting
+                            wrapMode: Text.Wrap
                         }
                     }
                 }

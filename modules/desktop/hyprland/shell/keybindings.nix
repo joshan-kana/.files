@@ -262,6 +262,7 @@
           "SessionPanel.shutdown" = "S";
           "SessionPanel.suspend" = "W";
           "SettingsDetail.toggle" = "T";
+          "SettingsDetail.inhibitorsRefresh" = "F";
           "SettingsDetail.blur" = "B";
           "SettingsDetail.reset" = "R";
           "SettingsDetail.resetParameter" = "SHIFT+R";
