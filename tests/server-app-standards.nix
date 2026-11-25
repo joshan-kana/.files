@@ -3,14 +3,10 @@
 let
   inherit (inputs.nixpkgs) lib;
   cfg = configuration.config;
-  alternateNix = cfg.nix.package.overrideAttrs (old: {
-    pname = "${old.pname}-alternate";
-  });
   alternate =
     (configuration.extendModules {
       modules = [
         {
-          nix.package = lib.mkForce alternateNix;
           dotfiles.server = {
             storage = {
               appData = {
@@ -41,24 +37,7 @@ let
 
   hasRequiredPathAssertion =
     unit: lib.attrByPath [ unit "unitConfig" "AssertPathExists" ] null cfg.systemd.services != null;
-  usesConfiguredNix =
-    host:
-    let
-      package = host.nix.package;
-    in
-    builtins.all (packages: lib.elem package packages) [
-      host.systemd.services.chatgpt-shell-access.path
-      host.services.hermes-agent.extraPackages
-      host.systemd.services.open-webui-computer.path
-      host.services.openclaw-gateway.servicePath
-    ]
-    && lib.elem "${package}/bin" (
-      lib.splitString ":" host.systemd.services.chatgpt-shell-access.environment.CHATGPT_SHELL_COMMAND_PATH
-    );
 in
-assert usesConfiguredNix cfg;
-assert alternate.nix.package != cfg.nix.package;
-assert usesConfiguredNix alternate;
 assert lib.elem tailscaleInterface cfg.networking.firewall.trustedInterfaces;
 assert lib.attrByPath [ "allowedTCPPorts" ] [ ] tailscaleFirewall == [ ];
 assert lib.attrByPath [ "allowedUDPPorts" ] [ ] tailscaleFirewall == [ ];

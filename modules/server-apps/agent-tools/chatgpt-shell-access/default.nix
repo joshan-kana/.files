@@ -54,7 +54,6 @@ let
     gnused
     iproute2
     jq
-    config.nix.package
     openssh
     procps
     psmisc
@@ -63,6 +62,7 @@ let
     rsync
     systemd
     util-linux
+    "/run/current-system/sw"
   ];
 in
 {
