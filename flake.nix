@@ -651,7 +651,6 @@
             [
               nixfmt
               nixd
-              nil
               lua-language-server
               basedpyright
               bash-language-server
