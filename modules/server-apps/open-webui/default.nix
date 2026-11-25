@@ -72,7 +72,7 @@ in
       inherit (server.storage) appData;
 
       computerUser = "open-webui-computer";
-      computerVersion = pkgs.open-webui-computer.version;
+      computerPackage = pkgs.open-webui-computer;
       computerPort = 8000;
       computerRoot = "${appData.root}/open-webui-computer";
       computerStateDir = "${computerRoot}/state";
@@ -92,7 +92,7 @@ in
 
         exec ${pkgs.uv}/bin/uvx \
           --python ${pkgs.python3}/bin/python \
-          --from 'cptr[all]==${computerVersion}' \
+          --from 'cptr[all] @ file://${computerPackage}/${computerPackage.wheelName}' \
           python -m uvicorn cptr.app:application \
           --host ${lib.escapeShellArg server.lan.serverIp} \
           --port ${toString computerPort}

@@ -11,6 +11,7 @@ _: {
           let
             pname = "cptr";
             version = "0.9.21";
+            wheelName = "${pname}-${version}-py3-none-any.whl";
           in
           stdenvNoCC.mkDerivation {
             inherit pname version;
@@ -27,10 +28,11 @@ _: {
             passthru.updateUrl = "https://pypi.org/project/cptr/";
 
             passthru.autoUpdate = true;
+            passthru.wheelName = wheelName;
             dontUnpack = true;
             installPhase = ''
               mkdir -p "$out"
-              cp "$src" "$out/"
+              cp "$src" "$out/${wheelName}"
             '';
           }
         ) { };
