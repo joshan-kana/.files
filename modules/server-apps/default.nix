@@ -20,6 +20,11 @@ _: {
   gitea = import ./gitea;
 
   /**
+    Private unified home dashboard.
+  */
+  homeDashboard = import ./home-dashboard;
+
+  /**
     Native Home Assistant service.
   */
   homeAssistant = import ./home-assistant;

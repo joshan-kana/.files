@@ -179,6 +179,7 @@
           programs = {
             deadnix.enable = true;
             csharpier.enable = true;
+            gofmt.enable = true;
             biome = {
               enable = true;
               formatCommand = "lint";
@@ -287,6 +288,10 @@
                 command = lib.getExe pkgs.lua54Packages.luacheck;
                 includes = [ "*.lua" ];
                 priority = 2;
+              };
+              htmlhint = {
+                command = lib.getExe pkgs.htmlhint;
+                includes = [ "*.html" ];
               };
               actionlint = {
                 command = lib.getExe pkgs.actionlint;
@@ -604,6 +609,7 @@
         {
           docs = generatedDocs.book;
           docs-source = generatedDocs.docsSource;
+          home-dashboard = (pkgsFor system).callPackage ./modules/server-apps/home-dashboard/package.nix { };
         }
         // updatePackagesFor system
       );
@@ -770,6 +776,7 @@
                 bash ${./tests/update-container-lock.sh} ${./scripts/update-container-lock.sh}
                 touch "$out"
               '';
+          home-dashboard = self.packages.${system}.home-dashboard;
           git-attributes =
             assert lib.assertMsg (
               builtins.readFile ./.gitattributes == gitAttributesText
