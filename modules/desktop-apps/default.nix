@@ -266,16 +266,18 @@ in
     _:
     lib.optionalAttrs isLinux {
       home = _: {
-        home.packages = [
-          (pkgs.kodi-wayland.withPackages (addons: [ addons.jellyfin ]))
-        ];
+        # Jellyfin is the repository's shared media library.
+        home.packages = [ (pkgs.kodi-wayland.withPackages (addons: [ addons.jellyfin ])) ];
       };
     };
 
   kdeConnect =
     _:
     lib.optionalAttrs isLinux {
-      programs.kdeconnect.enable = true;
+      programs.kdeconnect = {
+        enable = true;
+        package = null;
+      };
       home = _: {
         services.kdeconnect.enable = true;
       };
@@ -283,6 +285,9 @@ in
 
   librespot =
     _:
+    let
+      discoveryPort = 24879;
+    in
     lib.optionalAttrs isLinux {
       home = _: {
         services.librespot = {
@@ -291,7 +296,7 @@ in
             name = config.networking.hostName;
             backend = "pulseaudio";
             device-type = "speaker";
-            zeroconf-port = 24879;
+            zeroconf-port = discoveryPort;
           };
         };
         systemd.user.services.librespot = {
@@ -299,7 +304,7 @@ in
           Install.WantedBy = lib.mkForce [ "graphical-session.target" ];
         };
       };
-      networking.firewall.allowedTCPPorts = [ 24879 ];
+      networking.firewall.allowedTCPPorts = [ discoveryPort ];
     };
 
   jellyfin =
