@@ -47,7 +47,50 @@ Item {
     property var profileDraft: ({})
     property bool profileReady: false
     readonly property string foregroundRole: "connectivity"
-    readonly property bool foregroundBusy: profileAction.running || editApply.running || editQuery.running || detailPending || networks.some(network => network.stateChanging)
+    readonly property bool connectivityCheckBusy: connectivityPolicyQuery.running || connectivityCheck.running
+    readonly property bool canCheckConnectivity: open && !passwordPrompt && !profileEditing && !connectivityCheckBusy && !profileBusy
+    function triggerConnectivityCheck(): void {
+        connectivityCheckAction.trigger();
+    }
+    function checkConnectivity(): void {
+        if (!canCheckConnectivity)
+            return;
+        statusText = "Checking NetworkManager policy…";
+        statusError = false;
+        connectivityPolicyQuery.exec([runtime.busctl, "--system", "--json=short", "--timeout=5s", "get-property", "org.freedesktop.NetworkManager", "/org/freedesktop/NetworkManager", "org.freedesktop.NetworkManager", "ConnectivityCheckAvailable", "ConnectivityCheckEnabled"]);
+    }
+    Process {
+        id: connectivityPolicyQuery
+        stdout: StdioCollector {
+            id: connectivityPolicyOutput
+        }
+        onExited: (code, status) => {
+            if (!panel.open)
+                return;
+            const policy = code === 0 ? Profiles.connectivityPolicy(connectivityPolicyOutput.text) : null;
+            if (policy === null || !policy.available || !policy.enabled) {
+                panel.statusText = policy === null ? "Connectivity check policy unavailable" : !policy.available ? "Connectivity probe not configured" : "Connectivity probe disabled";
+                panel.statusError = policy === null;
+                return;
+            }
+            panel.statusText = "Checking connectivity…";
+            connectivityCheck.exec([panel.runtime.busctl, "--system", "--json=short", "--timeout=15s", "call", "org.freedesktop.NetworkManager", "/org/freedesktop/NetworkManager", "org.freedesktop.NetworkManager", "CheckConnectivity"]);
+        }
+    }
+    Process {
+        id: connectivityCheck
+        stdout: StdioCollector {
+            id: connectivityOutput
+        }
+        onExited: (code, status) => {
+            if (!panel.open)
+                return;
+            const result = code === 0 ? Profiles.connectivityResult(connectivityOutput.text) : null;
+            panel.statusText = result || "Connectivity check failed";
+            panel.statusError = result === null;
+        }
+    }
+    readonly property bool foregroundBusy: profileAction.running || editApply.running || editQuery.running || connectivityCheckBusy || detailPending || networks.some(network => network.stateChanging)
     readonly property bool profileBusy: editQuery.running || editApply.running
     readonly property bool profileEditable: savedView && savedSelected && ["802-11-wireless", "802-3-ethernet"].includes(savedSelected.kind) && detailUuid === savedSelected.uuid
 
@@ -722,7 +765,7 @@ Item {
         motion: panel.motion
         message: panel.statusText
         idleMessage: "Browse available connections"
-        phase: panel.statusError ? "error" : panel.actionUuid.length > 0 || panel.detailPending ? "busy" : "idle"
+        phase: panel.statusError ? "error" : panel.actionUuid.length > 0 || panel.detailPending || panel.connectivityCheckBusy ? "busy" : "idle"
     }
 
     Item {
@@ -1278,6 +1321,22 @@ Item {
             left: parent.left
         }
         spacing: panel.theme.spacing2
+
+        ShellAction {
+            id: connectivityCheckAction
+            visible: !panel.profileEditing && !panel.passwordPrompt
+            width: parent.width
+            height: Math.max(40, implicitHeight)
+            runtime: panel.runtime
+            theme: panel.theme
+            motion: panel.motion
+            compact: true
+            horizontalCompact: true
+            title: "Check connectivity"
+            shortcut: panel.runtime.shellHint("NetworkPanel.checkConnectivity")
+            enabled: panel.canCheckConnectivity
+            onActivated: panel.checkConnectivity()
+        }
 
         Row {
             width: parent.width

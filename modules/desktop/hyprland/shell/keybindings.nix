@@ -204,6 +204,7 @@
           "ControlsMediaCard.repeat" = "B";
           "ControlsMediaCard.shuffle" = "Z";
           "NetworkPanel.advanced" = "A";
+          "NetworkPanel.checkConnectivity" = "C";
           "NetworkPanel.connect" = "ENTER";
           "NetworkPanel.connectNetwork" = "ENTER";
           "NetworkPanel.connectProfile" = "ENTER";

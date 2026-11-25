@@ -436,6 +436,10 @@ FocusScope {
                 action: "Details / refresh current view"
             },
             {
+                key: root.runtime.shellHint("NetworkPanel.checkConnectivity"),
+                action: "Run configured NetworkManager connectivity check"
+            },
+            {
                 key: root.runtime.shellHint("SystemContent.legend.advanced_network_editor"),
                 action: "Advanced network editor"
             },
@@ -2376,6 +2380,12 @@ FocusScope {
                         } else {
                             return;
                         }
+                        event.accepted = true;
+                        return;
+                    }
+                    if (root.runtime.shellMatchesHint("NetworkPanel.checkConnectivity", event.key, event.modifiers)) {
+                        if (!event.isAutoRepeat)
+                            networkPanel.invoke("triggerConnectivityCheck");
                         event.accepted = true;
                         return;
                     }

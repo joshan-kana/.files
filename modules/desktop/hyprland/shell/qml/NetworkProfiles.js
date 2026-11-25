@@ -91,3 +91,44 @@ function modification(uuid, fields, original, draft) {
   }
   return args;
 }
+
+// NetworkManager owns the probe URI, policy and connectivity classification.
+// A cached/full connectivity state is not proof that a probe was enabled.
+function connectivityPolicy(output) {
+  try {
+    const rows = output
+      .trim()
+      .split("\n")
+      .map((row) => JSON.parse(row));
+    if (
+      rows.length !== 2 ||
+      !rows.every((row) => row.type === "b" && typeof row.data === "boolean")
+    )
+      return null;
+    return { available: rows[0].data, enabled: rows[1].data };
+  } catch (_) {
+    return null;
+  }
+}
+function connectivityResult(output) {
+  try {
+    const reply = JSON.parse(output);
+    if (
+      reply.type !== "u" ||
+      !Array.isArray(reply.data) ||
+      reply.data.length !== 1
+    )
+      return null;
+    return (
+      {
+        0: "Unknown connectivity",
+        1: "No network connectivity",
+        2: "Captive portal detected",
+        3: "Limited connectivity",
+        4: "Full connectivity",
+      }[reply.data[0]] || null
+    );
+  } catch (_) {
+    return null;
+  }
+}
