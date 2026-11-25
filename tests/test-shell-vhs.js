@@ -76,6 +76,12 @@ function withCompositor(fn, options = {}) {
       [
         "#!/bin/sh",
         'if [ "$1" = getoption ]; then',
+        '  [ "${MOCK_FAIL_QUERY:-0}" = 0 ] || exit 1',
+        '  if [ -f "$XDG_RUNTIME_DIR/mock-compositor" ]; then',
+        "    MOCK_DAMAGE=$(sed -n '1p' \"$XDG_RUNTIME_DIR/mock-compositor\")",
+        "    MOCK_VFR=$(sed -n '2p' \"$XDG_RUNTIME_DIR/mock-compositor\")",
+        "    MOCK_SHADER=$(sed -n '3p' \"$XDG_RUNTIME_DIR/mock-compositor\")",
+        "  fi",
         '  case "$2" in',
         '    debug:damage_tracking) printf "int: %s\\nset: true\\n" "$MOCK_DAMAGE" ;;',
         '    debug:vfr) printf "bool: %s\\nset: true\\n" "$MOCK_VFR" ;;',
@@ -84,6 +90,14 @@ function withCompositor(fn, options = {}) {
         "  esac",
         'elif [ "$1" = eval ]; then',
         '  printf "%s\\n" "$2" >> "$VHS_CALLS"',
+        "  if [ \"${MOCK_REJECT:-0}\" != 0 ]; then printf 'error\\n'; exit 0; fi",
+        '  if [ "${MOCK_IGNORE:-0}" = 0 ]; then',
+        "    damage=$(printf '%s' \"$2\" | sed -n 's/.*damage_tracking = \\([0-9]\\).*/\\1/p')",
+        "    vfr=$(printf '%s' \"$2\" | sed -En 's/.*vfr = (true|false).*/\\1/p')",
+        '    shader=$(printf \'%s\' "$2" | sed -n \'s/.*screen_shader = "\\([^"]*\\)".*/\\1/p\')',
+        '    printf \'%s\\n%s\\n%s\\n\' "${damage:-$MOCK_DAMAGE}" "${vfr:-$MOCK_VFR}" "$shader" > "$XDG_RUNTIME_DIR/mock-compositor"',
+        "  fi",
+        "  printf 'ok\\n'",
         "else",
         "  exit 1",
         "fi",
@@ -391,4 +405,24 @@ test("VHS backend inherits modified Nix defaults and bounds", () => {
       },
     },
   );
+});
+
+test("VHS never discards its recovery state after a rejected or unverified restore", () => {
+  withCompositor(({ tmp, env, run }) => {
+    const state = path.join(tmp, "desktop-shell", "vhs-state-test-session");
+    env.MOCK_FAIL_QUERY = "1";
+    assert.equal(run("off").status, 1);
+    delete env.MOCK_FAIL_QUERY;
+    assert.equal(run("on", "70").status, 0);
+    env.MOCK_REJECT = "1";
+    assert.notEqual(run("off").status, 0);
+    assert.ok(fs.existsSync(state));
+    delete env.MOCK_REJECT;
+    env.MOCK_IGNORE = "1";
+    assert.notEqual(run("off").status, 0);
+    assert.ok(fs.existsSync(state));
+    delete env.MOCK_IGNORE;
+    assert.equal(run("off").status, 0);
+    assert.equal(fs.existsSync(state), false);
+  });
 });

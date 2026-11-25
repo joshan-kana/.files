@@ -27,13 +27,29 @@ luaEscape() {
   sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'
 }
 
+applyConfig() {
+  local reply
+  reply="$(hyprctl eval "$1")" || return 1
+  if [[ "$reply" != ok ]]; then
+    printf '%s\n' "$reply" >&2
+    return 1
+  fi
+}
+
+verifyConfig() {
+  [[ "$(optionValue debug:damage_tracking int)" == "$1" &&
+  "$(optionValue debug:vfr bool)" == "$2" &&
+  "$(optionValue decoration:screen_shader str)" == "$3" ]]
+}
+
 if [[ "$mode" == off ]]; then
   if [[ ! -e "$stateFile" ]]; then
     # Preserve an unrelated user-configured screen shader. Also clean up
     # the original static VHS shader when upgrading in a running session.
-    currentShader="$(optionValue decoration:screen_shader str)" || exit 0
+    currentShader="$(optionValue decoration:screen_shader str)" || exit 1
     if [[ "$currentShader" == "$runtimeDir/"* ]]; then
-      exec hyprctl eval 'hl.config({ decoration = { screen_shader = "" } })'
+      applyConfig 'hl.config({ decoration = { screen_shader = "" } })'
+      [[ "$(optionValue decoration:screen_shader str)" == "" ]] || exit 1
     fi
     exit 0
   fi
@@ -48,7 +64,8 @@ if [[ "$mode" == off ]]; then
   fi
 
   escapedShader="$(printf '%s' "$shader" | luaEscape)"
-  hyprctl eval "hl.config({ debug = { damage_tracking = $damage, vfr = $vfr }, decoration = { screen_shader = \"$escapedShader\" } })"
+  applyConfig "hl.config({ debug = { damage_tracking = $damage, vfr = $vfr }, decoration = { screen_shader = \"$escapedShader\" } })"
+  verifyConfig "$damage" "$vfr" "$shader"
   rm -f "$stateFile"
   exit 0
 fi
@@ -130,4 +147,5 @@ fi
 escapedShader="$(printf '%s' "$shader" | luaEscape)"
 # Time-based animation needs continuous redraws even while the desktop is idle.
 # Restore the exact previous settings when turning the effect off.
-hyprctl eval "hl.config({ debug = { damage_tracking = 0, vfr = false }, decoration = { screen_shader = \"$escapedShader\" } })"
+applyConfig "hl.config({ debug = { damage_tracking = 0, vfr = false }, decoration = { screen_shader = \"$escapedShader\" } })"
+verifyConfig 0 false "$shader"
