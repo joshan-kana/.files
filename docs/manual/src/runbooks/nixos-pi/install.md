@@ -270,4 +270,14 @@ sbt --option extra-substituters https://nixos-raspberrypi.cachix.org \
   --option extra-trusted-public-keys nixos-raspberrypi.cachix.org-1:4iMO9LXa8BqhU+Rpg6LQKiGa2lsNh/j2oiYLNOQ5sPI=
 ```
 
+When changing Jellyfin MPV Shim settings, stop its user service before switching the system and start it afterward. Otherwise the old process may overwrite the new configuration as it exits:
+
+```sh
+systemctl --user stop jellyfin-mpv-shim.service
+sup
+systemctl --user start jellyfin-mpv-shim.service
+```
+
+Verify the journal reports `Using external mpv playback backend.` The Pi-specific MPV uses V4L2 hardware decoding and DMA-BUF presentation with two hardware decoder threads.
+
 Test HDMI output and audio, Kodi, Chromium, Moonlight and Jellyfin MPV Shim on the Pi. Verify the selected display mode and HDR signalling with representative media on the physical display. Video decoding and codec compatibility depend on the actual hardware and media. Reinstall by writing a current image to the drive and copying the host credentials onto its root partition. Restore additional mutable data from its normal backups where applicable.
