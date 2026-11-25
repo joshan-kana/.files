@@ -9,45 +9,41 @@ let
   inherit (config.dotfiles) server;
   inherit (config.dotfiles.users) primary;
   tunnelSecret = "${server.secretsDir}/chatgpt-shell-tunnel.env";
-  macSshKeySecret = "${server.secretsDir}/chatgpt-shell-mac";
-  parallelsSshKeySecret = "${server.secretsDir}/chatgpt-shell-nixos-arm-parallels";
-  piSshKeySecret = "${server.secretsDir}/chatgpt-shell-nixos-pi";
-  parallelsSudoSshKeySecret = "${server.secretsDir}/nixos-arm-parallels-sudo";
-  piSudoSshKeySecret = "${server.secretsDir}/nixos-pi-sudo";
-  sudoSshKeySecret = "${server.secretsDir}/chatgpt-shell-sudo";
   githubSecret = "${server.secretsDir}/github-self-hosted-agents.env";
   knownHostsFile = "${config.users.users.${primary.name}.home}/.ssh/known_hosts";
   remoteAuthAgentSocket = "/run/chatgpt-shell-access/remote-sudo-agent.sock";
 
-  macHost = "mac.home";
-  parallelsHost = "nixos-arm-parallels.home";
-  piHost = "nixos-pi.home";
-
   remoteTargets = {
     mac = {
-      sshTarget = "${primary.name}@${macHost}";
-      credential = macSshKeySecret;
       shell = "/bin/zsh";
       forwardAgent = false;
     };
     nixos-arm-parallels = {
-      sshTarget = "${primary.name}@${parallelsHost}";
-      credential = parallelsSshKeySecret;
       shell = "/run/current-system/sw/bin/bash";
       forwardAgent = true;
     };
     nixos-pi = {
-      sshTarget = "${primary.name}@${piHost}";
-      credential = piSshKeySecret;
       shell = "/run/current-system/sw/bin/bash";
       forwardAgent = true;
     };
   };
   remoteTargetConfig = lib.mapAttrs (name: target: {
-    ssh_target = target.sshTarget;
+    ssh_target = "${primary.name}@${name}.home";
     credential = "chatgpt-shell-${name}";
     inherit (target) shell forwardAgent;
   }) remoteTargets;
+  remoteElevationCredentials = map (name: "${name}-sudo") (
+    lib.attrNames (lib.filterAttrs (_: target: target.forwardAgent) remoteTargets)
+  );
+  credentials =
+    lib.genAttrs (
+      [ "chatgpt-shell-sudo" ]
+      ++ map (name: "chatgpt-shell-${name}") (lib.attrNames remoteTargets)
+      ++ remoteElevationCredentials
+    ) (name: "${server.secretsDir}/${name}")
+    // {
+      chatgpt-shell-known-hosts = knownHostsFile;
+    };
   shellPackages = with pkgs; [
     bash
     coreutils
@@ -87,13 +83,9 @@ in
 
     unitConfig.AssertPathExists = [
       tunnelSecret
-      sudoSshKeySecret
-      parallelsSudoSshKeySecret
-      piSudoSshKeySecret
       githubSecret
-      knownHostsFile
     ]
-    ++ lib.mapAttrsToList (_: target: target.credential) remoteTargets;
+    ++ lib.attrValues credentials;
 
     path = shellPackages;
 
@@ -117,14 +109,7 @@ in
         tunnelSecret
         githubSecret
       ];
-      LoadCredential =
-        lib.mapAttrsToList (name: target: "chatgpt-shell-${name}:${target.credential}") remoteTargets
-        ++ [
-          "chatgpt-shell-sudo:${sudoSshKeySecret}"
-          "nixos-arm-parallels-sudo:${parallelsSudoSshKeySecret}"
-          "nixos-pi-sudo:${piSudoSshKeySecret}"
-          "chatgpt-shell-known-hosts:${knownHostsFile}"
-        ];
+      LoadCredential = lib.mapAttrsToList (name: path: "${name}:${path}") credentials;
       ExecStart = pkgs.writeShellScript "chatgpt-shell-access-start" ''
         set -euo pipefail
         rm -f "$SSH_AUTH_SOCK" "$CHATGPT_SHELL_REMOTE_AUTH_AGENT"
@@ -136,15 +121,10 @@ in
         done
         [ -S "$SSH_AUTH_SOCK" ]
         [ -S "$CHATGPT_SHELL_REMOTE_AUTH_AGENT" ]
-        cat "$CREDENTIALS_DIRECTORY/chatgpt-shell-sudo" | \
-          ${pkgs.bash}/bin/bash -c \
-            'SSH_AUTH_SOCK="$1" exec ${pkgs.openssh}/bin/ssh-add -' _ "$SSH_AUTH_SOCK"
-        cat "$CREDENTIALS_DIRECTORY/nixos-arm-parallels-sudo" | \
-          ${pkgs.bash}/bin/bash -c \
-            'SSH_AUTH_SOCK="$1" exec ${pkgs.openssh}/bin/ssh-add -' _ "$CHATGPT_SHELL_REMOTE_AUTH_AGENT"
-        cat "$CREDENTIALS_DIRECTORY/nixos-pi-sudo" | \
-          ${pkgs.bash}/bin/bash -c \
-            'SSH_AUTH_SOCK="$1" exec ${pkgs.openssh}/bin/ssh-add -' _ "$CHATGPT_SHELL_REMOTE_AUTH_AGENT"
+        ${pkgs.openssh}/bin/ssh-add - < "$CREDENTIALS_DIRECTORY/chatgpt-shell-sudo"
+        for credential in ${lib.escapeShellArgs remoteElevationCredentials}; do
+          SSH_AUTH_SOCK="$CHATGPT_SHELL_REMOTE_AUTH_AGENT" ${pkgs.openssh}/bin/ssh-add - < "$CREDENTIALS_DIRECTORY/$credential"
+        done
         exec ${pkgs.openai-tunnel-client}/bin/tunnel-client run --log.level=info --log.format=struct-text
       '';
       Restart = "always";
