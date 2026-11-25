@@ -54,7 +54,7 @@ in
     ];
   };
 
-  virtualisation.vmVariant.services.ntfy-sh.enable = lib.mkForce false;
+  virtualisation.vmVariant.dotfiles.scopes.serverApps.ntfy.enable = lib.mkForce false;
 
   comin = import ./comin.nix;
 }

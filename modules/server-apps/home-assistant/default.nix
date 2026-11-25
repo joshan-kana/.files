@@ -65,8 +65,6 @@ in
     extraGroups = [ appData.group.name ];
   };
 
-  virtualisation.vmVariant.services.home-assistant.enable = lib.mkForce false;
-
   systemd = {
     tmpfiles.rules = [
       "d ${configDir} 0750 hass hass - -"
@@ -99,4 +97,6 @@ in
       pathConfig.PathChanged = "${configDir}/custom_components/tuya_local/devices/breville_airdynamic3d_fan.yaml";
     };
   };
+
+  virtualisation.vmVariant.dotfiles.scopes.serverApps.homeAssistant.enable = lib.mkForce false;
 }

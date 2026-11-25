@@ -1,5 +1,6 @@
 {
   config,
+  lib,
   ...
 }:
 
@@ -32,4 +33,6 @@
       RemainAfterExit = false;
     };
   };
+
+  virtualisation.vmVariant.dotfiles.scopes.serverApps.webhook.enable = lib.mkForce false;
 }
