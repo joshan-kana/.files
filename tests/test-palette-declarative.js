@@ -405,3 +405,58 @@ test("runtime bounds follow the supplied configuration instead of fixed literals
     );
   }
 });
+
+test("preference validity and inheritance follow changing declared constraints", () => {
+  const source = read("qml/PreferenceStore.qml");
+  const body = (signature) => source.split(signature)[1].split("\n    }")[0];
+  const valid = new Function(
+    "key",
+    "value",
+    "defaults",
+    "constraints",
+    body("function valid(key: string, value: var): bool {"),
+  );
+  const has = new Function(
+    "key",
+    "overrides",
+    "valid",
+    body("function has(key: string): bool {"),
+  );
+  const effective = new Function(
+    "key",
+    "has",
+    "overrides",
+    "defaults",
+    body("function value(key: string): var {"),
+  );
+  const defaults = { opacity: 0.6, seek: 10, size: 5, enabled: false };
+  const constraints = {
+    opacity: { min: 0.2, max: 1 },
+    seek: { values: [10, 30, 120] },
+    size: { min: 1, max: 10, integer: true },
+  };
+  const overrides = { opacity: 0.4, seek: 120, size: 5.5, enabled: true };
+  const accepts = (key) =>
+    has(key, overrides, (name, value) =>
+      valid(name, value, defaults, constraints),
+    );
+  const value = (key) => effective(key, accepts, overrides, defaults);
+  assert.equal(value("opacity"), 0.4);
+  assert.equal(value("seek"), 120);
+  assert.equal(value("size"), 5);
+  assert.equal(value("enabled"), true);
+  constraints.opacity.min = 0.5;
+  constraints.seek.values = [10, 30];
+  assert.equal(value("opacity"), 0.6);
+  assert.equal(value("seek"), 10);
+  assert.equal(accepts("opacity"), false);
+  assert.equal(accepts("seek"), false);
+  defaults.opacity = 0.8;
+  assert.equal(value("opacity"), 0.8);
+  constraints.opacity.min = 0.2;
+  assert.equal(value("opacity"), 0.4);
+  delete overrides.opacity;
+  assert.equal(value("opacity"), 0.8);
+  assert.equal(valid("size", Infinity, defaults, constraints), false);
+  assert.equal(valid("enabled", "true", defaults, constraints), false);
+});

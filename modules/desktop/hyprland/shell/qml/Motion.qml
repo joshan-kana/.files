@@ -10,6 +10,7 @@ QtObject {
     property PreferenceStore preferences: PreferenceStore {
         id: qmlPreferences
         category: "Motion"
+        constraints: root.runtime.constraints.motion
         defaults: ({
                 animationsEnabled: root.runtime.animationsEnabled,
                 durationMultiplier: root.runtime.motionDurationMultiplier
@@ -26,7 +27,7 @@ QtObject {
             syncWallpaperMotion();
         }
     }
-    readonly property real durationMultiplier: runtime.bounded("motion", "durationMultiplier", qmlPreferences.value("durationMultiplier"))
+    readonly property real durationMultiplier: qmlPreferences.value("durationMultiplier")
     function setDurationMultiplier(value: real): void {
         qmlPreferences.set("durationMultiplier", runtime.bounded("motion", "durationMultiplier", value));
     }

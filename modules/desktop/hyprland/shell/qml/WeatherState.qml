@@ -13,6 +13,7 @@ QtObject {
     property PreferenceStore preferences: PreferenceStore {
         id: saved
         category: "Weather"
+        constraints: weather.runtime.constraints.weather
         defaults: ({
                 location: weather.declaredLocation,
                 units: weather.runtime.weatherUnits
@@ -21,7 +22,7 @@ QtObject {
     readonly property string declaredLocation: Quickshell.env("DESKTOP_SHELL_WEATHER_LOCATION") || runtime.weatherLocation
     readonly property string preferredLocation: saved.value("location")
     readonly property bool locationOverridden: saved.has("location")
-    readonly property string units: ["metric", "imperial"].includes(saved.value("units")) ? saved.value("units") : runtime.weatherUnits
+    readonly property string units: saved.value("units")
     property string requestLocation: ""
     property bool initialized: false
     Component.onCompleted: {
@@ -56,7 +57,8 @@ QtObject {
     }
 
     function toggleUnits(): void {
-        saved.set("units", units === "metric" ? "imperial" : "metric");
+        const values = runtime.constraints.weather.units.values;
+        saved.set("units", values[(values.indexOf(units) + 1) % values.length]);
     }
 
     function resetUnits(): void {

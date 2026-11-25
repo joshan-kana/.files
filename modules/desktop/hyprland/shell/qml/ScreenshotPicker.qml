@@ -217,9 +217,7 @@ Item {
         ]);
     }
     function encoding(key: string): var {
-        const value = qmlCapturePreferences.value(key);
-        const rule = runtime.constraints.captureEncoding[key];
-        return rule && !rule.values.includes(value) ? runtime.captureEncoding[key] : value;
+        return qmlCapturePreferences.value(key);
     }
     function setEncoding(key: string, value: var): void {
         if (countingDown || exporting)
@@ -251,6 +249,7 @@ Item {
     property PreferenceStore capturePreferences: PreferenceStore {
         id: qmlCapturePreferences
         category: "Capture"
+        constraints: picker.runtime.constraints.captureEncoding
         defaults: Object.assign({
             freezeEnabled: picker.runtime.captureFreezeEnabled
         }, picker.runtime.captureEncoding)

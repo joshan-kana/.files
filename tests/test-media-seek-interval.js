@@ -18,13 +18,17 @@ test("seek interval has one validated persistent preference and a declarative de
   );
   assert.match(
     appearance,
-    /readonly property int mediaSeekSeconds: seekIntervals\.includes\(effective\("mediaSeekSeconds"\)\)/,
+    /readonly property int mediaSeekSeconds: effective\("mediaSeekSeconds"\)/,
   );
   assert.match(
     appearance,
     /storeOverride\("mediaSeekSeconds", seekIntervals\[index\]\)/,
   );
   assert.match(appearance, /saved\.set\(key, value\)/);
+  assert.match(
+    appearance,
+    /constraints: appearance\.runtime\.constraints\.appearance/,
+  );
   const media = read("MediaState.qml");
   const indexExpression = media.match(
     /readonly property int seekIntervalIndex: (.+)/,

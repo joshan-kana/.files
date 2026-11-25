@@ -8,6 +8,7 @@ QtObject {
     id: store
     required property string category
     required property var defaults
+    property var constraints: ({})
     property string location: "file://" + (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/desktop-shell/preferences.ini"
     property Settings backend: Settings {
         id: persisted
@@ -33,10 +34,15 @@ QtObject {
     function valid(key: string, value: var): bool {
         if (!Object.prototype.hasOwnProperty.call(defaults, key) || value === null || typeof value !== typeof defaults[key])
             return false;
-        if (typeof value === "number")
-            return Number.isFinite(value);
-        if (typeof value === "object")
-            return !Array.isArray(value);
+        if (typeof value === "number" && !Number.isFinite(value) || typeof value === "object" && Array.isArray(value))
+            return false;
+        const rule = constraints[key];
+        if (!rule)
+            return true;
+        if (rule.values && !rule.values.includes(value))
+            return false;
+        if (typeof value === "number" && (rule.integer && !Number.isInteger(value) || rule.min !== undefined && value < rule.min || rule.max !== undefined && value > rule.max))
+            return false;
         return true;
     }
 

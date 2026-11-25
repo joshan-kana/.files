@@ -97,6 +97,7 @@ QtObject {
         id: saved
         category: "Resources"
         defaults: root.runtime.resourceSampling
+        constraints: root.runtime.constraints.resourceSampling
     }
     Component.onCompleted: {
         const interval = saved.legacy("intervalOverride", 0);
@@ -106,16 +107,14 @@ QtObject {
             historyLength: history > 0 ? history : undefined
         });
     }
-    readonly property int intervalSeconds: runtime.constraints.resourceSampling.intervalSeconds.values.includes(saved.value("intervalSeconds")) ? saved.value("intervalSeconds") : runtime.resourceSampling.intervalSeconds
-    readonly property int historyLength: runtime.constraints.resourceSampling.historyLength.values.includes(saved.value("historyLength")) ? saved.value("historyLength") : runtime.resourceSampling.historyLength
+    readonly property int intervalSeconds: saved.value("intervalSeconds")
+    readonly property int historyLength: saved.value("historyLength")
     readonly property int historySeconds: historyLength * intervalSeconds
     function setInterval(value: int): void {
-        if (runtime.constraints.resourceSampling.intervalSeconds.values.includes(value))
-            saved.set("intervalSeconds", value);
+        saved.set("intervalSeconds", value);
     }
     function setHistory(value: int): void {
-        if (runtime.constraints.resourceSampling.historyLength.values.includes(value))
-            saved.set("historyLength", value);
+        saved.set("historyLength", value);
     }
     function resetSampling(): void {
         saved.resetAll();

@@ -12,16 +12,11 @@ test("window and glass opacity persist independently from 20% to 100%", () => {
     ["glassOpacity", "0.70"],
   ]) {
     assert.match(prefs, /defaults: appearance\.runtime\.appearanceDefaults/);
-    assert.ok(
-      prefs.includes(
-        setting +
-          ': runtime.bounded("appearance", "' +
-          setting +
-          '", effective("' +
-          setting +
-          '"))',
-      ),
+    assert.match(
+      prefs,
+      /constraints: appearance\.runtime\.constraints\.appearance/,
     );
+    assert.ok(prefs.includes(setting + ': effective("' + setting + '")'));
     assert.match(
       prefs,
       new RegExp('storeOverride\\("' + setting + '", next\\)'),

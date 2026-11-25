@@ -56,6 +56,7 @@ let
         max = 2.5;
       };
       wallpaperSpectrumBars = {
+        integer = true;
         min = 24;
         max = 96;
       };
@@ -64,10 +65,12 @@ let
         max = 1.0;
       };
       barIslandHeight = {
+        integer = true;
         min = 44;
         max = 60;
       };
       frameThickness = {
+        integer = true;
         min = 18;
         max = 36;
       };
@@ -270,6 +273,10 @@ let
         ];
       };
     };
+    weather.units.values = [
+      "metric"
+      "imperial"
+    ];
     motion = {
       durationMultiplier = {
         min = 0.75;
@@ -1042,10 +1049,7 @@ in
   };
 
   scopeOptions.weatherUnits = lib.mkOption {
-    type = lib.types.enum [
-      "metric"
-      "imperial"
-    ];
+    type = lib.types.enum constraints.weather.units.values;
     default = "metric";
     description = "Default units for the shared weather forecast.";
   };
@@ -1322,6 +1326,7 @@ in
           appearance = constraints.appearance // {
             # Keep the native compositor baseline representable in the UI.
             blurSize = {
+              integer = true;
               min = lib.min 5 config.wayland.windowManager.hyprland.settings.config.decoration.blur.size;
               max = lib.max 25 config.wayland.windowManager.hyprland.settings.config.decoration.blur.size;
             };

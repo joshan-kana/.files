@@ -12,23 +12,24 @@ QtObject {
         id: saved
         category: "Appearance"
         defaults: appearance.runtime.appearanceDefaults
+        constraints: appearance.runtime.constraints.appearance
     }
 
     readonly property bool wallpaperSpectrumEnabled: effective("wallpaperSpectrumEnabled")
-    readonly property string wallpaperResizeMode: runtime.constraints.appearance.wallpaperResizeMode.values.includes(effective("wallpaperResizeMode")) ? effective("wallpaperResizeMode") : runtime.appearanceDefaults.wallpaperResizeMode
+    readonly property string wallpaperResizeMode: effective("wallpaperResizeMode")
     readonly property string wallpaperTargetOutput: effective("wallpaperTargetOutput")
     readonly property bool musicReactiveEnabled: effective("musicReactiveEnabled")
-    readonly property real musicReactiveSensitivity: runtime.bounded("appearance", "musicReactiveSensitivity", effective("musicReactiveSensitivity"))
-    readonly property real musicReactiveAttack: runtime.bounded("appearance", "musicReactiveAttack", effective("musicReactiveAttack"))
-    readonly property real musicReactiveRelease: runtime.bounded("appearance", "musicReactiveRelease", effective("musicReactiveRelease"))
-    readonly property real musicReactiveSmoothing: runtime.bounded("appearance", "musicReactiveSmoothing", effective("musicReactiveSmoothing"))
-    readonly property real musicReactiveIntensity: runtime.bounded("appearance", "musicReactiveIntensity", effective("musicReactiveIntensity"))
-    readonly property string musicReactiveEmphasis: runtime.constraints.appearance.musicReactiveEmphasis.values.includes(effective("musicReactiveEmphasis")) ? effective("musicReactiveEmphasis") : runtime.appearanceDefaults.musicReactiveEmphasis
-    readonly property real spectrumSensitivity: runtime.bounded("appearance", "spectrumSensitivity", effective("spectrumSensitivity"))
-    readonly property real spectrumAttack: runtime.bounded("appearance", "spectrumAttack", effective("spectrumAttack"))
-    readonly property real spectrumRelease: runtime.bounded("appearance", "spectrumRelease", effective("spectrumRelease"))
-    readonly property int wallpaperSpectrumBars: runtime.bounded("appearance", "wallpaperSpectrumBars", effective("wallpaperSpectrumBars"))
-    readonly property real wallpaperSpectrumOpacity: runtime.bounded("appearance", "wallpaperSpectrumOpacity", effective("wallpaperSpectrumOpacity"))
+    readonly property real musicReactiveSensitivity: effective("musicReactiveSensitivity")
+    readonly property real musicReactiveAttack: effective("musicReactiveAttack")
+    readonly property real musicReactiveRelease: effective("musicReactiveRelease")
+    readonly property real musicReactiveSmoothing: effective("musicReactiveSmoothing")
+    readonly property real musicReactiveIntensity: effective("musicReactiveIntensity")
+    readonly property string musicReactiveEmphasis: effective("musicReactiveEmphasis")
+    readonly property real spectrumSensitivity: effective("spectrumSensitivity")
+    readonly property real spectrumAttack: effective("spectrumAttack")
+    readonly property real spectrumRelease: effective("spectrumRelease")
+    readonly property int wallpaperSpectrumBars: effective("wallpaperSpectrumBars")
+    readonly property real wallpaperSpectrumOpacity: effective("wallpaperSpectrumOpacity")
     readonly property var reactiveParameters: [
         {
             key: "musicReactiveSensitivity",
@@ -94,8 +95,8 @@ QtObject {
         }
         return "Custom";
     }
-    readonly property int barIslandHeight: runtime.bounded("appearance", "barIslandHeight", effective("barIslandHeight"))
-    readonly property int frameThickness: runtime.bounded("appearance", "frameThickness", effective("frameThickness"))
+    readonly property int barIslandHeight: effective("barIslandHeight")
+    readonly property int frameThickness: effective("frameThickness")
     function setGeometryPreference(key: string, value: real): void {
         const bounds = ["barIslandHeight", "frameThickness"].includes(key);
         if (bounds && Number.isFinite(value)) {
@@ -106,10 +107,10 @@ QtObject {
     readonly property bool frameVisible: effective("frameVisible")
     readonly property bool windowTransparencyEnabled: effective("windowTransparencyEnabled")
     readonly property bool shellGlassEnabled: effective("shellGlassEnabled")
-    readonly property real windowOpacity: runtime.bounded("appearance", "windowOpacity", effective("windowOpacity"))
-    readonly property real glassOpacity: runtime.bounded("appearance", "glassOpacity", effective("glassOpacity"))
+    readonly property real windowOpacity: effective("windowOpacity")
+    readonly property real glassOpacity: effective("glassOpacity")
     readonly property bool blurEnabled: effective("blurEnabled")
-    readonly property int blurSize: runtime.bounded("appearance", "blurSize", effective("blurSize"))
+    readonly property int blurSize: effective("blurSize")
     readonly property var vhsParameterKeys: ["vhsIntensity", "vhsTracking", "vhsChroma", "vhsNoise", "vhsScanlines", "vhsSpeed", "vhsDropouts"]
     readonly property var vhsPresets: ({
             Subtle: [0.25, 0.15, 0.25, 0.10, 0.15, 0.8, 0.0],
@@ -126,21 +127,21 @@ QtObject {
         return "Custom";
     }
     readonly property bool vhsEnabled: effective("vhsEnabled")
-    readonly property real vhsIntensity: runtime.bounded("appearance", "vhsIntensity", effective("vhsIntensity"))
-    readonly property real vhsTracking: runtime.bounded("appearance", "vhsTracking", effective("vhsTracking"))
-    readonly property real vhsChroma: runtime.bounded("appearance", "vhsChroma", effective("vhsChroma"))
-    readonly property real vhsNoise: runtime.bounded("appearance", "vhsNoise", effective("vhsNoise"))
-    readonly property real vhsScanlines: runtime.bounded("appearance", "vhsScanlines", effective("vhsScanlines"))
-    readonly property real vhsSpeed: runtime.bounded("appearance", "vhsSpeed", effective("vhsSpeed"))
-    readonly property real vhsDropouts: runtime.bounded("appearance", "vhsDropouts", effective("vhsDropouts"))
+    readonly property real vhsIntensity: effective("vhsIntensity")
+    readonly property real vhsTracking: effective("vhsTracking")
+    readonly property real vhsChroma: effective("vhsChroma")
+    readonly property real vhsNoise: effective("vhsNoise")
+    readonly property real vhsScanlines: effective("vhsScanlines")
+    readonly property real vhsSpeed: effective("vhsSpeed")
+    readonly property real vhsDropouts: effective("vhsDropouts")
     function hasOverride(key: string): bool {
         return saved.has(key);
     }
-    readonly property string mediaVisualizerMode: runtime.constraints.appearance.mediaVisualizerMode.values.includes(effective("mediaVisualizerMode")) ? effective("mediaVisualizerMode") : runtime.appearanceDefaults.mediaVisualizerMode
+    readonly property string mediaVisualizerMode: effective("mediaVisualizerMode")
     readonly property bool mediaLyricsVisible: effective("mediaLyricsVisible")
     readonly property var seekIntervals: runtime.constraints.appearance.mediaSeekSeconds.values
     readonly property string mediaPreferredPlayer: effective("mediaPreferredPlayer")
-    readonly property int mediaSeekSeconds: seekIntervals.includes(effective("mediaSeekSeconds")) ? effective("mediaSeekSeconds") : runtime.appearanceDefaults.mediaSeekSeconds
+    readonly property int mediaSeekSeconds: effective("mediaSeekSeconds")
 
     function setMediaPreferredPlayer(identity: string): void {
         storeOverride("mediaPreferredPlayer", identity);
