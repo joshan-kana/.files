@@ -559,8 +559,7 @@ FocusScope {
                             onActivated: {
                                 center.selectedIndex = groupItem.modelData.groupIndex;
                                 center.selectedMemberIndex = 0;
-                                if (!event.isAutoRepeat)
-                                    center.toggleExpanded();
+                                center.toggleExpanded();
                             }
                         }
                     }
@@ -614,17 +613,15 @@ FocusScope {
                                 center.selectedIndex = groupItem.modelData.groupIndex;
                                 center.selectedMemberIndex = member.index;
                                 if (sameSelection)
-                                    if (!event.isAutoRepeat)
-                                        center.toggleExpanded();
-                                    else
-                                        center.expandedGroupKey = groupItem.group.key;
+                                    center.toggleExpanded();
+                                else
+                                    center.expandedGroupKey = groupItem.group.key;
                                 center.rememberSelection();
                                 center.focusKeyboard();
                             }
                             onDefaultRequested: {
                                 if (!center.notificationState.invokeDefault(member.modelData))
-                                    if (!event.isAutoRepeat)
-                                        center.toggleExpanded();
+                                    center.toggleExpanded();
                             }
                             onActionRequested: action => center.notificationState.invokeAction(member.modelData, action)
                             onReplyRequested: message => {
@@ -639,8 +636,7 @@ FocusScope {
                                 center.selectedIndex = groupItem.modelData.groupIndex;
                                 center.selectedMemberIndex = member.index;
                                 center.rememberSelection();
-                                if (!event.isAutoRepeat)
-                                    center.focusReply();
+                                center.focusReply();
                             }
                             onReplyFocusChanged: focused => {
                                 if (focused) {
