@@ -9,3 +9,6 @@ create-missing = false
 
 [output.html]
 git-repository-url = "https://github.com/joshan-kana/.files"
+
+[output.html.redirect]
+"/overview/fleet.html" = "../fleet.html"

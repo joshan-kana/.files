@@ -381,11 +381,13 @@ let
       } | ${toString (builtins.length facts.serverApps)} | ${toString (builtins.length facts.systemPackages)} | ${toString (builtins.length facts.homePackages)} |"
     ) hostNames}
 
-    Backup coverage on each platform is described in [Backups](../infrastructure/backups.md).
+    Backup coverage on each platform is described in [Backups](infrastructure/backups.md).
   '';
 
   semanticScopesMarkdown = ''
     # Semantic scopes
+
+    Checkmarks indicate resolved scope selection. Platform conditions may leave a selected scope with no applicable configuration; consult the evaluated package and service references for actual host contents.
 
     ${scopeTableHeader}
     ${lib.concatStringsSep "\n" scopeTableRows}
@@ -481,7 +483,7 @@ let
 
       ## Enabled scopes
 
-      ${toString (builtins.length facts.enabledScopes)} scopes are enabled. Top-level scopes:
+      ${toString (builtins.length facts.enabledScopes)} scopes are selected, subject to platform conditions. Top-level scopes:
 
       ${bulletList facts.topLevelScopes}
 
@@ -764,7 +766,24 @@ let
 
     # Overview
 
-    - [Fleet](overview/fleet.md)
+    - [Fleet](fleet.md)
+
+    # Conventions
+
+    - [Conventions](conventions/index.md)
+      - [Repository structure](conventions/repository-structure.md)
+      - [Semantic scopes](conventions/semantic-scopes.md)
+      - [Nix modules](conventions/nix-modules.md)
+      - [Platforms](conventions/platforms.md)
+      - [Packaging](conventions/packages.md)
+      - [Services](conventions/services.md)
+      - [Networking and security](conventions/networking-and-security.md)
+      - [State and recovery](conventions/state-and-recovery.md)
+      - [Desktop and appearance](conventions/desktop-and-appearance.md)
+      - [Tooling](conventions/tooling.md)
+      - [Validation](conventions/validation.md)
+      - [Git and delivery](conventions/git-and-delivery.md)
+      - [Documentation](conventions/documentation.md)
 
     # Runbooks
 
@@ -878,7 +897,7 @@ let
     "infrastructure/networking.md" = networkingMarkdown;
     "infrastructure/packages.md" = packagesMarkdown;
     "infrastructure/storage.md" = infrastructureStorageMarkdown;
-    "overview/fleet.md" = fleetMarkdown;
+    "fleet.md" = fleetMarkdown;
   }
   // systemFiles
   // hostRunbookIndexFiles

@@ -13,8 +13,8 @@ nix develop -c $SHELL
 Common commands:
 
 ```sh
-nix fmt | fmt               # apply repository formatting/fixes
-nix flake check | chk       # run repository validation
+nix fmt                     # apply repository formatting/fixes (or fmt)
+nix flake check             # run native flake checks (or chk)
 nix run .#theme-warm        # prebuild and cache all theme variants
 docs                        # build the generated manual
 docs-serve                  # live-preview the generated manual
@@ -27,6 +27,8 @@ Use native NixOS/Home Manager options inside semantic scopes. Shared behaviour b
 
 `docs` builds reference pages from evaluated Nix together with operational runbooks. Generated reference pages are build artifacts and are not committed.
 
+The [contributor conventions](docs/manual/src/conventions/index.md) are part of the manual.
+
 The cross-project operating handbook is included as the `docs/infrastructure-docs` submodule.
 
 ## Repository layout
@@ -35,10 +37,10 @@ The cross-project operating handbook is included as the `docs/infrastructure-doc
 flake.nix                 Flake outputs, checks, packages, apps, and host composition
 hosts/                    Host entrypoints and host-specific policy
 profiles/                 Reusable host scope selections and defaults
-profiles/                 Reusable machine scope selections
 modules/                  Shared semantic configuration scopes
 lib/                      Semantic-scope and shared Nix helpers
 overlays/                 Package overlays
+patches/                  Downstream package patches
 scripts/                  Repository and operational commands
 tests/                    Evaluated and behavioural checks
 docs/manual/              Manual runbooks and generated-reference source
@@ -62,7 +64,9 @@ git submodule update --init --recursive
 ## Validation
 
 ```sh
-nix fmt
+nix fmt -- --ci
 git diff --check
-nix flake check
+git diff --cached --check
+nix flake check --option builders ''
+nix flake check --no-build --all-systems --option builders ''
 ```
