@@ -251,3 +251,21 @@ test("Wallpaper gallery keeps thumbnail names and independent active/favourite m
   assert.match(wallpaper, /sourceSize: Qt.size\(480, 300\)/);
   assert.match(wallpaper, /id: currentWallpaperPreview[\s\S]*?id: stylixLabel/);
 });
+
+test("wallpaper gallery errors use the destination name without renaming the backend", () => {
+  const panel = qml("WallpaperPanel.qml");
+  const actions = qml("Actions.qml");
+  assert.match(panel, /Could not open Wallpaper gallery/);
+  assert.match(panel, /Invalid Wallpaper gallery response/);
+  assert.match(actions, /Wallpaper gallery unavailable/);
+  assert.doesNotMatch(panel + actions, /wallpaper library/i);
+  assert.match(panel, /runtime\.wallpaperLibrary/);
+  assert.match(
+    wallpaper("wallpaper-policy.py"),
+    /Invalid wallpaper gallery path/,
+  );
+  assert.match(
+    wallpaper("wallpaper-policy.py"),
+    /wallpaper library owns application/,
+  );
+});

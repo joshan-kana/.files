@@ -443,7 +443,7 @@ Item {
         onExited: (code, status) => {
             panel.loading = false;
             if (code !== 0) {
-                panel.statusText = panel.listError.text.trim() || "Could not open wallpaper library";
+                panel.statusText = panel.listError.text.trim() || "Could not open Wallpaper gallery";
                 return;
             }
             try {
@@ -451,7 +451,7 @@ Item {
                 const position = panel.entries.indexOf(panel.currentPath);
                 panel.selectedIndex = position >= 0 ? position : 0;
             } catch (error) {
-                panel.statusText = "Invalid wallpaper library response";
+                panel.statusText = "Invalid Wallpaper gallery response";
             }
         }
     }

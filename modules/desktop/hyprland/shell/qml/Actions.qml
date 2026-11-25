@@ -147,7 +147,7 @@ QtObject {
                     command: [runtime.wallpaperLibrary, "reset", output]
                 });
         } else {
-            resetErrors.push("Wallpaper library unavailable");
+            resetErrors.push("Wallpaper gallery unavailable");
         }
         if (runtime.wallpaperPolicy)
             steps.push({

@@ -62,7 +62,7 @@ def relative(value):
     if path.is_absolute():
         path = path.relative_to(ROOT)
     if ".." in path.parts or "\n" in str(path) or "\x00" in str(path):
-        raise ValueError("Invalid wallpaper library path")
+        raise ValueError("Invalid wallpaper gallery path")
     return "" if str(path) == "." else str(path)
 
 
