@@ -489,9 +489,7 @@
       nixosPiImage = mkHost "nixos-pi" (
         hostSpecs.nixos-pi
         // {
-          extraModules = hostSpecs.nixos-pi.extraModules ++ [
-            (import ./hosts/nixos-pi/image.nix self.nixosConfigurations.nixos-pi.config.fileSystems)
-          ];
+          extraModules = hostSpecs.nixos-pi.extraModules ++ [ ./hosts/nixos-pi/image.nix ];
         }
       );
 

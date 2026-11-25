@@ -1,4 +1,3 @@
-installedFileSystems:
 {
   config,
   lib,
@@ -28,8 +27,6 @@ installedFileSystems:
   sdImage = {
     compressImage = false;
     firmwareSize = 512;
-    rootVolumeLabel = lib.removePrefix "/dev/disk/by-label/" installedFileSystems."/".device;
-    firmwarePartitionName = lib.removePrefix "/dev/disk/by-label/" installedFileSystems."/boot".device;
     # The pinned fakeroot lacks nftw() ownership emulation used by mkfs.btrfs.
     rootFilesystemImage = pkgs.callPackage (modulesPath + "/../lib/make-btrfs-fs.nix") {
       inherit (config.sdImage) storePaths compressImage;
@@ -55,6 +52,8 @@ installedFileSystems:
       sfdisk --activate "$img" 1
     '';
   };
+
+  systemd.services.register-nix-paths.requires = lib.optional config.sdImage.expandOnBoot "expand-root-partition.service";
 
   systemd.services.expand-root-partition.script = lib.mkForce ''
     rootPart=$(${lib.getExe' pkgs.util-linux "findmnt"} -n -o SOURCE /)

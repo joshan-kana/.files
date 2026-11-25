@@ -1,10 +1,29 @@
 {
   config,
   lib,
+  options,
   pkgs,
   ...
 }:
 
+let
+  fileSystems = {
+    "/" = {
+      device = "/dev/disk/by-label/ROOT";
+      fsType = "btrfs";
+      options = [
+        "compress=zstd"
+        "noatime"
+      ];
+    };
+
+    "/boot" = {
+      device = "/dev/disk/by-label/FIRMWARE";
+      fsType = "vfat";
+      options = [ "umask=0077" ];
+    };
+  };
+in
 {
   hardware.enableRedistributableFirmware = true;
   # The cached vendor kernel predates these nixpkgs kernel metadata fields.
@@ -42,22 +61,7 @@
   '';
   users.users.${config.dotfiles.users.primary.name}.extraGroups = [ "video" ];
 
-  fileSystems = {
-    "/" = {
-      device = "/dev/disk/by-label/ROOT";
-      fsType = "btrfs";
-      options = [
-        "compress=zstd"
-        "noatime"
-      ];
-    };
-
-    "/boot" = {
-      device = "/dev/disk/by-label/FIRMWARE";
-      fsType = "vfat";
-      options = [ "umask=0077" ];
-    };
-  };
+  inherit fileSystems;
 
   zramSwap = {
     enable = true;
@@ -65,4 +69,10 @@
   };
 
   nixpkgs.hostPlatform = lib.mkDefault "aarch64-linux";
+}
+// lib.optionalAttrs (options ? sdImage) {
+  sdImage = {
+    rootVolumeLabel = lib.removePrefix "/dev/disk/by-label/" fileSystems."/".device;
+    firmwarePartitionName = lib.removePrefix "/dev/disk/by-label/" fileSystems."/boot".device;
+  };
 }
