@@ -24,11 +24,6 @@ Item {
     property int actionIndex: 0
     property var actionTarget: null
     property string priorQuery: ""
-    readonly property bool deleteArmed: deleteConfirmation.pending.length > 0
-    property ConfirmationState deleteConfirmation: ConfirmationState {
-        id: internalDeleteConfirmation
-        onExpired: panel.copyFeedback = ""
-    }
     property bool hideAfterCopy: false
 
     ContextActionModel {
@@ -66,7 +61,6 @@ Item {
         stderr: panel.operationError
         onExited: (exitCode, exitStatus) => {
             panel.copyFeedback = exitCode === 0 ? "UPDATED" : "OPERATION FAILED";
-            panel.deleteConfirmation.cancel();
             if (exitCode === 0)
                 panel.refresh();
         }
@@ -259,7 +253,6 @@ Item {
         actionMode = false;
         actionTarget = null;
         kindFilter = "all";
-        deleteConfirmation.cancel();
         refresh();
         previewTimer.restart();
         search.forceActiveFocus();
@@ -270,7 +263,6 @@ Item {
             return;
         actionMode = false;
         actionTarget = null;
-        deleteConfirmation.cancel();
 
         // Preserve the Wayland surface until the longer spatial exit finishes.
         closing = motion.enabled;
@@ -308,7 +300,6 @@ Item {
         actionReturnToList = list.activeFocus;
         actionTarget = currentEntry;
         actionIndex = 0;
-        deleteConfirmation.cancel();
         actionMode = true;
         search.text = "";
         search.forceActiveFocus();
@@ -318,7 +309,6 @@ Item {
         const target = actionTarget;
         actionMode = false;
         actionTarget = null;
-        deleteConfirmation.cancel();
         search.text = priorQuery;
         if (target)
             selectedIndex = Math.max(0, filteredEntries.findIndex(item => item.id === target.id));
@@ -341,10 +331,6 @@ Item {
         const entry = actionTarget;
         if (!entry)
             return;
-        if (action === "delete" && !deleteConfirmation.request(String(entry.id))) {
-            copyFeedback = "Delete clipboard item? Press Enter again within 5 seconds.";
-            return;
-        }
         leaveActions();
         if (action === "copy") {
             copyEntry(entry, true);
@@ -483,7 +469,6 @@ Item {
                         onTextChanged: {
                             if (panel.actionMode)
                                 panel.actionIndex = 0;
-                            panel.deleteConfirmation.cancel();
                         }
 
                         Keys.onPressed: event => {
@@ -723,7 +708,6 @@ Item {
 
                 onCurrentIndexChanged: {
                     positionViewAtIndex(currentIndex, ListView.Contain);
-                    panel.deleteConfirmation.cancel();
                 }
             }
 

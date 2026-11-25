@@ -33,21 +33,19 @@ function clipboardActions(entry, canOpenLink) {
   const actions = [action("copy", "Copy to Clipboard", "edit-copy")];
   if (canOpenLink)
     actions.push(action("openLink", "Open Link", "internet-web-browser"));
-  if (entry.kind !== "BINARY") {
+  if (entry.pinned) {
     actions.push(
-      entry.pinned
-        ? action("unpin", "Unpin Entry", "bookmark-remove", "Remove saved copy")
-        : action(
-            "pin",
-            "Pin Entry",
-            "bookmark-new",
-            "Keep a private local copy",
-          ),
+      action("unpin", "Unpin Entry", "bookmark-remove", "Remove saved copy"),
+    );
+  } else {
+    if (entry.kind !== "BINARY")
+      actions.push(
+        action("pin", "Pin Entry", "bookmark-new", "Keep a private local copy"),
+      );
+    actions.push(
+      action("delete", "Delete Entry", "edit-delete", "Remove this entry only"),
     );
   }
-  actions.push(
-    action("delete", "Delete Entry", "edit-delete", "Remove this entry only"),
-  );
   return actions;
 }
 

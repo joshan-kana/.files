@@ -248,7 +248,6 @@ test("all destructive owners use the same expiry and cancellation controller", (
     "NotificationContent.qml",
     "RecordingLibrary.qml",
     "BluetoothPanel.qml",
-    "ClipboardPanel.qml",
   ])
     assert.match(source(name), /ConfirmationState \{/, name);
   assert.match(source("MediaLyrics.qml"), /printErrors: false/);
@@ -279,4 +278,18 @@ test("Restore Defaults requires Enter after arming; repeated clicks and shortcut
     /root.runtime.shellMatchesHint\("SystemContent.reset",/,
   );
   assert.match(keybindings, /"SystemContent.resetConfirm" = "ENTER"/);
+});
+
+test("clipboard delete is immediate and pinned entries do not duplicate Unpin", () => {
+  const clipboard = source("ClipboardPanel.qml");
+  const actions = source("ContextActions.js");
+  assert.doesNotMatch(
+    clipboard,
+    /ConfirmationState|deleteConfirmation|deleteArmed/,
+  );
+  assert.doesNotMatch(clipboard, /Delete clipboard item\?/);
+  assert.match(clipboard, /operationProcess.exec\(action === "pin"/);
+  assert.match(actions, /if \(entry.pinned\)/);
+  assert.match(actions, /action\("unpin", "Unpin Entry"/);
+  assert.match(actions, /action\("delete", "Delete Entry"/);
 });

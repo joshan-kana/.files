@@ -49,7 +49,7 @@ test("clipboard actions reflect capabilities and never offer executable URL sche
   );
   assert.deepEqual(
     Array.from(context.clipboardActions(pinned, false)).map((a) => a.action),
-    ["copy", "unpin", "delete"],
+    ["copy", "unpin"],
   );
   assert.deepEqual(
     Array.from(context.clipboardActions(image, false)).map((a) => a.action),
@@ -99,7 +99,11 @@ test("clipboard search combines persistent pins, type filtering and list focus",
     clipboard,
     /if\s*\(panel\.actionMode\)\s*panel\.toggleActions\(\)/,
   );
-  assert.match(clipboard, /deleteConfirmation.request\(String\(entry.id\)\)/);
+  assert.doesNotMatch(
+    clipboard,
+    /deleteConfirmation|deleteArmed|Delete clipboard item\?/,
+  );
+  assert.match(clipboard, /operationProcess.exec\(action === "pin"/);
   assert.match(clipboard, /panel\.kindFilter === modelData\.id/);
   assert.match(clipboard, /clipboardOperations/);
   assert.match(clipboard, /text: item\.modelData \? \(panel\.actionMode \?/);
