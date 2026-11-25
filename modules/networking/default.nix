@@ -47,21 +47,22 @@ in
       );
     };
   };
-}
-// lib.optionalAttrs isLinux {
+
   /**
     NetworkManager-based host networking.
   */
-  networkManager = _: {
-    networking.networkmanager.enable = true;
-  };
+  networkManager =
+    _:
+    lib.optionalAttrs isLinux {
+      networking.networkmanager.enable = true;
+    };
 
   /**
     Multicast DNS discovery through Avahi.
   */
   mdns =
     { lib, pkgs, ... }:
-    {
+    lib.optionalAttrs isLinux {
       services.avahi = {
         enable = true;
         openFirewall = true;
