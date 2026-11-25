@@ -477,10 +477,7 @@
         nixos-pi = {
           system = "aarch64-linux";
           hostModule = ./hosts/nixos-pi;
-          extraModules = [
-            inputs.nixos-hardware.nixosModules.raspberry-pi-4
-            inputs.nixos-raspberrypi.nixosModules.trusted-nix-caches
-          ];
+          extraModules = [ inputs.nixos-hardware.nixosModules.raspberry-pi-4 ];
         };
 
         mac = {

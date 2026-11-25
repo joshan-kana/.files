@@ -263,7 +263,7 @@ Reload the generated host exports before verifying or initializing its secrets b
 
 The Pi 4 supports a single 4K/60 Hz display on HDMI0, the micro-HDMI port next to USB-C power. The installation image enables the necessary firmware clock setting, but the connected display, HDMI input mode, and cable must also support 4K/60 Hz. The Pi hardware module manages the firmware partition and applies the 4K/60 Hz setting on system activation; reboot for the firmware and kernel changes to take effect. Firmware files are shared by boot generations, so retain a backup of the known-working FAT partition when testing changes to the boot pipeline. Verify the active HDMI mode; use `wlr-randr` from the Labwc session to inspect or change the output mode. HDR10 requires a capable display and a playback pipeline that passes HDR metadata; enabling a high-refresh-rate output does not automatically enable HDR.
 
-The Pi uses the cached downstream kernel and matching GPU firmware from `nixos-raspberrypi`. Keep that input's own nixpkgs lock to preserve binary substitution. The host and image trust its signed Cachix cache. Before the first upgrade from a configuration without that cache, pass its substituter and signing key to the rebuild command:
+The Pi uses the cached downstream kernel and matching GPU firmware from `nixos-raspberrypi`. Keep that input's own nixpkgs lock to preserve binary substitution. The shared Nix module trusts its signed Cachix cache, including on remote builders. Before the first upgrade from a configuration without that cache, pass its substituter and signing key to the rebuild command:
 
 ```sh
 sbt --option extra-substituters https://nixos-raspberrypi.cachix.org \

@@ -25,6 +25,7 @@ let
       "https://install.determinate.systems"
       "https://nix-community.cachix.org"
       "https://cache.numtide.com"
+      "https://nixos-raspberrypi.cachix.org"
       "${atticEndpoint}/${atticCache}"
     ];
     trusted-public-keys = [
@@ -32,6 +33,7 @@ let
       "cache.flakehub.com-3:hJuILl5sVK4iKm86JzgdXW12Y2Hwd5G07qKtHTOcDCM="
       "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
       "niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g="
+      "nixos-raspberrypi.cachix.org-1:4iMO9LXa8BqhU+Rpg6LQKiGa2lsNh/j2oiYLNOQ5sPI="
       "dotfiles:U1NE7k5WM7I0l3losIw3VhG4eUGZAxsSvkw6br7p2iA="
     ];
     require-sigs = true;

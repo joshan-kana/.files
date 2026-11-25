@@ -55,6 +55,7 @@ _: {
     ./vial
     ./determinate-nix
     ./fakeroot
+    ./raspberrypi
     ./steam
     ./vlc
     ./dropbox
