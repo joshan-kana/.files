@@ -668,3 +668,91 @@ test("configured discrete widget shortcuts and explicit action assignments are e
     choices.length,
   );
 });
+
+test("discrete actions follow their Nix binding across overview, capture, resize and nested controls", () => {
+  const cases = [
+    ["OverviewPanel.move", "OverviewPanel.qml"],
+    ["OverviewPanel.toggleFloating", "OverviewPanel.qml"],
+    ["OverviewPanel.togglePin", "OverviewPanel.qml"],
+    ["OverviewPanel.all", "OverviewPanel.qml"],
+    ["ScreenshotPicker.freeze", "ScreenshotPicker.qml"],
+    ["ScreenshotPicker.edit", "ScreenshotPicker.qml"],
+    ["ScreenshotPicker.full", "ScreenshotPicker.qml"],
+    ["ResizeOverlay.balance", "ResizeOverlay.qml"],
+    ["ResizeOverlay.inspect", "ResizeOverlay.qml"],
+    ["ResizeOverlay.doneAlternate", "ResizeOverlay.qml"],
+    ["StatusContent.refresh", "StatusPeek.qml"],
+    ["CalendarContent.scrollUp", "CalendarContent.qml"],
+    ["CalendarContent.scrollDown", "CalendarContent.qml"],
+    ["RecordingLibrary.delete", "SystemContent.qml"],
+    ["RecordingLibrary.edit", "SystemContent.qml"],
+    ["RecordingLibrary.copy", "SystemContent.qml"],
+    ["RecordingLibrary.ocrCopy", "SystemContent.qml"],
+    ["RecordingLibrary.ocrSelectAll", "SystemContent.qml"],
+    ["RecordingLibrary.pageUp", "SystemContent.qml"],
+    ["RecordingLibrary.pageDown", "SystemContent.qml"],
+    ["BluetoothPanel.scan", "SystemContent.qml"],
+    ["BluetoothPanel.radio", "SystemContent.qml"],
+    ["BluetoothPanel.pair", "SystemContent.qml"],
+    ["BluetoothPanel.trust", "SystemContent.qml"],
+    ["BluetoothPanel.forget", "SystemContent.qml"],
+    ["NetworkPanel.detail", "SystemContent.qml"],
+    ["NetworkPanel.saved", "SystemContent.qml"],
+    ["NetworkPanel.toggleWifi", "SystemContent.qml"],
+    ["NetworkPanel.advanced", "SystemContent.qml"],
+  ];
+  for (const [action, file] of cases) {
+    const body = fs.readFileSync(path.join(qmlDir, file), "utf8");
+    assert.ok(
+      body.includes(`shellMatchesHint("${action}",`),
+      `${file} must execute ${action} through the registry`,
+    );
+    assert.ok(f.hint(registry, action).length > 0, `${action} missing a hint`);
+    const rebound = {
+      ...registry,
+      actions: { ...actionAssignments, [action]: "ALT+Y" },
+    };
+    assert.equal(f.hint(rebound, action), "ALT+Y", `${action} did not remap`);
+    assert.equal(f.matchesHint(rebound, action, 89, Qt.AltModifier, Qt), true);
+    assert.equal(f.matchesHint(rebound, action, 89, 0, Qt), false);
+  }
+});
+
+test("OCR text actions and paging cannot collide with capture/delete shortcuts", () => {
+  const cases = [
+    ["RecordingLibrary.copy", 67, 0],
+    ["RecordingLibrary.ocrCopy", 67, Qt.ControlModifier],
+    ["RecordingLibrary.ocrSelectAll", 65, Qt.ControlModifier],
+    ["RecordingLibrary.delete", 68, 0],
+    ["RecordingLibrary.pageDown", 68, Qt.ShiftModifier],
+    ["BluetoothPanel.scan", 68, Qt.ShiftModifier],
+  ];
+  for (const [action, key, modifiers] of cases)
+    assert.equal(f.matchesHint(registry, action, key, modifiers, Qt), true);
+  assert.equal(
+    f.matchesHint(
+      registry,
+      "RecordingLibrary.delete",
+      68,
+      Qt.ShiftModifier,
+      Qt,
+    ),
+    false,
+  );
+  assert.equal(
+    f.matchesHint(
+      registry,
+      "RecordingLibrary.copy",
+      67,
+      Qt.ControlModifier,
+      Qt,
+    ),
+    false,
+  );
+  assert.equal(
+    f.matchesHint(registry, "RecordingLibrary.ocrCopy", 67, 0, Qt),
+    false,
+  );
+  assert.equal(f.hint(registry, "RecordingLibrary.page"), "U / SHIFT+D");
+  assert.equal(f.hint(registry, "CalendarContent.events"), "U / D");
+});

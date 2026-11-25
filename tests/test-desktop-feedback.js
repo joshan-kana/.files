@@ -166,7 +166,7 @@ test("active resize owns local inspection and reports observed geometry", () => 
   assert.match(resize, /WlrKeyboardFocus\.Exclusive/);
   assert.match(
     resize,
-    /event\.key === overlay\.runtime\.shellKeyCode\("resize", "S"\)/,
+    /overlay\.runtime\.shellMatchesHint\("ResizeOverlay\.inspect", event\.key, event\.modifiers\)/,
   );
   assert.match(resize, /keyboard\.refresh\("inspect"\)/);
   assert.match(resize, /"-j", "activewindow"/);

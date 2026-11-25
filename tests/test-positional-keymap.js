@@ -224,11 +224,11 @@ test("U/D paging and PageUp/PageDown survive throughout Controls and list views"
   const controls = qml("SystemContent.qml");
   assert.match(
     controls,
-    /event\.key === root\.runtime\.shellKeyCode\("controls", "D"\)\)\s*\{\s*recordingsPanel\.invoke\("requestDelete"\)/,
+    /root\.runtime\.shellMatchesHint\("RecordingLibrary\.delete", event\.key, event\.modifiers\)\)\s*\{\s*recordingsPanel\.invoke\("requestDelete"\)/,
   );
   assert.match(
     controls,
-    /event\.key === root\.runtime\.shellKeyCode\("controls", "PageDown"\) \|\| \(event\.key === root\.runtime\.shellKeyCode\("controls", "D"\) && \(root\.runtime\.shellModifier\("controls", "Shift", event\.modifiers\)\)\)/,
+    /event\.key === root\.runtime\.shellKeyCode\("controls", "PageDown"\) \|\| root\.runtime\.shellMatchesHint\("RecordingLibrary\.pageDown", event\.key, event\.modifiers\)/,
   );
 });
 
@@ -248,7 +248,7 @@ test("capture confirmation uses Enter, never Space", () => {
   );
   assert.match(
     source,
-    /event\.key === picker\.runtime\.shellKeyCode\("capture", "E"\)\)/,
+    /picker\.runtime\.shellMatchesHint\("ScreenshotPicker\.edit", event\.key, event\.modifiers\)/,
   );
 });
 
@@ -309,7 +309,7 @@ test("Bluetooth scanning hints never advertise paging's plain D key", () => {
   assert.doesNotMatch(bluetooth, /NO DEVICES \/\/ PRESS SHIFT\+D TO SCAN/);
   assert.match(
     controls,
-    /event\.key === root\.runtime\.shellKeyCode\("controls", "D"\) && \(root\.runtime\.shellModifier\("controls", "Shift", event\.modifiers\)\)\)\s*\{\s*bluetoothPanel\.invoke\("toggleDiscovery"\)/,
+    /root\.runtime\.shellMatchesHint\("BluetoothPanel\.scan", event\.key, event\.modifiers\)\)\s*\{\s*bluetoothPanel\.invoke\("toggleDiscovery"\)/,
   );
   assert.match(
     controls,

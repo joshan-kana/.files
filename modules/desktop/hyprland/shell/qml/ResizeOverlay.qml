@@ -163,7 +163,7 @@ PanelWindow {
         Keys.onPressed: event => {
             const opposite = !!(overlay.runtime.shellModifier("resize", "Shift", event.modifiers));
             const size = opposite ? -50 : 50;
-            if (event.key === overlay.runtime.shellKeyCode("resize", "Escape") || event.key === overlay.runtime.shellKeyCode("resize", "Return") || event.key === overlay.runtime.shellKeyCode("resize", "R")) {
+            if (event.key === overlay.runtime.shellKeyCode("resize", "Escape") || event.key === overlay.runtime.shellKeyCode("resize", "Return") || overlay.runtime.shellMatchesHint("ResizeOverlay.doneAlternate", event.key, event.modifiers)) {
                 overlay.open = false;
             } else if (overlay.runtime.shellNavigates("resize", "left", event.key)) {
                 overlay.resizeWindow(-size, 0);
@@ -173,9 +173,9 @@ PanelWindow {
                 overlay.resizeWindow(0, -size);
             } else if (overlay.runtime.shellNavigates("resize", "right", event.key)) {
                 overlay.resizeWindow(size, 0);
-            } else if (event.key === overlay.runtime.shellKeyCode("resize", "B")) {
+            } else if (overlay.runtime.shellMatchesHint("ResizeOverlay.balance", event.key, event.modifiers)) {
                 overlay.balance();
-            } else if (event.key === overlay.runtime.shellKeyCode("resize", "S")) {
+            } else if (overlay.runtime.shellMatchesHint("ResizeOverlay.inspect", event.key, event.modifiers)) {
                 overlay.inspectOpen = !overlay.inspectOpen;
                 if (overlay.inspectOpen)
                     overlay.keyboard.refresh("inspect");

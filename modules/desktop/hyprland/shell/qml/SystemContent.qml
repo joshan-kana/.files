@@ -2173,9 +2173,9 @@ FocusScope {
                         if (event.key === root.runtime.shellKeyCode("controls", "Backspace") || root.runtime.shellMatchesHint("RecordingLibrary.ocr", event.key, event.modifiers)) {
                             recordingsPanel.invoke("closeText");
                             keyboardFocus.forceActiveFocus();
-                        } else if (control && event.key === root.runtime.shellKeyCode("controls", "A")) {
+                        } else if (root.runtime.shellMatchesHint("RecordingLibrary.ocrSelectAll", event.key, event.modifiers)) {
                             recordingsPanel.invoke("selectAllWords");
-                        } else if (control && event.key === root.runtime.shellKeyCode("controls", "C") || !control && !shifted && event.key === root.runtime.shellKeyCode("controls", "C")) {
+                        } else if (root.runtime.shellMatchesHint("RecordingLibrary.ocrCopy", event.key, event.modifiers) || root.runtime.shellMatchesHint("RecordingLibrary.copy", event.key, event.modifiers)) {
                             recordingsPanel.invoke("copyHighlightedText");
                         } else if (!control && (root.runtime.shellNavigates("controls", "left", event.key))) {
                             recordingsPanel.invoke("moveWordSelection", -1, shifted);
@@ -2196,15 +2196,15 @@ FocusScope {
                         recordingsPanel.invoke("moveSelection", 1);
                     } else if (root.runtime.shellNavigates("controls", "up", event.key)) {
                         recordingsPanel.invoke("moveSelection", -1);
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "U") || event.key === root.runtime.shellKeyCode("controls", "PageUp")) {
+                    } else if (root.runtime.shellMatchesHint("RecordingLibrary.pageUp", event.key, event.modifiers) || event.key === root.runtime.shellKeyCode("controls", "PageUp")) {
                         recordingsPanel.invoke("moveSelection", -4);
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "PageDown") || (event.key === root.runtime.shellKeyCode("controls", "D") && (root.runtime.shellModifier("controls", "Shift", event.modifiers)))) {
+                    } else if (event.key === root.runtime.shellKeyCode("controls", "PageDown") || root.runtime.shellMatchesHint("RecordingLibrary.pageDown", event.key, event.modifiers)) {
                         recordingsPanel.invoke("moveSelection", 4);
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "D")) {
+                    } else if (root.runtime.shellMatchesHint("RecordingLibrary.delete", event.key, event.modifiers)) {
                         recordingsPanel.invoke("requestDelete");
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "E")) {
+                    } else if (root.runtime.shellMatchesHint("RecordingLibrary.edit", event.key, event.modifiers)) {
                         recordingsPanel.invoke("editSelected");
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "C")) {
+                    } else if (root.runtime.shellMatchesHint("RecordingLibrary.copy", event.key, event.modifiers)) {
                         recordingsPanel.invoke("copySelected");
                     } else if (root.runtime.shellMatchesHint("RecordingLibrary.ocr", event.key, event.modifiers)) {
                         recordingsPanel.invoke("showText");
@@ -2269,19 +2269,19 @@ FocusScope {
                     } else if (event.key === root.runtime.shellKeyCode("controls", "Return") || event.key === root.runtime.shellKeyCode("controls", "Enter")) {
                         bluetoothPanel.invoke("activateSelected");
                         event.accepted = true;
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "B")) {
+                    } else if (root.runtime.shellMatchesHint("BluetoothPanel.radio", event.key, event.modifiers)) {
                         bluetoothPanel.invoke("toggleBluetooth");
                         event.accepted = true;
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "D") && (root.runtime.shellModifier("controls", "Shift", event.modifiers))) {
+                    } else if (root.runtime.shellMatchesHint("BluetoothPanel.scan", event.key, event.modifiers)) {
                         bluetoothPanel.invoke("toggleDiscovery");
                         event.accepted = true;
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "P")) {
+                    } else if (root.runtime.shellMatchesHint("BluetoothPanel.pair", event.key, event.modifiers)) {
                         bluetoothPanel.invoke("pairSelected");
                         event.accepted = true;
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "T")) {
+                    } else if (root.runtime.shellMatchesHint("BluetoothPanel.trust", event.key, event.modifiers)) {
                         bluetoothPanel.invoke("toggleTrust");
                         event.accepted = true;
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "F")) {
+                    } else if (root.runtime.shellMatchesHint("BluetoothPanel.forget", event.key, event.modifiers)) {
                         bluetoothPanel.invoke("forgetSelected");
                         event.accepted = true;
                     }
@@ -2412,24 +2412,24 @@ FocusScope {
                     } else if (event.key === root.runtime.shellKeyCode("controls", "Return") || event.key === root.runtime.shellKeyCode("controls", "Enter")) {
                         networkPanel.invoke("activateSelected");
                         event.accepted = true;
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "V")) {
+                    } else if (root.runtime.shellMatchesHint("NetworkPanel.detail", event.key, event.modifiers)) {
                         networkPanel.invoke("toggleDetailView");
                         event.accepted = true;
                     } else if (root.runtime.shellMatchesHint("NetworkPanel.refresh", event.key, event.modifiers) && networkPanel.detailView) {
                         if (!event.isAutoRepeat)
                             networkPanel.invoke("triggerRefresh");
                         event.accepted = true;
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "P") && !networkPanel.detailView) {
+                    } else if (root.runtime.shellMatchesHint("NetworkPanel.saved", event.key, event.modifiers) && !networkPanel.detailView) {
                         networkPanel.invoke("toggleSavedView");
                         event.accepted = true;
                     } else if (root.runtime.shellMatchesHint("NetworkPanel.refresh", event.key, event.modifiers) && networkPanel.savedView && !networkPanel.detailView) {
                         if (!event.isAutoRepeat)
                             networkPanel.invoke("triggerRefresh");
                         event.accepted = true;
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "W") && !networkPanel.savedView) {
+                    } else if (root.runtime.shellMatchesHint("NetworkPanel.toggleWifi", event.key, event.modifiers) && !networkPanel.savedView) {
                         networkPanel.invoke("toggleWifi");
                         event.accepted = true;
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "A")) {
+                    } else if (root.runtime.shellMatchesHint("NetworkPanel.advanced", event.key, event.modifiers)) {
                         Quickshell.execDetached([root.runtime.networkConnectionEditor]);
                         event.accepted = true;
                     }

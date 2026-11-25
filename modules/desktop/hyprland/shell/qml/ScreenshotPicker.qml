@@ -824,7 +824,7 @@ Item {
                         compact: true
                         horizontalCompact: true
                         title: picker.selectionMode === "record" ? picker.audioLabel : picker.frozenForCapture ? "Frozen" : "Live"
-                        shortcut: picker.selectionMode === "record" ? picker.runtime.shellHint("ScreenshotPicker.edit") : picker.runtime.shellHint("ScreenshotPicker.toggleRecord")
+                        shortcut: picker.selectionMode === "record" ? picker.runtime.shellHint("ScreenshotPicker.edit") : picker.runtime.shellHint("ScreenshotPicker.freeze")
                         onActivated: {
                             if (picker.selectionMode === "record")
                                 picker.openAudioChoices();
@@ -985,17 +985,17 @@ Item {
             } else if (event.key === picker.runtime.shellKeyCode("capture", "Tab")) {
                 if (!event.isAutoRepeat)
                     picker.nextMonitor();
-            } else if (event.key === picker.runtime.shellKeyCode("capture", "E")) {
+            } else if (picker.runtime.shellMatchesHint("ScreenshotPicker.edit", event.key, event.modifiers)) {
                 if (!event.isAutoRepeat) {
                     if (picker.selectionMode === "record")
                         picker.openAudioChoices();
                     else
                         picker.toggleAnnotation();
                 }
-            } else if (event.key === picker.runtime.shellKeyCode("capture", "Z") && picker.selectionMode !== "record") {
+            } else if (picker.runtime.shellMatchesHint("ScreenshotPicker.freeze", event.key, event.modifiers) && picker.selectionMode !== "record") {
                 if (!event.isAutoRepeat)
                     picker.toggleFreeze();
-            } else if (event.key === picker.runtime.shellKeyCode("capture", "F")) {
+            } else if (picker.runtime.shellMatchesHint("ScreenshotPicker.full", event.key, event.modifiers)) {
                 picker.initialiseSelection = false;
                 picker.startX = 0;
                 picker.startY = 0;

@@ -145,7 +145,14 @@
           "CalendarContent.calendars" = "C";
           "CalendarContent.closeCalendars" = "ESC";
           "CalendarContent.days" = "NAV_HORIZONTAL";
-          "CalendarContent.events" = "U/D";
+          "CalendarContent.events" = {
+            actions = [
+              "CalendarContent.scrollUp"
+              "CalendarContent.scrollDown"
+            ];
+          };
+          "CalendarContent.scrollUp" = "U";
+          "CalendarContent.scrollDown" = "D";
           "CalendarContent.months" = "NAV_VERTICAL · PGUP/PGDN";
           "CalendarContent.selectCalendar" = "NAV_VERTICAL";
           "CalendarContent.today" = "T";
@@ -162,7 +169,7 @@
           "ScreenshotPicker.move" = "NAV_ALL";
           "ScreenshotPicker.options" = "NAV_VERTICAL";
           "ScreenshotPicker.resize" = "NAV_ALL_SHIFT";
-          "ScreenshotPicker.toggleRecord" = "Z";
+          "ScreenshotPicker.freeze" = "Z";
           "ScreenshotPicker.format" = "T";
           "ScreenshotPicker.quality" = "Q";
           "ScreenshotPicker.codec" = "C";
@@ -228,7 +235,16 @@
           "RecordingLibrary.extend" = "NAV_HORIZONTAL_SHIFT";
           "RecordingLibrary.ocr" = "SHIFT+O";
           "RecordingLibrary.open" = "ENTER";
-          "RecordingLibrary.page" = "U/D";
+          "RecordingLibrary.page" = {
+            actions = [
+              "RecordingLibrary.pageUp"
+              "RecordingLibrary.pageDown"
+            ];
+          };
+          "RecordingLibrary.pageUp" = "U";
+          "RecordingLibrary.pageDown" = "SHIFT+D";
+          "RecordingLibrary.ocrCopy" = "CTRL+C";
+          "RecordingLibrary.ocrSelectAll" = "CTRL+A";
           "RecordingLibrary.refresh" = "R";
           "RecordingLibrary.imageDestination" = "SHIFT+S";
           "RecordingLibrary.videoDestination" = "SHIFT+V";
@@ -704,6 +720,7 @@
         resize = {
           "ResizeOverlay.balance" = "B";
           "ResizeOverlay.done" = "ESC";
+          "ResizeOverlay.doneAlternate" = "R";
           "ResizeOverlay.inspect" = "S";
           "ResizeOverlay.legend.move" = "NAV_KEY_RIGHT_PRIMARY";
           "ResizeOverlay.legend.move_1" = "NAV_KEY_LEFT_PRIMARY";

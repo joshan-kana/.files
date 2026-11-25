@@ -104,7 +104,7 @@ PanelWindow {
                 if (!event.isAutoRepeat)
                     statusContent.copyStatus();
                 event.accepted = true;
-            } else if (event.key === peek.runtime.shellKeyCode("status", "R")) {
+            } else if (peek.runtime.shellMatchesHint("StatusContent.refresh", event.key, event.modifiers)) {
                 statusContent.refreshRequested();
                 event.accepted = true;
             }

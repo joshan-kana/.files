@@ -103,7 +103,7 @@ test("nested panels share canonical I/O navigation and preserve text-entry owner
   );
   assert.match(
     controls,
-    /event\.key === root\.runtime\.shellKeyCode\("controls", "V"\)\) \{\s*networkPanel\.invoke\("toggleDetailView"\)/,
+    /root\.runtime\.shellMatchesHint\("NetworkPanel\.detail", event\.key, event\.modifiers\)\) \{\s*networkPanel\.invoke\("toggleDetailView"\)/,
   );
   assert.match(
     network,

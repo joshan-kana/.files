@@ -646,11 +646,11 @@ Item {
                     overview.cancelMove();
                 else
                     overview.hide();
-            } else if (event.key === overview.runtime.shellKeyCode("overview", "M") && !overview.movePending) {
+            } else if (overview.runtime.shellMatchesHint("OverviewPanel.move", event.key, event.modifiers) && !overview.movePending) {
                 overview.startMove(overview.selectedIndex);
-            } else if (event.key === overview.runtime.shellKeyCode("overview", "F") && !overview.moveMode) {
+            } else if (overview.runtime.shellMatchesHint("OverviewPanel.toggleFloating", event.key, event.modifiers) && !overview.moveMode) {
                 overview.toggleWindowState("float");
-            } else if (event.key === overview.runtime.shellKeyCode("overview", "P") && !overview.moveMode) {
+            } else if (overview.runtime.shellMatchesHint("OverviewPanel.togglePin", event.key, event.modifiers) && !overview.moveMode) {
                 overview.toggleWindowState("pin");
             } else if (event.key === overview.runtime.shellKeyCode("overview", "Return") || event.key === overview.runtime.shellKeyCode("overview", "Enter")) {
                 if (overview.moveMode)
@@ -668,7 +668,7 @@ Item {
                     overview.destinationWorkspace = 10;
                 else
                     overview.focusWorkspace(10);
-            } else if (event.key === overview.runtime.shellKeyCode("overview", "A") && !overview.moveMode) {
+            } else if (overview.runtime.shellMatchesHint("OverviewPanel.all", event.key, event.modifiers) && !overview.moveMode) {
                 overview.browseAllWorkspaces();
             } else if (overview.runtime.shellNavigates("overview", "left", event.key)) {
                 if (overview.moveMode)

@@ -185,8 +185,8 @@ FocusScope {
             } else if (calendar.runtime.shellNavigates("calendar", "right", event.key)) {
                 calendar.browseDays(1);
                 event.accepted = true;
-            } else if (event.key === calendar.runtime.shellKeyCode("calendar", "U") || event.key === calendar.runtime.shellKeyCode("calendar", "D")) {
-                agendaView.scrollEvents(event.key === calendar.runtime.shellKeyCode("calendar", "U") ? -1 : 1);
+            } else if (calendar.runtime.shellMatchesHint("CalendarContent.scrollUp", event.key, event.modifiers) || calendar.runtime.shellMatchesHint("CalendarContent.scrollDown", event.key, event.modifiers)) {
+                agendaView.scrollEvents(calendar.runtime.shellMatchesHint("CalendarContent.scrollUp", event.key, event.modifiers) ? -1 : 1);
                 event.accepted = true;
             } else if (calendar.runtime.shellMatchesHint("CalendarContent.refresh", event.key, event.modifiers)) {
                 if (!event.isAutoRepeat)
