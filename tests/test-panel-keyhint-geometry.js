@@ -29,7 +29,7 @@ test("every shell panel uses the canonical keyboard and visible action primitive
     const source = read(name);
     assert.match(
       source,
-      /(?:KeyHint|KeyHintStrip|ShellAction|SessionActionButton|QuickSettingChip)\s*\{/,
+      /(?:KeyHint|KeyHintStrip|ShellAction|ShellUtilityAction|SessionActionButton|QuickSettingChip)\s*\{/,
       name + " must use a shared action or hint primitive",
     );
     assert.doesNotMatch(
@@ -141,7 +141,10 @@ test("buttons across panels own hints while decorative symbols are not fake shor
     /shortcut: panel\.runtime\.shellHint\("ResourceDashboard\.toggleCores"\)/,
   );
   assert.doesNotMatch(resources, /ResourceDashboard\.toggleCoresHint/);
-  assert.match(resources, /action: "ResourceDashboard\.refresh"/);
+  assert.match(
+    resources,
+    /shortcut: panel\.runtime\.shellHint\("ResourceDashboard\.refresh"\)/,
+  );
 
   const recordings = read("RecordingLibrary");
   assert.match(
@@ -168,8 +171,8 @@ test("buttons across panels own hints while decorative symbols are not fake shor
     ["StatusContent", "StatusContent.refresh"],
   ]) {
     const panel = read(name);
-    assert.match(panel, /ShellAction \{/);
-    assert.match(panel, /inlineIconHint: true/);
+    assert.match(panel, /ShellUtilityAction \{/);
+    assert.match(read("ShellUtilityAction"), /inlineIconHint: true/);
     assert.ok(panel.includes('shellHint("' + action + '")'), action);
   }
 });

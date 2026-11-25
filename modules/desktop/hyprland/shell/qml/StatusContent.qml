@@ -119,34 +119,24 @@ Item {
                     font.pixelSize: content.theme.fontSize(10)
                 }
             }
-            ShellAction {
+            ShellUtilityAction {
                 id: copyAction
-                width: Math.max(44, implicitWidth)
-                height: Math.max(40, implicitHeight)
                 anchors.verticalCenter: parent.verticalCenter
                 runtime: content.runtime
                 theme: content.theme
                 motion: content.motion
-                iconOnly: true
-                iconHint: true
-                inlineIconHint: true
                 shortcut: content.runtime.shellHint("StatusContent.copy")
                 icon: content.copied ? "󰄬" : "󰆏"
                 title: content.copied ? "Copied" : "Copy status"
                 enabled: !!content.runtime.copyText
                 onActivated: content.copyStatus()
             }
-            ShellAction {
+            ShellUtilityAction {
                 id: refreshAction
-                width: Math.max(44, implicitWidth)
-                height: Math.max(40, implicitHeight)
                 anchors.verticalCenter: parent.verticalCenter
                 runtime: content.runtime
                 theme: content.theme
                 motion: content.motion
-                iconOnly: true
-                iconHint: true
-                inlineIconHint: true
                 shortcut: content.runtime.shellHint("StatusContent.refresh")
                 icon: DesktopIcons.actionGlyph("refresh")
                 title: "Refresh current status"

@@ -9,7 +9,10 @@ Column {
     required property Theme theme
     required property Motion motion
     property bool engaged: false
-    signal nativeEditorRequested
+    readonly property bool canRefresh: !busy && !previewActive && !changed
+    readonly property bool canOpenNative: canRefresh && runtime.displaySettings.length > 0
+    signal refreshRequested
+    signal nativeRequested
     property var monitors: []
     property int outputIndex: 0
     property var profiles: []
@@ -32,6 +35,13 @@ Column {
     readonly property bool busy: worker.running
     readonly property bool editable: !!output?.editable && !busy && !previewActive
     readonly property var modes: output ? [...new Set([output.currentMode, ...(output.availableModes || [])].filter(value => !!value))] : []
+    readonly property var resolutions: [...new Set(modes.map(value => value.split("@")[0]))]
+    readonly property var refreshModes: modes.filter(value => value.split("@")[0] === mode.split("@")[0])
+    readonly property var openSelector: resolutionSelector.expanded ? resolutionSelector : refreshSelector.expanded ? refreshSelector : profileSelector.expanded ? profileSelector : null
+    function formatRate(value: string): string {
+        const rate = Number.parseFloat(value.split("@")[1]);
+        return Number.isFinite(rate) ? Number(rate.toFixed(2)) + " Hz" : value;
+    }
     readonly property var scales: {
         const dimensions = mode.split("@")[0].split("x").map(Number);
         const candidates = [1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 3];
@@ -69,8 +79,13 @@ Column {
     onEngagedChanged: {
         if (engaged)
             refresh();
-        else if (previewActive && !busy)
-            run("rollback");
+        else {
+            resolutionSelector.cancel();
+            refreshSelector.cancel();
+            profileSelector.cancel();
+            if (previewActive && !busy)
+                run("rollback");
+        }
     }
 
     Timer {
@@ -137,26 +152,33 @@ Column {
         positionY = output.y;
     }
     function cycleOutput(): void {
-        if (busy || previewActive || monitors.length < 2)
+        if (busy || previewActive || changed || monitors.length < 2)
             return;
         outputIndex = (outputIndex + 1) % monitors.length;
         loadValues();
     }
-    function cycleMode(delta: int): void {
-        if (!editable || modes.length === 0)
+    function selectMode(value: string): void {
+        if (!editable || !modes.includes(value))
             return;
-        mode = modes[(modes.indexOf(mode) + delta + modes.length) % modes.length];
+        mode = value;
         if (!scales.includes(scaleValue))
-            scaleValue = scales.reduce((best, value) => Math.abs(value - scaleValue) < Math.abs(best - scaleValue) ? value : best, 1);
+            scaleValue = scales.reduce((best, entry) => Math.abs(entry - scaleValue) < Math.abs(best - scaleValue) ? entry : best, 1);
+    }
+    function selectResolution(index: int): void {
+        const resolution = resolutions[index];
+        const rate = Number.parseFloat(mode.split("@")[1]);
+        const matching = modes.filter(value => value.split("@")[0] === resolution);
+        if (matching.length)
+            selectMode(matching.reduce((best, entry) => Math.abs(Number.parseFloat(entry.split("@")[1]) - rate) < Math.abs(Number.parseFloat(best.split("@")[1]) - rate) ? entry : best));
     }
     function cycleScale(delta: int): void {
         if (!editable || scales.length === 0)
             return;
-        scaleValue = scales[(scales.indexOf(scaleValue) + delta + scales.length) % scales.length];
+        const next = Math.max(0, Math.min(scales.length - 1, scales.indexOf(scaleValue) + delta));
+        scaleValue = scales[next];
     }
     function cycleOrientation(): void {
-        if (editable)
-            orientation = (orientation + 1) % 4;
+        (orientationChoices.itemAt((orientation + 1) % 4) as ShellAction)?.trigger();
     }
     function previewOrKeep(): void {
         if (previewActive) {
@@ -166,6 +188,8 @@ Column {
         }
     }
     function cancelNested(): bool {
+        if (openSelector)
+            return openSelector.cancel();
         if (previewActive) {
             run("rollback");
             return true;
@@ -177,7 +201,26 @@ Column {
         return busy;
     }
     function handleKey(key: int, modifiers: int, autoRepeat: bool): bool {
-        const actions = ["DisplaySettings.saveProfile", "DisplaySettings.nextProfile", "DisplaySettings.previewProfile", "DisplaySettings.deleteProfile", "DisplaySettings.apply", "DisplaySettings.cancel", "DisplaySettings.refresh", "DisplaySettings.native", "DisplaySettings.output", "DisplaySettings.mode", "DisplaySettings.previousMode", "DisplaySettings.scale", "DisplaySettings.previousScale", "DisplaySettings.orientation", "DisplaySettings.moveLeft", "DisplaySettings.moveRight", "DisplaySettings.moveUp", "DisplaySettings.moveDown"];
+        if (openSelector) {
+            if (runtime.shellNavigates("controls", "up", key))
+                openSelector.moveHighlight(-1);
+            else if (runtime.shellNavigates("controls", "down", key))
+                openSelector.moveHighlight(1);
+            else if (runtime.shellMatchesHint("DisplaySettings.apply", key, modifiers) || (key === runtime.shellKeyCode("controls", "Enter") && modifiers === Qt.NoModifier)) {
+                if (!autoRepeat)
+                    openSelector.commit();
+            } else if (runtime.shellMatchesHint("DisplaySettings.cancel", key, modifiers) || key === runtime.shellKeyCode("controls", "Escape")) {
+                openSelector.cancel();
+            } else if (!autoRepeat && runtime.shellMatchesHint("DisplaySettings.mode", key, modifiers)) {
+                resolutionSelector.toggle();
+            } else if (!autoRepeat && runtime.shellMatchesHint("DisplaySettings.refreshRate", key, modifiers)) {
+                refreshSelector.toggle();
+            } else if (!autoRepeat && runtime.shellMatchesHint("DisplaySettings.nextProfile", key, modifiers)) {
+                profileSelector.toggle();
+            }
+            return true;
+        }
+        const actions = ["DisplaySettings.saveProfile", "DisplaySettings.nextProfile", "DisplaySettings.previewProfile", "DisplaySettings.deleteProfile", "DisplaySettings.apply", "DisplaySettings.cancel", "DisplaySettings.refresh", "DisplaySettings.native", "DisplaySettings.output", "DisplaySettings.mode", "DisplaySettings.refreshRate", "DisplaySettings.scale", "DisplaySettings.previousScale", "DisplaySettings.orientation", "DisplaySettings.moveLeft", "DisplaySettings.moveRight", "DisplaySettings.moveUp", "DisplaySettings.moveDown"];
         for (const id of actions) {
             const action = id.split(".")[1];
             if (!runtime.shellMatchesHint(id, key, modifiers) && !(action === "apply" && key === runtime.shellKeyCode("controls", "Enter") && modifiers === Qt.NoModifier))
@@ -187,25 +230,29 @@ Column {
             if (action === "saveProfile")
                 saveProfileAction.trigger();
             else if (action === "nextProfile")
-                nextProfileAction.trigger();
+                profileSelector.toggle();
             else if (action === "previewProfile")
                 loadProfileAction.trigger();
             else if (action === "deleteProfile")
                 deleteProfileAction.trigger();
             else if (action === "apply")
-                previewOrKeep();
+                previewAction.trigger();
             else if (action === "cancel")
                 cancelNested();
-            else if (action === "refresh" && !previewActive)
-                refresh();
-            else if (action === "native" && !busy && !previewActive)
-                nativeEditorRequested();
+            else if (action === "refresh")
+                refreshRequested();
+            else if (action === "native")
+                nativeRequested();
             else if (action === "output")
                 cycleOutput();
-            else if (action === "mode" || action === "previousMode")
-                cycleMode(action === "mode" ? 1 : -1);
-            else if (action === "scale" || action === "previousScale")
-                cycleScale(action === "scale" ? 1 : -1);
+            else if (action === "mode")
+                resolutionSelector.toggle();
+            else if (action === "refreshRate")
+                refreshSelector.toggle();
+            else if (action === "scale")
+                scaleStepper.increase();
+            else if (action === "previousScale")
+                scaleStepper.decrease();
             else if (action === "orientation")
                 cycleOrientation();
             else if (editable && monitors.length > 1) {
@@ -224,63 +271,31 @@ Column {
     }
 
     ShellText {
+        visible: text.length > 0
         width: parent.width
         runtime: panel.runtime
         theme: panel.theme
-        text: panel.error || (panel.previewActive ? "Keep the new layout within " + Math.max(0, Math.ceil(panel.deadline - panel.clockMs / 1000)) + " seconds; otherwise it reverts." : panel.busy ? "Reading compositor state…" : panel.output ? panel.output.name + " · " + panel.output.width + "×" + panel.output.height + " @ " + panel.output.refreshRate.toFixed(1) + " Hz · scale " + panel.output.scale : "No outputs reported")
+        text: panel.error || (panel.previewActive ? "Keep the new layout within " + Math.max(0, Math.ceil(panel.deadline - panel.clockMs / 1000)) + " seconds; otherwise it reverts." : panel.busy ? "Reading compositor state…" : panel.output ? "" : "No outputs reported")
         color: panel.error || panel.previewActive ? panel.theme.warning : panel.theme.textMuted
         wrapMode: Text.WordWrap
     }
-    Row {
+    ShellAction {
+        visible: panel.monitors.length > 1
         width: parent.width
-        height: 42
-        spacing: panel.theme.spacing2
-        ShellAction {
-            width: Math.max(1, (parent.width - displayRefresh.width - 2 * parent.spacing) / 2)
-            height: parent.height
-            runtime: panel.runtime
-            theme: panel.theme
-            motion: panel.motion
-            compact: true
-            horizontalCompact: true
-            title: panel.output ? panel.output.name + " · " + (panel.outputIndex + 1) + "/" + panel.monitors.length : "No display"
-            shortcut: panel.runtime.shellHint("DisplaySettings.output")
-            enabled: !panel.busy && !panel.previewActive && panel.monitors.length > 1
-            onActivated: panel.cycleOutput()
-        }
-        ShellAction {
-            id: displayRefresh
-            width: implicitWidth
-            height: parent.height
-            runtime: panel.runtime
-            theme: panel.theme
-            motion: panel.motion
-            compact: true
-            iconOnly: true
-            inlineIconHint: true
-            icon: DesktopIcons.actionGlyph("refresh")
-            title: "Refresh"
-            shortcut: panel.runtime.shellHint("DisplaySettings.refresh")
-            enabled: !panel.busy && !panel.previewActive
-            onActivated: panel.refresh()
-        }
-        ShellAction {
-            width: Math.max(1, (parent.width - displayRefresh.width - 2 * parent.spacing) / 2)
-            height: parent.height
-            runtime: panel.runtime
-            theme: panel.theme
-            motion: panel.motion
-            compact: true
-            horizontalCompact: true
-            title: "Advanced display editor"
-            shortcut: panel.runtime.shellHint("DisplaySettings.native")
-            enabled: !panel.busy && !panel.previewActive && panel.runtime.displaySettings.length > 0
-            onActivated: panel.nativeEditorRequested()
-        }
+        height: implicitHeight
+        runtime: panel.runtime
+        theme: panel.theme
+        motion: panel.motion
+        compact: true
+        horizontalCompact: true
+        title: panel.output ? panel.output.name + " · " + (panel.outputIndex + 1) + "/" + panel.monitors.length : "No display"
+        shortcut: panel.runtime.shellHint("DisplaySettings.output")
+        enabled: panel.canRefresh && panel.monitors.length > 1
+        onActivated: panel.cycleOutput()
     }
     ShellSurface {
         width: parent.width
-        height: panel.theme.fontSize(panel.logicalOutputs.length > 1 ? 150 : 104)
+        height: panel.theme.fontSize(panel.logicalOutputs.length > 1 ? 150 : 116)
         theme: panel.theme
         motion: panel.motion
         surfaceLayer: ShellSurface.Group
@@ -308,7 +323,7 @@ Column {
                     outlined: modelData.selected
                     borderColor: modelData.selected ? panel.theme.roleColor("display") : panel.theme.subtleBorder
                     borderWidth: modelData.selected ? panel.theme.borderFocus : panel.theme.borderThin
-                    fillColor: modelData.selected ? panel.theme.selectedTabFill : panel.theme.controlBase
+                    fillColor: modelData.selected ? panel.theme.choiceFill(panel.theme.roleColor("display")) : panel.theme.controlBase
                     Accessible.role: Accessible.StaticText
                     Accessible.name: modelData.name + (modelData.selected ? ", selected" : "") + ", " + Math.round(modelData.width) + " by " + Math.round(modelData.height) + " logical pixels"
                     ShellText {
@@ -335,80 +350,118 @@ Column {
         color: panel.theme.textMuted
         wrapMode: Text.WordWrap
     }
-    Grid {
+    ShellSurface {
         width: parent.width
-        columns: 3
-        rowSpacing: panel.theme.spacing2
-        columnSpacing: panel.theme.spacing2
-        Repeater {
-            model: [
-                {
-                    title: panel.mode || "Mode unavailable",
-                    key: "mode",
-                    action: "DisplaySettings.mode",
-                    alternate: "DisplaySettings.previousMode",
-                    description: "Resolution / refresh"
-                },
-                {
-                    title: panel.scaleValue.toFixed(2) + "×",
-                    key: "scale",
-                    action: "DisplaySettings.scale",
-                    alternate: "DisplaySettings.previousScale",
-                    description: "Scale"
-                },
-                {
-                    title: ["Normal", "90°", "180°", "270°"][panel.orientation] || "Other",
-                    key: "orientation",
-                    action: "DisplaySettings.orientation",
-                    alternate: "",
-                    description: "Orientation"
+        height: displayParameters.implicitHeight + panel.theme.spacing3 * 2
+        theme: panel.theme
+        motion: panel.motion
+        surfaceLayer: ShellSurface.Group
+        cornerRadius: panel.theme.radiusLarge
+        Flow {
+            id: displayParameters
+            anchors.centerIn: parent
+            width: Math.max(1, parent.width - panel.theme.spacing3 * 2)
+            spacing: panel.theme.spacing2
+            readonly property int columns: width >= panel.theme.fontSize(560) ? 2 : 1
+            readonly property real fieldWidth: Math.floor((width - spacing * (columns - 1)) / columns)
+            ShellValueSelector {
+                id: resolutionSelector
+                width: displayParameters.fieldWidth
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                title: "Resolution"
+                shortcut: panel.runtime.shellHint("DisplaySettings.mode")
+                confirmShortcut: panel.runtime.shellHint("DisplaySettings.apply")
+                options: panel.resolutions.map(value => value.replace("x", " × "))
+                selectedIndex: panel.resolutions.indexOf(panel.mode.split("@")[0])
+                enabled: panel.editable
+                onOpened: {
+                    refreshSelector.cancel();
+                    profileSelector.cancel();
                 }
-            ]
-            delegate: Column {
-                id: field
-                required property var modelData
-                width: (panel.width - 2 * panel.theme.spacing2) / 3
+                onChosen: index => panel.selectResolution(index)
+            }
+            ShellValueSelector {
+                id: refreshSelector
+                width: displayParameters.fieldWidth
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                title: "Refresh rate"
+                shortcut: panel.runtime.shellHint("DisplaySettings.refreshRate")
+                confirmShortcut: panel.runtime.shellHint("DisplaySettings.apply")
+                options: panel.refreshModes.map(value => panel.formatRate(value))
+                selectedIndex: panel.refreshModes.indexOf(panel.mode)
+                enabled: panel.editable
+                onOpened: {
+                    resolutionSelector.cancel();
+                    profileSelector.cancel();
+                }
+                onChosen: index => panel.selectMode(panel.refreshModes[index])
+            }
+            ShellStepper {
+                id: scaleStepper
+                width: displayParameters.fieldWidth
+                fillAvailableWidth: true
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                title: "Scale"
+                readback: Math.round(panel.scaleValue * 100) + "%"
+                decreaseShortcut: panel.runtime.shellHint("DisplaySettings.previousScale")
+                increaseShortcut: panel.runtime.shellHint("DisplaySettings.scale")
+                canDecrease: panel.editable && panel.scales.indexOf(panel.scaleValue) > 0
+                canIncrease: panel.editable && panel.scales.indexOf(panel.scaleValue) < panel.scales.length - 1
+                onDecreased: panel.cycleScale(-1)
+                onIncreased: panel.cycleScale(1)
+            }
+            Column {
+                width: displayParameters.fieldWidth
                 spacing: panel.theme.spacing1
-                ShellText {
+                Row {
                     width: parent.width
-                    runtime: panel.runtime
-                    theme: panel.theme
-                    text: field.modelData.description
-                    color: panel.theme.textMuted
-                }
-                ShellAction {
-                    width: parent.width
-                    height: 44
-                    runtime: panel.runtime
-                    theme: panel.theme
-                    motion: panel.motion
-                    title: field.modelData.title
-                    shortcut: panel.runtime.shellHint(field.modelData.action)
-                    compact: true
-                    horizontalCompact: true
-                    enabled: panel.editable
-                    onActivated: {
-                        if (field.modelData.key === "mode")
-                            panel.cycleMode(1);
-                        else if (field.modelData.key === "scale")
-                            panel.cycleScale(1);
-                        else
-                            panel.cycleOrientation();
+                    spacing: panel.theme.spacing2
+                    ShellText {
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        text: "Orientation"
+                        textRole: ShellText.Supporting
+                    }
+                    KeyHint {
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        shortcut: panel.runtime.shellHint("DisplaySettings.orientation")
+                        label: "Next"
+                        compact: true
                     }
                 }
-                ShellAction {
-                    visible: field.modelData.alternate !== ""
+                Row {
                     width: parent.width
-                    height: visible ? 36 : 0
-                    runtime: panel.runtime
-                    theme: panel.theme
-                    motion: panel.motion
-                    title: "Previous"
-                    shortcut: visible ? panel.runtime.shellHint(field.modelData.alternate) : ""
-                    compact: true
-                    horizontalCompact: true
-                    enabled: panel.editable
-                    onActivated: field.modelData.key === "mode" ? panel.cycleMode(-1) : panel.cycleScale(-1)
+                    spacing: Math.max(2, panel.theme.spacing1 / 2)
+                    Repeater {
+                        id: orientationChoices
+                        model: ["0°", "90°", "180°", "270°"]
+                        delegate: ShellChoice {
+                            required property int index
+                            required property string modelData
+                            width: (displayParameters.fieldWidth - 3 * Math.max(2, panel.theme.spacing1 / 2)) / 4
+                            height: Math.max(panel.theme.fontSize(62), implicitHeight)
+                            runtime: panel.runtime
+                            theme: panel.theme
+                            motion: panel.motion
+                            compact: true
+                            title: modelData
+                            icon: DesktopIcons.glyphFor("displays")
+                            iconRotation: index * 90
+                            choices: orientationChoices
+                            choiceIndex: index
+                            active: panel.orientation === index
+                            activeColor: panel.theme.roleColor("display")
+                            enabled: panel.editable
+                            onActivated: panel.orientation = index
+                        }
+                    }
                 }
             }
         }
@@ -417,12 +470,13 @@ Column {
         width: parent.width
         runtime: panel.runtime
         theme: panel.theme
-        text: "Position · " + panel.positionX + ", " + panel.positionY + " logical px · VRR " + (panel.output?.vrr ? "active" : "inactive") + " · " + (panel.output?.colorManagementPreset || "Colour mode unavailable")
+        text: (panel.monitors.length > 1 ? "Position · " + panel.positionX + ", " + panel.positionY + " logical px · " : "") + "VRR " + (panel.output?.vrr ? "active" : "inactive") + " · " + (panel.output?.colorManagementPreset || "Colour mode unavailable")
         color: panel.theme.textMuted
     }
     Row {
+        visible: panel.monitors.length > 1
         width: parent.width
-        height: 40
+        height: visible ? 40 : 0
         spacing: panel.theme.spacing2
         Repeater {
             model: [
@@ -495,11 +549,10 @@ Column {
             theme: panel.theme
             motion: panel.motion
             compact: true
-            iconOnly: true
-            inlineIconHint: true
+            horizontalCompact: true
             quietAction: true
             icon: DesktopIcons.actionGlyph("cancel")
-            title: panel.previewActive ? "Revert temporary layout" : "Discard edits"
+            title: panel.previewActive ? "Revert" : "Discard"
             shortcut: panel.runtime.shellHint("DisplaySettings.cancel")
             enabled: !panel.busy && (panel.previewActive || panel.changed)
             onActivated: panel.cancelNested()
@@ -516,78 +569,88 @@ Column {
             icon: DesktopIcons.actionGlyph("confirm")
             title: panel.previewActive ? "Keep layout" : "Preview layout"
             shortcut: panel.runtime.shellHint("DisplaySettings.apply")
-            active: panel.previewActive || panel.changed
+            prominentAction: enabled
+            restingRadius: height / 2
+            activeColor: panel.theme.roleColor("display")
             enabled: !panel.busy && (panel.previewActive || panel.editable && panel.changed)
             onActivated: panel.previewOrKeep()
         }
     }
-    ShellSection {
-        runtime: panel.runtime
-        theme: panel.theme
-        title: "Saved layouts"
+    Row {
+        width: parent.width
+        spacing: panel.theme.spacing2
         ShellText {
-            width: parent.width
+            width: Math.max(1, parent.width - saveProfileAction.width - parent.spacing)
+            anchors.verticalCenter: parent.verticalCenter
             runtime: panel.runtime
             theme: panel.theme
-            text: panel.profile ? (panel.profileIndex + 1) + "/" + panel.profiles.length + " · " + panel.profile.label + (panel.profile.compatible ? "" : " · Different displays") : "No saved layouts"
-            wrapMode: Text.Wrap
-            textRole: ShellText.Supporting
+            text: "Saved layouts"
+            textRole: ShellText.Section
         }
-        Row {
-            width: parent.width
-            spacing: panel.theme.spacing2
-            ShellAction {
-                id: saveProfileAction
-                width: (parent.width - 3 * parent.spacing) / 4
-                height: Math.max(40, implicitHeight)
-                runtime: panel.runtime
-                theme: panel.theme
-                motion: panel.motion
-                compact: true
-                title: "Save current"
-                shortcut: panel.runtime.shellHint("DisplaySettings.saveProfile")
-                enabled: panel.canSaveProfile
-                onActivated: panel.run("save-profile")
+        ShellUtilityAction {
+            id: saveProfileAction
+            runtime: panel.runtime
+            theme: panel.theme
+            motion: panel.motion
+            icon: DesktopIcons.actionGlyph("save")
+            title: "Save current layout"
+            shortcut: panel.runtime.shellHint("DisplaySettings.saveProfile")
+            enabled: panel.canSaveProfile
+            onActivated: panel.run("save-profile")
+        }
+    }
+    ShellText {
+        visible: panel.profiles.length === 0
+        width: parent.width
+        runtime: panel.runtime
+        theme: panel.theme
+        text: "No saved layouts"
+        textRole: ShellText.Supporting
+    }
+    Row {
+        visible: panel.profiles.length > 0
+        width: parent.width
+        spacing: panel.theme.spacing2
+        ShellValueSelector {
+            id: profileSelector
+            width: Math.max(1, parent.width - loadProfileAction.width - deleteProfileAction.width - parent.spacing * 2)
+            runtime: panel.runtime
+            theme: panel.theme
+            motion: panel.motion
+            title: "Layout"
+            shortcut: panel.runtime.shellHint("DisplaySettings.nextProfile")
+            confirmShortcut: panel.runtime.shellHint("DisplaySettings.apply")
+            options: panel.profiles.map(entry => entry.label + (entry.compatible ? "" : " · Different displays"))
+            selectedIndex: panel.profileIndex
+            enabled: panel.profileActionsAvailable && panel.profiles.length > 0
+            onOpened: {
+                resolutionSelector.cancel();
+                refreshSelector.cancel();
             }
-            ShellAction {
-                id: nextProfileAction
-                width: saveProfileAction.width
-                height: saveProfileAction.height
-                runtime: panel.runtime
-                theme: panel.theme
-                motion: panel.motion
-                compact: true
-                title: "Next layout"
-                shortcut: panel.runtime.shellHint("DisplaySettings.nextProfile")
-                enabled: panel.profileActionsAvailable && panel.profiles.length > 1
-                onActivated: panel.profileIndex = (panel.profileIndex + 1) % panel.profiles.length
-            }
-            ShellAction {
-                id: loadProfileAction
-                width: saveProfileAction.width
-                height: saveProfileAction.height
-                runtime: panel.runtime
-                theme: panel.theme
-                motion: panel.motion
-                compact: true
-                title: "Preview saved"
-                shortcut: panel.runtime.shellHint("DisplaySettings.previewProfile")
-                enabled: panel.profileActionsAvailable && !!panel.profile?.compatible
-                onActivated: panel.run("preview-profile", [String(panel.profileIndex)])
-            }
-            ShellAction {
-                id: deleteProfileAction
-                width: saveProfileAction.width
-                height: saveProfileAction.height
-                runtime: panel.runtime
-                theme: panel.theme
-                motion: panel.motion
-                compact: true
-                title: "Remove saved"
-                shortcut: panel.runtime.shellHint("DisplaySettings.deleteProfile")
-                enabled: panel.profileActionsAvailable && !!panel.profile
-                onActivated: panel.run("delete-profile", [String(panel.profileIndex)])
-            }
+            onChosen: index => panel.profileIndex = index
+        }
+        ShellUtilityAction {
+            id: loadProfileAction
+            runtime: panel.runtime
+            theme: panel.theme
+            motion: panel.motion
+            icon: DesktopIcons.actionGlyph("confirm")
+            title: "Preview saved layout"
+            shortcut: panel.runtime.shellHint("DisplaySettings.previewProfile")
+            enabled: panel.profileActionsAvailable && !!panel.profile?.compatible && !profileSelector.expanded
+            activeColor: panel.theme.roleColor("display")
+            onActivated: panel.run("preview-profile", [String(panel.profileIndex)])
+        }
+        ShellUtilityAction {
+            id: deleteProfileAction
+            runtime: panel.runtime
+            theme: panel.theme
+            motion: panel.motion
+            icon: DesktopIcons.actionGlyph("delete")
+            title: "Remove selected layout"
+            shortcut: panel.runtime.shellHint("DisplaySettings.deleteProfile")
+            enabled: panel.profileActionsAvailable && !!panel.profile && !profileSelector.expanded
+            onActivated: panel.run("delete-profile", [String(panel.profileIndex)])
         }
     }
 }

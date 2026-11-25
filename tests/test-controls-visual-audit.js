@@ -947,7 +947,8 @@ test("Status detail keeps Refresh in its owning action and Close in the shared f
     status,
     /shortcut: content\.runtime\.shellHint\("StatusContent\.refresh"\)/,
   );
-  assert.match(status, /inlineIconHint: true/);
+  assert.match(status, /ShellUtilityAction \{/);
+  assert.match(read("ShellUtilityAction.qml"), /inlineIconHint: true/);
   assert.doesNotMatch(status, /KeyHintStrip\s*\{/);
   assert.doesNotMatch(status, /StatusContent\.close/);
   const controls = read("SystemContent.qml");

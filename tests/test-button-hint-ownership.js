@@ -16,9 +16,9 @@ test("Forecast and Status Refresh shortcuts appear on their own button, not in f
     [weather, "panel", "WeatherContent.refresh"],
     [status, "content", "StatusContent.refresh"],
   ]) {
-    assert.match(src, /ShellAction \{/);
-    assert.match(src, /iconOnly: true/);
-    assert.match(src, /inlineIconHint: true/);
+    assert.match(src, /ShellUtilityAction \{/);
+    assert.match(qml("ShellUtilityAction"), /iconOnly: true/);
+    assert.match(qml("ShellUtilityAction"), /inlineIconHint: true/);
     assert.ok(
       src.includes("shortcut: " + owner + '.runtime.shellHint("' + name + '")'),
     );

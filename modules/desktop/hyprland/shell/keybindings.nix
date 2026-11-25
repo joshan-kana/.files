@@ -236,7 +236,7 @@
           "DisplaySettings.refresh" = "R";
           "DisplaySettings.native" = "E";
           "DisplaySettings.mode" = "M";
-          "DisplaySettings.previousMode" = "SHIFT+M";
+          "DisplaySettings.refreshRate" = "SHIFT+M";
           "DisplaySettings.scale" = "S";
           "DisplaySettings.previousScale" = "SHIFT+S";
           "DisplaySettings.orientation" = "T";

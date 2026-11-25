@@ -270,13 +270,14 @@ Item {
         Row {
             width: parent.width
             height: implicitHeight
-            spacing: panel.theme.spacing1
+            spacing: Math.max(2, panel.theme.spacing1 / 2)
             Repeater {
+                id: vhsPresets
                 model: ["Subtle", "Analog", "Degraded", "Default"]
-                delegate: ShellAction {
+                delegate: ShellChoice {
                     required property int index
                     required property string modelData
-                    width: (panel.width - panel.theme.spacing1 * 3) / 4
+                    width: (panel.width - Math.max(2, panel.theme.spacing1 / 2) * 3) / 4
                     height: Math.max(76, implicitHeight)
                     runtime: panel.runtime
                     theme: panel.theme
@@ -285,7 +286,8 @@ Item {
                     icon: ["󰨛", "󰕧", "󰓎", DesktopIcons.actionGlyph("reset")][index]
                     shortcut: panel.runtime.shellChoiceHint(index)
                     compact: true
-                    connectedGroup: true
+                    choices: vhsPresets
+                    choiceIndex: index
                     activeColor: panel.theme.roleColor("reactive")
                     active: panel.appearance.vhsPreset === modelData
                     onActivated: panel.appearance.applyVhsPreset(modelData)

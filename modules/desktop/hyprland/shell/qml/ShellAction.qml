@@ -12,12 +12,15 @@ Item {
     property string subtitle: ""
     property string icon: ""
     property string iconName: ""
+    property real iconRotation: 0
     property string actionId: ""
     property string shortcut: actionId.length > 0 ? runtime.shellHint(actionId) : ""
     property bool active: false
     property color activeColor: theme.accent
     property bool prominentAction: false
-    property color iconColor: prominentAction ? theme.onColor(activeColor) : active ? activeColor : theme.textStrong
+    property color actionForeground: prominentAction ? theme.onColor(activeColor) : active ? activeColor : theme.textStrong
+    property color actionFill: prominentAction ? activeColor : quietAction || switchControl ? "transparent" : active ? theme.blend(theme.controlBase, activeColor, theme.dark ? 0.20 : 0.12) : theme.expressiveSurfaceStrong
+    property color iconColor: actionForeground
     property bool compact: false
     property bool horizontalCompact: false
     property bool headerEntry: false
@@ -38,7 +41,7 @@ Item {
     readonly property real inlineHintWidth: shortcut.length > 0 ? inlineHint.implicitWidth : 0
     readonly property real symbolWidth: switchControl ? Math.max(46, theme.fontSize(42)) : theme.iconRegular
     readonly property real symbolHeight: switchControl ? Math.max(26, theme.fontSize(24)) : inlineSymbol ? theme.iconRegular : theme.fontSize(17)
-    implicitWidth: iconOnly ? Math.max(theme.minActionTarget, inlineSymbol ? symbolWidth + inlineHintWidth + (iconHint ? theme.spacing1 : 0) + theme.spacing2 * 2 : Math.max(symbolWidth, iconHint ? inlineHintWidth : 0) + theme.spacing2) : Math.max(96, horizontalPadding * 2 + (horizontalCompact ? Math.ceil(Math.max(actionLabelMetrics.advanceWidth, actionLabelMetrics.boundingRect.width)) + 2 + inlineGlyphWidth + inlineHintWidth + (inlineGlyphWidth > 0 ? theme.spacing2 : 0) + (inlineHintWidth > 0 ? theme.spacing2 : 0) : Math.max(stackedLabel.implicitWidth, stackedSubtitle.implicitWidth)))
+    implicitWidth: iconOnly ? Math.max(theme.minActionTarget, inlineSymbol ? symbolWidth + inlineHintWidth + (iconHint ? theme.spacing1 : 0) + theme.spacing2 * 2 : Math.max(symbolWidth, iconHint ? inlineHintWidth : 0) + theme.spacing2) : Math.max(96, horizontalPadding * 2 + (horizontalCompact ? Math.ceil(Math.max(actionLabelMetrics.advanceWidth, actionLabelMetrics.boundingRect.width)) + theme.spacing1 + inlineGlyphWidth + inlineHintWidth + (inlineGlyphWidth > 0 ? theme.spacing2 : 0) + (inlineHintWidth > 0 ? theme.spacing2 : 0) : Math.max(stackedLabel.implicitWidth, stackedSubtitle.implicitWidth)))
     implicitHeight: iconOnly ? Math.max(40, inlineSymbol ? Math.max(symbolHeight, inlineHint.implicitHeight) + theme.spacing2 : symbolHeight + (iconHint ? inlineHint.implicitHeight + theme.spacing1 : 0) + theme.spacing1) : horizontalCompact ? Math.max(40, inlineLabel.implicitHeight + theme.spacing2 * 2, inlineHint.implicitHeight + theme.spacing2 * 2) : Math.max(compact ? 40 : 58, content.implicitHeight + theme.spacing2 * 2)
 
     TextMetrics {
@@ -60,6 +63,10 @@ Item {
     }
     opacity: enabled ? 1 : 0.42
     // Keep the pointer/keyboard target fixed; deform the painted body only.
+    // Choice controls supply their own resting shape, while retaining the
+    // fixed hit region and the common press/hover implementation.
+    property int labelAlignment: Text.AlignLeft
+    property real restingRadius: active || prominentAction ? theme.radiusLarge : compact ? theme.radiusSmall : theme.radiusMedium
     property bool connectedGroup: false
     property bool neighborPressed: false
     readonly property bool visualPressed: interaction.visualPressed
@@ -106,8 +113,8 @@ Item {
             motion: root.motion
             surfaceLayer: ShellSurface.Control
             selected: root.active
-            fillColor: root.prominentAction ? root.activeColor : root.quietAction || root.switchControl ? "transparent" : root.active ? root.theme.blend(root.theme.controlBase, root.activeColor, root.theme.dark ? 0.20 : 0.12) : root.theme.expressiveSurfaceStrong
-            cornerRadius: root.motion.enabled && interaction.visualPressed ? Math.min(root.height / 2, root.theme.radiusSmall) : root.active || root.prominentAction ? root.theme.radiusLarge : root.compact ? theme.radiusSmall : theme.radiusMedium
+            fillColor: root.actionFill
+            cornerRadius: root.motion.enabled && interaction.visualPressed ? Math.min(root.height / 2, root.theme.radiusSmall) : root.restingRadius
             Behavior on cornerRadius {
                 Anim {
                     motion: root.motion
@@ -127,6 +134,7 @@ Item {
                 visible: !root.iconOnly && root.icon.length > 0
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: root.icon
+                rotation: root.iconRotation
                 color: root.iconColor
                 font.family: "Symbols Nerd Font"
                 font.pixelSize: root.theme.fontSize(root.compact ? 15 : 19)
@@ -141,7 +149,7 @@ Item {
                 runtime: root.runtime
                 theme: root.theme
                 text: root.title
-                color: root.prominentAction ? root.theme.onColor(root.activeColor) : root.active ? root.activeColor : theme.textStrong
+                color: root.actionForeground
                 font.pixelSize: root.compact ? theme.fontCompactAction : theme.fontAction
                 font.weight: Font.DemiBold
             }
@@ -154,7 +162,7 @@ Item {
                 runtime: root.runtime
                 theme: root.theme
                 text: root.subtitle
-                color: theme.textMuted
+                color: root.prominentAction ? root.theme.onColor(root.activeColor) : theme.textMuted
                 font.pixelSize: theme.fontSupporting
                 elide: Text.ElideRight
             }
@@ -190,6 +198,7 @@ Item {
                 visible: root.iconName.length === 0 && root.icon.length > 0
                 anchors.verticalCenter: parent.verticalCenter
                 text: root.icon
+                rotation: root.iconRotation
                 color: root.iconColor
                 font.family: "Symbols Nerd Font"
                 font.pixelSize: root.theme.fontSize(15)
@@ -197,13 +206,14 @@ Item {
 
             ShellText {
                 id: inlineLabel
+                horizontalAlignment: root.labelAlignment
                 anchors.verticalCenter: parent.verticalCenter
                 width: Math.max(1, inlineContent.width - root.inlineGlyphWidth - root.inlineHintWidth - (root.inlineGlyphWidth > 0 ? inlineContent.spacing : 0) - (root.inlineHintWidth > 0 ? inlineContent.spacing : 0))
                 text: root.title
                 wrapMode: Text.WordWrap
                 runtime: root.runtime
                 theme: root.theme
-                color: root.prominentAction ? root.theme.onColor(root.activeColor) : root.active ? root.activeColor : root.theme.textStrong
+                color: root.actionForeground
                 font.pixelSize: root.compact ? root.theme.fontCompactAction : root.theme.fontAction
                 font.weight: Font.DemiBold
             }
@@ -231,6 +241,7 @@ Item {
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             text: root.icon
+            rotation: root.iconRotation
             color: root.iconColor
             font.family: "Symbols Nerd Font"
             font.pixelSize: root.theme.fontSize(17)
@@ -280,6 +291,7 @@ Item {
                     visible: !root.switchControl
                     anchors.centerIn: parent
                     text: root.icon
+                    rotation: root.iconRotation
                     color: root.iconColor
                     font.family: "Symbols Nerd Font"
                     font.pixelSize: root.theme.iconSmall
@@ -334,9 +346,9 @@ Item {
         disabled: !root.enabled
         selected: root.active
         keyboardFocusable: !root.iconOnly || root.iconHint || root.title.length > 0
-        Accessible.role: root.switchControl ? Accessible.CheckBox : Accessible.Button
-        Accessible.checkable: root.switchControl
-        Accessible.checked: root.switchControl && root.active
+        Accessible.role: root.Accessible.role
+        Accessible.checkable: root.Accessible.checkable
+        Accessible.checked: root.Accessible.checked
         Accessible.name: root.title.length > 0 ? root.title : "Activate control"
         Accessible.onPressAction: root.trigger()
         stateColor: root.active ? root.activeColor : root.theme.textStrong

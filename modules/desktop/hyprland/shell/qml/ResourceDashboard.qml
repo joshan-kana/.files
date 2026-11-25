@@ -51,8 +51,12 @@ Item {
         for (const action of ["refresh", "interval", "history", "processes", "sort", "defaults"]) {
             const id = "ResourceDashboard." + action;
             if (runtime.shellMatchesHint(id, key, modifiers)) {
-                if (!autoRepeat)
-                    activateAction(id);
+                if (!autoRepeat) {
+                    if (action === "refresh")
+                        refreshResources.trigger();
+                    else
+                        activateAction(id);
+                }
                 return true;
             }
         }
@@ -77,17 +81,32 @@ Item {
         width: parent.width
         spacing: panel.theme.spacing3
 
-        DetailHero {
+        Row {
             width: parent.width
-            runtime: panel.runtime
-            theme: panel.theme
-            motion: panel.motion
-            glyph: DesktopIcons.glyphFor("resources")
-            glyphFont: "Symbols Nerd Font"
-            glyphColor: panel.theme.roleColor("resources")
-            eyebrow: "Performance / live"
-            title: "Resources"
-            detail: "CPU · Memory · GPU · Temperature · Network · Disk · Last " + panel.resourceState.historySeconds + "s"
+            spacing: panel.theme.spacing2
+            DetailHero {
+                width: Math.max(1, parent.width - refreshResources.width - parent.spacing)
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                glyph: DesktopIcons.glyphFor("resources")
+                glyphFont: "Symbols Nerd Font"
+                glyphColor: panel.theme.roleColor("resources")
+                eyebrow: "Performance / live"
+                title: "Resources"
+                detail: "CPU · Memory · GPU · Temperature · Network · Disk · Last " + panel.resourceState.historySeconds + "s"
+            }
+            ShellUtilityAction {
+                id: refreshResources
+                anchors.verticalCenter: parent.verticalCenter
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                icon: DesktopIcons.actionGlyph("refresh")
+                title: "Refresh resources"
+                shortcut: panel.runtime.shellHint("ResourceDashboard.refresh")
+                onActivated: panel.activateAction("ResourceDashboard.refresh")
+            }
         }
 
         Flow {
@@ -546,11 +565,6 @@ Item {
             spacing: panel.theme.spacing2
             Repeater {
                 model: [
-                    {
-                        action: "ResourceDashboard.refresh",
-                        glyph: DesktopIcons.actionGlyph("refresh"),
-                        title: "Refresh"
-                    },
                     {
                         action: "ResourceDashboard.interval",
                         title: panel.resourceState.intervalSeconds + "s sampling"

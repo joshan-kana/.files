@@ -1025,9 +1025,10 @@ Item {
                 Flow {
                     id: modeChoices
                     width: parent.width
-                    spacing: panel.theme.spacing2
+                    spacing: Math.max(2, panel.theme.spacing1 / 2)
                     readonly property int columns: width >= panel.theme.fontSize(420) ? 3 : 1
                     Repeater {
+                        id: wallpaperModeChoices
                         model: [
                             {
                                 id: "off",
@@ -1045,7 +1046,8 @@ Item {
                                 glyph: "󰖔"
                             }
                         ]
-                        delegate: ShellAction {
+                        delegate: ShellChoice {
+                            required property int index
                             required property var modelData
                             width: Math.floor((modeChoices.width - (modeChoices.columns - 1) * modeChoices.spacing) / modeChoices.columns)
                             height: Math.max(panel.theme.fontSize(58), implicitHeight)
@@ -1055,7 +1057,9 @@ Item {
                             icon: modelData.glyph
                             title: modelData.title
                             compact: true
-                            connectedGroup: modeChoices.columns > 1
+                            joined: modeChoices.columns > 1
+                            choices: wallpaperModeChoices
+                            choiceIndex: index
                             active: panel.policy.mode === modelData.id
                             activeColor: panel.theme.roleColor("wallpaper")
                             enabled: panel.policyActionEnabled("WallpaperPolicy.mode")

@@ -112,17 +112,12 @@ FocusScope {
                 }
             }
 
-            ShellAction {
+            ShellUtilityAction {
                 id: refreshButton
-                width: Math.max(48, implicitWidth)
-                height: Math.max(42, implicitHeight)
                 anchors.verticalCenter: parent.verticalCenter
                 runtime: panel.runtime
                 theme: panel.theme
                 motion: panel.motion
-                iconOnly: true
-                iconHint: true
-                inlineIconHint: true
                 icon: DesktopIcons.actionGlyph("refresh")
                 shortcut: panel.runtime.shellHint("WeatherContent.refresh")
                 title: "Refresh forecast"

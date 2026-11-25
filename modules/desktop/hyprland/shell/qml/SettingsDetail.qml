@@ -663,7 +663,7 @@ Item {
 
         Row {
             width: parent.width
-            height: Math.max(44, heading.implicitHeight, masterAction.implicitHeight, appearanceReset.height)
+            height: Math.max(44, heading.implicitHeight, masterAction.implicitHeight, appearanceReset.height, displayUtilities.height)
             spacing: panel.theme.spacing3
 
             Text {
@@ -680,7 +680,7 @@ Item {
             Column {
                 id: heading
                 anchors.verticalCenter: parent.verticalCenter
-                width: Math.max(1, parent.width - capabilityGlyph.width - masterAction.width - appearanceReset.width - (1 + (panel.hasMaster ? 1 : 0) + (appearanceReset.visible ? 1 : 0)) * parent.spacing)
+                width: Math.max(1, parent.width - capabilityGlyph.width - masterAction.width - appearanceReset.width - displayUtilities.width - (1 + (panel.hasMaster ? 1 : 0) + (appearanceReset.visible ? 1 : 0) + (displayUtilities.visible ? 1 : 0)) * parent.spacing)
                 spacing: panel.theme.spacing1
 
                 ShellText {
@@ -738,6 +738,36 @@ Item {
                 shortcut: panel.runtime.shellHint("SettingsDetail.reset")
                 onActivated: panel.resetAppearance()
             }
+            Row {
+                id: displayUtilities
+                visible: panel.kind === "displays"
+                width: visible ? implicitWidth : 0
+                height: visible ? implicitHeight : 0
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: panel.theme.spacing1
+                ShellUtilityAction {
+                    id: nativeDisplayAction
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    motion: panel.motion
+                    icon: DesktopIcons.actionGlyph("settings")
+                    title: "Advanced display editor"
+                    shortcut: panel.runtime.shellHint("DisplaySettings.native")
+                    enabled: displayDetails.canOpenNative
+                    onActivated: panel.nativeDisplayEditorRequested()
+                }
+                ShellUtilityAction {
+                    id: refreshDisplayAction
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    motion: panel.motion
+                    icon: DesktopIcons.actionGlyph("refresh")
+                    title: "Refresh display state"
+                    shortcut: panel.runtime.shellHint("DisplaySettings.refresh")
+                    enabled: displayDetails.canRefresh
+                    onActivated: displayDetails.refresh()
+                }
+            }
         }
 
         ScenePanel {
@@ -761,7 +791,8 @@ Item {
             runtime: panel.runtime
             theme: panel.theme
             motion: panel.motion
-            onNativeEditorRequested: panel.nativeDisplayEditorRequested()
+            onRefreshRequested: refreshDisplayAction.trigger()
+            onNativeRequested: nativeDisplayAction.trigger()
         }
 
         Row {
@@ -891,14 +922,14 @@ Item {
                 visible: panel.reactiveTuning
                 width: parent.width
                 height: visible ? 44 : 0
-                spacing: panel.theme.spacing2
+                spacing: Math.max(2, panel.theme.spacing1 / 2)
                 Repeater {
                     id: reactivePresets
                     model: ["Subtle", "Default", "Energetic"]
-                    delegate: ShellAction {
+                    delegate: ShellChoice {
                         required property int index
                         required property string modelData
-                        width: (panel.width - panel.theme.spacing2 * 2) / 3
+                        width: (panel.width - Math.max(2, panel.theme.spacing1 / 2) * 2) / 3
                         height: 44
                         runtime: panel.runtime
                         theme: panel.theme
@@ -907,7 +938,8 @@ Item {
                         shortcut: panel.runtime.shellChoiceHint(index)
                         compact: true
                         horizontalCompact: true
-                        connectedGroup: true
+                        choices: reactivePresets
+                        choiceIndex: index
                         activeColor: panel.theme.roleColor("reactive")
                         active: panel.appearance.musicReactivePreset === modelData
                         onActivated: panel.appearance.applyReactivePreset(modelData)
@@ -928,14 +960,14 @@ Item {
                 visible: panel.reactiveTuning
                 width: parent.width
                 height: visible ? 44 : 0
-                spacing: panel.theme.spacing2
+                spacing: Math.max(2, panel.theme.spacing1 / 2)
                 Repeater {
                     id: reactiveEmphases
                     model: ["balanced", "bass", "mid", "treble"]
-                    delegate: ShellAction {
+                    delegate: ShellChoice {
                         required property int index
                         required property string modelData
-                        width: (panel.width - panel.theme.spacing2 * 3) / 4
+                        width: (panel.width - Math.max(2, panel.theme.spacing1 / 2) * 3) / 4
                         height: 44
                         runtime: panel.runtime
                         theme: panel.theme
@@ -944,7 +976,8 @@ Item {
                         shortcut: panel.runtime.shellChoiceHint(index + 3)
                         compact: true
                         horizontalCompact: true
-                        connectedGroup: true
+                        choices: reactiveEmphases
+                        choiceIndex: index
                         activeColor: panel.theme.roleColor("reactive")
                         active: panel.appearance.musicReactiveEmphasis === modelData
                         onActivated: panel.appearance.setReactiveEmphasis(modelData)
@@ -1025,7 +1058,7 @@ Item {
             Row {
                 width: parent.width
                 height: 40
-                spacing: panel.theme.spacing2
+                spacing: Math.max(2, panel.theme.spacing1 / 2)
                 Repeater {
                     id: nightModes
                     model: [
@@ -1046,10 +1079,10 @@ Item {
                             title: "Sunset"
                         }
                     ]
-                    delegate: ShellAction {
+                    delegate: ShellChoice {
                         required property int index
                         required property var modelData
-                        width: (panel.width - panel.theme.spacing2 * 3) / 4
+                        width: (panel.width - Math.max(2, panel.theme.spacing1 / 2) * 3) / 4
                         height: 40
                         runtime: panel.runtime
                         theme: panel.theme
@@ -1058,7 +1091,8 @@ Item {
                         horizontalCompact: true
                         title: modelData.title
                         shortcut: panel.runtime.shellChoiceHint(index)
-                        connectedGroup: true
+                        choices: nightModes
+                        choiceIndex: index
                         activeColor: panel.theme.roleColor("warmth")
                         active: panel.nightLight.mode === modelData.id
                         enabled: panel.masterAvailable && (modelData.id !== "solar" || panel.nightLight.solarAvailable)
@@ -1080,7 +1114,7 @@ Item {
                 visible: panel.nightLight.mode === "custom"
                 width: parent.width
                 height: visible ? 40 : 0
-                spacing: panel.theme.spacing2
+                spacing: Math.max(2, panel.theme.spacing1 / 2)
                 Repeater {
                     id: nightDays
                     model: [
@@ -1097,10 +1131,10 @@ Item {
                             days: 65
                         }
                     ]
-                    delegate: ShellAction {
+                    delegate: ShellChoice {
                         required property int index
                         required property var modelData
-                        width: (panel.width - panel.theme.spacing2 * 2) / 3
+                        width: (panel.width - Math.max(2, panel.theme.spacing1 / 2) * 2) / 3
                         height: 40
                         runtime: panel.runtime
                         theme: panel.theme
@@ -1108,7 +1142,8 @@ Item {
                         compact: true
                         horizontalCompact: true
                         title: modelData.title
-                        connectedGroup: true
+                        choices: nightDays
+                        choiceIndex: index
                         activeColor: panel.theme.roleColor("schedule")
                         active: panel.nightLight.days === modelData.days
                         shortcut: panel.runtime.shellChoiceHint(index + 4)
@@ -1272,7 +1307,7 @@ Item {
                 Repeater {
                     id: powerProfiles
                     model: panel.powerProfile.profiles
-                    delegate: ShellAction {
+                    delegate: ShellChoice {
                         required property int index
                         required property string modelData
                         width: Math.floor((profileFlow.width - (profileFlow.columns - 1) * profileFlow.spacing) / profileFlow.columns)
@@ -1283,7 +1318,9 @@ Item {
                         icon: DesktopIcons.powerProfileGlyph(modelData)
                         title: panel.powerProfile.label(modelData)
                         shortcut: panel.runtime.shellChoiceHint(index)
-                        connectedGroup: true
+                        choices: powerProfiles
+                        choiceIndex: index
+                        joined: profileFlow.columns > 1
                         active: panel.powerProfile.current === modelData
                         activeColor: panel.theme.powerProfileColor(modelData)
                         enabled: panel.powerProfile.available && !panel.powerProfile.applying
@@ -1537,7 +1574,7 @@ Item {
                 Row {
                     width: parent.width
                     height: 40
-                    spacing: panel.theme.spacing2
+                    spacing: Math.max(2, panel.theme.spacing1 / 2)
                     Repeater {
                         id: quietDays
                         model: [
@@ -1554,10 +1591,10 @@ Item {
                                 days: 65
                             }
                         ]
-                        delegate: ShellAction {
+                        delegate: ShellChoice {
                             required property int index
                             required property var modelData
-                            width: (panel.width - panel.theme.spacing2 * 2) / 3
+                            width: (panel.width - Math.max(2, panel.theme.spacing1 / 2) * 2) / 3
                             height: 40
                             runtime: panel.runtime
                             theme: panel.theme
@@ -1566,7 +1603,8 @@ Item {
                             shortcut: panel.runtime.shellChoiceHint(index + 3)
                             compact: true
                             horizontalCompact: true
-                            connectedGroup: true
+                            choices: quietDays
+                            choiceIndex: index
                             activeColor: panel.theme.roleColor("schedule")
                             active: panel.notifications.quietDays === modelData.days
                             onActivated: panel.notifications.setQuietPreference("days", modelData.days)
@@ -1641,16 +1679,6 @@ Item {
             }
         }
 
-        ShellText {
-            visible: panel.parameters.length === 0 && panel.kind !== "power" && panel.kind !== "stay" && panel.kind !== "alerts"
-            width: parent.width
-            runtime: panel.runtime
-            theme: panel.theme
-            text: "The direct action and its state are available here. Further settings are shown only when the backend supports them."
-            color: panel.theme.textMuted
-            wrapMode: Text.WordWrap
-            font.pixelSize: panel.theme.fontSize(10)
-        }
         KeyHintStrip {
             visible: panel.parameters.length > 1
             width: parent.width

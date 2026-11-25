@@ -69,6 +69,11 @@ function actionGlyph(action) {
       increase: "󰐕",
       copy: "󰆏",
       edit: "󰏫",
+      expand: "󰅀",
+      collapse: "󰅃",
+      settings: "󰒓",
+      save: "󰆓",
+      delete: "󰆴",
     }[action] || ""
   );
 }

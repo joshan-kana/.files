@@ -187,6 +187,16 @@ QtObject {
     readonly property color layer2: groupBase
     readonly property color layer3: blend(paneBase, accent, dark ? 0.08 : 0.07)
     readonly property color selectionFill: Qt.rgba(accent.r, accent.g, accent.b, dark ? 0.20 : 0.15)
+    // Selection is a tonal container, not the full-strength command accent.
+    // Both colours follow the active Base16 palette and semantic role.
+    function choiceFill(role: color): color {
+        return blend(controlBase, role, dark ? 0.34 : 0.22);
+    }
+    function choiceForeground(role: color): color {
+        const fill = choiceFill(role);
+        const contrast = (Math.max(luminance(role), luminance(fill)) + 0.05) / (Math.min(luminance(role), luminance(fill)) + 0.05);
+        return contrast >= 4.5 ? role : onColor(fill);
+    }
     readonly property color selectedTabFill: blend(controlBase, accent, dark ? 0.52 : 0.34)
     readonly property color expressiveSurface: blend(groupBase, accent, dark ? 0.035 : 0.022)
     readonly property color expressiveSurfaceStrong: blend(controlBase, accent, dark ? 0.055 : 0.035)

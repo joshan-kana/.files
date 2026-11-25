@@ -287,12 +287,20 @@ FocusScope {
                 }
             ] : []), ...(settingsPanel.panel?.kind === "displays" ? [
                 {
+                    key: root.runtime.shellHint("DisplaySettings.mode"),
+                    action: "Choose resolution"
+                },
+                {
+                    key: root.runtime.shellHint("DisplaySettings.refreshRate"),
+                    action: "Choose refresh rate"
+                },
+                {
                     key: root.runtime.shellHint("DisplaySettings.saveProfile"),
                     action: "Save current display layout"
                 },
                 {
                     key: root.runtime.shellHint("DisplaySettings.nextProfile"),
-                    action: "Select next saved layout"
+                    action: "Choose saved layout"
                 },
                 {
                     key: root.runtime.shellHint("DisplaySettings.previewProfile"),
