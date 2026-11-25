@@ -1574,10 +1574,11 @@ FocusScope {
                             motion: root.motion
                             icon: DesktopIcons.glyphFor("scenes")
                             title: root.scenes.active ? "Scene active" : "Scenes"
-                            actionId: "SystemContent.scenes"
+                            detailActionId: "SystemContent.scenes"
+                            detailName: "Desktop scenes"
                             active: root.scenes.active
                             activeColor: root.theme.roleColor("display")
-                            onActivated: root.openSetting("scenes")
+                            onDetailsRequested: root.openSetting("scenes")
                         }
                     }
                 }

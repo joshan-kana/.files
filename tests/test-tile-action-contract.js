@@ -184,6 +184,13 @@ test("dashboard destination-only tiles advertise a right-corner detail action wi
     assert.doesNotMatch(tile, /\bactionId:|onActivated:/);
     assert.match(tile, /onDetailsRequested: root\.open/);
   }
+  const scenes = tiles.find((entry) =>
+    entry.includes('"SystemContent.scenes"'),
+  );
+  assert.ok(scenes);
+  assert.match(scenes, /detailActionId: "SystemContent.scenes"/);
+  assert.match(scenes, /onDetailsRequested: root.openSetting\("scenes"\)/);
+  assert.doesNotMatch(scenes, /\bactionId:|onActivated:/);
   const reset = tiles.find((entry) => entry.includes('"SystemContent.reset"'));
   assert.match(reset, /actionId: "SystemContent.reset"/);
   assert.doesNotMatch(reset, /detailActionId:/);

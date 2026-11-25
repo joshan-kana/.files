@@ -175,8 +175,15 @@ test("desktop scenes are owned by Visual Modes, not Power & Session", () => {
     .split("id: mediaMatrix")[0];
   assert.match(visualModes, /QuickSettingChip \{/);
   assert.match(visualModes, /icon: DesktopIcons.glyphFor\("scenes"\)/);
-  assert.match(visualModes, /actionId: "SystemContent.scenes"/);
-  assert.match(visualModes, /onActivated: root.openSetting\("scenes"\)/);
+  assert.match(visualModes, /detailActionId: "SystemContent.scenes"/);
+  assert.match(visualModes, /detailName: "Desktop scenes"/);
+  assert.match(visualModes, /onDetailsRequested: root.openSetting\("scenes"\)/);
+  assert.doesNotMatch(
+    visualModes
+      .split('detailActionId: "SystemContent.scenes"')[1]
+      .split("onDetailsRequested:")[0],
+    /\bactionId:/,
+  );
   assert.match(visualModes, /active: root.scenes.active/);
   assert.doesNotMatch(
     controls,
