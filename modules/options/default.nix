@@ -199,9 +199,27 @@ in
       description = "OpenAI-compatible Ollama endpoint used by local tools.";
     };
 
+    services.n8n.port = mkOption {
+      type = types.port;
+      default = 5678;
+      description = "LAN port used by n8n clients and the server listener.";
+    };
+
+    services.attic.port = mkOption {
+      type = types.port;
+      default = 8080;
+      description = "Port used by the private Attic binary cache.";
+    };
+
+    services.ntfy.port = mkOption {
+      type = types.port;
+      default = 2586;
+      description = "Port used by the private ntfy listener.";
+    };
+
     services.ntfy.url = mkOption {
       type = types.str;
-      default = "http://nixos-server.home:2586";
+      default = "http://nixos-server.home:${toString config.dotfiles.services.ntfy.port}";
       description = "Private ntfy endpoint used by infrastructure clients.";
     };
 

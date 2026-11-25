@@ -2,7 +2,7 @@
 
 let
   inherit (config.dotfiles) server;
-  hostPort = 5678;
+  hostPort = config.dotfiles.services.n8n.port;
   n8nSecret = "${server.secretsDir}/n8n.env";
 in
 {

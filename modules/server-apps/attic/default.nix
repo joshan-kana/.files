@@ -7,7 +7,7 @@
 let
   inherit (config.dotfiles) server;
   cacheRoot = "/var/lib/atticd";
-  cachePort = 8080;
+  cachePort = config.dotfiles.services.attic.port;
   atticSecret = "${server.secretsDir}/attic.env";
   cacheHost = server.lan.serverIp;
   lanHost = "${config.networking.hostName}.home";

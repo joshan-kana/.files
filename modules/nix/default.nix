@@ -8,7 +8,7 @@
 
 let
   atticCache = "dotfiles";
-  atticEndpoint = "http://nixos-server.home:8080";
+  atticEndpoint = "http://nixos-server.home:${toString config.dotfiles.services.attic.port}";
   inherit (lib.systems.elaborate system) isDarwin isLinux;
   settings = {
     trusted-users = [

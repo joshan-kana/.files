@@ -511,7 +511,7 @@ lib.recursiveUpdate (import ../../profiles/minimal.nix { inherit lib moduleRegis
                       --yes \
                       --https=443 \
                       --set-path=/webhook/${webhookPath} \
-                      http://${server.lan.serverIp}:5678/webhook/${webhookPath}
+                      http://${server.lan.serverIp}:${toString config.dotfiles.services.n8n.port}/webhook/${webhookPath}
                   '';
                   serviceConfig = {
                     Type = "oneshot";

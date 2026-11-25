@@ -68,7 +68,7 @@ let
         }
         {
           name = "n8n";
-          mcp.host = "http://${server.lan.serverIp}:5678/mcp-server/http";
+          mcp.host = "http://${server.lan.serverIp}:${toString config.dotfiles.services.n8n.port}/mcp-server/http";
           policies.backendAuth.key = {
             value = "$N8N_AUTHORIZATION";
             location.header = {

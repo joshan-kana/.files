@@ -9,7 +9,7 @@ let
 
   service = {
     ip = server.lan.serverIp;
-    port = 2586;
+    port = config.dotfiles.services.ntfy.port;
     stateDir = "${server.storage.appData.root}/ntfy";
   };
 in

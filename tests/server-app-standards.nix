@@ -17,6 +17,11 @@ let
             };
             lan.gateway = "192.168.1.254";
           };
+          dotfiles.services = {
+            attic.port = 18080;
+            n8n.port = 15678;
+            ntfy.port = 12586;
+          };
           dotfiles.backups.secrets.credentialsDir = "/var/lib/alternate-credentials";
         }
       ];
@@ -63,6 +68,16 @@ assert
   alternate.systemd.services.matter-server.serviceConfig.StateDirectory
   == [ "alternate-apps/matter-server:matter-server" ];
 assert alternate.services.restic.backups.apps.rcloneConfigFile == rcloneConfig;
+assert alternate.services.atticd.settings.listen == "0.0.0.0:18080";
+assert lib.elem "http://nixos-server.home:18080/dotfiles" alternate.nix.settings.substituters;
+assert alternate.services.ntfy-sh.settings."base-url" == "http://nixos-server.home:12586";
+assert
+  alternate.services.ntfy-sh.settings."listen-http"
+  == "${alternate.dotfiles.server.lan.serverIp}:12586";
+assert
+  alternate.virtualisation.oci-containers.containers.n8n.ports == [
+    "${alternate.dotfiles.server.lan.serverIp}:15678:5678"
+  ];
 assert lib.elem "dropbox-rclone:${rcloneConfig}"
   alternate.systemd.services.agentgateway.serviceConfig.LoadCredential;
 assert
