@@ -2,8 +2,6 @@
 
 let
   inherit (lib.systems.elaborate system) isDarwin isLinux;
-  linuxScope =
-    scope: lib.setFunctionArgs (args: lib.optionalAttrs isLinux (scope args)) (lib.functionArgs scope);
 in
 {
   # Shared graphical-session infrastructure. Applications, audio, and
@@ -21,25 +19,39 @@ in
   /**
     Shared X server compatibility support.
   */
-  xserver = linuxScope (import ./xserver);
+  xserver = _: lib.optionalAttrs isLinux ((import ./xserver) { });
   /**
     Display-manager policy shared by graphical hosts.
   */
-  displayManager = linuxScope (import ./display-manager);
+  displayManager = _: lib.optionalAttrs isLinux ((import ./display-manager) { });
   /**
     Hyprland desktop session and its host integration.
   */
-  hyprland = linuxScope (import ./hyprland);
+  hyprland =
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
+    lib.optionalAttrs isLinux ((import ./hyprland) { inherit config lib pkgs; });
   /**
     KDE Plasma desktop session and generated Plasma Manager state.
   */
-  plasma = linuxScope (import ./plasma);
+  plasma =
+    {
+      config,
+      inputs,
+      lib,
+      ...
+    }:
+    lib.optionalAttrs isLinux ((import ./plasma) { inherit config inputs lib; });
 
   # Keep GNOME available as an opt-in desktop without changing current hosts.
   /**
     Optional GNOME desktop session.
   */
-  gnome = linuxScope (import ./gnome);
+  gnome = _: lib.optionalAttrs isLinux ((import ./gnome) { });
 
   /**
     Native macOS keyboard remapping and event handling.
