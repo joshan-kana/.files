@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "DesktopIcons.js" as DesktopIcons
 
 ShellSurface {
     id: deviceControl
@@ -89,7 +90,7 @@ ShellSurface {
 
         Item {
             width: parent.width
-            height: 28
+            height: Math.max(deviceControl.theme.fontSize(28), muteHint.implicitHeight, levelLabel.implicitHeight)
             StateLayer {
                 id: muteHit
                 anchors.fill: parent
@@ -163,7 +164,7 @@ ShellSurface {
                 id: meter
                 visible: !deviceControl.compact
                 width: parent.width
-                height: visible ? 22 : 0
+                height: visible ? implicitHeight : 0
                 theme: deviceControl.theme
                 node: deviceControl.device
                 muted: deviceControl.muted
@@ -194,7 +195,7 @@ ShellSurface {
 
         Item {
             width: parent.width
-            height: deviceControl.compact ? 30 : 26
+            height: Math.max(deviceControl.theme.fontSize(deviceControl.compact ? 30 : 26), pickerHint.implicitHeight, chooserChevron.implicitHeight)
             StateLayer {
                 anchors.fill: parent
                 theme: deviceControl.theme
@@ -241,7 +242,7 @@ ShellSurface {
         ListView {
             id: deviceList
             width: parent.width
-            height: deviceControl.chooserOpen ? Math.min(4, deviceControl.devices.length) * 38 : 0
+            height: deviceControl.chooserOpen ? Math.min(contentHeight, deviceControl.theme.fontSize(48) * 4) : 0
             visible: deviceControl.chooserOpen
             clip: true
             model: deviceControl.devices
@@ -251,18 +252,23 @@ ShellSurface {
                 if (currentIndex >= 0)
                     positionViewAtIndex(currentIndex, ListView.Contain);
             }
-            delegate: ShellAction {
+            delegate: ShellChoice {
                 required property var modelData
                 required property int index
                 width: deviceList.width
-                height: 36
+                height: Math.max(deviceControl.theme.minActionTarget, implicitHeight)
                 runtime: deviceControl.runtime
                 theme: deviceControl.theme
                 motion: deviceControl.motion
                 compact: true
-                title: (modelData === deviceControl.device ? "✓  " : "") + (modelData.description || modelData.name)
-                active: index === deviceControl.chooserIndex
-                shortcut: index === deviceControl.chooserIndex ? "↵" : ""
+                title: modelData.description || modelData.name
+                horizontalCompact: true
+                joined: false
+                active: modelData === deviceControl.device
+                highlighted: index === deviceControl.chooserIndex
+                activeColor: deviceControl.theme.roleColor("audio")
+                icon: active ? DesktopIcons.actionGlyph("confirm") : ""
+                shortcut: highlighted ? deviceControl.runtime.shellHint("AudioHardwareSettings.apply") : ""
                 onActivated: deviceControl.selectDevice(index)
             }
         }

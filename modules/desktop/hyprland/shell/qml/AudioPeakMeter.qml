@@ -13,7 +13,7 @@ Item {
     property bool showLabels: true
 
     implicitWidth: 160
-    implicitHeight: showLabels ? 31 : 16
+    implicitHeight: theme.fontSize(showLabels ? 24 : 16)
 
     PwNodePeakMonitor {
         id: monitor
@@ -50,9 +50,10 @@ Item {
                 readonly property var channel: monitor.channels[index]
 
                 Text {
+                    id: channelLabel
                     visible: meter.showLabels
                     width: parent.width
-                    height: meter.showLabels ? 11 : 0
+                    height: meter.showLabels ? implicitHeight : 0
                     horizontalAlignment: Text.AlignHCenter
                     color: meter.theme.textMuted
                     font.family: meter.theme.runtime.fontMono
@@ -76,7 +77,7 @@ Item {
 
                 Rectangle {
                     width: parent.width
-                    height: Math.max(4, parent.height - (meter.showLabels ? 14 : 0))
+                    height: Math.max(4, parent.height - (meter.showLabels ? channelLabel.height + parent.spacing : 0))
                     radius: height / 2
                     color: meter.theme.layer1
 

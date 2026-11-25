@@ -167,3 +167,40 @@ test("full mixer height matches visible channels before virtual scrolling", () =
     ),
   );
 });
+
+test("expanded mixer sizes headings, selectors, meters and balance from their content", () => {
+  const mixer = qml("AudioMixerContent.qml");
+  const device = qml("AudioDeviceControl.qml");
+  const stream = qml("AudioStreamControl.qml");
+  const meter = qml("AudioPeakMeter.qml");
+  assert.match(
+    mixer,
+    /DetailHero \{\s*width: parent.width\s*height: visible \? implicitHeight : 0/,
+  );
+  assert.match(
+    mixer,
+    /parent.width - balanceLabel.width - centreBalance.width - balanceKeys.implicitWidth/,
+  );
+  assert.match(
+    mixer,
+    /height: Math.max\(balanceLabel.implicitHeight, balanceSlider.implicitHeight/,
+  );
+  assert.match(
+    device,
+    /active: modelData === deviceControl.device\s*highlighted: index === deviceControl.chooserIndex/,
+  );
+  assert.match(
+    mixer,
+    /active: modelData === mixer.routedDevice\s*highlighted: index === mixer.routeIndex/,
+  );
+  for (const control of [device, stream])
+    assert.match(
+      control,
+      /AudioPeakMeter \{[\s\S]*?height: visible \? implicitHeight : 0/,
+    );
+  assert.match(meter, /channelLabel.height \+ parent.spacing/);
+  assert.match(
+    qml("SystemContent.qml"),
+    /detailUsesHostPaging: [^\n]+mixerOpen/,
+  );
+});

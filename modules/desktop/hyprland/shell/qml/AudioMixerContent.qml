@@ -15,11 +15,12 @@ FocusScope {
         readonly property bool sectionStart: index === 0 || index === mixer.system.audioApplicationStreams.length
         readonly property bool inViewport: y + height > list.contentY && y < list.contentY + list.height
         width: list.width
-        height: streamCard.height + (sectionStart && !mixer.compact ? 18 : 0)
+        height: streamCard.height + sectionLabel.height
 
         Text {
+            id: sectionLabel
             visible: streamRow.sectionStart && !mixer.compact
-            height: visible ? 18 : 0
+            height: visible ? implicitHeight + mixer.theme.spacing1 : 0
             text: streamRow.capture ? "Capture" : "Playback"
             color: mixer.theme.readableRoleColor("audio")
             font.family: mixer.runtime.fontSans
@@ -32,7 +33,7 @@ FocusScope {
                 left: parent.left
                 right: parent.right
                 top: parent.top
-                topMargin: streamRow.sectionStart && !mixer.compact ? 18 : 0
+                topMargin: sectionLabel.height
             }
             height: streamControl.implicitHeight + mixer.theme.spacing2 * 2
             theme: mixer.theme
@@ -502,23 +503,18 @@ FocusScope {
             width: Math.max(1, parent.width - (mixer.compact ? mixer.theme.spacing4 : mixer.theme.spacing2) * 2)
             spacing: mixer.theme.spacing3
 
-            Item {
+            DetailHero {
                 width: parent.width
-                height: 66
+                height: visible ? implicitHeight : 0
                 visible: !mixer.compact
-
-                DetailHero {
-                    width: parent.width
-                    height: parent.height
-                    runtime: mixer.runtime
-                    theme: mixer.theme
-                    motion: mixer.motion
-                    glyph: DesktopIcons.glyphFor("audioMixer")
-                    glyphColor: mixer.theme.roleColor("audio")
-                    eyebrow: "Audio / " + mixer.streams.length + (mixer.streams.length === 1 ? " active channel" : " active channels")
-                    title: "Audio mixer"
-                    detail: "Output, input and every application channel"
-                }
+                runtime: mixer.runtime
+                theme: mixer.theme
+                motion: mixer.motion
+                glyph: DesktopIcons.glyphFor("audioMixer")
+                glyphColor: mixer.theme.roleColor("audio")
+                eyebrow: "Audio / " + mixer.streams.length + (mixer.streams.length === 1 ? " active channel" : " active channels")
+                title: "Audio mixer"
+                detail: "Output, input and every application channel"
             }
 
             Grid {
@@ -598,10 +594,11 @@ FocusScope {
 
                 Row {
                     width: parent.width
-                    height: 20
+                    height: Math.max(processingTitle.implicitHeight, processingStatus.implicitHeight)
                     spacing: mixer.theme.spacing2
 
                     ShellText {
+                        id: processingTitle
                         anchors.verticalCenter: parent.verticalCenter
                         runtime: mixer.runtime
                         theme: mixer.theme
@@ -612,8 +609,9 @@ FocusScope {
                     }
 
                     ShellText {
+                        id: processingStatus
                         anchors.verticalCenter: parent.verticalCenter
-                        width: Math.max(1, parent.width - x - parent.spacing)
+                        width: Math.max(1, parent.width - processingTitle.implicitWidth - parent.spacing)
                         runtime: mixer.runtime
                         theme: mixer.theme
                         text: effectsState.statusLabel
@@ -632,7 +630,7 @@ FocusScope {
 
                     ShellAction {
                         width: parent.cellWidth
-                        height: 44
+                        height: implicitHeight
                         runtime: mixer.runtime
                         theme: mixer.theme
                         motion: mixer.motion
@@ -648,7 +646,7 @@ FocusScope {
 
                     ShellAction {
                         width: parent.cellWidth
-                        height: 44
+                        height: implicitHeight
                         runtime: mixer.runtime
                         theme: mixer.theme
                         motion: mixer.motion
@@ -662,7 +660,7 @@ FocusScope {
 
                     ShellAction {
                         width: parent.cellWidth
-                        height: 44
+                        height: implicitHeight
                         runtime: mixer.runtime
                         theme: mixer.theme
                         motion: mixer.motion
@@ -686,7 +684,7 @@ FocusScope {
                 }
                 ShellAction {
                     width: parent.width
-                    height: 36
+                    height: implicitHeight
                     runtime: mixer.runtime
                     theme: mixer.theme
                     motion: mixer.motion
@@ -700,7 +698,7 @@ FocusScope {
                 }
                 ListView {
                     width: parent.width
-                    height: mixer.presetOpen ? Math.min(4, effectsState.presets.length) * 38 : 0
+                    height: mixer.presetOpen ? Math.min(contentHeight, mixer.theme.fontSize(48) * 4) : 0
                     visible: mixer.presetOpen
                     clip: true
                     model: effectsState.presets
@@ -732,9 +730,10 @@ FocusScope {
             Row {
                 width: parent.width
                 visible: !mixer.compact
-                height: visible ? 20 : 0
+                height: visible ? Math.max(channelTitle.implicitHeight, channelCount.implicitHeight) : 0
                 spacing: mixer.theme.spacing2
                 Text {
+                    id: channelTitle
                     anchors.verticalCenter: parent.verticalCenter
                     width: Math.max(1, parent.width - channelCount.implicitWidth - parent.spacing)
                     text: mixer.compact ? "Application audio" : "Application channels"
@@ -777,14 +776,18 @@ FocusScope {
 
             ShellSurface {
                 width: parent.width
-                height: mixer.compact ? 46 : 120
+                height: Math.max(mixer.compact ? 46 : 120, emptyChannels.implicitHeight + mixer.theme.spacing4 * 2)
                 visible: !mixer.compact && mixer.streams.length === 0
                 theme: mixer.theme
                 motion: mixer.motion
                 surfaceLayer: ShellSurface.Control
                 cornerRadius: mixer.theme.radiusMedium
                 Text {
+                    id: emptyChannels
+                    width: Math.max(1, parent.width - mixer.theme.spacing4 * 2)
                     anchors.centerIn: parent
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.WordWrap
                     text: mixer.compact ? "No application audio" : "No application channels · Start playback or capture"
                     color: mixer.theme.textMuted
                     font.family: mixer.runtime.fontSans
@@ -798,26 +801,30 @@ FocusScope {
                 spacing: mixer.theme.spacing1
                 ListView {
                     width: parent.width
-                    height: mixer.routeOpen ? Math.min(4, mixer.routeDevices.length) * 38 : 0
+                    height: mixer.routeOpen ? Math.min(contentHeight, mixer.theme.fontSize(48) * 4) : 0
                     visible: mixer.routeOpen
                     clip: true
                     model: mixer.routeDevices
                     currentIndex: mixer.routeIndex
                     onCurrentIndexChanged: if (currentIndex >= 0)
                         positionViewAtIndex(currentIndex, ListView.Contain)
-                    delegate: ShellAction {
+                    delegate: ShellChoice {
                         required property int index
                         required property var modelData
                         width: ListView.view.width
-                        height: 36
+                        height: Math.max(mixer.theme.minActionTarget, implicitHeight)
                         runtime: mixer.runtime
                         theme: mixer.theme
                         motion: mixer.motion
                         compact: true
                         horizontalCompact: true
-                        title: (modelData === mixer.routedDevice ? "✓ " : "") + (modelData.description || modelData.name)
-                        shortcut: index === mixer.routeIndex ? "↵" : ""
-                        active: index === mixer.routeIndex
+                        title: modelData.description || modelData.name
+                        icon: active ? DesktopIcons.actionGlyph("confirm") : ""
+                        shortcut: highlighted ? mixer.runtime.shellHint("AudioHardwareSettings.apply") : ""
+                        active: modelData === mixer.routedDevice
+                        highlighted: index === mixer.routeIndex
+                        activeColor: mixer.theme.roleColor("audio")
+                        joined: false
                         onActivated: mixer.selectRoute(index)
                     }
                 }
@@ -835,10 +842,11 @@ FocusScope {
             Row {
                 visible: !mixer.compact && mixer.balanceAvailable
                 width: parent.width
-                height: 40
+                height: Math.max(balanceLabel.implicitHeight, balanceSlider.implicitHeight, balanceKeys.implicitHeight, centreBalance.implicitHeight)
                 spacing: mixer.theme.spacing2
                 ShellText {
-                    width: 90
+                    id: balanceLabel
+                    width: implicitWidth
                     anchors.verticalCenter: parent.verticalCenter
                     runtime: mixer.runtime
                     theme: mixer.theme
@@ -847,7 +855,7 @@ FocusScope {
                 ShellSlider {
                     id: balanceSlider
                     anchors.verticalCenter: parent.verticalCenter
-                    width: Math.max(1, parent.width - 200 - balanceKeys.implicitWidth - parent.spacing * 3)
+                    width: Math.max(1, parent.width - balanceLabel.width - centreBalance.width - balanceKeys.implicitWidth - parent.spacing * 3)
                     theme: mixer.theme
                     motion: mixer.motion
                     value: (mixer.balancePosition + 1) / 2
@@ -862,8 +870,10 @@ FocusScope {
                     shortcut: mixer.runtime.shellHint("AudioMixerContent.balanceLeft") + " / " + mixer.runtime.shellHint("AudioMixerContent.balanceRight")
                 }
                 ShellAction {
-                    width: 110
-                    height: 36
+                    id: centreBalance
+                    width: implicitWidth
+                    height: implicitHeight
+                    anchors.verticalCenter: parent.verticalCenter
                     runtime: mixer.runtime
                     theme: mixer.theme
                     motion: mixer.motion
@@ -871,6 +881,7 @@ FocusScope {
                     horizontalCompact: true
                     title: "Centre"
                     shortcut: mixer.runtime.shellHint("AudioMixerContent.balanceReset")
+                    activeColor: mixer.theme.roleColor("audio")
                     onActivated: mixer.system.setBalance(mixer.balanceNode, 0)
                 }
             }

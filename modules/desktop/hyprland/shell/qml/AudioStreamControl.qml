@@ -138,7 +138,7 @@ Item {
                 id: streamMeter
                 visible: !channel.compact
                 width: parent.width
-                height: visible ? 22 : 0
+                height: visible ? implicitHeight : 0
                 theme: channel.theme
                 node: channel.stream
                 muted: channel.muted
