@@ -70,6 +70,9 @@ function hardwareSnapshot(output) {
           choices.push({
             key: "route:" + n["node.name"] + ":" + route.index,
             type: "route",
+            direction,
+            nodeName: n["node.description"] || n["node.name"],
+            routeName: route.description || route.name,
             index: route.index,
             target: node.id,
             serial: n["object.serial"],
@@ -110,4 +113,25 @@ function pendingChoice(devices, request) {
         choice.key === request.key && choice.serial === request.serial,
     ) || null
   );
+}
+
+// One profile choice per card; physical routes belong to their native node.
+// Do not combine routes from different sinks or sources into one radio group.
+function choiceGroups(choices) {
+  const groups = new Map();
+  for (const choice of choices) {
+    const key =
+      choice.type === "profile" ? "profile" : "route:" + choice.serial;
+    if (!groups.has(key))
+      groups.set(key, {
+        key,
+        title:
+          choice.type === "profile"
+            ? "Profile"
+            : choice.direction + " · " + choice.nodeName,
+        choices: [],
+      });
+    groups.get(key).choices.push(choice);
+  }
+  return [...groups.values()];
 }

@@ -6,7 +6,7 @@ const vm = require("node:vm");
 const root = path.join(__dirname, "../modules/desktop/hyprland/shell/qml");
 const f = vm.runInNewContext(
   fs.readFileSync(path.join(root, "AudioHardware.js"), "utf8") +
-    "\n({ hardwareSnapshot, pendingChoice })",
+    "\n({ hardwareSnapshot, pendingChoice, choiceGroups })",
 );
 const card = {
   id: 10,
@@ -96,5 +96,21 @@ test("reused PipeWire ids cannot authorize a stale choice", () => {
   assert.equal(
     f.pendingChoice(devices, { ...request, deviceSerial: 22 }),
     null,
+  );
+});
+
+test("grouped hardware controls retain exclusive native profile and per-node route choices", () => {
+  const choices = f.hardwareSnapshot(JSON.stringify([card, sink]))[0].choices;
+  const groups = f.choiceGroups(choices);
+  assert.equal(groups.length, 2);
+  assert.equal(groups[0].title, "Profile");
+  assert.equal(groups[0].choices.length, 3);
+  assert.equal(groups[0].choices[1].active, true);
+  assert.equal(groups[0].choices[2].available, false);
+  assert.equal(groups[1].title, "Output · sink");
+  assert.equal(groups[1].choices[0].routeName, "speaker");
+  assert.equal(
+    f.choiceGroups([...choices, { ...choices[3], serial: 22 }]).length,
+    3,
   );
 });

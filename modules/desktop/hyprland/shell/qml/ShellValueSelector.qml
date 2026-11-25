@@ -12,7 +12,21 @@ Column {
     required property string title
     required property string shortcut
     required property string confirmShortcut
+    property color accentColor: theme.accent
     property var options: []
+    property var disabledIndices: []
+    property bool highlighted: false
+    property bool showField: true
+    readonly property bool canChoose: options.some((value, index) => index !== selectedIndex && !disabledIndices.includes(index))
+    onCanChooseChanged: if (!canChoose)
+        cancel()
+
+    onOptionsChanged: {
+        if (!canChoose)
+            cancel();
+        else
+            highlightedIndex = Math.max(0, Math.min(options.length - 1, highlightedIndex));
+    }
     property int selectedIndex: -1
     property int highlightedIndex: 0
     property bool expanded: false
@@ -22,7 +36,8 @@ Column {
     spacing: theme.spacing1
 
     function toggle(): void {
-        field.trigger();
+        if (canChoose && enabled)
+            field.trigger();
     }
     function cancel(): bool {
         if (!expanded)
@@ -33,10 +48,15 @@ Column {
     onEnabledChanged: if (!enabled)
         cancel()
     function moveHighlight(delta: int): void {
-        highlightedIndex = Math.max(0, Math.min(options.length - 1, highlightedIndex + delta));
+        let next = highlightedIndex + delta;
+        while (next >= 0 && next < options.length && disabledIndices.includes(next))
+            next += delta;
+        if (next >= 0 && next < options.length)
+            highlightedIndex = next;
     }
     function commit(): void {
-        (menuRows.itemAt(highlightedIndex) as ShellAction)?.trigger();
+        if (expanded)
+            (menuRows.itemAt(highlightedIndex) as ShellAction)?.trigger();
     }
     onHighlightedIndexChanged: {
         const row = menuRows.itemAt(highlightedIndex);
@@ -56,7 +76,7 @@ Column {
         textRole: ShellText.Supporting
     }
     ShellSurface {
-        visible: selector.options.length <= 1
+        visible: selector.showField && !selector.canChoose
         width: parent.width
         height: visible ? Math.max(selector.theme.fontSize(44), singleValue.implicitHeight + selector.theme.spacing2 * 2) : 0
         theme: selector.theme
@@ -76,7 +96,7 @@ Column {
     }
     ShellAction {
         id: field
-        visible: selector.options.length > 1
+        visible: selector.showField && selector.canChoose
         width: parent.width
         height: Math.max(selector.theme.fontSize(44), implicitHeight)
         runtime: selector.runtime
@@ -87,15 +107,19 @@ Column {
         restingRadius: selector.theme.radiusMedium
         icon: DesktopIcons.actionGlyph(selector.expanded ? "collapse" : "expand")
         title: selector.options[selector.selectedIndex] || "Unavailable"
-        shortcut: selector.shortcut
+        shortcut: selector.expanded ? "" : selector.shortcut
         active: selector.expanded
-        enabled: visible
+        highlighted: selector.highlighted && !selector.expanded
+        actionFill: active ? selector.theme.choiceFill(activeColor) : selector.theme.expressiveSurfaceStrong
+        actionForeground: active ? selector.theme.choiceForeground(activeColor) : selector.theme.textStrong
+        activeColor: selector.accentColor
+        enabled: selector.canChoose
         Accessible.description: selector.title
         onActivated: {
             selector.expanded = !selector.expanded;
             if (selector.expanded) {
                 selector.opened();
-                selector.highlightedIndex = Math.max(0, selector.selectedIndex);
+                selector.highlightedIndex = Math.max(0, selector.selectedIndex >= 0 ? selector.selectedIndex : selector.options.findIndex((value, index) => !selector.disabledIndices.includes(index)));
                 Qt.callLater(() => {
                     const row = menuRows.itemAt(selector.highlightedIndex);
                     if (row)
@@ -127,7 +151,7 @@ Column {
                 Repeater {
                     id: menuRows
                     model: selector.expanded ? selector.options : []
-                    delegate: ShellAction {
+                    delegate: ShellChoice {
                         required property int index
                         required property string modelData
                         width: menuContent.width
@@ -139,12 +163,12 @@ Column {
                         horizontalCompact: true
                         title: modelData
                         icon: index === selector.selectedIndex ? DesktopIcons.actionGlyph("confirm") : ""
-                        active: index === selector.highlightedIndex
-                        quietAction: !active
-                        shortcut: active ? selector.confirmShortcut : ""
-                        Accessible.role: Accessible.RadioButton
-                        Accessible.checkable: true
-                        Accessible.checked: index === selector.selectedIndex
+                        joined: false
+                        enabled: !selector.disabledIndices.includes(index)
+                        active: index === selector.selectedIndex
+                        highlighted: index === selector.highlightedIndex
+                        activeColor: selector.accentColor
+                        shortcut: highlighted ? selector.confirmShortcut : ""
                         onActivated: {
                             selector.expanded = false;
                             selector.chosen(index);

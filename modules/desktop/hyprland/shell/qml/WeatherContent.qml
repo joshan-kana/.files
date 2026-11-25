@@ -158,16 +158,13 @@ FocusScope {
                 shortcut: panel.runtime.shellHint("WeatherContent.units")
                 onActivated: panel.weather.toggleUnits()
             }
-            ShellAction {
+            ShellUtilityAction {
                 id: defaultsButton
                 width: implicitWidth
                 height: parent.height
                 runtime: panel.runtime
                 theme: panel.theme
                 motion: panel.motion
-                compact: true
-                iconOnly: true
-                inlineIconHint: true
                 icon: DesktopIcons.actionGlyph("reset")
                 title: "Restore weather defaults"
                 shortcut: panel.runtime.shellHint("WeatherContent.reset")

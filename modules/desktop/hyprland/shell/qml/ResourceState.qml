@@ -55,13 +55,13 @@ QtObject {
     readonly property int intervalSeconds: runtime.constraints.resourceSampling.intervalSeconds.values.includes(saved.value("intervalSeconds")) ? saved.value("intervalSeconds") : runtime.resourceSampling.intervalSeconds
     readonly property int historyLength: runtime.constraints.resourceSampling.historyLength.values.includes(saved.value("historyLength")) ? saved.value("historyLength") : runtime.resourceSampling.historyLength
     readonly property int historySeconds: historyLength * intervalSeconds
-    function cycleInterval(): void {
-        const choices = runtime.constraints.resourceSampling.intervalSeconds.values;
-        saved.set("intervalSeconds", choices[(choices.indexOf(intervalSeconds) + 1) % choices.length]);
+    function setInterval(value: int): void {
+        if (runtime.constraints.resourceSampling.intervalSeconds.values.includes(value))
+            saved.set("intervalSeconds", value);
     }
-    function cycleHistory(): void {
-        const choices = runtime.constraints.resourceSampling.historyLength.values;
-        saved.set("historyLength", choices[(choices.indexOf(historyLength) + 1) % choices.length]);
+    function setHistory(value: int): void {
+        if (runtime.constraints.resourceSampling.historyLength.values.includes(value))
+            saved.set("historyLength", value);
     }
     function resetSampling(): void {
         saved.resetAll();

@@ -250,7 +250,7 @@ Item {
                 shortcut: panel.runtime.shellHint("VhsPanel.toggle")
                 onActivated: panel.appearance.toggleVhs()
             }
-            ShellAction {
+            ShellUtilityAction {
                 id: defaultsButton
                 width: implicitWidth
                 height: implicitHeight
@@ -258,8 +258,6 @@ Item {
                 runtime: panel.runtime
                 theme: panel.theme
                 motion: panel.motion
-                compact: true
-                horizontalCompact: true
                 icon: DesktopIcons.actionGlyph("reset")
                 title: "Restore defaults"
                 shortcut: panel.runtime.shellHint("VhsPanel.defaults")

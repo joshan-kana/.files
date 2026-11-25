@@ -331,7 +331,7 @@ FocusScope {
             return false;
         if (hardwareOpen) {
             if (key === runtime.shellKeyCode("mixer", "Escape") || runtime.shellMatchesHint("AudioMixerContent.hardware", key, modifiers)) {
-                if (!autoRepeat)
+                if (!autoRepeat && !hardwareView.cancelNested())
                     hardwareView.open = false;
                 return true;
             }
@@ -707,19 +707,23 @@ FocusScope {
                     currentIndex: mixer.presetIndex
                     onCurrentIndexChanged: if (currentIndex >= 0)
                         positionViewAtIndex(currentIndex, ListView.Contain)
-                    delegate: ShellAction {
+                    delegate: ShellChoice {
                         required property int index
                         required property var modelData
                         width: ListView.view.width
-                        height: 36
+                        height: Math.max(mixer.theme.minActionTarget, implicitHeight)
                         runtime: mixer.runtime
                         theme: mixer.theme
                         motion: mixer.motion
                         compact: true
                         horizontalCompact: true
                         title: modelData.name + " · " + (modelData.input && modelData.output ? "Input + output" : modelData.input ? "Input" : "Output")
-                        shortcut: index === mixer.presetIndex ? "↵" : ""
-                        active: index === mixer.presetIndex
+                        joined: false
+                        activeColor: mixer.theme.roleColor("audio")
+                        active: modelData.name === effectsState.activePresets.output || modelData.name === effectsState.activePresets.input
+                        highlighted: index === mixer.presetIndex
+                        icon: active ? DesktopIcons.actionGlyph("confirm") : ""
+                        shortcut: highlighted ? mixer.runtime.shellHint("AudioHardwareSettings.apply") : ""
                         onActivated: mixer.chooseEffectPreset(index)
                     }
                 }

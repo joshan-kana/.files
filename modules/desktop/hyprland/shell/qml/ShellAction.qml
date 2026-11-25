@@ -16,9 +16,10 @@ Item {
     property string actionId: ""
     property string shortcut: actionId.length > 0 ? runtime.shellHint(actionId) : ""
     property bool active: false
+    property bool highlighted: false
     property color activeColor: theme.accent
     property bool prominentAction: false
-    property color actionForeground: prominentAction ? theme.onColor(activeColor) : active ? activeColor : theme.textStrong
+    property color actionForeground: prominentAction ? theme.onColor(activeColor) : active ? theme.readableColor(activeColor, actionFill.a > 0 ? actionFill : theme.panelBase) : theme.textStrong
     property color actionFill: prominentAction ? activeColor : quietAction || switchControl ? "transparent" : active ? theme.blend(theme.controlBase, activeColor, theme.dark ? 0.20 : 0.12) : theme.expressiveSurfaceStrong
     property color iconColor: actionForeground
     property bool compact: false
@@ -113,6 +114,9 @@ Item {
             motion: root.motion
             surfaceLayer: ShellSurface.Control
             selected: root.active
+            outlined: root.highlighted
+            borderWidth: root.highlighted ? root.theme.borderFocus : 0
+            borderColor: root.highlighted ? root.activeColor : "transparent"
             fillColor: root.actionFill
             cornerRadius: root.motion.enabled && interaction.visualPressed ? Math.min(root.height / 2, root.theme.radiusSmall) : root.restingRadius
             Behavior on cornerRadius {
@@ -162,7 +166,7 @@ Item {
                 runtime: root.runtime
                 theme: root.theme
                 text: root.subtitle
-                color: root.prominentAction ? root.theme.onColor(root.activeColor) : theme.textMuted
+                color: root.prominentAction ? root.theme.onColor(root.activeColor) : root.active ? root.theme.readableColor(root.theme.textMuted, root.actionFill.a > 0 ? root.actionFill : root.theme.panelBase) : theme.textMuted
                 font.pixelSize: theme.fontSupporting
                 elide: Text.ElideRight
             }
@@ -260,7 +264,7 @@ Item {
                     anchors.fill: parent
                     visible: root.switchControl
                     radius: height / 2
-                    color: root.active ? root.theme.blend(root.theme.controlBase, root.activeColor, 0.60) : root.theme.layer3
+                    color: root.active ? root.theme.choiceFill(root.activeColor) : root.theme.controlBase
                     border.color: root.active ? root.activeColor : root.theme.subtleBorder
                     border.width: root.theme.borderThin
                     Rectangle {
@@ -280,7 +284,7 @@ Item {
                         Text {
                             anchors.centerIn: parent
                             text: root.active ? "✓" : "−"
-                            color: root.theme.background
+                            color: root.theme.onColor(switchThumb.color)
                             font.family: root.runtime.fontSans
                             font.pixelSize: root.theme.fontUtility
                             font.weight: Font.DemiBold

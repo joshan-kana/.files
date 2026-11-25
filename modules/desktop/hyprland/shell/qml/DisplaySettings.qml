@@ -372,6 +372,7 @@ Column {
                 motion: panel.motion
                 title: "Resolution"
                 shortcut: panel.runtime.shellHint("DisplaySettings.mode")
+                accentColor: panel.theme.roleColor("display")
                 confirmShortcut: panel.runtime.shellHint("DisplaySettings.apply")
                 options: panel.resolutions.map(value => value.replace("x", " × "))
                 selectedIndex: panel.resolutions.indexOf(panel.mode.split("@")[0])
@@ -390,6 +391,7 @@ Column {
                 motion: panel.motion
                 title: "Refresh rate"
                 shortcut: panel.runtime.shellHint("DisplaySettings.refreshRate")
+                accentColor: panel.theme.roleColor("display")
                 confirmShortcut: panel.runtime.shellHint("DisplaySettings.apply")
                 options: panel.refreshModes.map(value => panel.formatRate(value))
                 selectedIndex: panel.refreshModes.indexOf(panel.mode)
@@ -619,6 +621,7 @@ Column {
             motion: panel.motion
             title: "Layout"
             shortcut: panel.runtime.shellHint("DisplaySettings.nextProfile")
+            accentColor: panel.theme.roleColor("display")
             confirmShortcut: panel.runtime.shellHint("DisplaySettings.apply")
             options: panel.profiles.map(entry => entry.label + (entry.compatible ? "" : " · Different displays"))
             selectedIndex: panel.profileIndex

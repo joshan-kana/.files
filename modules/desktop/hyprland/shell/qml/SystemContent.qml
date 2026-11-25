@@ -413,15 +413,19 @@ FocusScope {
     ] : mixerOpen && mixerView.panel?.hardwareOpen ? [
         {
             key: root.runtime.shellHint("AudioHardwareSettings.device"),
+            action: "Previous / next audio device"
+        },
+        {
+            key: root.runtime.shellHint("AudioHardwareSettings.devicePicker"),
             action: "Choose audio device"
         },
         {
             key: root.runtime.shellHint("AudioHardwareSettings.select"),
-            action: "Choose profile or physical port"
+            action: "Select profile or physical port field"
         },
         {
             key: root.runtime.shellHint("AudioHardwareSettings.apply"),
-            action: "Apply selected native choice"
+            action: "Open field / apply native choice"
         },
         {
             key: root.runtime.shellHint("AudioHardwareSettings.refresh"),
@@ -707,6 +711,8 @@ FocusScope {
         } else if (wallpaperPanel.open && wallpaperPanel.panel && wallpaperPanel.panel.policyView) {
             wallpaperPanel.invoke("togglePolicyView");
         } else if (settingsPanel.open && settingsPanel.panel && settingsPanel.panel.cancelNested()) {
+            return;
+        } else if (resourcesPanel.open && resourcesPanel.panel && resourcesPanel.panel.cancelNested()) {
             return;
         } else if (mixerOpen) {
             mixerView.finishLoading();
@@ -2306,7 +2312,7 @@ FocusScope {
 
                 if (resourcesPanel.open) {
                     if (event.key === root.runtime.shellKeyCode("controls", "Backspace")) {
-                        root.backFromDetail();
+                        root.navigateBack();
                         event.accepted = true;
                     } else if (resourcesPanel.invoke("handleKey", event.key, event.modifiers, event.isAutoRepeat)) {
                         event.accepted = true;

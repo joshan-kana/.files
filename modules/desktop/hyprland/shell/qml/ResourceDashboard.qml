@@ -29,10 +29,10 @@ Item {
             resourceState.refresh();
             break;
         case "ResourceDashboard.interval":
-            resourceState.cycleInterval();
+            intervalSelector.toggle();
             break;
         case "ResourceDashboard.history":
-            resourceState.cycleHistory();
+            historySelector.toggle();
             break;
         case "ResourceDashboard.processes":
             showCores = false;
@@ -47,7 +47,24 @@ Item {
             break;
         }
     }
+    function cancelNested(): bool {
+        return intervalSelector.cancel() || historySelector.cancel();
+    }
     function handleKey(key: int, modifiers: int, autoRepeat: bool): bool {
+        const selector = intervalSelector.expanded ? intervalSelector : historySelector.expanded ? historySelector : null;
+        if (selector) {
+            if (runtime.shellNavigates("controls", "up", key))
+                selector.moveHighlight(-1);
+            else if (runtime.shellNavigates("controls", "down", key))
+                selector.moveHighlight(1);
+            else if (key === runtime.shellKeyCode("controls", "Return") || key === runtime.shellKeyCode("controls", "Enter")) {
+                if (!autoRepeat)
+                    selector.commit();
+            } else if (key === runtime.shellKeyCode("controls", "Backspace")) {
+                selector.cancel();
+            }
+            return true;
+        }
         for (const action of ["refresh", "interval", "history", "processes", "sort", "defaults"]) {
             const id = "ResourceDashboard." + action;
             if (runtime.shellMatchesHint(id, key, modifiers)) {
@@ -72,6 +89,7 @@ Item {
         keyboardRequested();
     }
     function closeView(): void {
+        cancelNested();
         open = false;
         keyboardRequested();
     }
@@ -560,38 +578,52 @@ Item {
             }
         }
 
-        CenteredActionFlow {
+        Row {
             width: parent.width
             spacing: panel.theme.spacing2
-            Repeater {
-                model: [
-                    {
-                        action: "ResourceDashboard.interval",
-                        title: panel.resourceState.intervalSeconds + "s sampling"
-                    },
-                    {
-                        action: "ResourceDashboard.history",
-                        title: panel.resourceState.historyLength + " samples"
-                    },
-                    {
-                        action: "ResourceDashboard.defaults",
-                        glyph: DesktopIcons.actionGlyph("reset"),
-                        title: "Restore defaults"
-                    }
-                ]
-                delegate: ShellAction {
-                    required property var modelData
-                    width: Math.min(parent.width, implicitWidth)
-                    height: implicitHeight
-                    runtime: panel.runtime
-                    theme: panel.theme
-                    motion: panel.motion
-                    compact: true
-                    horizontalCompact: true
-                    title: modelData.title
-                    icon: modelData.glyph || ""
-                    shortcut: panel.runtime.shellHint(modelData.action)
-                    onActivated: panel.activateAction(modelData.action)
+            ShellValueSelector {
+                id: intervalSelector
+                width: Math.max(1, (parent.width - resetSampling.width - parent.spacing * 2) / 2)
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                title: "Sampling interval"
+                shortcut: panel.runtime.shellHint("ResourceDashboard.interval")
+                confirmShortcut: panel.runtime.shellHint("SystemContent.legend.activate_confirm")
+                accentColor: panel.theme.roleColor("resources")
+                readonly property var values: panel.runtime.constraints.resourceSampling.intervalSeconds.values
+                options: values.map(value => value + "s")
+                selectedIndex: values.indexOf(panel.resourceState.intervalSeconds)
+                onOpened: historySelector.cancel()
+                onChosen: index => panel.resourceState.setInterval(values[index])
+            }
+            ShellValueSelector {
+                id: historySelector
+                width: intervalSelector.width
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                title: "History length"
+                shortcut: panel.runtime.shellHint("ResourceDashboard.history")
+                confirmShortcut: panel.runtime.shellHint("SystemContent.legend.activate_confirm")
+                accentColor: panel.theme.roleColor("resources")
+                readonly property var values: panel.runtime.constraints.resourceSampling.historyLength.values
+                options: values.map(value => value + " samples")
+                selectedIndex: values.indexOf(panel.resourceState.historyLength)
+                onOpened: intervalSelector.cancel()
+                onChosen: index => panel.resourceState.setHistory(values[index])
+            }
+            ShellUtilityAction {
+                id: resetSampling
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                icon: DesktopIcons.actionGlyph("reset")
+                title: "Restore sampling defaults"
+                shortcut: panel.runtime.shellHint("ResourceDashboard.defaults")
+                onActivated: {
+                    panel.cancelNested();
+                    panel.resourceState.resetSampling();
                 }
             }
         }

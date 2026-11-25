@@ -734,22 +734,39 @@ Item {
         }
     }
 
-    DetailHero {
+    Row {
         id: header
         width: parent.width
         height: implicitHeight
-        runtime: panel.runtime
-        theme: panel.theme
-        motion: panel.motion
-        glyph: DesktopIcons.capabilityGlyph("network", {
-            wifiConnected: panel.system.wifiConnected,
-            networkConnected: panel.system.networkConnected
-        })
-        glyphFont: "Symbols Nerd Font"
-        glyphColor: panel.system.networkConnected ? panel.theme.positive : panel.theme.warning
-        eyebrow: "Connectivity / " + panel.system.connectivityText
-        title: panel.profileEditing ? "Saved profile settings" : panel.detailView ? "Connection details" : panel.savedView ? "Saved connections" : panel.system.wifiAvailable ? "Wi-Fi" : "Network"
-        detail: panel.detailView ? panel.detailName + " · " + panel.detailType : panel.savedView ? panel.savedProfiles.length + " NetworkManager profiles · VPN / Wi-Fi" : panel.system.networkConnected ? panel.system.networkName : "No active network"
+        spacing: panel.theme.spacing2
+        DetailHero {
+            width: Math.max(1, parent.width - (refreshHeader.visible ? refreshHeader.width + parent.spacing : 0))
+            height: implicitHeight
+            runtime: panel.runtime
+            theme: panel.theme
+            motion: panel.motion
+            glyph: DesktopIcons.capabilityGlyph("network", {
+                wifiConnected: panel.system.wifiConnected,
+                networkConnected: panel.system.networkConnected
+            })
+            glyphFont: "Symbols Nerd Font"
+            glyphColor: panel.system.networkConnected ? panel.theme.positive : panel.theme.warning
+            eyebrow: "Connectivity / " + panel.system.connectivityText
+            title: panel.profileEditing ? "Saved profile settings" : panel.detailView ? "Connection details" : panel.savedView ? "Saved connections" : panel.system.wifiAvailable ? "Wi-Fi" : "Network"
+            detail: panel.detailView ? panel.detailName + " · " + panel.detailType : panel.savedView ? panel.savedProfiles.length + " NetworkManager profiles · VPN / Wi-Fi" : panel.system.networkConnected ? panel.system.networkName : "No active network"
+        }
+        ShellUtilityAction {
+            id: refreshHeader
+            visible: !panel.profileEditing && (panel.savedView || panel.detailView)
+            anchors.verticalCenter: parent.verticalCenter
+            runtime: panel.runtime
+            theme: panel.theme
+            motion: panel.motion
+            icon: DesktopIcons.actionGlyph("refresh")
+            title: "Refresh connection details"
+            shortcut: panel.runtime.shellHint("NetworkPanel.refresh")
+            onActivated: panel.detailView ? panel.refreshDetails() : panel.refreshSaved()
+        }
     }
 
     PanelStatus {
@@ -1400,11 +1417,6 @@ Item {
                         shortcut: panel.runtime.shellHint("NetworkPanel.saved"),
                         label: panel.savedView ? "Scan" : "Saved",
                         visible: !panel.detailView
-                    },
-                    {
-                        shortcut: panel.runtime.shellHint("NetworkPanel.refresh"),
-                        label: "Refresh",
-                        visible: panel.savedView || panel.detailView
                     },
                     {
                         shortcut: panel.runtime.shellHint("NetworkPanel.listScroll"),

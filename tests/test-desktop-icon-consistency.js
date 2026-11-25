@@ -194,7 +194,7 @@ test("Controls header destination glyphs use their detail semantic colours witho
   }
   assert.match(
     action,
-    /property color actionForeground: prominentAction \? theme.onColor\(activeColor\) : active \? activeColor : theme.textStrong/,
+    /property color actionForeground: prominentAction \? theme.onColor\(activeColor\) : active \? theme.readableColor\(activeColor, actionFill.a > 0 \? actionFill : theme.panelBase\) : theme.textStrong/,
   );
   assert.equal(
     [

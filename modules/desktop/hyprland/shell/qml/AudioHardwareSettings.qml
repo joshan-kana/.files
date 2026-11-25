@@ -23,6 +23,26 @@ Column {
     readonly property int deviceIndex: devices.findIndex(device => device.name === deviceName)
     readonly property var device: deviceIndex >= 0 ? devices[deviceIndex] : null
     readonly property var choices: device?.choices || []
+    readonly property var groups: Hardware.choiceGroups(choices)
+    readonly property var openSelector: {
+        if (deviceSelector.expanded)
+            return deviceSelector;
+        for (let i = 0; i < groupFields.count; ++i) {
+            const field = groupFields.itemAt(i) as ShellValueSelector;
+            if (field?.expanded)
+                return field;
+        }
+        return null;
+    }
+    function closeOtherSelectors(current: var): void {
+        if (current !== deviceSelector)
+            deviceSelector.cancel();
+        for (let i = 0; i < groupFields.count; ++i) {
+            const field = groupFields.itemAt(i) as ShellValueSelector;
+            if (field && field !== current)
+                field.cancel();
+        }
+    }
 
     visible: open
     spacing: theme.spacing2
@@ -30,6 +50,7 @@ Column {
         if (open)
             refresh();
         else {
+            deviceSelector.cancel();
             devices = [];
             deviceName = "";
             selectedIndex = 0;
@@ -55,27 +76,33 @@ Column {
         statusError = true;
     }
     function updateDevices(snapshot: var): void {
-        const oldKey = choices[selectedIndex]?.key;
+        const oldKey = groups[selectedIndex]?.key;
         devices = snapshot;
         if (!device)
             deviceName = devices[0]?.name || "";
-        const index = choices.findIndex(choice => choice.key === oldKey);
-        selectedIndex = Math.max(0, Math.min(choices.length - 1, index >= 0 ? index : 0));
+        const index = groups.findIndex(group => group.key === oldKey);
+        selectedIndex = Math.max(0, Math.min(groups.length - 1, index >= 0 ? index : 0));
     }
-    function moveDevice(delta: int): void {
-        if (busy || devices.length === 0)
+    function selectDevice(index: int): void {
+        if (busy || index < 0 || index >= devices.length)
             return;
-        deviceName = devices[(deviceIndex + delta + devices.length) % devices.length].name;
+        deviceName = devices[index].name;
         selectedIndex = 0;
     }
+    function moveDevice(delta: int): void {
+        if (devices.length > 1)
+            selectDevice((deviceIndex + delta + devices.length) % devices.length);
+    }
+    function cancelNested(): bool {
+        return openSelector ? openSelector.cancel() : false;
+    }
     function moveSelection(delta: int): void {
-        selectedIndex = Math.max(0, Math.min(choices.length - 1, selectedIndex + delta));
+        selectedIndex = Math.max(0, Math.min(groups.length - 1, selectedIndex + delta));
     }
     function choose(index: int): void {
         const choice = choices[index];
         if (!open || busy || !device || !choice?.available || choice.active)
             return;
-        selectedIndex = index;
         pending = {
             device: device.name,
             deviceSerial: device.serial,
@@ -155,117 +182,125 @@ Column {
     }
 
     function handleKey(key: int, modifiers: int, autoRepeat: bool): bool {
+        if (runtime.shellMatchesHint("AudioHardwareSettings.devicePicker", key, modifiers)) {
+            if (!autoRepeat)
+                deviceSelector.toggle();
+            return true;
+        }
+        if (openSelector) {
+            if (runtime.shellNavigates("mixer", "up", key))
+                openSelector.moveHighlight(-1);
+            else if (runtime.shellNavigates("mixer", "down", key))
+                openSelector.moveHighlight(1);
+            else if (runtime.shellMatchesHint("AudioHardwareSettings.apply", key, modifiers) || (key === runtime.shellKeyCode("mixer", "Enter") && modifiers === Qt.NoModifier)) {
+                if (!autoRepeat)
+                    openSelector.commit();
+            }
+            return true;
+        }
         if (runtime.shellMatchesHint("AudioHardwareSettings.refresh", key, modifiers)) {
             if (!autoRepeat)
                 refreshAction.trigger();
         } else if (runtime.shellNavigates("mixer", "left", key)) {
             if (!autoRepeat)
-                previousDevice.trigger();
+                moveDevice(-1);
         } else if (runtime.shellNavigates("mixer", "right", key)) {
             if (!autoRepeat)
-                nextDevice.trigger();
+                moveDevice(1);
         } else if (runtime.shellNavigates("mixer", "up", key)) {
             moveSelection(-1);
         } else if (runtime.shellNavigates("mixer", "down", key)) {
             moveSelection(1);
         } else if (key === runtime.shellKeyCode("mixer", "Return") || key === runtime.shellKeyCode("mixer", "Enter")) {
             if (!autoRepeat)
-                (choiceList.itemAtIndex(selectedIndex) as ShellAction)?.trigger();
+                (groupFields.itemAt(selectedIndex) as ShellValueSelector)?.toggle();
         } else {
             return false;
         }
         return true;
     }
 
-    DetailHero {
-        width: parent.width
-        runtime: panel.runtime
-        theme: panel.theme
-        motion: panel.motion
-        glyph: DesktopIcons.glyphFor("audioMixer")
-        glyphColor: panel.theme.roleColor("audio")
-        eyebrow: "Audio / Device configuration"
-        title: panel.device?.label || "Audio hardware"
-        detail: panel.device?.profile || "Profiles and physical ports"
-    }
     Row {
         width: parent.width
         spacing: panel.theme.spacing2
-        ShellAction {
-            id: previousDevice
-            width: (parent.width - parent.spacing * 2) / 3
-            height: Math.max(40, implicitHeight)
+        DetailHero {
+            width: Math.max(1, parent.width - refreshAction.width - parent.spacing)
             runtime: panel.runtime
             theme: panel.theme
             motion: panel.motion
-            compact: true
-            horizontalCompact: true
-            title: "Previous device"
-            enabled: panel.devices.length > 1 && !panel.busy
-            onActivated: panel.moveDevice(-1)
+            glyph: DesktopIcons.glyphFor("audioMixer")
+            glyphColor: panel.theme.roleColor("audio")
+            height: implicitHeight
+            title: "Audio hardware"
+            detail: panel.device?.profile || "Profiles and physical ports"
         }
-        ShellAction {
-            id: nextDevice
-            width: previousDevice.width
-            height: Math.max(40, implicitHeight)
-            runtime: panel.runtime
-            theme: panel.theme
-            motion: panel.motion
-            compact: true
-            horizontalCompact: true
-            title: "Next device"
-            enabled: panel.devices.length > 1 && !panel.busy
-            onActivated: panel.moveDevice(1)
-        }
-        ShellAction {
+        ShellUtilityAction {
             id: refreshAction
-            width: previousDevice.width
-            height: Math.max(40, implicitHeight)
+            anchors.verticalCenter: parent.verticalCenter
             runtime: panel.runtime
             theme: panel.theme
             motion: panel.motion
-            compact: true
-            horizontalCompact: true
-            title: "Refresh"
+            icon: DesktopIcons.actionGlyph("refresh")
+            title: "Refresh audio hardware"
             shortcut: panel.runtime.shellHint("AudioHardwareSettings.refresh")
             enabled: !panel.busy
             onActivated: panel.refresh()
         }
     }
+    ShellValueSelector {
+        id: deviceSelector
+        width: parent.width
+        runtime: panel.runtime
+        theme: panel.theme
+        motion: panel.motion
+        title: "Device"
+        shortcut: panel.runtime.shellHint("AudioHardwareSettings.devicePicker")
+        confirmShortcut: panel.runtime.shellHint("AudioHardwareSettings.apply")
+        accentColor: panel.theme.roleColor("audio")
+        options: panel.devices.map(entry => entry.label)
+        selectedIndex: panel.deviceIndex
+        enabled: !panel.busy
+        onOpened: panel.closeOtherSelectors(deviceSelector)
+        onChosen: index => panel.selectDevice(index)
+    }
     ShellText {
         width: parent.width
         runtime: panel.runtime
         theme: panel.theme
+        visible: panel.statusError || panel.busy || panel.devices.length === 0
         text: panel.statusText
         color: panel.statusError ? panel.theme.warning : panel.theme.textMuted
         wrapMode: Text.WordWrap
     }
-    ListView {
-        id: choiceList
-        width: parent.width
-        height: Math.min(panel.theme.fontSize(330), contentHeight)
-        clip: true
-        spacing: panel.theme.spacing1
-        model: panel.choices
-        currentIndex: panel.selectedIndex
-        boundsBehavior: Flickable.StopAtBounds
-        onCurrentIndexChanged: if (currentIndex >= 0)
-            positionViewAtIndex(currentIndex, ListView.Contain)
-        delegate: ShellAction {
+    Repeater {
+        id: groupFields
+        model: panel.groups
+        delegate: ShellValueSelector {
+            id: groupField
             required property int index
             required property var modelData
-            width: ListView.view.width
-            height: Math.max(40, implicitHeight)
+            width: parent.width
             runtime: panel.runtime
             theme: panel.theme
             motion: panel.motion
-            compact: true
-            horizontalCompact: true
-            title: (modelData.active ? "✓ " : "") + (modelData.type === "profile" ? "Profile · " : "") + modelData.label + (!modelData.available ? " · Unavailable" : "")
-            active: index === panel.selectedIndex
-            shortcut: active ? panel.runtime.shellHint("AudioHardwareSettings.apply") : ""
-            enabled: !panel.busy && modelData.available
-            onActivated: panel.choose(index)
+            title: modelData.title
+            shortcut: highlighted ? panel.runtime.shellHint("AudioHardwareSettings.apply") : ""
+            confirmShortcut: panel.runtime.shellHint("AudioHardwareSettings.apply")
+            accentColor: panel.theme.roleColor("audio")
+            options: modelData.choices.map(choice => (choice.routeName || choice.label) + (choice.available ? "" : " · Unavailable"))
+            disabledIndices: modelData.choices.map((choice, i) => choice.available ? -1 : i).filter(i => i >= 0)
+            selectedIndex: modelData.choices.findIndex(choice => choice.active)
+            highlighted: index === panel.selectedIndex
+            enabled: !panel.busy
+            onOpened: {
+                panel.selectedIndex = index;
+                panel.closeOtherSelectors(groupField);
+            }
+            onChosen: i => {
+                const choice = modelData.choices[i];
+                if (choice)
+                    panel.choose(panel.choices.findIndex(entry => entry.key === choice.key && entry.serial === choice.serial));
+            }
         }
     }
     KeyHintStrip {
@@ -279,7 +314,7 @@ Column {
             },
             {
                 shortcut: panel.runtime.shellHint("AudioHardwareSettings.select"),
-                label: "Select profile or port"
+                label: panel.openSelector ? "Browse choices" : "Select field"
             }
         ]
     }

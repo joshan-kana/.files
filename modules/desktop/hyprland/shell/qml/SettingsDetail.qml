@@ -722,7 +722,7 @@ Item {
                 enabled: panel.masterAvailable
                 onActivated: panel.toggleMaster()
             }
-            ShellAction {
+            ShellUtilityAction {
                 id: appearanceReset
                 visible: panel.hasReset
                 width: visible ? implicitWidth : 0
@@ -731,8 +731,6 @@ Item {
                 runtime: panel.runtime
                 theme: panel.theme
                 motion: panel.motion
-                compact: true
-                horizontalCompact: true
                 icon: DesktopIcons.actionGlyph("reset")
                 title: "Restore defaults"
                 shortcut: panel.runtime.shellHint("SettingsDetail.reset")
@@ -1421,7 +1419,7 @@ Item {
                     Repeater {
                         id: stayDurations
                         model: [15, 30, 60, 120, 0]
-                        delegate: ShellAction {
+                        delegate: ShellChoice {
                             required property int index
                             required property int modelData
                             width: modelData === 0 ? durationFlow.width : Math.floor((durationFlow.width - (durationFlow.columns - 1) * durationFlow.spacing) / durationFlow.columns)
@@ -1433,6 +1431,7 @@ Item {
                             horizontalCompact: true
                             title: modelData === 0 ? "Until disabled" : modelData + " minutes"
                             shortcut: panel.runtime.shellChoiceHint(index)
+                            joined: false
                             activeColor: panel.theme.roleColor("inhibition")
                             active: panel.system.idleInhibited && panel.system.idleInhibitMinutes === modelData
                             onActivated: panel.system.setIdleInhibitMinutes(modelData)

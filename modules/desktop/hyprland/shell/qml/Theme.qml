@@ -145,11 +145,14 @@ QtObject {
 
     // Small labels must remain readable on light and dark palettes.
     // Return an existing Stylix token, never an interpolated accent colour.
+    function readableColor(chosen: color, against: color): color {
+        const light = Math.max(luminance(chosen), luminance(against));
+        const dark = Math.min(luminance(chosen), luminance(against));
+        return (light + 0.05) / (dark + 0.05) >= 4.5 ? chosen : onColor(against);
+    }
+
     function readableRoleColor(role: string): color {
-        const chosen = roleColor(role);
-        const light = Math.max(luminance(chosen), luminance(panelBase));
-        const dark = Math.min(luminance(chosen), luminance(panelBase));
-        return (light + 0.05) / (dark + 0.05) >= 4.5 ? chosen : textStrong;
+        return readableColor(roleColor(role), panelBase);
     }
 
     function onColor(backgroundColor: color): color {
@@ -193,9 +196,7 @@ QtObject {
         return blend(controlBase, role, dark ? 0.34 : 0.22);
     }
     function choiceForeground(role: color): color {
-        const fill = choiceFill(role);
-        const contrast = (Math.max(luminance(role), luminance(fill)) + 0.05) / (Math.min(luminance(role), luminance(fill)) + 0.05);
-        return contrast >= 4.5 ? role : onColor(fill);
+        return readableColor(role, choiceFill(role));
     }
     readonly property color selectedTabFill: blend(controlBase, accent, dark ? 0.52 : 0.34)
     readonly property color expressiveSurface: blend(groupBase, accent, dark ? 0.035 : 0.022)

@@ -76,6 +76,76 @@ Item {
     property int remaining: 0
     readonly property bool countingDown: remaining > 0
     property bool frozenCursor: false
+    property string encodingFieldKey: ""
+    readonly property var selectedEncodingField: encodingFieldKey === "audio" ? {
+        key: "audio",
+        action: "ScreenshotPicker.edit",
+        values: runtime.constraints.captureEncoding.audio.values
+    } : encodingControls.find(field => field.key === encodingFieldKey) || null
+    function encodingFieldLabel(key: string): string {
+        return ({
+                imageFormat: "Image format",
+                jpegQuality: "JPEG quality",
+                videoFormat: "Video container",
+                codec: "Video codec",
+                frameRate: "Frame rate",
+                videoQuality: "Video quality",
+                countdown: "Countdown",
+                audio: "Audio source",
+                preset: "Encoding preset"
+            })[key] || "";
+    }
+    function encodingChoiceLabel(key: string, value: var): string {
+        switch (key) {
+        case "imageFormat":
+        case "videoFormat":
+            return String(value).toUpperCase();
+        case "codec":
+            return value === "libx265" ? "HEVC" : "H.264";
+        case "frameRate":
+            return value === 0 ? "Automatic" : value + " FPS";
+        case "videoQuality":
+            return "CRF " + value;
+        case "jpegQuality":
+            return value + "%";
+        case "countdown":
+            return value === 0 ? "None" : value + " seconds";
+        case "audio":
+            return value === "system" ? "System audio" : value === "microphone" ? "Microphone" : "No audio";
+        default:
+            return String(value);
+        }
+    }
+    function openEncodingField(field: var): void {
+        if (!field || countingDown || exporting || (selectionMode !== "record" && (copying || annotateAfterCapture) && ["imageFormat", "jpegQuality", "preset"].includes(field.key)))
+            return;
+        if (field.key === "cursor") {
+            encodingSelector.cancel();
+            setEncoding("cursor", !encoding("cursor"));
+        } else if (field.key === "") {
+            encodingSelector.cancel();
+            resetToDeclared();
+        } else if (encodingFieldKey === field.key && encodingSelector.expanded) {
+            encodingSelector.cancel();
+        } else {
+            encodingSelector.cancel();
+            encodingFieldKey = field.key;
+            Qt.callLater(() => {
+                if (picker.open && picker.encodingFieldKey === field.key)
+                    encodingSelector.toggle();
+            });
+        }
+    }
+    function chooseEncoding(index: int): void {
+        const field = selectedEncodingField;
+        if (!field || index < 0 || index >= field.values.length)
+            return;
+        if (field.key === "preset")
+            qmlCapturePreferences.setMany(encodingPresets[index].values);
+        else
+            setEncoding(field.key, field.values[index]);
+        encodingFieldKey = "";
+    }
     readonly property var encodingControls: {
         const record = selectionMode === "record";
         const lossless = copying || annotateAfterCapture;
@@ -95,7 +165,7 @@ Item {
             {
                 key: "frameRate",
                 action: "ScreenshotPicker.fps",
-                title: encoding("frameRate") === 0 ? "AUTO FPS" : encoding("frameRate") + " FPS",
+                title: encoding("frameRate") === 0 ? "Auto FPS" : encoding("frameRate") + " FPS",
                 values: runtime.constraints.captureEncoding.frameRate.values
             },
             {
@@ -107,14 +177,14 @@ Item {
             {
                 key: "countdown",
                 action: "ScreenshotPicker.countdown",
-                title: "DELAY " + encoding("countdown") + "s",
+                title: "Delay " + encoding("countdown") + "s",
                 values: runtime.constraints.captureEncoding.countdown.values
             }
         ] : [
             {
                 key: "imageFormat",
                 action: "ScreenshotPicker.format",
-                title: lossless ? "PNG EXPORT" : String(encoding("imageFormat")).toUpperCase(),
+                title: lossless ? "PNG export" : String(encoding("imageFormat")).toUpperCase(),
                 values: runtime.constraints.captureEncoding.imageFormat.values
             },
             {
@@ -126,7 +196,7 @@ Item {
             {
                 key: "cursor",
                 action: "ScreenshotPicker.cursor",
-                title: "CURSOR " + (encoding("cursor") ? "ON" : "OFF") + (frozenForCapture ? " · NEXT" : ""),
+                title: "Cursor " + (encoding("cursor") ? "on" : "off") + (frozenForCapture ? " · NEXT" : ""),
                 values: [false, true]
             }
         ];
@@ -134,8 +204,8 @@ Item {
             {
                 key: "preset",
                 action: "ScreenshotPicker.preset",
-                title: presetIndex >= 0 ? encodingPresets[presetIndex].name.toUpperCase() : "PRESET",
-                values: []
+                title: presetIndex >= 0 ? encodingPresets[presetIndex].name : "Custom preset",
+                values: encodingPresets.map(preset => preset.name)
             },
             {
                 key: "",
@@ -155,21 +225,6 @@ Item {
         if (countingDown || exporting)
             return;
         qmlCapturePreferences.set(key, value);
-    }
-    function cycleEncoding(field: var): void {
-        if (countingDown || exporting || (selectionMode !== "record" && (copying || annotateAfterCapture) && ["imageFormat", "jpegQuality"].includes(field.key)))
-            return;
-        if (field.key === "preset") {
-            if (selectionMode !== "record" && (copying || annotateAfterCapture))
-                return;
-            const preset = encodingPresets[(presetIndex + 1) % encodingPresets.length];
-            qmlCapturePreferences.setMany(preset.values);
-        } else if (field.key === "") {
-            resetToDeclared();
-        } else {
-            const index = field.values.indexOf(encoding(field.key));
-            setEncoding(field.key, field.values[(index + 1) % field.values.length]);
-        }
     }
     function imageArguments(pixels: var): var {
         return [runtime.frozenCapture, exportAction, snapshotPath, String(pixels.x), String(pixels.y), String(pixels.w), String(pixels.h), String(encoding("imageFormat")), String(encoding("jpegQuality"))];
@@ -243,6 +298,8 @@ Item {
     function begin(copy: bool, target: var, mode: string): void {
         if (open || pending || exporting || !target || (mode !== "record" && runtime.frozenCapture.length === 0))
             return;
+        encodingSelector.cancel();
+        encodingFieldKey = "";
         captureScreen = target;
         copying = copy;
         selectionMode = mode;
@@ -372,6 +429,8 @@ Item {
     function dismiss(clearFile: bool): void {
         if (exporting)
             return;
+        encodingSelector.cancel();
+        encodingFieldKey = "";
         recordCountdown.stop();
         remaining = 0;
         modeSnapshotDelay.stop();
@@ -460,11 +519,12 @@ Item {
         endY = newY + rectHeight;
     }
 
-    function cycleAudio(): void {
-        if (selectionMode === "record") {
-            const choices = runtime.constraints.captureEncoding.audio.values;
-            setEncoding("audio", choices[(choices.indexOf(audioMode) + 1) % choices.length]);
-        }
+    function openAudioChoices(): void {
+        if (selectionMode === "record")
+            openEncodingField({
+                key: "audio",
+                values: runtime.constraints.captureEncoding.audio.values
+            });
     }
 
     function nextMonitor(): void {
@@ -727,6 +787,7 @@ Item {
                         width: Math.min(actions.width, implicitWidth)
                         height: implicitHeight
                         prominentAction: true
+                        enabled: !encodingSelector.expanded && !picker.countingDown
                         activeColor: picker.theme.readableRoleColor("capture")
                         runtime: picker.runtime
                         theme: picker.theme
@@ -767,7 +828,7 @@ Item {
                         shortcut: picker.selectionMode === "record" ? picker.runtime.shellHint("ScreenshotPicker.edit") : picker.runtime.shellHint("ScreenshotPicker.toggleRecord")
                         onActivated: {
                             if (picker.selectionMode === "record")
-                                picker.cycleAudio();
+                                picker.openAudioChoices();
                             else
                                 picker.toggleFreeze();
                         }
@@ -790,12 +851,34 @@ Item {
                         compact: true
                         horizontalCompact: true
                         title: modelData.title
-                        icon: modelData.glyph || ""
+                        icon: modelData.glyph || (modelData.key === "cursor" ? DesktopIcons.toggleGlyph(picker.encoding("cursor")) : DesktopIcons.actionGlyph("expand"))
+                        iconOnly: modelData.key === ""
+                        inlineIconHint: iconOnly
+                        active: encodingSelector.expanded && picker.encodingFieldKey === modelData.key
+                        activeColor: picker.theme.roleColor("capture")
                         shortcut: picker.runtime.shellHint(modelData.action)
                         enabled: !picker.countingDown && !picker.exporting && !(picker.selectionMode !== "record" && (picker.copying || picker.annotateAfterCapture) && ["imageFormat", "jpegQuality", "preset"].includes(modelData.key))
-                        onActivated: picker.cycleEncoding(modelData)
+                        onActivated: picker.openEncodingField(modelData)
                     }
                 }
+            }
+
+            ShellValueSelector {
+                id: encodingSelector
+                showField: false
+                visible: expanded
+                width: parent.width
+                runtime: picker.runtime
+                theme: picker.theme
+                motion: picker.motion
+                title: picker.encodingFieldLabel(picker.encodingFieldKey)
+                shortcut: picker.selectedEncodingField ? picker.runtime.shellHint(picker.selectedEncodingField.action) : ""
+                confirmShortcut: picker.runtime.shellHint("ScreenshotPicker.capture")
+                accentColor: picker.theme.roleColor("capture")
+                options: picker.selectedEncodingField?.values.map(value => picker.encodingChoiceLabel(picker.encodingFieldKey, value)) || []
+                selectedIndex: picker.encodingFieldKey === "preset" ? picker.presetIndex : picker.selectedEncodingField?.values.indexOf(picker.encoding(picker.encodingFieldKey)) ?? -1
+                enabled: !picker.countingDown && !picker.exporting
+                onChosen: index => picker.chooseEncoding(index)
             }
 
             KeyHintStrip {
@@ -803,7 +886,20 @@ Item {
                 width: parent.width
                 runtime: picker.runtime
                 theme: picker.theme
-                hints: [
+                hints: encodingSelector.expanded ? [
+                    {
+                        shortcut: picker.runtime.shellHint("ScreenshotPicker.options"),
+                        label: "Browse choices"
+                    },
+                    {
+                        shortcut: picker.runtime.shellHint("ScreenshotPicker.capture"),
+                        label: "Select"
+                    },
+                    {
+                        shortcut: picker.runtime.shellHint("ScreenshotPicker.cancel"),
+                        label: "Back"
+                    }
+                ] : [
                     {
                         shortcut: picker.runtime.shellHint("ScreenshotPicker.move"),
                         label: "Move"
@@ -860,10 +956,27 @@ Item {
             for (const field of picker.encodingControls) {
                 if (picker.runtime.shellMatchesHint(field.action, event.key, event.modifiers)) {
                     if (!event.isAutoRepeat)
-                        picker.cycleEncoding(field);
+                        picker.openEncodingField(field);
                     event.accepted = true;
                     return;
                 }
+            }
+            if (encodingSelector.expanded) {
+                if (event.key === picker.runtime.shellKeyCode("capture", "Escape")) {
+                    encodingSelector.cancel();
+                } else if (picker.runtime.shellNavigates("capture", "up", event.key)) {
+                    encodingSelector.moveHighlight(-1);
+                } else if (picker.runtime.shellNavigates("capture", "down", event.key)) {
+                    encodingSelector.moveHighlight(1);
+                } else if (event.key === picker.runtime.shellKeyCode("capture", "Return") || event.key === picker.runtime.shellKeyCode("capture", "Enter")) {
+                    if (!event.isAutoRepeat)
+                        encodingSelector.commit();
+                } else if (picker.selectionMode === "record" && picker.runtime.shellMatchesHint("ScreenshotPicker.edit", event.key, event.modifiers)) {
+                    if (!event.isAutoRepeat)
+                        picker.openAudioChoices();
+                }
+                event.accepted = true;
+                return;
             }
             const resize = !!(picker.runtime.shellModifier("capture", "Shift", event.modifiers));
             const step = resize ? 8 : 16;
@@ -878,7 +991,7 @@ Item {
             } else if (event.key === picker.runtime.shellKeyCode("capture", "E")) {
                 if (!event.isAutoRepeat) {
                     if (picker.selectionMode === "record")
-                        picker.cycleAudio();
+                        picker.openAudioChoices();
                     else
                         picker.toggleAnnotation();
                 }

@@ -509,19 +509,36 @@ Item {
         previewProcess.exec([runtime.recordingLibrary, "preview", previewName]);
     }
 
-    DetailHero {
+    Row {
         id: hero
         width: parent.width
         height: implicitHeight
-        runtime: library.runtime
-        theme: library.theme
-        motion: library.motion
-        glyph: DesktopIcons.glyphFor("captures")
-        glyphFont: "Symbols Nerd Font"
-        glyphColor: library.theme.roleColor("capture")
-        eyebrow: "Capture / Local library"
-        title: "Captures"
-        detail: library.entries.length + (library.entries.length === 1 ? " saved image or video" : " saved images and videos")
+        spacing: library.theme.spacing2
+        DetailHero {
+            width: Math.max(1, parent.width - (refreshHeader.visible ? refreshHeader.width + parent.spacing : 0))
+            height: implicitHeight
+            runtime: library.runtime
+            theme: library.theme
+            motion: library.motion
+            glyph: DesktopIcons.glyphFor("captures")
+            glyphFont: "Symbols Nerd Font"
+            glyphColor: library.theme.roleColor("capture")
+            eyebrow: "Capture / Local library"
+            title: "Captures"
+            detail: library.entries.length + (library.entries.length === 1 ? " saved image or video" : " saved images and videos")
+        }
+        ShellUtilityAction {
+            id: refreshHeader
+            enabled: !library.isBusy && !library.ocrVisible
+            anchors.verticalCenter: parent.verticalCenter
+            runtime: library.runtime
+            theme: library.theme
+            motion: library.motion
+            icon: DesktopIcons.actionGlyph("refresh")
+            title: "Refresh captures"
+            shortcut: library.runtime.shellHint("RecordingLibrary.refresh")
+            onActivated: library.refresh()
+        }
     }
 
     PanelStatus {
@@ -1017,10 +1034,6 @@ Item {
                 {
                     shortcut: library.runtime.shellHint("RecordingLibrary.page"),
                     label: "Page"
-                },
-                {
-                    shortcut: library.runtime.shellHint("RecordingLibrary.refresh"),
-                    label: "Refresh"
                 }
             ]
         }

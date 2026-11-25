@@ -159,6 +159,7 @@
           "ScreenshotPicker.edit" = "E";
           "ScreenshotPicker.full" = "F";
           "ScreenshotPicker.move" = "NAV_ALL";
+          "ScreenshotPicker.options" = "NAV_VERTICAL";
           "ScreenshotPicker.resize" = "NAV_ALL_SHIFT";
           "ScreenshotPicker.toggleRecord" = "Z";
           "ScreenshotPicker.format" = "T";
@@ -501,6 +502,7 @@
           "AudioHardwareSettings.refresh" = "R";
           "AudioHardwareSettings.select" = "NAV_VERTICAL";
           "AudioHardwareSettings.device" = "NAV_HORIZONTAL";
+          "AudioHardwareSettings.devicePicker" = "D";
           "AudioHardwareSettings.apply" = "ENTER";
           "AudioMixerContent.balanceLeft" = "NAV_KEY_LEFT_PRIMARY_SHIFT";
           "AudioMixerContent.balanceRight" = "NAV_KEY_RIGHT_PRIMARY_SHIFT";
