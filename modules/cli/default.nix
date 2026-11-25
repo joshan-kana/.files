@@ -241,14 +241,6 @@ in
       };
     };
 
-  ollama =
-    _:
-    lib.optionalAttrs isLinux {
-      home = _: {
-        home.shellAliases.ollama = "docker exec -it ollama ollama";
-      };
-    };
-
   jujutsu =
     _:
     let
