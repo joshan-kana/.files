@@ -110,6 +110,77 @@ function actionAssignment(registry, action) {
   return typeof explicit === "string" ? explicit.toUpperCase() : "";
 }
 
+const keySlots = {
+  "/": "Slash",
+  "?": "Question",
+  ",": "Comma",
+  ".": "Period",
+  "-": "Minus",
+  _: "Underscore",
+  "+": "Plus",
+  "=": "Equal",
+  "[": "BracketLeft",
+  "]": "BracketRight",
+  PGUP: "PageUp",
+  PGDN: "PageDown",
+  PGDOWN: "PageDown",
+  ESC: "Escape",
+  ENTER: "Return",
+  NUMENTER: "Enter",
+  SPACE: "Space",
+  TAB: "Tab",
+  SHIFT: "Shift",
+  CTRL: "Control",
+  ALT: "Alt",
+  SUPER: "Meta",
+  ALTGR: "AltGr",
+  BACKSPACE: "Backspace",
+  DEL: "Delete",
+  UP: "Up",
+  DOWN: "Down",
+  LEFT: "Left",
+  RIGHT: "Right",
+};
+
+function splitChord(value) {
+  if (!value) return [];
+  const spec = value.toUpperCase();
+  return spec.endsWith("+")
+    ? [...(spec === "+" ? [] : spec.slice(0, -2).split("+")), "+"]
+    : spec.split("+");
+}
+
+// Resolve executable bindings from the declaration, not a formatted keycap.
+function resolvedActionChord(registry, action) {
+  const explicit = actionAssignment(registry, action);
+  if (explicit) return explicit;
+  const entry = registry?.hints?.[action];
+  if (!entry || entry.literal === true) return "";
+  const navigation = entry.template.match(
+    /^NAV_KEY_(UP|DOWN|LEFT|RIGHT)_(PRIMARY(?:_SHIFT)?|ARROW)$/,
+  );
+  if (navigation) {
+    const [, direction, variant] = navigation;
+    const slot =
+      registry.navigation[direction.toLowerCase()][variant === "ARROW" ? 1 : 0];
+    const key = assigned(registry, entry.scope, slot);
+    return variant.endsWith("_SHIFT")
+      ? assigned(registry, entry.scope, "Shift") + "+" + key
+      : key;
+  }
+  const parts = splitChord(entry.template);
+  const key = parts.pop();
+  if (
+    !key ||
+    !(key in keySlots || /^[A-Z0-9]$/.test(key)) ||
+    parts.some((part) => !["SHIFT", "ALT", "CTRL", "SUPER"].includes(part))
+  )
+    return "";
+  return [...parts, key]
+    .map((part) => assigned(registry, entry.scope, keySlots[part] ?? part))
+    .join("+");
+}
+
 function hint(registry, action) {
   const explicit = actionAssignment(registry, action);
   if (explicit) return explicit;
@@ -117,19 +188,16 @@ function hint(registry, action) {
   if (!entry) return "";
   const scope = entry.scope;
   if (entry.literal === true) return entry.template;
+  const resolved = resolvedActionChord(registry, action);
+  if (resolved) {
+    if (entry.template.startsWith("NAV_KEY_"))
+      return resolved.replace(
+        /\b(UP|DOWN|LEFT|RIGHT)\b/g,
+        (key) => key[0] + key.slice(1).toLowerCase(),
+      );
+    return resolved;
+  }
   const render = (name) => assigned(registry, scope, name);
-  const single = {
-    "/": "Slash",
-    "?": "Question",
-    ",": "Comma",
-    ".": "Period",
-    "-": "Minus",
-    "+": "Plus",
-    "=": "Equal",
-    "[": "BracketLeft",
-    "]": "BracketRight",
-  };
-  if (entry.template in single) return render(single[entry.template]);
   if (entry.template === ", / .")
     return `${render("Comma")} / ${render("Period")}`;
   if (entry.template === "- / +")
@@ -189,22 +257,7 @@ function hint(registry, action) {
         }[direction];
         return rendered === original ? token : rendered;
       }
-      const alias = {
-        PGUP: "PageUp",
-        PGDN: "PageDown",
-        ESC: "Escape",
-        ENTER: "Return",
-        NUMENTER: "Enter",
-        SUPER: "Meta",
-        SPACE: "Space",
-        TAB: "Tab",
-        SHIFT: "Shift",
-        CTRL: "Control",
-        ALT: "Alt",
-        BACKSPACE: "Backspace",
-        DEL: "Delete",
-      };
-      return render(alias[token] ?? token) || token;
+      return render(keySlots[token] ?? token) || token;
     },
   );
 }
@@ -226,10 +279,7 @@ function sequence(registry, action) {
 // plus is a key, not a modifier separator.
 function chord(value, qt) {
   if (!value) return null;
-  const spec = value.toUpperCase();
-  const parts = spec.endsWith("+")
-    ? [...(spec === "+" ? [] : spec.slice(0, -2).split("+")), "+"]
-    : spec.split("+");
+  const parts = splitChord(value);
   const assignedKey = parts.pop();
   const modifiersByName = {
     SHIFT: qt.ShiftModifier,
@@ -244,7 +294,7 @@ function chord(value, qt) {
     (mask, name) => mask | modifiersByName[name],
     0,
   );
-  return { key, modifiers, plus: assignedKey === "+" };
+  return { key, modifiers, symbol: assignedKey };
 }
 
 function matchesChord(value, key, modifiers, qt) {
@@ -252,34 +302,35 @@ function matchesChord(value, key, modifiers, qt) {
   if (!resolved) return false;
   const bits =
     qt.ShiftModifier | qt.AltModifier | qt.ControlModifier | qt.MetaModifier;
-  const actual = modifiers & bits;
-  if (resolved.plus)
-    return (
-      (key === qt.Key_Plus &&
-        (actual & ~qt.ShiftModifier) ===
-          (resolved.modifiers & ~qt.ShiftModifier)) ||
-      (key === qt.Key_Equal &&
-        actual === (resolved.modifiers | qt.ShiftModifier))
-    );
+  let actual = modifiers & bits;
+  // Qt reports Shift+Tab as Backtab, sometimes with an implicit Shift bit.
+  if (key === qt.Key_Backtab) {
+    key = qt.Key_Tab;
+    actual |= qt.ShiftModifier;
+  }
+  // Printable shifted symbols may be reported as the symbol or its base key.
+  // An explicit Shift modifier is still required when the binding requests it.
+  const shiftedBase = {
+    "+": qt.Key_Equal,
+    "?": qt.Key_Slash,
+    _: qt.Key_Minus,
+  }[resolved.symbol];
+  if (shiftedBase !== undefined) {
+    if (key === shiftedBase)
+      return actual === (resolved.modifiers | qt.ShiftModifier);
+    if (key === resolved.key && !(resolved.modifiers & qt.ShiftModifier))
+      return (actual & ~qt.ShiftModifier) === resolved.modifiers;
+  }
   return key === resolved.key && actual === resolved.modifiers;
 }
 
 function matchesHint(registry, action, key, modifiers, qt) {
-  const explicit = actionAssignment(registry, action);
-  const entry = registry?.hints?.[action];
-  // Composite and literal legends are never executable. Validate the
-  // original template against the shared vocabulary before resolving slots.
-  if (
-    !explicit &&
-    (!entry ||
-      entry.literal === true ||
-      (!chord(entry.template, qt) &&
-        !/^NAV_KEY_(?:UP|DOWN|LEFT|RIGHT)_(?:PRIMARY(?:_SHIFT)?|ARROW)$/.test(
-          entry.template,
-        )))
-  )
-    return false;
-  return matchesChord(hint(registry, action), key, modifiers, qt);
+  return matchesChord(
+    resolvedActionChord(registry, action),
+    key,
+    modifiers,
+    qt,
+  );
 }
 
 // Numbered actions can be rearranged without requiring contiguous Qt keycodes.

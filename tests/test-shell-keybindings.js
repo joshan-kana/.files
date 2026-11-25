@@ -585,3 +585,37 @@ test("compact and full seeking use their own scoped action assignments", () => {
       );
   }
 });
+
+test("single chord resolution handles shifted symbols and Qt Backtab without interpreting display legends", () => {
+  const action = "MediaContent.longer";
+  const binding = (template, overrides = {}) => ({
+    ...registry,
+    overrides: { media: overrides },
+    hints: { ...hints, [action]: { scope: "media", template } },
+  });
+  const shift = Qt.ShiftModifier;
+  for (const [template, key, modifiers, expected] of [
+    ["SHIFT+TAB", Qt.Key_Backtab, shift, true],
+    ["SHIFT+TAB", Qt.Key_Backtab, 0, true],
+    ["SHIFT+TAB", Qt.Key_Tab, 0, false],
+    ["?", Qt.Key_Question, shift, true],
+    ["?", Qt.Key_Slash, shift, true],
+    ["?", Qt.Key_Slash, 0, false],
+    ["SHIFT++", Qt.Key_Plus, 0, false],
+    ["SHIFT++", Qt.Key_Plus, shift, true],
+    ["SHIFT++", Qt.Key_Equal, shift, true],
+    ["_", Qt.Key_Minus, shift, true],
+    ["=", Qt.Key_Equal, shift, false],
+    ["A / B", 65, 0, false],
+  ]) {
+    assert.equal(
+      f.matchesHint(binding(template), action, key, modifiers, Qt),
+      expected,
+      template,
+    );
+  }
+  const remapped = binding("SHIFT+/", { Slash: "G", Shift: "ALT" });
+  assert.equal(f.hint(remapped, action), "ALT+G");
+  assert.equal(f.matchesHint(remapped, action, 71, Qt.AltModifier, Qt), true);
+  assert.equal(f.matchesHint(remapped, action, Qt.Key_Slash, shift, Qt), false);
+});
