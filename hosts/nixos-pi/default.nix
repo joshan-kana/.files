@@ -8,6 +8,22 @@
 lib.recursiveUpdate (import ../../profiles/media.nix { inherit editScope lib moduleRegistry; }) {
   hardware = import ./hardware.nix;
 
+  audio =
+    {
+      lib,
+      pkgs,
+      system,
+      ...
+    }:
+    lib.recursiveUpdate (moduleRegistry.audio { inherit lib pkgs system; }) {
+      services.pipewire.wireplumber.extraConfig."51-hdmi-preferred"."monitor.alsa.rules" = [
+        {
+          matches = [ { "node.name" = "~alsa_output.platform-.*\\.hdmi\\..*"; } ];
+          actions.update-props."priority.session" = 1500;
+        }
+      ];
+    };
+
   dotfiles.scopes.system.boot.loader.enable = false;
 
   system = editScope moduleRegistry.system {
