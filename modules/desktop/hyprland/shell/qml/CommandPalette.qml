@@ -1018,7 +1018,7 @@ Item {
         copyFeedback = "COPYING";
         copyOnSuccessClose = !keepOpen;
         calculationGeneration = interactionGeneration;
-        calculationCopy.exec([runtime.clipboardCopy, "--type", "text/plain", value]);
+        calculationCopy.exec([runtime.copyText, "--type", "text/plain;charset=utf-8", value]);
     }
 
     function beginParameter(entry: var, mode: string): void {
