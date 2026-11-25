@@ -5,7 +5,10 @@
   ...
 }:
 
-lib.recursiveUpdate (import ../../profiles/media.nix { inherit editScope lib moduleRegistry; }) {
+let
+  profile = import ../../profiles/media.nix { inherit editScope lib moduleRegistry; };
+in
+lib.recursiveUpdate profile {
   hardware = import ./hardware.nix;
 
   audio =
@@ -23,6 +26,24 @@ lib.recursiveUpdate (import ../../profiles/media.nix { inherit editScope lib mod
         }
       ];
     };
+
+  desktopApps = editScope profile.desktopApps {
+    jellyfin = _: {
+      home = { pkgs, ... }: {
+        services.jellyfin-mpv-shim.settings = {
+          mpv_ext = true;
+          mpv_ext_path = lib.getExe pkgs.mpv-rpi;
+        };
+        xdg.configFile."jellyfin-mpv-shim/mpv.conf".text = ''
+          vo=dmabuf-wayland,gpu
+          hwdec=drm,v4l2m2m
+          hwdec-threads=2
+          hwdec-extra-frames=0
+          vd-queue-enable=no
+        '';
+      };
+    };
+  };
 
   dotfiles.scopes.system.boot.loader.enable = false;
 
