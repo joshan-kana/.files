@@ -212,16 +212,24 @@ test("desktop scenes are owned by Visual Modes, not Power & Session", () => {
   assert.match(keybindings, /"SystemContent.scenes" = "SHIFT\+L"/);
 });
 
-test("the weather hero uses the already-fetched daily range and precipitation probability", () => {
+test("today's weather summary uses prominent existing forecast values", () => {
   const weather = source("WeatherContent.qml");
   const state = source("WeatherState.qml");
+  assert.match(
+    weather,
+    /todayForecast: weather.forecast.length > 0 \? weather.forecast\[0\] : null/,
+  );
   for (const key of ["low", "high", "rain"])
-    assert.match(
-      weather,
-      new RegExp("panel\\.weather\\.forecast\\[0\\]\\?\\." + key),
-    );
+    assert.match(weather, new RegExp("panel\\.todayForecast\\." + key));
   assert.match(state, /precipitation_probability_max/);
-  assert.match(weather, /text: "Rain " \+ Math.round/);
+  assert.match(weather, /text: "TODAY"/);
+  assert.match(weather, /id: todayMetrics/);
+  assert.match(weather, /font.pixelSize: panel.theme.fontSize\(21\)/);
+  assert.match(weather, /Accessible.name: panel.weather.description/);
+  assert.doesNotMatch(
+    weather,
+    /text: "Low " \+|text: "High " \+|text: "Rain " \+/,
+  );
 });
 
 test("wallpaper and palette use one destination name and state-appropriate spectrum description", () => {
