@@ -7,7 +7,8 @@ _: {
         homepage = "https://chatgpt.com/";
         license = lib.licenses.unfree;
         inherit (prev) lib;
-        system = prev.stdenv.hostPlatform.system;
+        inherit (prev.stdenv) hostPlatform;
+        inherit (hostPlatform) system isDarwin isLinux;
         release = {
           version = "26.1120.41243";
           hash = "sha256-74qtMUCeLuOZOp50DPPpTnni1yGeUPSK3qIhfUrPedQ=";
@@ -17,12 +18,7 @@ _: {
           aarch64 = "sha256-eO9LHme3Bzc9pqQcTZPbg0k5aOlGP5goQdG9BvdHOrk=";
         };
         inherit (release) version;
-        isDarwin = prev.stdenv.hostPlatform.isDarwin;
-        isLinux = builtins.elem system [
-          "aarch64-linux"
-          "x86_64-linux"
-        ];
-        linuxArch = if system == "aarch64-linux" then "aarch64" else "x86_64";
+        linuxArch = hostPlatform.parsed.cpu.name;
         passthru = rec {
           autoUpdate = true;
           updateGroup = pname;
@@ -48,7 +44,7 @@ _: {
           unpacker = prev.unzip;
         };
       }
-      // lib.optionalAttrs isLinux {
+      // lib.optionalAttrs (isLinux && builtins.hasAttr linuxArch linuxHashes) {
         chatgpt = prev.stdenv.mkDerivation {
           inherit pname version;
           src = prev.fetchurl {
