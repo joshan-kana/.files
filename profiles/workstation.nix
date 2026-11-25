@@ -14,7 +14,10 @@
     backups
     ;
   dotfiles.scopes = {
-    desktop.mediaSession.enable = false;
+    desktop = {
+      gnome.enable = false;
+      mediaSession.enable = false;
+    };
     desktopApps = {
       kdeConnect.enable = false;
       kodi.enable = false;
