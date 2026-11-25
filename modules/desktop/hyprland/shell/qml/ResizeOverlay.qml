@@ -207,7 +207,7 @@ PanelWindow {
                     spacing: overlay.theme.spacing3
                     Text {
                         text: FeedbackSemantics.symbol("resize", false, 0, "")
-                        color: overlay.theme.accent
+                        color: overlay.theme.commandColor
                         font.family: "Symbols Nerd Font"
                         font.pixelSize: overlay.theme.fontSize(28)
                     }

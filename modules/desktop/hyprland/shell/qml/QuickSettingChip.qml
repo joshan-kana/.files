@@ -18,10 +18,11 @@ Item {
     signal detailsRequested
     property bool primaryAvailable: true
     property bool active: false
-    property color activeColor: theme.accent
+    property color identityColor: theme.commandColor
+    property color activeColor: theme.toggleColor
 
     property bool foregroundBusy: false
-    property color foregroundColor: theme.accent
+    property color foregroundColor: theme.progressColor
 
     signal activated
 
@@ -96,7 +97,7 @@ Item {
                         verticalCenter: parent.verticalCenter
                     }
                     text: chip.icon
-                    color: chip.activeColor
+                    color: chip.theme.readableColor(chip.identityColor, chipSurface.fillColor)
                     font.family: "Symbols Nerd Font"
                     font.pixelSize: chip.theme.fontSize(20)
                 }

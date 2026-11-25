@@ -43,11 +43,11 @@ ShellSurface {
     // tiles. Keyboard selection adds a stronger focus border independently.
     outlined: active || keyboardSelected
     luminous: active || keyboardSelected
-    luminousColor: roleAccent
+    luminousColor: theme.toggleColor
     borderWidth: keyboardSelected ? theme.borderFocus : active ? theme.borderThin : 0
-    borderColor: keyboardSelected ? theme.blend(roleAccent, theme.textStrong, 0.55) : active ? roleAccent : "transparent"
+    borderColor: keyboardSelected ? theme.focusColor : active ? theme.toggleColor : "transparent"
     hovered: tileHover.hovered
-    fillColor: active ? theme.blend(theme.controlBase, roleAccent, theme.dark ? 0.12 : 0.08) : theme.expressiveSurfaceStrong
+    fillColor: active ? theme.blend(theme.controlBase, theme.toggleColor, theme.dark ? 0.12 : 0.08) : theme.expressiveSurfaceStrong
     Behavior on cornerRadius {
         Anim {
             motion: setting.motion
@@ -73,7 +73,7 @@ ShellSurface {
         motion: setting.motion
         disabled: !setting.canToggle
         selected: setting.active
-        stateColor: setting.roleAccent
+        stateColor: setting.theme.toggleColor
         cornerRadius: setting.cornerRadius
         onActivated: setting.toggleRequested()
     }
@@ -117,7 +117,7 @@ ShellSurface {
             Text {
                 id: temperatureValue
                 text: setting.valueText
-                color: setting.active ? setting.roleAccent : setting.theme.textMuted
+                color: setting.active ? setting.theme.readableColor(setting.theme.valueColor, setting.theme.controlBase) : setting.theme.textMuted
                 font.family: setting.runtime.fontSans
                 font.pixelSize: setting.theme.fontSize(9)
                 font.weight: Font.DemiBold
@@ -134,7 +134,6 @@ ShellSurface {
             value: setting.value
             enabled: setting.canAdjust
             density: ShellSlider.Compact
-            accentColor: setting.roleAccent
             Accessible.role: Accessible.Slider
             Accessible.name: setting.label + " " + setting.valueText
             onInteractionStarted: setting.sliderActivated()
@@ -151,7 +150,7 @@ ShellSurface {
         motion: setting.motion
         theme: setting.theme
         emphasized: setting.active || setting.keyboardSelected
-        emphasisColor: setting.roleAccent
+        emphasisColor: setting.theme.focusColor
     }
 
     TileCornerAction {
@@ -160,7 +159,7 @@ ShellSurface {
         motion: setting.motion
         shortcut: setting.detailShortcut
         actionName: "Open " + setting.label + " details"
-        emphasisColor: setting.roleAccent
+        emphasisColor: setting.theme.focusColor
         onActivated: setting.detailRequested()
     }
 }

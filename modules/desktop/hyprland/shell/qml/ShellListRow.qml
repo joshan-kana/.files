@@ -7,7 +7,7 @@ ShellSurface {
     id: root
 
     property bool pressedFeedback: false
-    property color selectionColor: theme.accent
+    property color selectionColor: theme.focusColor
 
     surfaceLayer: ShellSurface.Control
     cornerRadius: motion.enabled && pressedFeedback ? theme.radiusSmall : selected ? theme.radiusLarge : theme.radiusMedium

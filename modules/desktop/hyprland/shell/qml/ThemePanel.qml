@@ -118,7 +118,6 @@ Item {
     property bool selectionTouched: false
     property string statusText: ""
     property bool statusError: false
-    readonly property string foregroundRole: "theme"
     property bool operationRunning: false
     property string operationPhase: "idle"
     property string operationTarget: ""
@@ -451,7 +450,7 @@ Item {
             text: panel.searchText
             onTextChanged: panel.searchText = text
             color: panel.theme.textStrong
-            selectionColor: panel.theme.accent
+            selectionColor: panel.theme.selectionFill
             font.family: panel.runtime.fontSans
             font.pixelSize: panel.theme.fontSize(12)
             focus: false
@@ -493,7 +492,6 @@ Item {
         theme: panel.theme
         motion: panel.motion
         entries: panel.galleryActions.filter(entry => entry.action !== "ThemePanel.defaults")
-        accentRole: "display"
         onActionRequested: action => panel.galleryAction(action)
     }
 
@@ -579,7 +577,7 @@ Item {
                 surfaceLayer: ShellSurface.Control
                 fillColor: themeCard.index === panel.selectedIndex ? panel.theme.layer2 : panel.theme.groupBase
                 cornerRadius: panel.theme.radiusMedium
-                borderColor: themeCard.index === panel.selectedIndex ? panel.theme.accent : "transparent"
+                borderColor: themeCard.index === panel.selectedIndex ? panel.theme.focusColor : "transparent"
                 borderWidth: themeCard.index === panel.selectedIndex ? panel.theme.borderFocus * 2 : 0
 
                 Column {

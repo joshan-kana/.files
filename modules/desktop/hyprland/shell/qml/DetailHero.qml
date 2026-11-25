@@ -38,7 +38,7 @@ ShellSurface {
             bottomMargin: -hero.theme.spacing4
         }
         text: hero.glyph
-        color: hero.glyphColor
+        color: hero.theme.readableColor(hero.glyphColor, hero.theme.panelBase)
         opacity: 0.11
         font.family: hero.glyphFont
         font.pixelSize: hero.theme.fontSize(98)
@@ -64,7 +64,7 @@ ShellSurface {
         Text {
             anchors.centerIn: parent
             text: hero.glyph
-            color: hero.glyphColor
+            color: hero.theme.readableColor(hero.glyphColor, hero.theme.panelBase)
             font.family: hero.glyphFont
             font.pixelSize: hero.theme.fontSize(35)
         }
@@ -80,7 +80,7 @@ ShellSurface {
             verticalCenter: parent.verticalCenter
         }
         text: hero.glyph
-        color: hero.glyphColor
+        color: hero.theme.readableColor(hero.glyphColor, hero.theme.panelBase)
         font.family: hero.glyphFont
         font.pixelSize: hero.theme.fontSize(25)
     }
@@ -109,7 +109,7 @@ ShellSurface {
             theme: hero.theme
             visible: !hero.quiet
             text: hero.eyebrow.toUpperCase()
-            color: hero.glyphColor
+            color: hero.theme.readableColor(hero.glyphColor, hero.theme.panelBase)
             font.pixelSize: hero.theme.fontPanelEyebrow
             font.weight: Font.DemiBold
             elide: Text.ElideRight

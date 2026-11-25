@@ -174,7 +174,6 @@ Item {
             title: "Storage filesystem"
             shortcut: panel.runtime.shellHint("ResourceDashboard.disk")
             confirmShortcut: panel.runtime.shellHint("SystemContent.legend.activate_confirm")
-            accentColor: panel.theme.roleColor("positive")
             options: panel.resourceState.disks.map(entry => entry.target + " · " + entry.source)
             selectedIndex: panel.resourceState.disks.findIndex(entry => entry.target === panel.resourceState.diskTarget)
             onOpened: {
@@ -462,7 +461,6 @@ Item {
                 icon: "󰍛"
                 title: "Logical cores"
                 active: panel.showCores
-                activeColor: panel.theme.roleColor("resources")
                 shortcut: panel.runtime.shellHint("ResourceDashboard.toggleCores")
                 onActivated: panel.toggleCoreView()
             }
@@ -478,7 +476,6 @@ Item {
                 icon: "󰓅"
                 title: "Processes"
                 active: panel.showProcesses
-                activeColor: panel.theme.roleColor("resources")
                 shortcut: panel.runtime.shellHint("ResourceDashboard.processes")
                 onActivated: panel.activateAction("ResourceDashboard.processes")
             }
@@ -664,7 +661,6 @@ Item {
                 title: "Sampling interval"
                 shortcut: panel.runtime.shellHint("ResourceDashboard.interval")
                 confirmShortcut: panel.runtime.shellHint("SystemContent.legend.activate_confirm")
-                accentColor: panel.theme.roleColor("resources")
                 readonly property var values: panel.runtime.constraints.resourceSampling.intervalSeconds.values
                 options: values.map(value => value + "s")
                 selectedIndex: values.indexOf(panel.resourceState.intervalSeconds)
@@ -684,7 +680,6 @@ Item {
                 title: "History length"
                 shortcut: panel.runtime.shellHint("ResourceDashboard.history")
                 confirmShortcut: panel.runtime.shellHint("SystemContent.legend.activate_confirm")
-                accentColor: panel.theme.roleColor("resources")
                 readonly property var values: panel.runtime.constraints.resourceSampling.historyLength.values
                 options: values.map(value => value + " samples")
                 selectedIndex: values.indexOf(panel.resourceState.historyLength)

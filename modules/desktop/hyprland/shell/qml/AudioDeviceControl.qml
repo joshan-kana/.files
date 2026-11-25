@@ -36,8 +36,8 @@ ShellSurface {
     implicitHeight: deviceContents.implicitHeight + (compact ? theme.spacing3 * 2 : theme.spacing2 * 2)
     surfaceLayer: ShellSurface.Control
     cornerRadius: theme.radiusMedium
-    fillColor: compact ? "transparent" : theme.blend(theme.expressiveSurface, theme.roleColor(microphone ? "connectivity" : "audio"), selected ? 0.14 : 0.07)
-    borderColor: !compact && selected ? theme.roleColor("audio") : "transparent"
+    fillColor: compact ? "transparent" : selected ? theme.selectionFill : theme.expressiveSurface
+    borderColor: !compact && selected ? theme.focusColor : "transparent"
     borderWidth: !compact && selected ? theme.borderFocus : 0
     Accessible.role: Accessible.Grouping
     Accessible.name: (microphone ? "Input" : "Output") + " audio, " + (muted ? "muted" : percent + " percent")
@@ -275,7 +275,6 @@ ShellSurface {
                 joined: false
                 active: modelData === deviceControl.device
                 highlighted: index === deviceControl.chooserIndex
-                activeColor: deviceControl.theme.roleColor("audio")
                 icon: active ? DesktopIcons.actionGlyph("confirm") : ""
                 shortcut: highlighted ? deviceControl.runtime.shellHint("AudioHardwareSettings.apply") : ""
                 onActivated: deviceControl.selectDevice(index)

@@ -11,7 +11,7 @@ Item {
     required property string shortcut
     property string actionName: "Open details"
     property bool selected: false
-    property color emphasisColor: theme.accent
+    property color emphasisColor: theme.commandColor
     signal activated
 
     visible: shortcut.length > 0

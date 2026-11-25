@@ -259,7 +259,6 @@ Item {
                     compact: true
                     choices: vhsPresets
                     choiceIndex: index
-                    activeColor: panel.theme.roleColor("reactive")
                     active: panel.appearance.vhsPreset === modelData
                     onActivated: panel.appearance.applyVhsPreset(modelData)
                 }
@@ -289,7 +288,6 @@ Item {
                     from: modelData.minimum
                     to: modelData.maximum
                     value: panel.parameterValue(modelData.key)
-                    accentColor: panel.theme.roleColor("reactive")
                     selectedParameter: panel.selectedIndex === index
                     adjustShortcut: panel.runtime.shellHint("VhsPanel.adjust")
                     resetShortcut: panel.runtime.shellHint("VhsPanel.reset")

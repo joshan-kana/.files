@@ -391,7 +391,7 @@ Item {
                     spacing: overview.theme.spacing1
                     Text {
                         text: "SPATIAL OVERVIEW"
-                        color: overview.theme.accent
+                        color: overview.theme.commandColor
                         font.family: overview.runtime.fontSans
                         font.pixelSize: overview.theme.fontPanelEyebrow
                         font.weight: Font.DemiBold
@@ -450,7 +450,7 @@ Item {
                         compact: true
                         title: index === 9 ? "0" : String(index + 1)
                         quietAction: !active && !overview.allWindows.some(window => window.workspace.id === index + 1)
-                        activeColor: overview.theme.readableRoleColor("workspace")
+                        activeColor: overview.theme.choiceColor
                         active: overview.moveMode ? overview.destinationWorkspace === index + 1 : overview.showAllWorkspaces ? overview.focusedWorkspace === index + 1 : overview.browsedWorkspace === index + 1
                         enabled: !overview.movePending
                         onActivated: {
@@ -469,7 +469,7 @@ Item {
                 Text {
                     Layout.fillWidth: true
                     text: overview.movePending ? "WAITING FOR COMPOSITOR" : overview.moveMode ? "MOVE TARGET · " + (overview.moveTarget ? overview.moveTarget.title : "WINDOW") : overview.showAllWorkspaces ? "ALL DESKTOP WINDOWS" : "WORKSPACE " + overview.browsedWorkspace
-                    color: overview.theme.accent
+                    color: overview.theme.commandColor
                     font.family: overview.runtime.fontSans
                     font.pixelSize: overview.theme.fontSubpanelEyebrow
                     font.letterSpacing: 0.6
@@ -612,6 +612,7 @@ Item {
                     icon: "󰉋"
                     shortcut: overview.runtime.shellHint("OverviewPanel.toggleFloating")
                     active: overview.chosenFloating
+                    activeColor: theme.toggleColor
                     enabled: !!overview.chosenWindow && !overview.moveMode && !overview.movePending && !overview.actionPending
                     onActivated: overview.toggleWindowState("float")
                 }
@@ -627,6 +628,7 @@ Item {
                     icon: "󰐃"
                     shortcut: overview.runtime.shellHint("OverviewPanel.togglePin")
                     active: overview.chosenPinned
+                    activeColor: theme.toggleColor
                     enabled: !!overview.chosenWindow && overview.chosenFloating && !overview.moveMode && !overview.movePending && !overview.actionPending
                     onActivated: overview.toggleWindowState("pin")
                 }

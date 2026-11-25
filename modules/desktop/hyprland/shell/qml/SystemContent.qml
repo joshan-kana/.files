@@ -220,7 +220,6 @@ FocusScope {
     readonly property var foregroundSource: Array.from(viewStack.children).find(source => source.exposed === true && source.foregroundBusy === true) || null
     readonly property bool dashboardExposed: presentationActive && engaged && !detailsVisible
     readonly property bool foregroundBusy: !!foregroundSource || (mixerOpen && audioDeck.foregroundBusy)
-    readonly property string foregroundRole: foregroundSource?.foregroundRole || (mixerOpen && audioDeck.foregroundBusy ? "audio" : "")
     readonly property bool displayBusy: !!settingsPanel.panel?.displayOperationBusy
     readonly property bool nightLightBusy: nightLight.foregroundBusy
     readonly property bool sessionOpen: sessionPanel.open
@@ -1093,7 +1092,6 @@ FocusScope {
                     title: "Themes"
                     actionId: "SystemContent.themes"
                     foregroundBusy: root.dashboardExposed && themePanel.foregroundBusy
-                    foregroundColor: root.theme.roleColor("display")
                     onActivated: root.openTheme()
                 }
                 ShellAction {
@@ -1112,7 +1110,6 @@ FocusScope {
                     title: "Wallpaper"
                     actionId: "SystemContent.wallpaper"
                     foregroundBusy: root.dashboardExposed && wallpaperPanel.foregroundBusy
-                    foregroundColor: root.theme.roleColor("wallpaper")
                     onActivated: root.openWallpaper()
                 }
                 ShellAction {
@@ -1149,7 +1146,6 @@ FocusScope {
                     theme: root.theme
                     title: "Appearance & display"
                     emphasized: true
-                    accentRole: "display"
 
                     ShellSurface {
                         width: parent.width
@@ -1181,7 +1177,6 @@ FocusScope {
                                     to: 100
                                     value: root.brightness.percent
                                     enabled: root.brightness.supported
-                                    accentColor: root.theme.roleColor("display")
                                     density: ShellSlider.Prominent
                                     onInteractionStarted: root.selectSlider("brightness")
                                     onValueRequested: next => root.brightness.setPercent(next)
@@ -1208,7 +1203,6 @@ FocusScope {
                     theme: root.theme
                     title: "Connectivity"
                     emphasized: true
-                    accentRole: "connectivity"
 
                     Grid {
                         id: connectionTiles
@@ -1233,7 +1227,6 @@ FocusScope {
                             })
                             actionId: "SystemContent.network"
                             foregroundBusy: root.dashboardExposed && networkPanel.foregroundBusy
-                            foregroundColor: root.theme.roleColor("connectivity")
                             detailActionId: "SystemContent.networkDetails"
                             connected: root.system.networkConnected
                             primaryAvailable: root.system.wifiAvailable
@@ -1261,7 +1254,6 @@ FocusScope {
                             })
                             actionId: "SystemContent.bluetooth"
                             foregroundBusy: root.dashboardExposed && bluetoothPanel.foregroundBusy
-                            foregroundColor: root.theme.roleColor("connectivity")
                             detailActionId: "SystemContent.bluetoothDetails"
                             connected: root.system.bluetoothEnabled
                             scanning: root.system.bluetoothDiscovering
@@ -1290,7 +1282,6 @@ FocusScope {
                     theme: root.theme
                     title: "Quick Actions"
                     emphasized: true
-                    accentRole: "attention"
 
                     BalancedTileFlow {
                         id: actionTiles
@@ -1312,7 +1303,7 @@ FocusScope {
                             detailActionId: "SystemContent.alertsDetails"
                             onDetailsRequested: root.openSetting("alerts")
                             active: root.notificationState.silent
-                            activeColor: root.notificationState.silent ? root.theme.roleColor("warning") : root.theme.roleColor("attention")
+                            identityColor: root.notificationState.silent ? root.theme.roleColor("warning") : root.theme.roleColor("attention")
                             onActivated: root.notificationState.toggleSilent()
                         }
 
@@ -1330,7 +1321,7 @@ FocusScope {
                             detailActionId: "SystemContent.stayDetails"
                             onDetailsRequested: root.openSetting("stay")
                             active: root.system.idleInhibited
-                            activeColor: root.theme.roleColor("warmth")
+                            identityColor: root.theme.roleColor("inhibition")
                             onActivated: root.system.toggleIdleInhibited()
                         }
 
@@ -1350,7 +1341,7 @@ FocusScope {
                             detailActionId: "SystemContent.powerDetails"
                             onDetailsRequested: root.openSetting("power")
                             active: root.powerProfile.current === "power-saver"
-                            activeColor: root.theme.powerProfileColor(root.powerProfile.current)
+                            identityColor: root.theme.powerProfileColor(root.powerProfile.current)
                             onActivated: root.powerProfile.cycle()
                         }
 
@@ -1363,7 +1354,7 @@ FocusScope {
                             icon: DesktopIcons.glyphFor("resources")
                             title: "Resources"
                             detailActionId: "SystemContent.resources"
-                            activeColor: root.theme.roleColor("resources")
+                            identityColor: root.theme.roleColor("resources")
                             onDetailsRequested: root.openResources()
                         }
 
@@ -1377,8 +1368,7 @@ FocusScope {
                             title: "Captures"
                             detailActionId: "SystemContent.captures"
                             foregroundBusy: root.dashboardExposed && recordingsPanel.foregroundBusy
-                            foregroundColor: root.theme.roleColor("capture")
-                            activeColor: root.theme.roleColor("capture")
+                            identityColor: root.theme.roleColor("capture")
                             onDetailsRequested: root.openRecordings()
                         }
 
@@ -1392,8 +1382,7 @@ FocusScope {
                             title: "Displays"
                             detailActionId: "SystemContent.displays"
                             foregroundBusy: root.dashboardExposed && root.displayBusy
-                            foregroundColor: root.theme.roleColor("display")
-                            activeColor: root.theme.roleColor("display")
+                            identityColor: root.theme.roleColor("display")
                             enabled: root.runtime.displaySettings.length > 0
                             onDetailsRequested: root.openSetting("displays")
                         }
@@ -1407,7 +1396,7 @@ FocusScope {
                             icon: DesktopIcons.glyphFor("status")
                             title: "Status"
                             detailActionId: "SystemContent.statusInspection"
-                            activeColor: root.theme.roleColor("resources")
+                            identityColor: root.theme.roleColor("resources")
                             onDetailsRequested: root.openStatus()
                         }
 
@@ -1421,10 +1410,10 @@ FocusScope {
                             title: root.resetRunning ? "Restoring…" : "Restore defaults"
                             actionId: "SystemContent.reset"
                             foregroundBusy: root.dashboardExposed && root.resetRunning
-                            foregroundColor: root.theme.roleColor("warning")
                             active: root.resetConfirmPending
                             enabled: !root.resetRunning
-                            activeColor: root.theme.roleColor("warning")
+                            identityColor: root.theme.roleColor("warning")
+                            activeColor: root.theme.warning
                             onActivated: {
                                 root.resetConfirmPending = true;
                                 root.resetStatus = "";
@@ -1514,7 +1503,7 @@ FocusScope {
                             detailName: "Wallpaper spectrum tuning"
                             onDetailsRequested: root.openSetting("spectrum")
                             active: root.wallpaperSpectrumEnabled
-                            activeColor: root.theme.roleColor("workspace")
+                            identityColor: root.theme.roleColor("spectrum")
                             onActivated: root.wallpaperSpectrumToggleRequested()
                         }
 
@@ -1531,7 +1520,7 @@ FocusScope {
                             detailName: "Reactive audio tuning"
                             onDetailsRequested: root.openSetting("reactive")
                             active: root.musicReactiveEnabled
-                            activeColor: root.theme.roleColor("audio")
+                            identityColor: root.theme.roleColor("reactive")
                             onActivated: root.musicReactiveToggleRequested()
                         }
 
@@ -1547,7 +1536,7 @@ FocusScope {
                             detailActionId: "SystemContent.windowsDetails"
                             detailName: "Window transparency details"
                             active: root.windowTransparencyEnabled
-                            activeColor: root.theme.roleColor("display")
+                            identityColor: root.theme.roleColor("display")
                             onActivated: root.windowTransparencyToggleRequested()
                             onDetailsRequested: root.openSetting("windows")
                         }
@@ -1564,7 +1553,7 @@ FocusScope {
                             detailActionId: "SystemContent.glassDetails"
                             detailName: "Frosted glass details"
                             active: root.shellGlassEnabled
-                            activeColor: root.theme.roleColor("connectivity")
+                            identityColor: root.theme.roleColor("connectivity")
                             onActivated: root.shellGlassToggleRequested()
                             onDetailsRequested: root.openSetting("glass")
                         }
@@ -1581,7 +1570,7 @@ FocusScope {
                             detailActionId: "SystemContent.vhsTune"
                             detailName: "VHS tuning"
                             active: root.appearance.vhsEnabled
-                            activeColor: root.theme.roleColor("display")
+                            identityColor: root.theme.roleColor("reactive")
                             onActivated: root.appearance.toggleVhs()
                             onDetailsRequested: root.openVhs()
                         }
@@ -1599,7 +1588,7 @@ FocusScope {
                             detailName: "Bar settings"
                             onDetailsRequested: root.openSetting("bar")
                             active: root.barVisible
-                            activeColor: root.theme.roleColor("positive")
+                            identityColor: root.theme.roleColor("workspace")
                             onActivated: root.barToggleRequested()
                         }
                         QuickSettingChip {
@@ -1617,7 +1606,7 @@ FocusScope {
                             detailName: "Frame settings"
                             onDetailsRequested: root.openSetting("frame")
                             active: root.frameVisible
-                            activeColor: root.theme.roleColor("display")
+                            identityColor: root.theme.roleColor("display")
                             onActivated: root.frameToggleRequested()
                         }
 
@@ -1636,7 +1625,7 @@ FocusScope {
                             detailName: "Motion settings"
                             onDetailsRequested: root.openSetting("motion")
                             active: root.motion.enabled
-                            activeColor: root.theme.roleColor("display")
+                            identityColor: root.theme.roleColor("motion")
                             onActivated: root.motion.toggle()
                         }
 
@@ -1653,11 +1642,10 @@ FocusScope {
                             actionId: "SystemContent.nightLight"
                             primaryAvailable: root.nightLight.supported && !root.nightLight.busy
                             foregroundBusy: root.dashboardExposed && root.nightLightBusy
-                            foregroundColor: root.theme.roleColor("display")
                             detailActionId: "SystemContent.nightLightDetails"
                             detailName: "Night Light details"
                             active: root.nightLight.active
-                            activeColor: root.theme.roleColor("warmth")
+                            identityColor: root.theme.roleColor("warmth")
                             onActivated: if (root.nightLight.supported && !root.nightLight.busy)
                                 root.nightLight.toggle()
                             onDetailsRequested: root.openSetting("nightLight")
@@ -1681,7 +1669,6 @@ FocusScope {
                     theme: root.theme
                     title: "Audio & levels"
                     emphasized: true
-                    accentRole: "audio"
                     hints: root.selectedSlider.length === 0 ? [
                         {
                             shortcut: root.runtime.shellHint("SystemContent.audioSelect"),
@@ -1715,7 +1702,6 @@ FocusScope {
                     theme: root.theme
                     title: "Media"
                     emphasized: true
-                    accentRole: "media"
 
                     ControlsMediaCard {
                         id: mediaCard

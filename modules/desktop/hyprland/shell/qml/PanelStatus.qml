@@ -73,7 +73,7 @@ Item {
                 visible: phaseIcon.animatedBusy
                 width: Math.max(1, phaseIcon.width * 0.70)
                 height: width
-                color: status.theme.accent
+                color: status.theme.readableColor(status.theme.progressColor, status.theme.panelBase)
                 radius: width / 2
                 SequentialAnimation on radius {
                     running: phaseIcon.animatedBusy

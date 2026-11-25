@@ -358,7 +358,7 @@ WlSessionLock {
                             surfaceLayer: ShellSurface.Group
                             cornerRadius: lock.theme.radiusMedium
                             outlined: passwordInput.activeFocus || lock.statusError
-                            borderColor: lock.statusError ? lock.theme.critical : passwordInput.activeFocus ? lock.theme.accent : lock.theme.subtleBorder
+                            borderColor: lock.statusError ? lock.theme.critical : passwordInput.activeFocus ? lock.theme.focusColor : lock.theme.subtleBorder
 
                             TextInput {
                                 id: passwordInput
@@ -376,8 +376,8 @@ WlSessionLock {
                                 passwordCharacter: "●"
                                 inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText
                                 color: lock.theme.textStrong
-                                selectionColor: lock.theme.accent
-                                selectedTextColor: lock.theme.background
+                                selectionColor: lock.theme.selectionFill
+                                selectedTextColor: lock.theme.textStrong
                                 font.family: lock.runtime.fontSans
                                 font.pixelSize: lock.theme.fontSize(17)
                                 clip: true
@@ -428,7 +428,7 @@ WlSessionLock {
                                 surface: passwordSurface
                                 active: lock.authenticating
                                 motion: lock.motion
-                                highlightColor: lock.theme.accent
+                                highlightColor: lock.theme.progressColor
                                 lineWidth: 2
                             }
                         }

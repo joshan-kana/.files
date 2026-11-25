@@ -32,7 +32,6 @@ Item {
     property string deletePending: ""
     property string statusText: ""
     property bool statusError: false
-    readonly property string foregroundRole: editorRequestRunning ? "screenshot" : "capture"
     property string locationCommand: ""
     readonly property bool foregroundBusy: editorRequestRunning || actionProcess.running || ocrProcess.running || (locationProcess.running && locationCommand !== "status")
     property bool editorRequestRunning: false
@@ -606,8 +605,8 @@ Item {
                     cornerRadius: library.theme.radiusMedium
                     selected: false
                     outlined: index === library.selectedIndex
-                    fillColor: index === library.selectedIndex ? library.theme.blend(library.theme.controlBase, library.theme.roleColor("capture"), library.theme.dark ? 0.075 : 0.045) : library.theme.controlBase
-                    borderColor: index === library.selectedIndex ? library.theme.roleColor("capture") : library.theme.subtleBorder
+                    fillColor: index === library.selectedIndex ? library.theme.selectionFill : library.theme.controlBase
+                    borderColor: index === library.selectedIndex ? library.theme.focusColor : library.theme.subtleBorder
                     StateLayer {
                         theme: library.theme
                         motion: library.motion
@@ -732,9 +731,9 @@ Item {
                                 y: modelData.top / Math.max(1, library.ocrImageHeight) * textHighlights.height
                                 width: modelData.width / Math.max(1, library.ocrImageWidth) * textHighlights.width
                                 height: modelData.height / Math.max(1, library.ocrImageHeight) * textHighlights.height
-                                color: library.wordInSelection(index) ? Qt.rgba(library.theme.accent.r, library.theme.accent.g, library.theme.accent.b, 0.50) : Qt.rgba(library.theme.accent.r, library.theme.accent.g, library.theme.accent.b, 0.10)
+                                color: library.wordInSelection(index) ? Qt.rgba(library.theme.choiceColor.r, library.theme.choiceColor.g, library.theme.choiceColor.b, 0.50) : Qt.rgba(library.theme.choiceColor.r, library.theme.choiceColor.g, library.theme.choiceColor.b, 0.10)
                                 border.width: library.wordInSelection(index) ? 1 : 0
-                                border.color: library.theme.accent
+                                border.color: library.theme.choiceColor
                             }
                         }
                         MouseArea {
@@ -803,8 +802,8 @@ Item {
                             wrapMode: TextEdit.NoWrap
                             textFormat: TextEdit.PlainText
                             color: library.theme.textStrong
-                            selectionColor: library.theme.accent
-                            selectedTextColor: library.theme.background
+                            selectionColor: library.theme.selectionFill
+                            selectedTextColor: library.theme.textStrong
                             font.family: library.runtime.fontSans
                             font.pixelSize: library.theme.fontSize(12)
                             background: null

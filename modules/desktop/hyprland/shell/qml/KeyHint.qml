@@ -12,7 +12,7 @@ Item {
     property bool showLabel: label.trim().length > 0
     property bool compact: false
     property bool emphasized: false
-    property color emphasisColor: theme.accent
+    property color emphasisColor: theme.focusColor
     property bool available: true
 
     visible: hasShortcut || showLabel
@@ -30,7 +30,7 @@ Item {
         // Use the same material as action controls, without bright inverted caps.
         color: hint.theme.expressiveSurfaceStrong
         border.width: hint.emphasized ? hint.theme.borderFocus : hint.theme.borderThin
-        border.color: hint.emphasized ? hint.emphasisColor : hint.theme.subtleBorder
+        border.color: hint.emphasized ? hint.theme.contrastColor(hint.emphasisColor, cap.color, 3) : hint.theme.subtleBorder
 
         KeyChord {
             id: chord

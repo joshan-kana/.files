@@ -49,11 +49,11 @@ Item {
         motion: button.motion
         cornerRadius: button.selected || pointer.pointerHovered ? width / 2 : button.theme.radiusLarge
         exponent: button.selected || pointer.pointerHovered ? 2.2 : button.theme.squircleExponent
-        fillColor: button.armed ? button.theme.focusFill : button.selected || button.active ? button.theme.blend(button.theme.controlBase, button.accentColor, button.theme.dark ? 0.24 : 0.14) : button.theme.expressiveSurfaceStrong
+        fillColor: button.armed ? button.theme.focusFill : button.selected || button.active ? button.theme.choiceFill(button.active ? button.theme.toggleColor : button.theme.choiceColor) : button.theme.expressiveSurfaceStrong
         luminous: button.active
         luminousColor: button.accentColor
         outlined: button.active
-        borderColor: button.armed ? button.theme.warning : button.selected || button.active ? button.accentColor : "transparent"
+        borderColor: button.armed ? button.theme.warning : button.selected ? button.theme.focusColor : button.active ? button.theme.toggleColor : "transparent"
         borderWidth: button.selected || button.armed || button.active ? button.theme.borderFocus : 0
 
         Behavior on cornerRadius {
@@ -100,7 +100,7 @@ Item {
             shortcut: button.shortcut
             compact: true
             emphasized: button.selected
-            emphasisColor: button.accentColor
+            emphasisColor: button.theme.focusColor
         }
     }
 

@@ -31,7 +31,7 @@ Item {
     readonly property color foreground: theme.textStrong
 
     property bool foregroundBusy: false
-    property color foregroundColor: theme.accent
+    property color foregroundColor: theme.progressColor
 
     signal activated
 

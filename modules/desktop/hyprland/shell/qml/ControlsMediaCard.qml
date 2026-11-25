@@ -182,7 +182,6 @@ Item {
                 motion: card.motion
                 value: card.media.length > 0 ? Math.max(0, Math.min(1, card.media.position / card.media.length)) : 0
                 enabled: card.media.seekable && card.media.length > 0
-                accentColor: card.theme.roleColor("media")
                 density: ShellSlider.Compact
                 Accessible.role: Accessible.Slider
                 Accessible.name: "Playback position"
@@ -212,6 +211,7 @@ Item {
                     title: card.media.shuffled ? "Shuffle on" : "Shuffle off"
                     shortcut: card.runtime.shellHint("ControlsMediaCard.shuffle")
                     active: card.media.shuffled
+                    activeColor: theme.toggleColor
                     enabled: card.media.shuffleAvailable
                     onActivated: card.media.toggleShuffle()
                 }
@@ -245,6 +245,7 @@ Item {
                     title: "Repeat " + card.media.repeatLabel
                     shortcut: card.runtime.shellHint("ControlsMediaCard.repeat")
                     active: card.media.repeatState !== 0
+                    activeColor: theme.toggleColor
                     enabled: card.media.repeatAvailable
                     onActivated: card.media.toggleRepeat()
                 }

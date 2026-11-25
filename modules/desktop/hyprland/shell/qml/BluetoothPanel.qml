@@ -63,7 +63,6 @@ Item {
     property string statusText: ""
     property bool statusError: false
 
-    readonly property string foregroundRole: "connectivity"
     readonly property bool foregroundBusy: devices.some(device => device.pairing)
     readonly property var adapter: system.bluetoothAdapter
     readonly property var devices: system.bluetoothAdapterDevices || []
@@ -384,6 +383,7 @@ Item {
                 shortcut: panel.runtime.shellHint("BluetoothPanel.wake")
                 horizontalCompact: true
                 active: !!panel.detailDevice?.wakeAllowed
+                activeColor: theme.toggleColor
                 enabled: !!panel.detailDevice?.paired
                 visible: !panel.renaming
                 onActivated: panel.toggleWake()
@@ -422,7 +422,6 @@ Item {
                 fillColor: deviceRow.modelData.connected ? panel.theme.blend(panel.theme.groupBase, panel.theme.positive, panel.theme.dark ? 0.11 : 0.07) : panel.theme.layer3
 
                 pressedFeedback: devicePress.visualPressed
-                selectionColor: panel.theme.roleColor("connectivity")
 
                 StateLayer {
                     id: devicePress

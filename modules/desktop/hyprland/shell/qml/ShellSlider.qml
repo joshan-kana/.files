@@ -12,7 +12,8 @@ Item {
     property bool interactive: true
     // Animate external/keyboard changes, never fight pointer dragging.
     property bool animateValueChanges: true
-    property color accentColor: theme.accent
+    property color accentColor: theme.sliderColor
+    readonly property color trackColor: theme.contrastColor(accentColor, theme.layer3, 3)
     property bool temperatureTrack: false
     enum Density {
         Compact,
@@ -115,7 +116,7 @@ Item {
         width: Math.max(0, root.thumbCenterX - root.thumbTrackGap - x)
         height: root.trackHeight
         radius: height / 2
-        color: root.accentColor
+        color: root.trackColor
     }
 
     Rectangle {
@@ -136,7 +137,7 @@ Item {
         radius: width / 2
         x: root.thumbCenterX - width / 2
         anchors.verticalCenter: parent.verticalCenter
-        color: root.temperatureTrack ? root.theme.textStrong : root.accentColor
+        color: root.temperatureTrack ? root.theme.textStrong : root.trackColor
         border.width: root.temperatureTrack ? 1 : 0
         border.color: root.theme.background
 

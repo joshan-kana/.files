@@ -86,7 +86,7 @@ Column {
         theme: panel.theme
         motion: panel.motion
         surfaceLayer: ShellSurface.Group
-        fillColor: panel.scenes.active ? panel.theme.choiceFill(panel.theme.roleColor("workspace")) : panel.theme.groupBase
+        fillColor: panel.scenes.active ? panel.theme.choiceFill(panel.theme.choiceColor) : panel.theme.groupBase
         Row {
             id: sceneStatus
             x: panel.theme.spacing3
@@ -154,7 +154,6 @@ Column {
             icon: active ? DesktopIcons.actionGlyph("confirm") : DesktopIcons.glyphFor("scenes")
             active: panel.scenes.activeName === modelData.name
             highlighted: index === panel.selectedIndex
-            activeColor: panel.theme.roleColor("workspace")
             shortcut: highlighted ? panel.runtime.shellHint("ScenePanel.apply") : ""
             onActivated: {
                 panel.selectedIndex = index;
@@ -215,7 +214,6 @@ Column {
             compact: true
             horizontalCompact: true
             prominentAction: enabled
-            activeColor: panel.theme.roleColor("workspace")
             icon: DesktopIcons.actionGlyph("save")
             title: panel.naming ? "Save scene" : "Save current"
             shortcut: panel.naming ? panel.runtime.shellHint("ScenePanel.apply") : panel.runtime.shellHint("ScenePanel.save")
@@ -233,6 +231,7 @@ Column {
             motion: panel.motion
             compact: true
             title: "Remove selected"
+            activeColor: panel.theme.critical
             shortcut: panel.runtime.shellHint("ScenePanel.remove")
             enabled: visible && !!panel.scenes.profiles[panel.selectedIndex] && panel.scenes.profiles[panel.selectedIndex].name !== panel.scenes.activeName
             onActivated: {

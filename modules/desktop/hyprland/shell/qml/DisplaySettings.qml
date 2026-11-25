@@ -321,9 +321,9 @@ Column {
                     surfaceLayer: ShellSurface.Control
                     cornerRadius: Math.min(panel.theme.radiusSmall, Math.min(width, height) / 6)
                     outlined: modelData.selected
-                    borderColor: modelData.selected ? panel.theme.roleColor("display") : panel.theme.subtleBorder
+                    borderColor: modelData.selected ? panel.theme.focusColor : panel.theme.subtleBorder
                     borderWidth: modelData.selected ? panel.theme.borderFocus : panel.theme.borderThin
-                    fillColor: modelData.selected ? panel.theme.choiceFill(panel.theme.roleColor("display")) : panel.theme.controlBase
+                    fillColor: modelData.selected ? panel.theme.choiceFill(panel.theme.choiceColor) : panel.theme.controlBase
                     Accessible.role: Accessible.StaticText
                     Accessible.name: modelData.name + (modelData.selected ? ", selected" : "") + ", " + Math.round(modelData.width) + " by " + Math.round(modelData.height) + " logical pixels"
                     ShellText {
@@ -372,7 +372,6 @@ Column {
                 motion: panel.motion
                 title: "Resolution"
                 shortcut: panel.runtime.shellHint("DisplaySettings.mode")
-                accentColor: panel.theme.roleColor("display")
                 confirmShortcut: panel.runtime.shellHint("DisplaySettings.apply")
                 options: panel.resolutions.map(value => value.replace("x", " × "))
                 selectedIndex: panel.resolutions.indexOf(panel.mode.split("@")[0])
@@ -391,7 +390,6 @@ Column {
                 motion: panel.motion
                 title: "Refresh rate"
                 shortcut: panel.runtime.shellHint("DisplaySettings.refreshRate")
-                accentColor: panel.theme.roleColor("display")
                 confirmShortcut: panel.runtime.shellHint("DisplaySettings.apply")
                 options: panel.refreshModes.map(value => panel.formatRate(value))
                 selectedIndex: panel.refreshModes.indexOf(panel.mode)
@@ -459,7 +457,6 @@ Column {
                             choices: orientationChoices
                             choiceIndex: index
                             active: panel.orientation === index
-                            activeColor: panel.theme.roleColor("display")
                             enabled: panel.editable
                             onActivated: panel.orientation = index
                         }
@@ -555,6 +552,7 @@ Column {
             quietAction: true
             icon: DesktopIcons.actionGlyph("cancel")
             title: panel.previewActive ? "Revert" : "Discard"
+            activeColor: panel.theme.warning
             shortcut: panel.runtime.shellHint("DisplaySettings.cancel")
             enabled: !panel.busy && (panel.previewActive || panel.changed)
             onActivated: panel.cancelNested()
@@ -570,10 +568,10 @@ Column {
             horizontalCompact: true
             icon: DesktopIcons.actionGlyph("confirm")
             title: panel.previewActive ? "Keep layout" : "Preview layout"
+            activeColor: panel.previewActive ? panel.theme.positive : panel.theme.commandColor
             shortcut: panel.runtime.shellHint("DisplaySettings.apply")
             prominentAction: enabled
             restingRadius: height / 2
-            activeColor: panel.theme.roleColor("display")
             enabled: !panel.busy && (panel.previewActive || panel.editable && panel.changed)
             onActivated: panel.previewOrKeep()
         }
@@ -621,7 +619,6 @@ Column {
             motion: panel.motion
             title: "Layout"
             shortcut: panel.runtime.shellHint("DisplaySettings.nextProfile")
-            accentColor: panel.theme.roleColor("display")
             confirmShortcut: panel.runtime.shellHint("DisplaySettings.apply")
             options: panel.profiles.map(entry => entry.label + (entry.compatible ? "" : " · Different displays"))
             selectedIndex: panel.profileIndex
@@ -641,7 +638,6 @@ Column {
             title: "Preview saved layout"
             shortcut: panel.runtime.shellHint("DisplaySettings.previewProfile")
             enabled: panel.profileActionsAvailable && !!panel.profile?.compatible && !profileSelector.expanded
-            activeColor: panel.theme.roleColor("display")
             onActivated: panel.run("preview-profile", [String(panel.profileIndex)])
         }
         ShellUtilityAction {
@@ -651,6 +647,7 @@ Column {
             motion: panel.motion
             icon: DesktopIcons.actionGlyph("delete")
             title: "Remove selected layout"
+            activeColor: panel.theme.critical
             shortcut: panel.runtime.shellHint("DisplaySettings.deleteProfile")
             enabled: panel.profileActionsAvailable && !!panel.profile && !profileSelector.expanded
             onActivated: panel.run("delete-profile", [String(panel.profileIndex)])

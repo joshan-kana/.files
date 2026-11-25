@@ -11,7 +11,6 @@ ShellSurface {
     required property real from
     required property real to
     required property real value
-    property color accentColor: theme.accent
     property bool adjustable: true
     property bool temperatureTrack: false
     property bool resetAvailable: true
@@ -33,7 +32,7 @@ ShellSurface {
     cornerRadius: theme.radiusMedium
     outlined: selectedParameter
     borderWidth: outlined ? theme.borderFocus : 0
-    borderColor: outlined ? theme.accent : "transparent"
+    borderColor: outlined ? theme.focusColor : "transparent"
     fillColor: theme.expressiveSurfaceStrong
 
     HoverHandler {
@@ -110,7 +109,7 @@ ShellSurface {
                 theme: card.theme
                 text: card.readback
                 textRole: ShellText.Readback
-                color: card.accentColor
+                color: card.theme.readableColor(card.theme.valueColor, card.fillColor)
             }
             Item {
                 id: resetSlot
@@ -148,7 +147,6 @@ ShellSurface {
             to: card.to
             value: card.value
             enabled: card.adjustable
-            accentColor: card.accentColor
             temperatureTrack: card.temperatureTrack
             density: card.temperatureTrack ? ShellSlider.Prominent : ShellSlider.Standard
             Accessible.role: Accessible.Slider

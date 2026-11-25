@@ -10,6 +10,7 @@ QtObject {
     readonly property color textMuted: runtime.textMuted
     readonly property color text: runtime.text
     readonly property color textStrong: runtime.textStrong
+    readonly property color textBright: runtime.textBright
     readonly property color critical: runtime.critical
     readonly property color warning: runtime.warning
     readonly property color positive: runtime.positive
@@ -20,8 +21,19 @@ QtObject {
     // Components select a role without embedding palette policy.
     function roleColor(role: string): color {
         const chosen = runtime.roleColors[role];
-        return chosen ? chosen : accent;
+        return chosen ? chosen : text;
     }
+
+    // Shared functional colours; no panel-specific accent inheritance.
+    readonly property color commandColor: roleColor("command")
+    readonly property color choiceColor: roleColor("choice")
+    readonly property color sliderColor: roleColor("adjustment")
+    readonly property color valueColor: roleColor("readback")
+    readonly property color utilityColor: roleColor("utility")
+    readonly property color toggleColor: roleColor("toggle")
+    readonly property color searchColor: roleColor("search")
+    readonly property color progressColor: roleColor("progress")
+    readonly property color focusColor: roleColor("focus")
 
     function weatherColor(code: int, daylight: bool): color {
         if (code < 0 || code === 3 || code === 45 || code === 48)
@@ -53,7 +65,7 @@ QtObject {
     }
 
     function audioLevelColor(muted: bool): color {
-        return muted ? warning : roleColor("audio");
+        return muted ? warning : sliderColor;
     }
 
     function powerProfileColor(profile: string): color {
@@ -144,11 +156,34 @@ QtObject {
     }
 
     // Small labels must remain readable on light and dark palettes.
-    // Return an existing Stylix token, never an interpolated accent colour.
+    // Preserve palette-derived hue while maintaining readable contrast.
     function readableColor(chosen: color, against: color): color {
-        const light = Math.max(luminance(chosen), luminance(against));
-        const dark = Math.min(luminance(chosen), luminance(against));
-        return (light + 0.05) / (dark + 0.05) >= 4.5 ? chosen : onColor(against);
+        return contrastColor(chosen, against, 4.5);
+    }
+
+    function contrastRatio(first: color, second: color): real {
+        const a = luminance(first);
+        const b = luminance(second);
+        return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+    }
+
+    // Preserve the semantic hue as far as contrast permits, using only
+    // colours derived from the active palette.
+    function contrastColor(chosen: color, against: color, minimum: real): color {
+        if (contrastRatio(chosen, against) >= minimum)
+            return chosen;
+        const endpoint = onColor(against);
+        if (contrastRatio(endpoint, against) < minimum)
+            return endpoint;
+        let lo = 0, hi = 1;
+        for (let i = 0; i < 12; ++i) {
+            const mid = (lo + hi) / 2;
+            if (contrastRatio(blend(chosen, endpoint, mid), against) >= minimum)
+                hi = mid;
+            else
+                lo = mid;
+        }
+        return blend(chosen, endpoint, hi);
     }
 
     function readableRoleColor(role: string): color {
@@ -156,9 +191,20 @@ QtObject {
     }
 
     function onColor(backgroundColor: color): color {
-        const first = (Math.max(luminance(background), luminance(backgroundColor)) + 0.05) / (Math.min(luminance(background), luminance(backgroundColor)) + 0.05);
-        const second = (Math.max(luminance(textStrong), luminance(backgroundColor)) + 0.05) / (Math.min(luminance(textStrong), luminance(backgroundColor)) + 0.05);
-        return first >= second ? background : textStrong;
+        const candidates = [background, surface, surfaceRaised, outline, textMuted, text, textStrong, textBright];
+        let best = candidates[0];
+        for (const candidate of candidates) {
+            if (contrastRatio(candidate, backgroundColor) > contrastRatio(best, backgroundColor))
+                best = candidate;
+        }
+        return best;
+    }
+
+    // Solid command fills must also leave a readable foreground. Preserve
+    // the role hue unless the palette has no tonal token with 4.5:1 contrast.
+    function solidFill(role: color): color {
+        const foreground = onColor(role);
+        return contrastRatio(role, foreground) >= 4.5 ? role : contrastColor(role, foreground, 4.5);
     }
 
     function blend(base: color, overlay: color, amount: real): color {
@@ -188,19 +234,25 @@ QtObject {
     readonly property color layer0: background
     readonly property color layer1: paneBase
     readonly property color layer2: groupBase
-    readonly property color layer3: blend(paneBase, accent, dark ? 0.08 : 0.07)
-    readonly property color selectionFill: Qt.rgba(accent.r, accent.g, accent.b, dark ? 0.20 : 0.15)
+    readonly property color layer3: blend(surfaceRaised, outline, dark ? 0.35 : 0.25)
+    readonly property color selectionFill: surfaceRaised
     // Selection is a tonal container, not the full-strength command accent.
     // Both colours follow the active Base16 palette and semantic role.
     function choiceFill(role: color): color {
-        return blend(controlBase, role, dark ? 0.34 : 0.22);
+        const tinted = blend(controlBase, role, dark ? 0.34 : 0.22);
+        if (contrastRatio(onColor(tinted), tinted) >= 4.5)
+            return tinted;
+        // Keep the selected container on the same tonal side as its base.
+        // Reduce tint only as far as needed to retain a readable foreground.
+        const foreground = onColor(controlBase);
+        return contrastColor(tinted, foreground, 4.5);
     }
     function choiceForeground(role: color): color {
         return readableColor(role, choiceFill(role));
     }
-    readonly property color selectedTabFill: blend(controlBase, accent, dark ? 0.52 : 0.34)
-    readonly property color expressiveSurface: blend(groupBase, accent, dark ? 0.035 : 0.022)
-    readonly property color expressiveSurfaceStrong: blend(controlBase, accent, dark ? 0.055 : 0.035)
+    readonly property color selectedTabFill: choiceFill(commandColor)
+    readonly property color expressiveSurface: groupBase
+    readonly property color expressiveSurfaceStrong: controlBase
     readonly property real panelClosedScale: 0.965
 
     readonly property int fontKeyHint: fontSize(11)

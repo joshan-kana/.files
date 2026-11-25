@@ -18,5 +18,5 @@ ShellSurface {
     }
     fillColor: fieldFocused ? theme.expressiveSurfaceStrong : theme.controlBase
     borderWidth: fieldFocused ? theme.borderFocus : theme.borderThin
-    borderColor: fieldFocused ? theme.accent : theme.subtleBorder
+    borderColor: fieldFocused ? theme.focusColor : theme.subtleBorder
 }

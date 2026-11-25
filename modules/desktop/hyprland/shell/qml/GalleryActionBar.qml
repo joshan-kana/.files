@@ -7,7 +7,6 @@ CenteredActionFlow {
     required property Theme theme
     required property Motion motion
     required property var entries
-    required property string accentRole
     signal actionRequested(string action)
 
     function triggerAction(action: string): void {
@@ -37,7 +36,7 @@ CenteredActionFlow {
             iconOnly: !!modelData.iconOnly
             inlineIconHint: iconOnly
             active: !!modelData.active
-            activeColor: bar.theme.roleColor(bar.accentRole)
+            activeColor: active ? bar.theme.toggleColor : bar.theme.commandColor
             enabled: modelData.enabled !== false
             shortcut: bar.runtime.shellHint(modelData.action)
             onActivated: bar.actionRequested(modelData.action)

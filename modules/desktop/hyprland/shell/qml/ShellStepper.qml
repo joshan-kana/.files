@@ -35,6 +35,7 @@ Row {
         iconOnly: true
         inlineIconHint: true
         compact: true
+        activeColor: stepper.theme.valueColor
         connectedGroup: true
         restingRadius: height / 2
         neighborPressed: up.visualPressed
@@ -78,6 +79,7 @@ Row {
                 theme: stepper.theme
                 text: stepper.readback
                 textRole: ShellText.Readback
+                color: stepper.theme.readableColor(stepper.theme.valueColor, readbackSurface.fillColor)
             }
         }
     }
@@ -92,6 +94,7 @@ Row {
         iconOnly: true
         inlineIconHint: true
         compact: true
+        activeColor: stepper.theme.valueColor
         connectedGroup: true
         restingRadius: height / 2
         neighborPressed: down.visualPressed

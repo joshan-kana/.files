@@ -119,7 +119,7 @@ test("Visual Modes and Quick Actions have distinct full-width balanced sections"
     controls.indexOf("id: quickActionsSection") <
       controls.indexOf("id: visualModesGroup"),
   );
-  assert.match(controls, /accentRole: "attention"/);
+  assert.match(controls, /title: "Quick actions"/i);
   assert.match(
     actions,
     /title: root.resetRunning \? "Restoring…" : "Restore defaults"/,
@@ -182,7 +182,7 @@ test("brightness slider is in Controls, not a draggable brightness OSD", () => {
     /onInteractionStarted: root\.selectSlider\("brightness"\)/,
   );
   assert.match(brightness, /function setPercent\(target: real\)/);
-  assert.match(osd, /osd\.kind === "brightness"/);
+  assert.match(osd, /theme\.sliderColor/);
   assert.doesNotMatch(osd, /ShellSlider|MouseArea|onValueRequested/);
   assert.match(osdState, /function onPercentChanged\(\): void \{/);
   assert.match(osdState, /root\.showBrightness\(\)/);
@@ -346,11 +346,11 @@ test("enabled slider tiles retain an accent border without confusing keyboard fo
     );
     assert.match(
       tile,
-      /borderColor: keyboardSelected \? theme\.blend\(roleAccent, theme\.textStrong, 0\.55\) : active \? roleAccent : "transparent"/,
+      /borderColor: keyboardSelected \? theme\.focusColor : active \? theme\.toggleColor : "transparent"/,
     );
     assert.match(
       tile,
-      /fillColor: active \? theme\.blend\(theme\.controlBase, roleAccent,/,
+      /fillColor: active \? theme\.blend\(theme\.controlBase, theme\.toggleColor,/,
     );
   }
   const chip = read("QuickSettingChip.qml");

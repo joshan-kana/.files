@@ -15,7 +15,7 @@ Item {
     property string actionName: "Toggle"
     property bool selected: false
     property bool available: true
-    property color emphasisColor: theme.accent
+    property color emphasisColor: theme.toggleColor
     signal activated
 
     function trigger(): void {

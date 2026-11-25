@@ -49,11 +49,11 @@ ShellSurface {
     // tiles. Keyboard selection adds a stronger focus border independently.
     outlined: active || keyboardSelected
     luminous: active || keyboardSelected
-    luminousColor: roleAccent
+    luminousColor: theme.toggleColor
     borderWidth: keyboardSelected ? theme.borderFocus : active ? theme.borderThin : 0
-    borderColor: keyboardSelected ? theme.blend(roleAccent, theme.textStrong, 0.55) : active ? roleAccent : "transparent"
+    borderColor: keyboardSelected ? theme.focusColor : active ? theme.toggleColor : "transparent"
     hovered: tileHover.hovered
-    fillColor: active ? theme.blend(theme.controlBase, roleAccent, theme.dark ? 0.12 : 0.08) : theme.expressiveSurfaceStrong
+    fillColor: active ? theme.blend(theme.controlBase, theme.toggleColor, theme.dark ? 0.12 : 0.08) : theme.expressiveSurfaceStrong
     Behavior on cornerRadius {
         Anim {
             motion: setting.motion
@@ -80,7 +80,7 @@ ShellSurface {
         theme: setting.theme
         motion: setting.motion
         selected: setting.active
-        stateColor: setting.roleAccent
+        stateColor: setting.theme.toggleColor
         cornerRadius: setting.cornerRadius
         onActivated: setting.toggleRequested()
     }
@@ -131,7 +131,7 @@ ShellSurface {
                     id: opacityValueLabel
                     anchors.centerIn: parent
                     text: Math.round(setting.opacityValue * 100) + "%"
-                    color: setting.active && !setting.blurEditing ? setting.roleAccent : setting.theme.textMuted
+                    color: setting.active && !setting.blurEditing ? setting.theme.readableColor(setting.theme.valueColor, setting.fillColor) : setting.theme.textMuted
                     font.family: setting.runtime.fontSans
                     font.pixelSize: setting.theme.fontSize(9)
                     font.weight: Font.DemiBold
@@ -156,7 +156,7 @@ ShellSurface {
                     id: blurValueLabel
                     anchors.centerIn: parent
                     text: "Blur " + setting.blurValue
-                    color: setting.blurEditing ? setting.roleAccent : setting.theme.textMuted
+                    color: setting.blurEditing ? setting.theme.readableColor(setting.theme.valueColor, setting.theme.controlBase) : setting.theme.textMuted
                     font.family: setting.runtime.fontSans
                     font.pixelSize: setting.theme.fontSize(9)
                     font.weight: Font.DemiBold
@@ -181,7 +181,6 @@ ShellSurface {
             to: setting.blurEditing ? 25 : setting.maximumValue
             value: setting.blurEditing ? setting.blurValue : setting.opacityValue
             density: ShellSlider.Compact
-            accentColor: setting.roleAccent
             onInteractionStarted: {
                 if (setting.blurEditing)
                     setting.blurActivated();
@@ -203,7 +202,7 @@ ShellSurface {
         motion: setting.motion
         shortcut: setting.detailShortcut
         actionName: "Tune " + setting.label + " parameters"
-        emphasisColor: setting.roleAccent
+        emphasisColor: setting.theme.focusColor
         onActivated: setting.detailRequested()
     }
 
@@ -217,6 +216,6 @@ ShellSurface {
         motion: setting.motion
         theme: setting.theme
         emphasized: setting.active || setting.keyboardSelected
-        emphasisColor: setting.roleAccent
+        emphasisColor: setting.theme.focusColor
     }
 }

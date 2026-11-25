@@ -11,7 +11,6 @@ FocusScope {
     required property Motion motion
     required property WeatherState weather
     readonly property bool foregroundBusy: weather.loading && weather.foregroundLoading
-    readonly property string foregroundRole: "weather"
     property bool engaged: false
     property bool locationEditing: false
     function editLocation(): void {
@@ -175,7 +174,7 @@ FocusScope {
                 }
                 verticalAlignment: TextInput.AlignVCenter
                 color: panel.theme.textStrong
-                selectionColor: panel.theme.accent
+                selectionColor: panel.theme.selectionFill
                 font.family: panel.runtime.fontSans
                 font.pixelSize: panel.theme.fontSize(12)
                 maximumLength: 128

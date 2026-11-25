@@ -18,7 +18,7 @@ SquircleSurface {
     property bool outlined: false
     property bool luminous: false
     property bool hovered: false
-    property color luminousColor: theme.accent
+    property color luminousColor: theme.focusColor
     property real lightIntensity: 1
     property bool elevated: false
     property bool glassAllowed: true
@@ -27,7 +27,7 @@ SquircleSurface {
     property bool reactiveSurface: false
     property bool frameConnected: false
     property bool foregroundBusy: false
-    property color foregroundColor: theme.accent
+    property color foregroundColor: theme.progressColor
 
     Loader {
         // The content slot can retain a different width during a morph.

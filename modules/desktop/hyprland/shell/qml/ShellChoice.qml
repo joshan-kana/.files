@@ -7,6 +7,7 @@ ShellAction {
     property Repeater choices: null
     property int choiceIndex: -1
     property bool joined: true
+    activeColor: theme.choiceColor
     connectedGroup: joined
     actionFill: active ? theme.choiceFill(activeColor) : theme.expressiveSurfaceStrong
     actionForeground: active ? theme.choiceForeground(activeColor) : theme.textStrong

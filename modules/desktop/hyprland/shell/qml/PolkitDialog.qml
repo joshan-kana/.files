@@ -220,7 +220,7 @@ Scope {
                     surfaceLayer: ShellSurface.Control
                     cornerRadius: auth.theme.radiusMedium
                     outlined: credential.activeFocus || auth.submitting
-                    borderColor: credential.activeFocus || auth.submitting ? auth.theme.accent : auth.theme.subtleBorder
+                    borderColor: credential.activeFocus || auth.submitting ? auth.theme.focusColor : auth.theme.subtleBorder
 
                     TextInput {
                         id: credential
@@ -231,7 +231,7 @@ Scope {
                         verticalAlignment: TextInput.AlignVCenter
                         enabled: !!auth.flow && auth.flow.isResponseRequired && !auth.submitting
                         color: auth.theme.textStrong
-                        selectionColor: auth.theme.accent
+                        selectionColor: auth.theme.selectionFill
                         font.family: auth.runtime.fontSans
                         font.pixelSize: auth.theme.fontSize(13)
                         echoMode: auth.flow && auth.flow.responseVisible ? TextInput.Normal : TextInput.Password

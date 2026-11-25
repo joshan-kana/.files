@@ -1406,7 +1406,7 @@ Item {
                             horizontalCompact: true
                             title: modelData.title
                             shortcut: modelData.shortcut
-                            activeColor: palette.scopeAccent
+                            activeColor: palette.theme.choiceColor
                             active: palette.searchScope === modelData.scope
                             onActivated: palette.chooseScope(modelData.scope)
                         }
@@ -1446,7 +1446,7 @@ Item {
                     }
 
                     text: ">"
-                    color: palette.scopeAccent
+                    color: theme.readableColor(theme.searchColor, theme.controlBase)
                     font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(20)
                     font.weight: Font.Bold
@@ -1464,8 +1464,8 @@ Item {
                     }
 
                     color: theme.textStrong
-                    selectionColor: palette.theme.accent
-                    selectedTextColor: theme.background
+                    selectionColor: palette.theme.selectionFill
+                    selectedTextColor: theme.textStrong
                     font.family: runtime.fontSans
                     font.pixelSize: theme.fontSize(18)
                     clip: true
@@ -1578,8 +1578,8 @@ Item {
                 highlight: SquircleSurface {
                     exponent: theme.squircleExponent
                     cornerRadius: theme.radiusMedium
-                    fillColor: theme.blend(theme.layer2, palette.scopeAccent, theme.dark ? 0.07 : 0.045)
-                    borderColor: Qt.rgba(palette.scopeAccent.r, palette.scopeAccent.g, palette.scopeAccent.b, theme.dark ? 0.53 : 0.62)
+                    fillColor: theme.selectionFill
+                    borderColor: theme.focusColor
                     borderWidth: theme.borderThin
                 }
 
@@ -1606,14 +1606,14 @@ Item {
                             anchors.verticalCenter: parent.verticalCenter
                             exponent: theme.squircleExponent
                             cornerRadius: theme.radiusSmall
-                            fillColor: result.ListView.isCurrentItem ? theme.blend(theme.controlBase, palette.scopeAccent, 0.18) : theme.controlBase
-                            borderColor: result.ListView.isCurrentItem ? Qt.rgba(palette.scopeAccent.r, palette.scopeAccent.g, palette.scopeAccent.b, 0.55) : theme.subtleBorder
+                            fillColor: result.ListView.isCurrentItem ? theme.choiceFill(theme.choiceColor) : theme.controlBase
+                            borderColor: result.ListView.isCurrentItem ? theme.focusColor : theme.subtleBorder
                             borderWidth: theme.borderThin
 
                             Text {
                                 anchors.centerIn: parent
                                 text: result.index < 9 && !palette.actionMode && !palette.parameterTarget ? result.index + 1 : ""
-                                color: result.ListView.isCurrentItem ? palette.scopeAccent : theme.textMuted
+                                color: result.ListView.isCurrentItem ? theme.readableColor(theme.choiceColor, theme.selectionFill) : theme.textMuted
                                 font.family: runtime.fontMono
                                 font.pixelSize: theme.fontSize(11)
                                 font.weight: Font.Bold
@@ -1684,7 +1684,7 @@ Item {
                                 shortcut: result.modelData.key.length > 0 ? result.modelData.key : (result.ListView.isCurrentItem ? "↵ RUN" : "")
                                 fontFamily: runtime.fontMono
                                 fontSize: theme.fontSize(11)
-                                textColor: result.ListView.isCurrentItem ? palette.scopeAccent : theme.textMuted
+                                textColor: result.ListView.isCurrentItem ? theme.readableColor(theme.choiceColor, theme.selectionFill) : theme.textMuted
                             }
                         }
                     }

@@ -788,7 +788,6 @@ Item {
                         height: implicitHeight
                         prominentAction: true
                         enabled: !encodingSelector.expanded && !picker.countingDown
-                        activeColor: picker.theme.readableRoleColor("capture")
                         runtime: picker.runtime
                         theme: picker.theme
                         motion: picker.motion
@@ -812,6 +811,7 @@ Item {
                         icon: "󰏫"
                         title: picker.annotateAfterCapture ? "Markup on" : "Markup off"
                         active: picker.annotateAfterCapture
+                        activeColor: theme.toggleColor
                         shortcut: picker.runtime.shellHint("ScreenshotPicker.edit")
                         onActivated: picker.toggleAnnotation()
                     }
@@ -855,7 +855,6 @@ Item {
                         iconOnly: modelData.key === ""
                         inlineIconHint: iconOnly
                         active: encodingSelector.expanded && picker.encodingFieldKey === modelData.key
-                        activeColor: picker.theme.roleColor("capture")
                         shortcut: picker.runtime.shellHint(modelData.action)
                         enabled: !picker.countingDown && !picker.exporting && !(picker.selectionMode !== "record" && (picker.copying || picker.annotateAfterCapture) && ["imageFormat", "jpegQuality", "preset"].includes(modelData.key))
                         onActivated: picker.openEncodingField(modelData)
@@ -874,7 +873,6 @@ Item {
                 title: picker.encodingFieldLabel(picker.encodingFieldKey)
                 shortcut: picker.selectedEncodingField ? picker.runtime.shellHint(picker.selectedEncodingField.action) : ""
                 confirmShortcut: picker.runtime.shellHint("ScreenshotPicker.capture")
-                accentColor: picker.theme.roleColor("capture")
                 options: picker.selectedEncodingField?.values.map(value => picker.encodingChoiceLabel(picker.encodingFieldKey, value)) || []
                 selectedIndex: picker.encodingFieldKey === "preset" ? picker.presetIndex : picker.selectedEncodingField?.values.indexOf(picker.encoding(picker.encodingFieldKey)) ?? -1
                 enabled: !picker.countingDown && !picker.exporting

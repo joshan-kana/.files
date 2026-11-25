@@ -23,15 +23,15 @@ ShellSurface {
     surfaceLayer: ShellSurface.Control
     selected: false
     cornerRadius: theme.radiusMedium
-    borderColor: picked ? (dayState === 1 ? theme.textStrong : theme.roleColor("calendar")) : "transparent"
+    borderColor: picked ? (dayState === 1 ? theme.onColor(fillColor) : theme.focusColor) : "transparent"
     borderWidth: picked ? theme.borderFocus : 0
 
-    fillColor: dayState === 1 ? theme.roleColor("calendar") : (hover.hovered && !header ? theme.blend(theme.layer1, theme.roleColor("calendar"), theme.dark ? 0.1 : 0.06) : "transparent")
+    fillColor: dayState === 1 ? theme.solidFill(theme.roleColor("calendar")) : (hover.hovered && !header ? theme.blend(theme.layer1, theme.roleColor("calendar"), theme.dark ? 0.1 : 0.06) : "transparent")
 
     Text {
         anchors.centerIn: parent
         text: cell.header ? cell.heading : String(cell.day)
-        color: cell.dayState === 1 ? cell.theme.background : (cell.picked ? cell.theme.readableRoleColor("calendar") : (cell.dayState === -1 ? cell.theme.textMuted : cell.theme.textStrong))
+        color: cell.dayState === 1 ? cell.theme.onColor(cell.fillColor) : (cell.picked ? cell.theme.readableRoleColor("choice") : (cell.dayState === -1 ? cell.theme.textMuted : cell.theme.textStrong))
         opacity: cell.dayState === -1 ? 0.48 : 1
         font.family: cell.theme.runtime.fontSans
         font.pixelSize: cell.theme.fontSize(cell.header ? 10 : cell.width < 36 ? 11 : 14)

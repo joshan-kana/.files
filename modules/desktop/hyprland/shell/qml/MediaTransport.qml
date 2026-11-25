@@ -146,7 +146,6 @@ Item {
                 title: root.label(modelData.action)
                 shortcut: root.hint(modelData.action)
                 prominentAction: modelData.action === "play" && !root.compact && !root.minimal && enabled
-                activeColor: root.theme.roleColor("media")
                 active: modelData.action === "play" && root.media.playing
                 enabled: root.canActivate(modelData.action)
                 onVisualPressedChanged: {

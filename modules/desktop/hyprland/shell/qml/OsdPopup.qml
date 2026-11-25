@@ -36,7 +36,7 @@ PanelWindow {
 
     property bool closing: false
     readonly property bool keyboardMode: osd.kind === "keyboard"
-    readonly property color accentColor: keyboardMode && osd.keyboardState !== "off" ? theme.warning : osd.muted ? theme.warning : (osd.kind === "brightness" ? theme.roleColor("warmth") : theme.roleColor("audio"))
+    readonly property color accentColor: keyboardMode && osd.keyboardState !== "off" ? theme.warning : osd.muted ? theme.warning : theme.sliderColor
 
     visible: true
     updatesEnabled: surfaceLifecycle.needsRendering

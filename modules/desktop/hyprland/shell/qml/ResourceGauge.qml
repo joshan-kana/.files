@@ -9,7 +9,7 @@ Item {
     // Keep the ring geometry, but do not manufacture "0%" before a first
     // authoritative sample is available.
     property bool known: true
-    property color accentColor: theme.accent
+    property color accentColor: theme.progressColor
     property string label: ""
     property string readback: ""
     property bool compact: false

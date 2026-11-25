@@ -686,7 +686,6 @@ Item {
                     title: (panel.masterState ? "Disable " : "Enable ") + panel.titleText
                     shortcut: panel.runtime.shellHint("SettingsDetail.toggle")
                     active: panel.masterState
-                    activeColor: panel.theme.roleColor(panel.foregroundRole)
                     enabled: panel.masterAvailable
                     onActivated: panel.toggleMaster()
                 },
@@ -915,7 +914,6 @@ Item {
                         horizontalCompact: true
                         choices: reactivePresets
                         choiceIndex: index
-                        activeColor: panel.theme.roleColor("reactive")
                         active: panel.appearance.musicReactivePreset === modelData
                         onActivated: panel.appearance.applyReactivePreset(modelData)
                     }
@@ -953,7 +951,6 @@ Item {
                         horizontalCompact: true
                         choices: reactiveEmphases
                         choiceIndex: index
-                        activeColor: panel.theme.roleColor("reactive")
                         active: panel.appearance.musicReactiveEmphasis === modelData
                         onActivated: panel.appearance.setReactiveEmphasis(modelData)
                     }
@@ -998,7 +995,6 @@ Item {
                     from: modelData.minimum
                     to: modelData.maximum
                     value: panel.currentValue(modelData.key)
-                    accentColor: panel.theme.readableRoleColor(modelData.suffix === "time" ? "schedule" : panel.foregroundRole)
                     temperatureTrack: modelData.key === "temperature" && panel.kind === "nightLight"
                     selectedParameter: panel.selectedIndex === index
                     adjustable: panel.kind !== "nightLight" || panel.nightLight.supported
@@ -1068,7 +1064,6 @@ Item {
                         shortcut: panel.runtime.shellChoiceHint(index)
                         choices: nightModes
                         choiceIndex: index
-                        activeColor: panel.theme.roleColor("warmth")
                         active: panel.nightLight.mode === modelData.id
                         enabled: panel.masterAvailable && (modelData.id !== "solar" || panel.nightLight.solarAvailable)
                         onActivated: panel.nightLight.setMode(modelData.id)
@@ -1119,7 +1114,6 @@ Item {
                         title: modelData.title
                         choices: nightDays
                         choiceIndex: index
-                        activeColor: panel.theme.roleColor("schedule")
                         active: panel.nightLight.days === modelData.days
                         shortcut: panel.runtime.shellChoiceHint(index + 4)
                         enabled: panel.masterAvailable
@@ -1297,7 +1291,6 @@ Item {
                         choiceIndex: index
                         joined: profileFlow.columns > 1
                         active: panel.powerProfile.current === modelData
-                        activeColor: panel.theme.powerProfileColor(modelData)
                         enabled: panel.powerProfile.available && !panel.powerProfile.applying
                         onActivated: panel.powerProfile.setProfile(modelData)
                     }
@@ -1353,7 +1346,6 @@ Item {
                         theme: panel.theme
                         motion: panel.motion
                         value: Math.max(0, (panel.system.idleInhibitDeadline - panel.clockMs) / Math.max(1, panel.system.idleInhibitMinutes * 60000))
-                        accentColor: panel.theme.roleColor("inhibition")
                         readback: Math.max(0, Math.ceil((panel.system.idleInhibitDeadline - panel.clockMs) / 60000)) + "m"
                         label: "Remaining"
                     }
@@ -1387,7 +1379,6 @@ Item {
                 theme: panel.theme
                 title: "Duration"
                 emphasized: true
-                accentRole: "power"
                 Flow {
                     id: durationFlow
                     width: parent.width
@@ -1409,7 +1400,6 @@ Item {
                             title: modelData === 0 ? "Until disabled" : modelData + " minutes"
                             shortcut: panel.runtime.shellChoiceHint(index)
                             joined: false
-                            activeColor: panel.theme.roleColor("inhibition")
                             active: panel.system.idleInhibited && panel.system.idleInhibitMinutes === modelData
                             onActivated: panel.system.setIdleInhibitMinutes(modelData)
                         }
@@ -1479,7 +1469,6 @@ Item {
                 theme: panel.theme
                 title: "Temporary silence"
                 emphasized: true
-                accentRole: "attention"
                 Row {
                     width: parent.width
                     height: 40
@@ -1509,7 +1498,6 @@ Item {
                 theme: panel.theme
                 title: "Quiet hours"
                 emphasized: true
-                accentRole: "attention"
                 Row {
                     width: parent.width
                     spacing: panel.theme.spacing2
@@ -1573,7 +1561,6 @@ Item {
                             horizontalCompact: true
                             choices: quietDays
                             choiceIndex: index
-                            activeColor: panel.theme.roleColor("schedule")
                             active: panel.notifications.quietDays === modelData.days
                             onActivated: panel.notifications.setQuietPreference("days", modelData.days)
                         }
@@ -1585,7 +1572,6 @@ Item {
                 theme: panel.theme
                 title: "Delivery and history"
                 emphasized: true
-                accentRole: "attention"
                 Row {
                     width: parent.width
                     spacing: panel.theme.spacing2

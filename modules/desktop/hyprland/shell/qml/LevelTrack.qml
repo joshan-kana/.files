@@ -6,7 +6,7 @@ Item {
     required property Motion motion
     property real fraction: 0
     property bool known: true
-    property color accentColor: theme.accent
+    property color accentColor: theme.progressColor
     property real thickness: theme.standardTrack
     implicitHeight: thickness
     Rectangle {
@@ -17,7 +17,7 @@ Item {
             height: parent.height
             width: level.known ? parent.width * Math.max(0, Math.min(1, level.fraction)) : 0
             radius: height / 2
-            color: level.accentColor
+            color: level.theme.contrastColor(level.accentColor, level.theme.layer3, 3)
             Behavior on width {
                 Anim {
                     motion: level.motion

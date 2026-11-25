@@ -103,7 +103,7 @@ PanelWindow {
     // to the currently presented page, never another prewarmed loader.
     readonly property var operationOwner: loadedContent && loadedContent.foregroundBusy === true ? loadedContent : null
     readonly property bool loadingOperationVisible: expansionState.hasCurrent && !!operationOwner
-    readonly property color loadingOperationColor: theme.roleColor(operationOwner?.foregroundRole || "")
+    readonly property color loadingOperationColor: theme.progressColor
     readonly property MediaContent mediaContent: expansionState.currentName === "media" ? loadedContent as MediaContent : null
     property bool otherHelpOpen: false
     readonly property bool helpVisible: systemContent ? systemContent.helpOpen : (mediaContent ? mediaContent.helpOpen : otherHelpOpen)

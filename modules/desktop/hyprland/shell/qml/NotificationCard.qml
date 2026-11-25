@@ -96,8 +96,8 @@ SquircleSurface {
     implicitHeight: Math.max(92, contents.implicitHeight + theme.spacing4 * 2)
     cornerRadius: theme.radiusMedium
     exponent: theme.squircleExponent
-    fillColor: selected ? theme.blend(theme.expressiveSurface, theme.roleColor("notifications"), theme.dark ? 0.065 : 0.04) : theme.expressiveSurface
-    borderColor: notification && notification.urgency === NotificationUrgency.Critical ? theme.critical : selected ? theme.roleColor("notifications") : theme.outline
+    fillColor: selected ? theme.selectionFill : theme.expressiveSurface
+    borderColor: notification && notification.urgency === NotificationUrgency.Critical ? theme.critical : selected ? theme.focusColor : theme.outline
     borderWidth: selected ? theme.borderFocus : theme.borderThin
 
     StateLayer {
@@ -229,6 +229,7 @@ SquircleSurface {
                     inlineIconHint: true
                     shortcut: card.selected ? card.runtime.shellHint("NotificationCard.mark") : ""
                     active: card.read
+                    activeColor: theme.toggleColor
                     icon: card.read ? "󰄭" : "󰄬"
                     title: card.read ? "Mark unread" : "Mark read"
                     onActivated: card.readToggled()
@@ -322,7 +323,6 @@ SquircleSurface {
                     iconName: card.notificationState.safeActionIcon(card.notification, modelData)
                     shortcut: card.selected && index < 9 ? card.runtime.shellChoiceHint(index) : ""
                     width: Math.min(actionButtons.width, implicitWidth)
-                    activeColor: card.theme.roleColor("notifications")
                     onActivated: card.actionRequested(index)
                 }
             }
@@ -341,7 +341,6 @@ SquircleSurface {
             title: "App notification policy"
             shortcut: card.selected ? card.runtime.shellHint("NotificationCard.policy") : ""
             active: card.policyOpen
-            activeColor: card.theme.roleColor("notifications")
             onActivated: card.policyRequested()
         }
 
@@ -449,7 +448,6 @@ SquircleSurface {
                             iconOnly: true
                             switchControl: true
                             active: policyRow.modelData.inverted ? applicationOptions.preferences[policyRow.modelData.key] !== false : applicationOptions.preferences[policyRow.modelData.key] === true
-                            activeColor: card.theme.roleColor("notifications")
                             title: policyRow.modelData.title
                             shortcut: card.selected ? card.runtime.shellHint(policyRow.modelData.action) : ""
                             onActivated: card.notificationState.setApplicationPreference(card.notification, policyRow.modelData.key, !active)
@@ -482,8 +480,8 @@ SquircleSurface {
                     anchors.rightMargin: card.theme.spacing3
                     verticalAlignment: TextInput.AlignVCenter
                     color: card.theme.textStrong
-                    selectionColor: card.theme.accent
-                    selectedTextColor: card.theme.background
+                    selectionColor: card.theme.selectionFill
+                    selectedTextColor: card.theme.textStrong
                     font.family: card.runtime.fontSans
                     font.pixelSize: card.theme.fontSize(11)
                     clip: true

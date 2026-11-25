@@ -12,7 +12,6 @@ Column {
     required property string title
     required property string shortcut
     required property string confirmShortcut
-    property color accentColor: theme.accent
     property var options: []
     property var disabledIndices: []
     property bool highlighted: false
@@ -111,8 +110,8 @@ Column {
         active: selector.expanded
         highlighted: selector.highlighted && !selector.expanded
         actionFill: active ? selector.theme.choiceFill(activeColor) : selector.theme.expressiveSurfaceStrong
-        actionForeground: active ? selector.theme.choiceForeground(activeColor) : selector.theme.textStrong
-        activeColor: selector.accentColor
+        actionForeground: active ? selector.theme.choiceForeground(activeColor) : selector.theme.readableColor(activeColor, actionFill)
+        activeColor: selector.theme.choiceColor
         enabled: selector.canChoose
         Accessible.description: selector.title
         onActivated: {
@@ -167,7 +166,7 @@ Column {
                         enabled: !selector.disabledIndices.includes(index)
                         active: index === selector.selectedIndex
                         highlighted: index === selector.highlightedIndex
-                        activeColor: selector.accentColor
+                        activeColor: selector.theme.choiceColor
                         shortcut: highlighted ? selector.confirmShortcut : ""
                         onActivated: {
                             selector.expanded = false;

@@ -27,7 +27,6 @@ Item {
     property double nextDue: 0
     property string policyPhase: ""
     property string scheduleCandidate: ""
-    readonly property string foregroundRole: "wallpaper"
     property string activePolicyCommand: ""
     readonly property bool foregroundBusy: busy || (policyBusy && activePolicyCommand !== "status")
     readonly property bool policyBusy: policyProcess.running
@@ -656,7 +655,7 @@ Item {
                 text: panel.searchText
                 onTextChanged: panel.searchText = text
                 color: panel.theme.textStrong
-                selectionColor: panel.theme.accent
+                selectionColor: panel.theme.selectionFill
                 font.family: panel.runtime.fontSans
                 font.pixelSize: panel.theme.fontSize(12)
                 focus: false
@@ -695,7 +694,6 @@ Item {
             theme: panel.theme
             motion: panel.motion
             entries: panel.galleryPolicyActions.filter(entry => entry.action !== "WallpaperPanel.default")
-            accentRole: "wallpaper"
             onActionRequested: action => panel.invokePolicyAction(action)
         }
 
@@ -932,7 +930,7 @@ Item {
                             visible: entry.current
                             cornerRadius: panel.theme.radiusMedium
                             exponent: panel.theme.squircleExponent
-                            borderColor: panel.theme.accent
+                            borderColor: panel.theme.choiceColor
                             borderWidth: panel.theme.borderFocus * 2
                         }
                     }
@@ -1125,7 +1123,6 @@ Item {
                             choices: wallpaperModeChoices
                             choiceIndex: index
                             active: panel.policy.mode === modelData.id
-                            activeColor: panel.theme.roleColor("wallpaper")
                             enabled: panel.policyActionEnabled("WallpaperPolicy.mode")
                             onActivated: if (panel.policy.mode !== modelData.id)
                                 panel.setPolicy("mode", modelData.id)
@@ -1217,7 +1214,6 @@ Item {
                     motion: panel.motion
                     known: panel.nextDue > 0
                     fraction: Math.max(0, Math.min(1, (panel.nextDue - intervalCard.clockSeconds) / (panel.policy.intervalMinutes * 60)))
-                    accentColor: panel.theme.roleColor("wallpaper")
                 }
                 Row {
                     width: parent.width
@@ -1243,7 +1239,6 @@ Item {
                         switchControl: true
                         compact: true
                         active: panel.policy.favoritesOnly
-                        activeColor: panel.theme.roleColor("wallpaper")
                         shortcut: panel.runtime.shellHint("WallpaperPolicy.favorites")
                         enabled: panel.policyActionEnabled("WallpaperPolicy.favorites")
                         onActivated: panel.invokePolicyAction("WallpaperPolicy.favorites")
@@ -1255,7 +1250,6 @@ Item {
                     runtime: panel.runtime
                     theme: panel.theme
                     motion: panel.motion
-                    accentRole: "wallpaper"
                     entries: panel.scheduleActions.filter(entry => ["WallpaperPolicy.collection", "WallpaperPolicy.next"].includes(entry.action)).map(entry => Object.assign({}, entry, {
                             enabled: panel.policyActionEnabled(entry.action)
                         }))
@@ -1322,7 +1316,6 @@ Item {
             runtime: panel.runtime
             theme: panel.theme
             motion: panel.motion
-            accentRole: "wallpaper"
             entries: panel.scheduleActions.filter(entry => ["WallpaperPolicy.target", "WallpaperPanel.rotation"].includes(entry.action)).map(entry => Object.assign({}, entry, {
                     enabled: panel.policyActionEnabled(entry.action)
                 }))

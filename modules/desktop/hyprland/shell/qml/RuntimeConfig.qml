@@ -68,6 +68,7 @@ QtObject {
     readonly property color textMuted: root.themeAdapter.theme.textMuted
     readonly property color text: root.themeAdapter.theme.text
     readonly property color textStrong: root.themeAdapter.theme.textStrong
+    readonly property color textBright: root.themeAdapter.theme.textBright
     readonly property color critical: root.themeAdapter.theme.critical
     readonly property color warning: root.themeAdapter.theme.warning
     readonly property color positive: root.themeAdapter.theme.positive

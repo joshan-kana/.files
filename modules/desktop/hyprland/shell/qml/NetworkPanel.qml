@@ -46,7 +46,6 @@ Item {
     property var profileOriginal: ({})
     property var profileDraft: ({})
     property bool profileReady: false
-    readonly property string foregroundRole: "connectivity"
     readonly property bool connectivityCheckBusy: connectivityPolicyQuery.running || connectivityCheck.running
     readonly property bool canCheckConnectivity: open && !passwordPrompt && !profileEditing && !connectivityCheckBusy && !profileBusy
     function triggerRefresh(): void {
@@ -821,7 +820,6 @@ Item {
                 fillColor: networkRow.modelData.connected ? panel.theme.blend(panel.theme.groupBase, panel.theme.positive, panel.theme.dark ? 0.11 : 0.07) : panel.theme.layer3
 
                 pressedFeedback: networkPress.visualPressed
-                selectionColor: panel.theme.roleColor("connectivity")
 
                 StateLayer {
                     id: networkPress
@@ -969,7 +967,6 @@ Item {
                 selected: index === panel.savedIndex
 
                 pressedFeedback: profilePress.visualPressed
-                selectionColor: panel.theme.roleColor("connectivity")
 
                 StateLayer {
                     id: profilePress
@@ -1158,7 +1155,7 @@ Item {
                         width: 115
                         anchors.verticalCenter: parent.verticalCenter
                         text: detailRow.modelData.label
-                        color: panel.theme.accent
+                        color: panel.theme.valueColor
                         font.family: panel.runtime.fontSans
                         font.pixelSize: panel.theme.fontSize(10)
                         font.weight: Font.DemiBold
@@ -1236,7 +1233,7 @@ Item {
                 surfaceLayer: ShellSurface.Group
                 cornerRadius: theme.radiusMedium
                 outlined: passwordInput.activeFocus
-                borderColor: passwordInput.activeFocus ? theme.accent : theme.subtleBorder
+                borderColor: passwordInput.activeFocus ? theme.focusColor : theme.subtleBorder
 
                 TextInput {
                     id: passwordInput
@@ -1252,8 +1249,8 @@ Item {
                     passwordCharacter: "●"
                     inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText
                     color: panel.theme.textStrong
-                    selectionColor: panel.theme.accent
-                    selectedTextColor: panel.theme.background
+                    selectionColor: panel.theme.selectionFill
+                    selectedTextColor: panel.theme.textStrong
                     font.family: panel.runtime.fontSans
                     font.pixelSize: panel.theme.fontSize(15)
                     clip: true

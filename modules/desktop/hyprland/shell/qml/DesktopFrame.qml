@@ -34,7 +34,7 @@ Variants {
     property var resizeScreen: null
     property var inspection: null
     property var inspectionScreen: null
-    property color busyColor: theme.accent
+    property color busyColor: theme.progressColor
     property bool busy: false
     property var busyScreen: null
     readonly property real thickness: theme.frameThickness

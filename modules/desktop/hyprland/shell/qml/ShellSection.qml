@@ -9,7 +9,6 @@ Column {
     property string title: ""
     property string detail: ""
     property bool emphasized: false
-    property string accentRole: ""
     property var hints: []
     default property alias contentData: body.data
 
@@ -27,7 +26,7 @@ Column {
             runtime: root.runtime
             theme: root.theme
             text: root.title
-            color: root.emphasized ? theme.readableRoleColor(root.accentRole) : theme.textStrong
+            color: root.emphasized ? theme.readableColor(theme.commandColor, theme.panelBase) : theme.textStrong
             font.pixelSize: theme.fontSection
             font.weight: Font.DemiBold
             font.letterSpacing: 0

@@ -276,8 +276,8 @@ Item {
                     verticalAlignment: TextInput.AlignVCenter
                     clip: true
                     color: window.theme.textStrong
-                    selectionColor: window.theme.accent
-                    selectedTextColor: window.theme.background
+                    selectionColor: window.theme.selectionFill
+                    selectedTextColor: window.theme.textStrong
                     font.family: window.runtime.fontSans
                     font.pixelSize: window.theme.fontSize(13)
                     onTextChanged: {
@@ -415,7 +415,7 @@ Item {
                         return (parent.height - height) * Math.max(0, Math.min(1, flick.contentY / maxScroll));
                     }
                     radius: parent.radius
-                    color: window.theme.accent
+                    color: window.theme.progressColor
                     opacity: 0.82
                 }
             }

@@ -457,7 +457,6 @@ FocusScope {
                     return content.scrubbing ? content.scrubFraction : Math.max(0, Math.min(1, content.media.position / content.media.length));
                 }
                 enabled: content.media.seekable && content.media.length > 0
-                accentColor: theme.roleColor("media")
                 density: ShellSlider.Compact
 
                 onInteractionStarted: value => {
@@ -512,11 +511,11 @@ FocusScope {
                     compact: true
                     iconOnly: true
                     iconHint: true
-                    activeColor: content.theme.roleColor("media")
                     icon: "󰒝"
                     title: content.media.shuffled ? "Shuffle on" : "Shuffle off"
                     shortcut: content.runtime.shellHint("MediaContent.shuffle")
                     active: content.media.shuffled
+                    activeColor: theme.toggleColor
                     enabled: content.media.shuffleAvailable
                     onActivated: content.media.toggleShuffle()
                 }
@@ -532,11 +531,11 @@ FocusScope {
                     compact: true
                     iconOnly: true
                     iconHint: true
-                    activeColor: content.theme.roleColor("media")
                     icon: content.media.repeatState === 1 ? "󰑘" : "󰑖"
                     title: "Repeat " + content.media.repeatLabel
                     shortcut: content.runtime.shellHint("MediaContent.repeat")
                     active: content.media.repeatState !== 0
+                    activeColor: theme.toggleColor
                     enabled: content.media.repeatAvailable
                     onActivated: content.media.toggleRepeat()
                 }
@@ -560,7 +559,6 @@ FocusScope {
                     motion: content.motion
                     compact: true
                     horizontalCompact: true
-                    activeColor: content.theme.roleColor("media")
                     icon: "󰎄"
                     title: content.media.available ? "Player " + (content.media.selectedPlayerIndex + 1) + "/" + content.media.playerCount : "No player"
                     shortcut: content.runtime.shellHint("MediaContent.player")
@@ -614,6 +612,7 @@ FocusScope {
                     title: "Lyrics"
                     shortcut: content.runtime.shellHint("MediaContent.lyrics")
                     active: content.lyricsVisible
+                    activeColor: theme.toggleColor
                     onActivated: content.toggleLyrics()
                 }
 
@@ -648,6 +647,7 @@ FocusScope {
                     title: content.media.preferredCurrent ? "Use auto selection" : "Prefer current app"
                     shortcut: content.runtime.shellHint("MediaContent.prefer")
                     active: content.media.preferredCurrent
+                    activeColor: theme.toggleColor
                     enabled: content.media.available || content.media.persistentPreference !== ""
                     onActivated: content.media.togglePreferredPlayer()
                 }

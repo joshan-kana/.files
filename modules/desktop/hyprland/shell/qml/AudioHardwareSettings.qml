@@ -252,7 +252,6 @@ Column {
         title: "Device"
         shortcut: panel.runtime.shellHint("AudioHardwareSettings.devicePicker")
         confirmShortcut: panel.runtime.shellHint("AudioHardwareSettings.apply")
-        accentColor: panel.theme.roleColor("audio")
         options: panel.devices.map(entry => entry.label)
         selectedIndex: panel.deviceIndex
         enabled: !panel.busy
@@ -282,7 +281,6 @@ Column {
             title: modelData.title
             shortcut: highlighted ? panel.runtime.shellHint("AudioHardwareSettings.apply") : ""
             confirmShortcut: panel.runtime.shellHint("AudioHardwareSettings.apply")
-            accentColor: panel.theme.roleColor("audio")
             options: modelData.choices.map(choice => (choice.routeName || choice.label) + (choice.available ? "" : " · Unavailable"))
             disabledIndices: modelData.choices.map((choice, i) => choice.available ? -1 : i).filter(i => i >= 0)
             selectedIndex: modelData.choices.findIndex(choice => choice.active)

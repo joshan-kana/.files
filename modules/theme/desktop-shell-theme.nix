@@ -17,6 +17,7 @@
     textMuted = colors.base04;
     text = colors.base05;
     textStrong = colors.base06;
+    textBright = colors.base07;
     critical = colors.base08;
     warning = colors.base0A;
     positive = colors.base0B;
@@ -29,9 +30,19 @@
     accentEnergy = colors.base0A;
     accentNature = colors.base0B;
   };
-  # Feature palette roles are chosen by the theme owner.
-  # Shell components only consume these semantic names.
+  # Interaction roles are shared across components. Feature roles identify
+  # destination glyphs and data, not the controls within those destinations.
   roles = {
+    command = colors.base0D;
+    choice = colors.base0E;
+    adjustment = colors.base0C;
+    readback = colors.base09;
+    utility = colors.base0F;
+    search = colors.base0A;
+    toggle = colors.base0B;
+    progress = colors.base0C;
+    focus = colors.base0D;
+    theme = colors.base0D;
     media = colors.base0E;
     workspace = colors.base0D;
     attention = colors.base08;

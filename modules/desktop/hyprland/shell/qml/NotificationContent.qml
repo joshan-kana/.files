@@ -374,6 +374,7 @@ FocusScope {
                         motion: center.motion
                         compact: true
                         active: center.notificationState.historyEnabled
+                        activeColor: theme.toggleColor
                         width: Math.max(center.theme.minActionTarget, implicitWidth)
                         height: Math.max(center.theme.minActionTarget, implicitHeight)
                         iconOnly: true

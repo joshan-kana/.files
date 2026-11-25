@@ -462,8 +462,8 @@ Item {
 
                         verticalAlignment: TextInput.AlignVCenter
                         color: panel.theme.textStrong
-                        selectionColor: panel.theme.accent
-                        selectedTextColor: panel.theme.background
+                        selectionColor: panel.theme.selectionFill
+                        selectedTextColor: panel.theme.textStrong
                         font.family: panel.runtime.fontSans
                         font.pixelSize: panel.theme.fontSize(14)
                         clip: true

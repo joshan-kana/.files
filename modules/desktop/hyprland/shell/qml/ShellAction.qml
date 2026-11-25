@@ -17,11 +17,11 @@ Item {
     property string shortcut: actionId.length > 0 ? runtime.shellHint(actionId) : ""
     property bool active: false
     property bool highlighted: false
-    property color activeColor: theme.accent
+    property color activeColor: switchControl ? theme.toggleColor : theme.commandColor
     property bool prominentAction: false
-    property color actionForeground: prominentAction ? theme.onColor(activeColor) : active ? theme.readableColor(activeColor, actionFill.a > 0 ? actionFill : theme.panelBase) : theme.textStrong
-    property color actionFill: prominentAction ? activeColor : quietAction || switchControl ? "transparent" : active ? theme.blend(theme.controlBase, activeColor, theme.dark ? 0.20 : 0.12) : theme.expressiveSurfaceStrong
-    property color iconColor: actionForeground
+    property color actionForeground: prominentAction ? theme.onColor(actionFill) : active ? theme.readableColor(activeColor, actionFill.a > 0 ? actionFill : theme.panelBase) : theme.textStrong
+    property color actionFill: prominentAction ? theme.solidFill(activeColor) : quietAction || switchControl ? "transparent" : active ? theme.blend(theme.controlBase, activeColor, theme.dark ? 0.20 : 0.12) : theme.expressiveSurfaceStrong
+    property color iconColor: prominentAction || active ? actionForeground : theme.readableColor(activeColor, actionFill.a > 0 ? actionFill : theme.panelBase)
     property bool compact: false
     property bool horizontalCompact: false
     property bool headerEntry: false
@@ -34,7 +34,7 @@ Item {
     property int horizontalPadding: headerEntry ? theme.spacing4 + theme.spacing2 : compact ? theme.spacing3 : theme.spacing4
 
     property bool foregroundBusy: false
-    property color foregroundColor: theme.accent
+    property color foregroundColor: theme.progressColor
 
     signal activated
 
@@ -116,7 +116,7 @@ Item {
             selected: root.active
             outlined: root.highlighted
             borderWidth: root.highlighted ? root.theme.borderFocus : 0
-            borderColor: root.highlighted ? root.activeColor : "transparent"
+            borderColor: root.highlighted ? root.theme.contrastColor(root.theme.focusColor, root.actionFill.a > 0 ? root.actionFill : root.theme.panelBase, 3) : "transparent"
             fillColor: root.actionFill
             cornerRadius: root.motion.enabled && interaction.visualPressed ? Math.max(root.theme.radiusSmall, root.restingRadius * 0.8) : root.restingRadius
             Behavior on cornerRadius {
@@ -166,7 +166,7 @@ Item {
                 runtime: root.runtime
                 theme: root.theme
                 text: root.subtitle
-                color: root.prominentAction ? root.theme.onColor(root.activeColor) : root.active ? root.theme.readableColor(root.theme.textMuted, root.actionFill.a > 0 ? root.actionFill : root.theme.panelBase) : theme.textMuted
+                color: root.prominentAction ? root.theme.onColor(root.actionFill) : root.active ? root.theme.readableColor(root.theme.textMuted, root.actionFill.a > 0 ? root.actionFill : root.theme.panelBase) : theme.textMuted
                 font.pixelSize: theme.fontSupporting
                 elide: Text.ElideRight
             }
@@ -265,7 +265,7 @@ Item {
                     visible: root.switchControl
                     radius: height / 2
                     color: root.active ? root.theme.choiceFill(root.activeColor) : root.theme.controlBase
-                    border.color: root.active ? root.activeColor : root.theme.subtleBorder
+                    border.color: root.active ? root.theme.contrastColor(root.activeColor, root.theme.choiceFill(root.activeColor), 3) : root.theme.subtleBorder
                     border.width: root.theme.borderThin
                     Rectangle {
                         id: switchThumb
@@ -274,7 +274,7 @@ Item {
                         radius: width / 2
                         x: root.active ? parent.width - width - root.theme.spacing1 : root.theme.spacing1
                         anchors.verticalCenter: parent.verticalCenter
-                        color: root.active ? root.activeColor : root.theme.textMuted
+                        color: root.active ? root.theme.contrastColor(root.activeColor, root.theme.choiceFill(root.activeColor), 3) : root.theme.textMuted
                         Behavior on x {
                             Anim {
                                 motion: root.motion

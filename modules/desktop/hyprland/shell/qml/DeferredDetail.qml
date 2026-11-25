@@ -37,7 +37,6 @@ Loader {
     // Busy panels participate automatically. A panel whose busy state also
     // covers passive reads exposes foregroundBusy to narrow the scope.
     readonly property bool foregroundBusy: !!panel && (panel.foregroundBusy !== undefined ? !!panel.foregroundBusy : !!(panel.busy || panel.operationRunning))
-    readonly property string foregroundRole: panel?.foregroundRole || ""
     readonly property bool statusError: !!(panel && panel.statusError)
     readonly property string armedAction: panel && typeof panel.armedAction === "string" ? panel.armedAction : ""
     readonly property string actionShortcutLegend: panel && typeof panel.actionShortcutLegend === "string" ? panel.actionShortcutLegend : ""

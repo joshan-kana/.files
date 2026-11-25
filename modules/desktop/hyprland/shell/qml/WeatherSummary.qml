@@ -34,7 +34,6 @@ Item {
             z: -1
             anchors.fill: parent
             foregroundBusy: summary.presentationActive && summary.weather.loading && summary.weather.foregroundLoading
-            foregroundColor: summary.theme.weatherColor(summary.weather.weatherCode, summary.weather.isDay)
             theme: summary.theme
             motion: summary.motion
             surfaceLayer: ShellSurface.Group

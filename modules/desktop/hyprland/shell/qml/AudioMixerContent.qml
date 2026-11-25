@@ -41,7 +41,7 @@ FocusScope {
             surfaceLayer: ShellSurface.Control
             cornerRadius: mixer.theme.radiusMedium
             fillColor: mixer.selectedStreamIndex === streamRow.index ? mixer.theme.expressiveSurfaceStrong : mixer.theme.expressiveSurface
-            borderColor: mixer.selectedStreamIndex === streamRow.index ? mixer.theme.roleColor("audio") : "transparent"
+            borderColor: mixer.selectedStreamIndex === streamRow.index ? mixer.theme.focusColor : "transparent"
             borderWidth: mixer.selectedStreamIndex === streamRow.index ? mixer.theme.borderFocus : 0
 
             AudioStreamControl {
@@ -114,7 +114,6 @@ FocusScope {
     readonly property int selectedStreamIndex: selectedTarget?.kind === "stream" ? streams.findIndex(node => node.id === selectedTarget.node.id) : -1
     readonly property var selectedTarget: targets[Math.max(0, Math.min(selectedIndex, targets.length - 1))] || null
 
-    readonly property string foregroundRole: "audio"
     readonly property bool hardwareOpen: hardwareView.open
     readonly property bool foregroundBusy: hardwareView.busy || routeProcess.running || pendingRoute !== "" || effectsState.awaitingConfirmation || effectsState.requestedPreset !== null
     property bool presetOpen: false
@@ -488,7 +487,6 @@ FocusScope {
             anchors.fill: parent
             visible: mixer.compact
             foregroundBusy: mixer.compact && mixer.foregroundOutlineVisible && (mixer.foregroundBusy || mixer.destinationBusy)
-            foregroundColor: mixer.theme.roleColor("audio")
             theme: mixer.theme
             motion: mixer.motion
             surfaceLayer: ShellSurface.Group
@@ -664,6 +662,7 @@ FocusScope {
                         title: effectsState.bypassed ? "Resume processing" : "Bypass effects"
                         shortcut: mixer.runtime.shellHint("AudioMixerContent.effectsToggle")
                         active: effectsState.known && effectsState.bypassed
+                        activeColor: theme.toggleColor
                         enabled: effectsState.known && !effectsState.busy
                         onActivated: effectsState.toggleBypass()
                     }
@@ -729,7 +728,6 @@ FocusScope {
                         horizontalCompact: true
                         title: modelData.name + " · " + (modelData.input && modelData.output ? "Input + output" : modelData.input ? "Input" : "Output")
                         joined: false
-                        activeColor: mixer.theme.roleColor("audio")
                         active: modelData.name === effectsState.activePresets.output || modelData.name === effectsState.activePresets.input
                         highlighted: index === mixer.presetIndex
                         icon: active ? DesktopIcons.actionGlyph("confirm") : ""
@@ -836,7 +834,6 @@ FocusScope {
                         shortcut: highlighted ? mixer.runtime.shellHint("AudioHardwareSettings.apply") : ""
                         active: modelData === mixer.routedDevice
                         highlighted: index === mixer.routeIndex
-                        activeColor: mixer.theme.roleColor("audio")
                         joined: false
                         onActivated: mixer.selectRoute(index)
                     }
@@ -894,7 +891,6 @@ FocusScope {
                     horizontalCompact: true
                     title: "Centre"
                     shortcut: mixer.runtime.shellHint("AudioMixerContent.balanceReset")
-                    activeColor: mixer.theme.roleColor("audio")
                     onActivated: mixer.system.setBalance(mixer.balanceNode, 0)
                 }
             }

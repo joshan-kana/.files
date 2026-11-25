@@ -69,7 +69,7 @@ MouseArea {
         onTriggered: root.pointerHovered = root.visible && root.enabled && (root.containsMouse || hoverHandler.hovered)
     }
     property bool showHover: true
-    property color stateColor: selected ? theme.accent : theme.textStrong
+    property color stateColor: selected ? theme.choiceColor : theme.textStrong
     property real hoverOpacity: 0.10
     property real pressOpacity: 0.16
     property real cornerRadius: theme.radiusMedium
@@ -300,7 +300,7 @@ MouseArea {
         cornerRadius: root.cornerRadius
         exponent: root.exponent
         fillColor: "transparent"
-        borderColor: root.theme.accent
+        borderColor: root.theme.contrastColor(root.theme.focusColor, root.theme.panelBase, 3)
         borderWidth: root.theme.borderFocus
     }
 }
