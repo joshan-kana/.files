@@ -135,7 +135,7 @@ Use the partitions of the **verified installation drive**, not another disk that
   [ -z "$(find "$MNT/nix/store" -mindepth 1 -maxdepth 1 ! -uid 0 -print -quit)" ]
 
   install -d -o "$PRIMARY_UID" -g "$PRIMARY_GID" -m 0700 "$MNT$PRIMARY_HOME" "$MNT$USER_SECRETS_DIR"
-  printf '%s\n' "$USER_RUNTIME_SECRET_FILES" | while IFS= read -r path; do
+  printf '%s\n' "$USER_BOOTSTRAP_SECRET_FILES" | while IFS= read -r path; do
     [ -n "$path" ] || continue
     relative=${path#"$USER_SECRETS_DIR/"}
     test -s "$PI_SECRETS_SOURCE/$relative"

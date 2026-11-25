@@ -66,9 +66,9 @@ if [[ ! -d "$DOTFILES_REPO/.git" ]]; then
   mkdir -p "$(dirname "$DOTFILES_REPO")"
   if [[ -r "$USER_SECRETS_DIR/id_ed25519" ]]; then
     GIT_SSH_COMMAND="ssh -i $USER_SECRETS_DIR/id_ed25519 -o IdentitiesOnly=yes" \
-      git clone --recurse-submodules git@github.com:joshan-kana/.files.git "$DOTFILES_REPO"
+      git clone --recurse-submodules "$DOTFILES_REMOTE" "$DOTFILES_REPO"
   else
-    git clone --recurse-submodules git@github.com:joshan-kana/.files.git "$DOTFILES_REPO"
+    git clone --recurse-submodules "$DOTFILES_REMOTE" "$DOTFILES_REPO"
   fi
 fi
 cd "$DOTFILES_REPO"

@@ -49,7 +49,7 @@ sudo env \
   SSH_AUTH_SOCK="${SSH_AUTH_SOCK:-}" \
   GIT_SSH_COMMAND="$git_ssh_command" \
   git clone --recurse-submodules \
-  git@github.com:joshan-kana/.files.git \
+  "$DOTFILES_REMOTE" \
   "/mnt$DOTFILES_REPO"
 
 sudo rm -f /tmp/dotfiles-git-key

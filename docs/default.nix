@@ -499,8 +499,7 @@ let
       primaryUser = config.dotfiles.users.primary;
       home = config.home-manager.users.${primaryUser.name};
       remotes = config.services.comin.remotes or [ ];
-      origin = lib.findFirst (remote: remote.name == "origin") null remotes;
-      userSecretFiles = lib.unique (
+      bootstrapSecretFiles = lib.unique (
         lib.filter (path: path != null && lib.hasPrefix "${config.dotfiles.secretsDir}/" (toString path)) (
           (map (remote: remote.auth.ssh_deploy_key_path or null) remotes)
           ++ (map (builder: builder.sshKey or null) config.nix.buildMachines)
@@ -521,6 +520,7 @@ let
       export SYSTEM=${lib.escapeShellArg host.pkgs.stdenv.hostPlatform.system}
       export PROFILE=${lib.escapeShellArg config.dotfiles.profile.name}
       export DOTFILES_REPO=${lib.escapeShellArg config.dotfiles.paths.repoPath}
+      export DOTFILES_REMOTE=${lib.escapeShellArg config.dotfiles.paths.repoUrl}
       export PRIMARY_USER=${lib.escapeShellArg primaryUser.name}
       export PRIMARY_HOME=${lib.escapeShellArg "${primaryUser.homeRoot}/${primaryUser.name}"}
       ${lib.optionalString
@@ -536,8 +536,7 @@ let
         ''
       }
       export USER_SECRETS_DIR=${lib.escapeShellArg config.dotfiles.secretsDir}
-      export USER_RUNTIME_SECRET_FILES=${lib.escapeShellArg (lib.concatStringsSep "\n" (map toString userSecretFiles))}
-      export DOTFILES_REMOTE=${lib.escapeShellArg (if origin == null then "" else origin.url)}
+      export USER_BOOTSTRAP_SECRET_FILES=${lib.escapeShellArg (lib.concatStringsSep "\n" (map toString bootstrapSecretFiles))}
       ${lib.optionalString (home.services.wayvnc.enable or false) ''
         export VNC_ADDRESS=${lib.escapeShellArg home.services.wayvnc.settings.address}
         export VNC_PORT=${toString home.services.wayvnc.settings.port}
@@ -837,6 +836,7 @@ let
       export SYSTEM=${lib.escapeShellArg host.pkgs.stdenv.hostPlatform.system}
       export PROFILE=${lib.escapeShellArg config.dotfiles.profile.name}
       export DOTFILES_REPO=${lib.escapeShellArg config.dotfiles.paths.repoPath}
+      export DOTFILES_REMOTE=${lib.escapeShellArg config.dotfiles.paths.repoUrl}
       export PRIMARY_USER=${lib.escapeShellArg primary.name}
       export PRIMARY_HOME=${lib.escapeShellArg "${primary.homeRoot}/${primary.name}"}
       export USER_SECRETS_DIR=${lib.escapeShellArg config.dotfiles.secretsDir}
