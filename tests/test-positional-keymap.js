@@ -224,7 +224,7 @@ test("U/D paging and PageUp/PageDown survive throughout Controls and list views"
   const controls = qml("SystemContent.qml");
   assert.match(
     controls,
-    /root\.runtime\.shellMatchesHint\("RecordingLibrary\.delete", event\.key, event\.modifiers\)\)\s*\{\s*recordingsPanel\.invoke\("requestDelete"\)/,
+    /root\.runtime\.shellMatchesHint\("RecordingLibrary\.delete", event\.key, event\.modifiers\)\)\s*\{\s*if \(!event\.isAutoRepeat\)\s*recordingsPanel\.invoke\("requestDelete"\)/,
   );
   assert.match(
     controls,

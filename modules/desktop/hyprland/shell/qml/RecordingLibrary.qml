@@ -221,12 +221,8 @@ Item {
         choose(selectedIndex + delta);
     }
     function openSelected(): void {
-        if (!selectedEntry || !open)
+        if (!selectedEntry || !open || isBusy || deletePending.length > 0)
             return;
-        if (deletePending === selectedEntry.name) {
-            confirmDelete();
-            return;
-        }
         Quickshell.execDetached([runtime.recordingLibrary, "open", selectedEntry.name]);
         statusText = "OPEN REQUESTED · " + selectedEntry.name;
         statusError = false;
@@ -380,21 +376,25 @@ Item {
     }
 
     function requestDelete(): void {
-        if (!selectedEntry || isBusy)
+        if (!selectedEntry || isBusy || deletePending === selectedEntry.name)
             return;
-        if (deletePending === selectedEntry.name) {
-            confirmDelete();
-            return;
-        }
         deleteConfirmation.request(selectedEntry.name);
-        statusText = "Move to trash? Press D or Enter again within 5 seconds.";
-        statusError = true;
+        statusText = "Move to trash? Press Enter within 5 seconds.";
+        statusError = false;
+    }
+    function activateSelected(): void {
+        if (deletePending.length > 0)
+            confirmDelete();
+        else
+            openSelected();
     }
     function confirmDelete(): void {
         if (!selectedEntry || deletePending !== selectedEntry.name || actionProcess.running)
             return;
         deletingName = deletePending;
         deleteConfirmation.cancel();
+        statusText = "MOVING TO TRASH · " + deletingName;
+        statusError = false;
         actionProcess.exec([runtime.recordingLibrary, "trash", deletingName]);
     }
     function cancelDelete(): void {
@@ -882,7 +882,7 @@ Item {
                         inlineIconHint: true
                         title: "Open"
                         shortcut: library.runtime.shellHint("RecordingLibrary.open")
-                        enabled: !!library.selectedEntry && !library.isBusy
+                        enabled: !!library.selectedEntry && !library.isBusy && library.deletePending.length === 0
                         onActivated: library.openSelected()
                     }
                     ShellAction {
@@ -924,9 +924,9 @@ Item {
                         compact: true
                         horizontalCompact: true
                         icon: "󰆴"
-                        title: library.selectedEntry && library.deletePending === library.selectedEntry.name ? "Confirm" : "Trash"
+                        title: library.selectedEntry && library.deletePending === library.selectedEntry.name ? "Press Enter to confirm" : "Trash"
                         shortcut: library.runtime.shellHint("RecordingLibrary.delete")
-                        enabled: !!library.selectedEntry && !library.isBusy
+                        enabled: !!library.selectedEntry && !library.isBusy && library.deletePending.length === 0
                         activeColor: library.theme.critical
                         active: !!library.selectedEntry && library.deletePending === library.selectedEntry.name
                         onActivated: library.requestDelete()

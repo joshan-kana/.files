@@ -2197,7 +2197,8 @@ FocusScope {
                     } else if (event.key === root.runtime.shellKeyCode("controls", "PageDown") || root.runtime.shellMatchesHint("RecordingLibrary.pageDown", event.key, event.modifiers)) {
                         recordingsPanel.invoke("moveSelection", 4);
                     } else if (root.runtime.shellMatchesHint("RecordingLibrary.delete", event.key, event.modifiers)) {
-                        recordingsPanel.invoke("requestDelete");
+                        if (!event.isAutoRepeat)
+                            recordingsPanel.invoke("requestDelete");
                     } else if (root.runtime.shellMatchesHint("RecordingLibrary.edit", event.key, event.modifiers)) {
                         recordingsPanel.invoke("editSelected");
                     } else if (root.runtime.shellMatchesHint("RecordingLibrary.copy", event.key, event.modifiers)) {
@@ -2205,7 +2206,8 @@ FocusScope {
                     } else if (root.runtime.shellMatchesHint("RecordingLibrary.ocr", event.key, event.modifiers)) {
                         recordingsPanel.invoke("showText");
                     } else if (event.key === root.runtime.shellKeyCode("controls", "Return") || event.key === root.runtime.shellKeyCode("controls", "Enter")) {
-                        recordingsPanel.invoke("openSelected");
+                        if (!event.isAutoRepeat)
+                            recordingsPanel.invoke("activateSelected");
                     } else if (root.runtime.shellMatchesHint("RecordingLibrary.refresh", event.key, event.modifiers)) {
                         if (!event.isAutoRepeat)
                             recordingsPanel.invoke("triggerRefresh");
