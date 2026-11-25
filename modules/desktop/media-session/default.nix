@@ -75,9 +75,7 @@ in
     in
     {
       xdg.configFile."flex-launcher/config.ini".text = launcherConfig;
-      wayland.windowManager.labwc = {
-        enable = true;
-      };
+      wayland.windowManager.labwc.enable = true;
 
       systemd.user.services.media-launcher = {
         Unit = {
@@ -86,7 +84,7 @@ in
           After = [ "graphical-session-pre.target" ];
         };
         Service = {
-          ExecStart = "${lib.getExe launcher} -c ${config.xdg.configHome}/flex-launcher/config.ini";
+          ExecStart = "${lib.getExe launcher} -c ${config.xdg.configFile."flex-launcher/config.ini".source}";
           Restart = "always";
           RestartSec = 1;
         };
