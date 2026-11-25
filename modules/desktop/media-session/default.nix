@@ -91,6 +91,7 @@ in
         Service = {
           ExecStart = "${lib.getExe launcher} -c ${config.xdg.configFile."flex-launcher/config.ini".source}";
           Restart = "always";
+          Environment = "SDL_VIDEO_DRIVER=wayland";
           RestartSec = 1;
         };
         Install.WantedBy = [ "labwc-session.target" ];
