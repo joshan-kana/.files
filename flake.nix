@@ -679,23 +679,22 @@
             ];
 
           vscodePkg = pkgs.vscodium or (pkgs.vscode or null);
-        in
-        {
-          default = pkgs.mkShell {
+          shellArgs = {
             packages = commonTools;
             NVIM_PROJECT_RUNTIMEPATH = lib.concatStringsSep "," (map toString neovimRuntime);
             NVIM_PROJECT_LSP_PATH = lib.makeBinPath commonTools;
             NVIM_PROJECT_SYSTEM = system;
             inherit (preCommit) shellHook;
           };
-
-          vscode = pkgs.mkShell {
-            packages = commonTools ++ lib.optionals (vscodePkg != null) [ vscodePkg ];
-            NVIM_PROJECT_RUNTIMEPATH = lib.concatStringsSep "," (map toString neovimRuntime);
-            NVIM_PROJECT_LSP_PATH = lib.makeBinPath commonTools;
-            NVIM_PROJECT_SYSTEM = system;
-            inherit (preCommit) shellHook;
-          };
+        in
+        {
+          default = pkgs.mkShell shellArgs;
+          vscode = pkgs.mkShell (
+            shellArgs
+            // {
+              packages = commonTools ++ lib.optionals (vscodePkg != null) [ vscodePkg ];
+            }
+          );
         }
       );
 
