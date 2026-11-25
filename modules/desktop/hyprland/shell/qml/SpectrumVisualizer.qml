@@ -7,7 +7,7 @@ Item {
     required property Theme theme
     required property string surfaceKey
     required property Motion motion
-    property int baseDensity: 48
+    readonly property int baseDensity: surfaceKey === "wallpaperVisualizerMode" ? 64 : surfaceKey === "islandVisualizerMode" || surfaceKey === "controlsVisualizerMode" ? 24 : 48
     property real baseOpacity: surfaceKey === "wallpaperVisualizerMode" ? 0.8 : 1
     // Wallpaper has independent demand even when its layer is hidden in silence.
     property bool drivesDemand: true

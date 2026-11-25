@@ -519,7 +519,11 @@ test("Compact Media shares a live spectrum, controls and full Now Playing naviga
   );
   assert.doesNotMatch(card, /parent.width - shuffleButton.width/);
   assert.match(card, /SpectrumVisualizer \{/);
-  assert.match(card, /baseDensity: 24/);
+  assert.doesNotMatch(card, /baseDensity: 24/);
+  assert.match(
+    read("SpectrumVisualizer.qml"),
+    /surfaceKey === "islandVisualizerMode" \|\| surfaceKey === "controlsVisualizerMode" \? 24 : 48/,
+  );
   assert.match(
     card,
     /shortcut: card\.runtime\.shellHint\("ControlsMediaCard.shuffle"\)[\s\S]*?onActivated: card.media.toggleShuffle\(\)/,

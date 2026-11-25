@@ -206,7 +206,6 @@ Item {
                 surfaceKey: "islandVisualizerMode"
                 drivesDemand: island.media.playing
                 enabled: island.surfaceShown
-                baseDensity: 24
             }
 
             Behavior on opacity {

@@ -61,7 +61,7 @@ let
       };
       spectrumOpacity = {
         min = 0.25;
-        max = 1.25;
+        max = 1.0;
       };
       barIslandHeight = {
         integer = true;

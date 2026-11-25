@@ -57,7 +57,7 @@ Variants {
                 theme: visuals.theme
                 motion: visuals.motion
                 surfaceKey: "wallpaperVisualizerMode"
-                baseDensity: 64
+
                 drivesDemand: false
                 enabled: wallpaperLayer.visible
             }
