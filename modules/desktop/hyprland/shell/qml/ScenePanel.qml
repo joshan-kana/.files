@@ -80,39 +80,82 @@ Column {
         return true;
     }
 
-    ShellText {
+    ShellSurface {
         width: parent.width
-        runtime: panel.runtime
+        height: sceneStatus.implicitHeight + panel.theme.spacing3 * 2
         theme: panel.theme
-        text: panel.scenes.active ? "Active: " + panel.scenes.activeName + " · temporary until stopped or shell restart" : "No scene active"
-        textRole: ShellText.Readback
-        wrapMode: Text.WordWrap
-    }
-    ShellText {
-        width: parent.width
-        runtime: panel.runtime
-        theme: panel.theme
-        text: "Save the current visual switches, animations and manual notification modes. Scenes temporarily override these switches; stopping restores your underlying preferences. Schedules, display layouts, power and idle policy remain independent."
-        textRole: ShellText.Supporting
-        wrapMode: Text.WordWrap
+        motion: panel.motion
+        surfaceLayer: ShellSurface.Group
+        fillColor: panel.scenes.active ? panel.theme.choiceFill(panel.theme.roleColor("workspace")) : panel.theme.groupBase
+        Row {
+            id: sceneStatus
+            x: panel.theme.spacing3
+            y: panel.theme.spacing3
+            width: Math.max(1, parent.width - panel.theme.spacing3 * 2)
+            spacing: panel.theme.spacing2
+            Text {
+                text: DesktopIcons.glyphFor("scenes")
+                font.family: "Symbols Nerd Font"
+                font.pixelSize: panel.theme.fontSize(24)
+                color: panel.theme.roleColor("workspace")
+                anchors.verticalCenter: parent.verticalCenter
+            }
+            Column {
+                width: Math.max(1, parent.width - stopAction.width - panel.theme.fontSize(30) - parent.spacing * 2)
+                ShellText {
+                    width: parent.width
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    text: panel.scenes.active ? panel.scenes.activeName : "No active scene"
+                    textRole: ShellText.Title
+                    wrapMode: Text.WordWrap
+                }
+                ShellText {
+                    width: parent.width
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    text: panel.scenes.active ? "Temporary overrides · Preferences preserved" : "Save a reusable combination of visual and notification modes."
+                    textRole: ShellText.Supporting
+                    wrapMode: Text.WordWrap
+                }
+            }
+            ShellUtilityAction {
+                id: stopAction
+                visible: panel.scenes.active
+                width: visible ? implicitWidth : 0
+                anchors.verticalCenter: parent.verticalCenter
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                icon: DesktopIcons.actionGlyph("cancel")
+                title: "Stop scene"
+                shortcut: panel.runtime.shellHint("ScenePanel.stop")
+                enabled: visible && !panel.naming
+                onActivated: panel.scenes.stop()
+            }
+        }
     }
     Repeater {
         id: sceneRows
         model: panel.scenes.profiles
-        delegate: ShellAction {
+        delegate: ShellChoice {
             required property int index
             required property var modelData
             width: parent.width
-            height: Math.max(44, implicitHeight)
+            height: Math.max(panel.theme.fontSize(66), implicitHeight)
             runtime: panel.runtime
             theme: panel.theme
             motion: panel.motion
+            joined: false
             compact: true
-            horizontalCompact: true
             enabled: !panel.naming
-            title: modelData.name + (panel.scenes.activeName === modelData.name ? " · Active" : "")
-            active: index === panel.selectedIndex
-            shortcut: active ? panel.runtime.shellHint("ScenePanel.apply") : ""
+            title: modelData.name
+            subtitle: [modelData.appearance.wallpaperSpectrumEnabled ? "Spectrum" : "", modelData.appearance.musicReactiveEnabled ? "Reactive" : "", modelData.appearance.shellGlassEnabled ? "Glass" : "", modelData.appearance.vhsEnabled ? "VHS" : "", modelData.animations ? "Motion" : "Reduced motion", modelData.silent ? "Silent" : "", modelData.presentation ? "Presentation" : ""].filter(Boolean).join(" · ")
+            icon: active ? DesktopIcons.actionGlyph("confirm") : DesktopIcons.glyphFor("scenes")
+            active: panel.scenes.activeName === modelData.name
+            highlighted: index === panel.selectedIndex
+            activeColor: panel.theme.roleColor("workspace")
+            shortcut: highlighted ? panel.runtime.shellHint("ScenePanel.apply") : ""
             onActivated: {
                 panel.selectedIndex = index;
                 panel.scenes.apply(index);
@@ -164,41 +207,34 @@ Column {
         spacing: panel.theme.spacing2
         ShellAction {
             id: saveAction
-            width: (parent.width - parent.spacing * 2) / 3
+            width: Math.min(parent.width - (removeAction.visible ? removeAction.width + parent.spacing : 0), implicitWidth)
             height: Math.max(44, implicitHeight)
             runtime: panel.runtime
             theme: panel.theme
             motion: panel.motion
             compact: true
+            horizontalCompact: true
+            prominentAction: enabled
+            activeColor: panel.theme.roleColor("workspace")
+            icon: DesktopIcons.actionGlyph("save")
             title: panel.naming ? "Save scene" : "Save current"
             shortcut: panel.naming ? panel.runtime.shellHint("ScenePanel.apply") : panel.runtime.shellHint("ScenePanel.save")
             enabled: panel.scenes.profiles.length < 12
             onActivated: panel.naming ? panel.saveScene() : panel.startNaming()
         }
-        ShellAction {
-            id: stopAction
-            width: saveAction.width
-            height: saveAction.height
-            runtime: panel.runtime
-            theme: panel.theme
-            motion: panel.motion
-            compact: true
-            title: "Stop scene"
-            shortcut: panel.runtime.shellHint("ScenePanel.stop")
-            enabled: panel.scenes.active && !panel.naming
-            onActivated: panel.scenes.stop()
-        }
-        ShellAction {
+        ShellUtilityAction {
             id: removeAction
-            width: saveAction.width
-            height: saveAction.height
+            visible: panel.scenes.profiles.length > 0 && !panel.naming
+            width: visible ? implicitWidth : 0
+            height: implicitHeight
+            icon: DesktopIcons.actionGlyph("delete")
             runtime: panel.runtime
             theme: panel.theme
             motion: panel.motion
             compact: true
             title: "Remove selected"
             shortcut: panel.runtime.shellHint("ScenePanel.remove")
-            enabled: !panel.naming && !!panel.scenes.profiles[panel.selectedIndex] && panel.scenes.profiles[panel.selectedIndex].name !== panel.scenes.activeName
+            enabled: visible && !!panel.scenes.profiles[panel.selectedIndex] && panel.scenes.profiles[panel.selectedIndex].name !== panel.scenes.activeName
             onActivated: {
                 panel.scenes.remove(panel.selectedIndex);
                 panel.selectedIndex = Math.max(0, Math.min(panel.selectedIndex, panel.scenes.profiles.length - 1));
@@ -209,6 +245,7 @@ Column {
         width: parent.width
         runtime: panel.runtime
         theme: panel.theme
+        visible: panel.scenes.profiles.length > 0 && !panel.naming
         hints: [
             {
                 shortcut: panel.runtime.shellHint("ScenePanel.select"),
