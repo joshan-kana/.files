@@ -181,7 +181,6 @@ ShellRoot {
             nightLight: root.nightLightRef
             resourceState: root.resourcesRef
             powerProfile: root.powerProfileRef
-            wallpaperSpectrumEnabled: root.wallpaperSpectrumEnabled
             musicReactiveEnabled: root.musicReactiveEnabled
             barVisible: qmlAppearance.barVisible
             frameVisible: qmlAppearance.frameVisible
@@ -189,7 +188,6 @@ ShellRoot {
             shellGlassEnabled: qmlAppearance.shellGlassEnabled
             engaged: qmlExpansionState.currentName === "system"
             presentationActive: qmlExpansionState.hasCurrent && qmlExpansionState.currentName === "system"
-            onWallpaperSpectrumToggleRequested: qmlAppearance.toggleWallpaperSpectrum()
             onMusicReactiveToggleRequested: qmlAppearance.toggleMusicReactive()
             onBarToggleRequested: qmlAppearance.toggleBar()
             onFrameToggleRequested: qmlAppearance.toggleFrame()

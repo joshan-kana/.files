@@ -20,11 +20,9 @@ Item {
     required property PowerProfileState powerProfile
     required property SystemState system
     required property SpectrumState spectrum
-    required property bool wallpaperSpectrumEnabled
     required property bool musicReactiveEnabled
     required property bool barVisible
     required property bool frameVisible
-    signal wallpaperSpectrumToggleRequested
     signal musicReactiveToggleRequested
     signal barToggleRequested
     signal frameToggleRequested
@@ -127,8 +125,6 @@ Item {
             return !notifications.silent;
         case "stay":
             return system.idleInhibited;
-        case "spectrum":
-            return wallpaperSpectrumEnabled;
         case "reactive":
             return musicReactiveEnabled;
         case "bar":
@@ -388,9 +384,6 @@ Item {
             break;
         case "stay":
             system.toggleIdleInhibited();
-            break;
-        case "spectrum":
-            wallpaperSpectrumToggleRequested();
             break;
         case "reactive":
             musicReactiveToggleRequested();

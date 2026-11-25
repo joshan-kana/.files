@@ -24,14 +24,12 @@ FocusScope {
     required property NightLightState nightLight
     required property ResourceState resourceState
     required property PowerProfileState powerProfile
-    required property bool wallpaperSpectrumEnabled
     required property bool musicReactiveEnabled
     required property bool barVisible
     required property bool frameVisible
     required property bool windowTransparencyEnabled
     required property bool shellGlassEnabled
 
-    signal wallpaperSpectrumToggleRequested
     signal musicReactiveToggleRequested
     signal barToggleRequested
     signal frameToggleRequested
@@ -1926,13 +1924,11 @@ FocusScope {
                     powerProfile: root.powerProfile
                     system: root.system
                     spectrum: root.spectrum
-                    wallpaperSpectrumEnabled: root.wallpaperSpectrumEnabled
                     musicReactiveEnabled: root.musicReactiveEnabled
                     barVisible: root.barVisible
                     frameVisible: root.frameVisible
                     onNativeDisplayEditorRequested: root.displaySettingsRequested()
                     onRevealSelection: (top, bottom) => root.revealContent(top, bottom)
-                    onWallpaperSpectrumToggleRequested: root.wallpaperSpectrumToggleRequested()
                     onMusicReactiveToggleRequested: root.musicReactiveToggleRequested()
                     onBarToggleRequested: root.barToggleRequested()
                     onFrameToggleRequested: root.frameToggleRequested()
