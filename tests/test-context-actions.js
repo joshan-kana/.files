@@ -156,3 +156,47 @@ test("Alt+Enter toggles actions from either focus region and Escape returns to t
     );
   }
 });
+
+test("clipboard entry actions execute once against their original selection", () => {
+  const body = clipboard
+    .split("    function executeAction(): void {")[1]
+    .split("\n    }\n\n    function activateSelected")[0];
+  assert.ok(body);
+  for (const [action, id] of [
+    ["delete", 42],
+    ["unpin", "pin:sample"],
+  ]) {
+    const commands = [];
+    const scope = {
+      actionMode: true,
+      actionIndex: 0,
+      contextActions: { matches: [{ action }] },
+      actionTarget: { id, kind: "TEXT" },
+      leaveActions() {
+        scope.actionMode = false;
+        scope.actionTarget = null;
+      },
+      operationProcess: {
+        running: false,
+        exec(args) {
+          commands.push(args);
+        },
+      },
+      runtime: { clipboardOperations: "clipboard-helper" },
+      copyFeedback: "",
+    };
+    vm.runInNewContext(
+      `function executeAction() {${body}\n}\nexecuteAction();`,
+      scope,
+    );
+    assert.equal(scope.actionMode, false);
+    assert.equal(scope.actionTarget, null);
+    assert.equal(scope.copyFeedback, "APPLYING");
+    assert.deepEqual(Array.from(commands[0]), [
+      "clipboard-helper",
+      action,
+      String(id),
+    ]);
+    assert.equal(commands.length, 1);
+  }
+});
