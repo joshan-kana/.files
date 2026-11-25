@@ -246,6 +246,10 @@
           "DisplaySettings.moveRight" = "L";
           "DisplaySettings.apply" = "ENTER";
           "DisplaySettings.cancel" = "X";
+          "DisplaySettings.saveProfile" = "V";
+          "DisplaySettings.nextProfile" = "P";
+          "DisplaySettings.previewProfile" = "F";
+          "DisplaySettings.deleteProfile" = "SHIFT+X";
           "ResourceDashboard.refresh" = "R";
           "ResourceDashboard.interval" = "T";
           "ResourceDashboard.history" = "H";

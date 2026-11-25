@@ -12,6 +12,11 @@ Column {
     signal nativeEditorRequested
     property var monitors: []
     property int outputIndex: 0
+    property var profiles: []
+    property int profileIndex: 0
+    readonly property var profile: profiles[profileIndex] || null
+    readonly property bool profileActionsAvailable: !busy && !previewActive && !changed
+    readonly property bool canSaveProfile: profileActionsAvailable && monitors.length > 0 && monitors.every(entry => entry.editable)
     readonly property var output: monitors[outputIndex] || null
     property string mode: ""
     property real scaleValue: 1
@@ -92,6 +97,8 @@ Column {
                     const data = JSON.parse(response.text);
                     const previous = panel.output?.name;
                     panel.monitors = data.monitors;
+                    panel.profiles = data.profiles || [];
+                    panel.profileIndex = Math.max(0, Math.min(panel.profileIndex, panel.profiles.length - 1));
                     const index = panel.monitors.findIndex(entry => entry.name === previous);
                     panel.outputIndex = index >= 0 ? index : 0;
                     panel.deadline = data.deadline;
@@ -170,14 +177,22 @@ Column {
         return busy;
     }
     function handleKey(key: int, modifiers: int, autoRepeat: bool): bool {
-        const actions = ["DisplaySettings.apply", "DisplaySettings.cancel", "DisplaySettings.refresh", "DisplaySettings.native", "DisplaySettings.output", "DisplaySettings.mode", "DisplaySettings.previousMode", "DisplaySettings.scale", "DisplaySettings.previousScale", "DisplaySettings.orientation", "DisplaySettings.moveLeft", "DisplaySettings.moveRight", "DisplaySettings.moveUp", "DisplaySettings.moveDown"];
+        const actions = ["DisplaySettings.saveProfile", "DisplaySettings.nextProfile", "DisplaySettings.previewProfile", "DisplaySettings.deleteProfile", "DisplaySettings.apply", "DisplaySettings.cancel", "DisplaySettings.refresh", "DisplaySettings.native", "DisplaySettings.output", "DisplaySettings.mode", "DisplaySettings.previousMode", "DisplaySettings.scale", "DisplaySettings.previousScale", "DisplaySettings.orientation", "DisplaySettings.moveLeft", "DisplaySettings.moveRight", "DisplaySettings.moveUp", "DisplaySettings.moveDown"];
         for (const id of actions) {
             const action = id.split(".")[1];
             if (!runtime.shellMatchesHint(id, key, modifiers) && !(action === "apply" && key === runtime.shellKeyCode("controls", "Enter") && modifiers === Qt.NoModifier))
                 continue;
             if (autoRepeat && !action.startsWith("move"))
                 return true;
-            if (action === "apply")
+            if (action === "saveProfile")
+                saveProfileAction.trigger();
+            else if (action === "nextProfile")
+                nextProfileAction.trigger();
+            else if (action === "previewProfile")
+                loadProfileAction.trigger();
+            else if (action === "deleteProfile")
+                deleteProfileAction.trigger();
+            else if (action === "apply")
                 previewOrKeep();
             else if (action === "cancel")
                 cancelNested();
@@ -504,6 +519,75 @@ Column {
             active: panel.previewActive || panel.changed
             enabled: !panel.busy && (panel.previewActive || panel.editable && panel.changed)
             onActivated: panel.previewOrKeep()
+        }
+    }
+    ShellSection {
+        runtime: panel.runtime
+        theme: panel.theme
+        title: "Saved layouts"
+        ShellText {
+            width: parent.width
+            runtime: panel.runtime
+            theme: panel.theme
+            text: panel.profile ? (panel.profileIndex + 1) + "/" + panel.profiles.length + " · " + panel.profile.label + (panel.profile.compatible ? "" : " · Different displays") : "No saved layouts"
+            wrapMode: Text.Wrap
+            textRole: ShellText.Supporting
+        }
+        Row {
+            width: parent.width
+            spacing: panel.theme.spacing2
+            ShellAction {
+                id: saveProfileAction
+                width: (parent.width - 3 * parent.spacing) / 4
+                height: Math.max(40, implicitHeight)
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                compact: true
+                title: "Save current"
+                shortcut: panel.runtime.shellHint("DisplaySettings.saveProfile")
+                enabled: panel.canSaveProfile
+                onActivated: panel.run("save-profile")
+            }
+            ShellAction {
+                id: nextProfileAction
+                width: saveProfileAction.width
+                height: saveProfileAction.height
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                compact: true
+                title: "Next layout"
+                shortcut: panel.runtime.shellHint("DisplaySettings.nextProfile")
+                enabled: panel.profileActionsAvailable && panel.profiles.length > 1
+                onActivated: panel.profileIndex = (panel.profileIndex + 1) % panel.profiles.length
+            }
+            ShellAction {
+                id: loadProfileAction
+                width: saveProfileAction.width
+                height: saveProfileAction.height
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                compact: true
+                title: "Preview saved"
+                shortcut: panel.runtime.shellHint("DisplaySettings.previewProfile")
+                enabled: panel.profileActionsAvailable && !!panel.profile?.compatible
+                onActivated: panel.run("preview-profile", [String(panel.profileIndex)])
+            }
+            ShellAction {
+                id: deleteProfileAction
+                width: saveProfileAction.width
+                height: saveProfileAction.height
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                compact: true
+                title: "Remove saved"
+                shortcut: panel.runtime.shellHint("DisplaySettings.deleteProfile")
+                enabled: panel.profileActionsAvailable && !!panel.profile
+                onActivated: panel.run("delete-profile", [String(panel.profileIndex)])
+            }
         }
     }
 }

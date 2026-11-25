@@ -263,7 +263,24 @@ FocusScope {
             key: root.runtime.shellHint("SystemContent.legend.back"),
             action: "Back to Controls"
         },
-        ...(settingsPanel.panel?.kind === "stay" ? [
+        ...(settingsPanel.panel?.kind === "displays" ? [
+                {
+                    key: root.runtime.shellHint("DisplaySettings.saveProfile"),
+                    action: "Save current display layout"
+                },
+                {
+                    key: root.runtime.shellHint("DisplaySettings.nextProfile"),
+                    action: "Select next saved layout"
+                },
+                {
+                    key: root.runtime.shellHint("DisplaySettings.previewProfile"),
+                    action: "Preview selected layout"
+                },
+                {
+                    key: root.runtime.shellHint("DisplaySettings.deleteProfile"),
+                    action: "Remove selected layout"
+                }
+            ] : []), ...(settingsPanel.panel?.kind === "stay" ? [
                 {
                     key: root.runtime.shellHint("SettingsDetail.inhibitorsRefresh"),
                     action: "Refresh system inhibitor locks"
