@@ -1381,25 +1381,13 @@ FocusScope {
                     }
                 }
 
-                Column {
+                ShellSection {
                     id: visualModesGroup
                     width: parent.width
-                    spacing: root.theme.spacing2
-
-                    Row {
-                        width: parent.width
-                        height: 24
-                        spacing: root.theme.spacing2
-                        Text {
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: "VISUAL MODES"
-                            color: root.theme.readableRoleColor("display")
-                            font.family: root.runtime.fontSans
-                            font.pixelSize: root.theme.fontPanelEyebrow
-                            font.weight: Font.DemiBold
-                            font.letterSpacing: 1.0
-                        }
-                    }
+                    runtime: root.runtime
+                    theme: root.theme
+                    title: "Visual Modes"
+                    emphasized: true
 
                     BalancedTileFlow {
                         id: visualTiles

@@ -113,7 +113,9 @@ test("Visual Modes and Quick Actions have distinct full-width balanced sections"
   assert.match(read("SettingsDetail.qml"), /key: "blurSize"/);
   assert.match(controls, /id: visualModesGroup/);
   assert.match(controls, /id: quickActionsSection/);
-  assert.match(controls, /text: "VISUAL MODES"/);
+  assert.match(controls, /ShellSection \{\s*id: visualModesGroup/);
+  assert.match(controls, /title: "Visual Modes"/);
+  assert.doesNotMatch(controls, /text: "VISUAL MODES"/);
   assert.match(controls, /title: "Quick Actions"/);
   assert.ok(
     controls.indexOf("id: quickActionsSection") <

@@ -293,3 +293,11 @@ test("clipboard delete is immediate and pinned entries do not duplicate Unpin", 
   assert.match(actions, /action\("unpin", "Unpin Entry"/);
   assert.match(actions, /action\("delete", "Delete Entry"/);
 });
+
+test("Visual Modes uses the same section heading primitive as Quick Actions", () => {
+  const controls = source("SystemContent.qml");
+  assert.match(controls, /ShellSection \{\s*id: visualModesGroup/);
+  assert.match(controls, /ShellSection \{\s*id: quickActionsSection/);
+  assert.match(controls, /title: "Visual Modes"/);
+  assert.doesNotMatch(controls, /text: "VISUAL MODES"/);
+});
