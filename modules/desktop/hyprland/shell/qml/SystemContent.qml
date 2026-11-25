@@ -8,7 +8,7 @@ FocusScope {
     id: root
 
     required property RuntimeConfig runtime
-    required property Actions actions
+    required property Actions shellActions
     required property Theme theme
     required property Motion motion
     required property AppearancePreferences appearance
@@ -54,8 +54,8 @@ FocusScope {
     readonly property string presentedDetail: settingsPanel.open ? settingKind : vhsPanel.open ? "vhs" : themePanel.open ? "theme" : wallpaperPanel.open ? "wallpaper" : networkPanel.open ? "network" : bluetoothPanel.open ? "bluetooth" : sessionPanel.open ? "session" : resourcesPanel.open ? "resources" : statusOpen ? "status" : mixerOpen ? "mixer" : recordingsPanel.open ? "recordings" : ""
     readonly property bool detailsVisible: settingsPanel.open || vhsPanel.open || trayMenu.open || networkPanel.open || bluetoothPanel.open || themePanel.open || wallpaperPanel.open || sessionPanel.open || resourcesPanel.open || statusOpen || mixerOpen || recordingsPanel.open
     property bool resetConfirmPending: false
-    readonly property bool resetRunning: actions.resetRunning
-    readonly property string resetStatus: actions.resetStatus
+    readonly property bool resetRunning: shellActions.resetRunning
+    readonly property string resetStatus: shellActions.resetStatus
 
     function findDashboardAction(key: int, modifiers: int): var {
         for (const section of [controlsHeading, connectionTiles, actionTiles, visualTiles]) {
@@ -79,7 +79,7 @@ FocusScope {
         if (!resetConfirmPending || resetRunning)
             return;
         resetConfirmPending = false;
-        actions.restoreDesktopDefaults();
+        shellActions.restoreDesktopDefaults();
     }
 
     property string requestedView: ""
@@ -1329,7 +1329,7 @@ FocusScope {
                             activeColor: root.theme.roleColor("warning")
                             onActivated: {
                                 root.resetConfirmPending = true;
-                                root.actions.resetStatus = "";
+                                root.shellActions.resetStatus = "";
                             }
                         }
                     }

@@ -164,7 +164,7 @@ ShellRoot {
         id: systemExpansionComponent
 
         SystemContent {
-            actions: root.actionsRef
+            shellActions: root.actionsRef
             appearance: qmlAppearance
             scenes: qmlScenes
             runtime: root.runtimeRef

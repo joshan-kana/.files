@@ -170,7 +170,7 @@ test("global and detail reset share the serialized Night Light reset operation",
     /waitingForNightLightReset = true;\s*nightLightState.resetToDeclared\(\)/,
   );
   assert.match(actions, /function onResetFinished\(success, reason\)/);
-  assert.match(controls, /actions\.restoreDesktopDefaults\(\)/);
+  assert.match(controls, /shellActions\.restoreDesktopDefaults\(\)/);
   assert.doesNotMatch(
     controls,
     /property var resetSteps|sessionPanel\.invoke\("resetToDeclared"/,
