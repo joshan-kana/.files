@@ -157,6 +157,9 @@ protected:
     const int count = std::min(int(edges_.size()) - 1, int(barColors_.size()));
     const int binCount = targetBands_.size();
     if (count < 1 || binCount < 2 || width() <= 0 || height() <= 0) {
+      current_.clear();
+      frameClock_.invalidate();
+      animating_.store(false, std::memory_order_relaxed);
       delete old;
       return nullptr;
     }
@@ -285,7 +288,8 @@ private:
   // Tessellate a quadratic outline into a fixed vertex buffer; the translucent
   // fill and coloured ribbon retain the former curve's visual language.
   void renderCurve(QSGGeometryNode *node, int count) {
-    constexpr int subdivisions = 6;
+    const int subdivisions =
+        std::clamp(int(width() / std::max(1, count - 1) / 3), 6, 24);
     const int segmentCount = std::max(1, count - 1) * subdivisions;
     constexpr int verticesPerSegment = 18;
     auto *geometry = node->geometry();
@@ -305,7 +309,7 @@ private:
     auto colorAt = [&](float x) {
       // Interpolate the same theme colours used by the bars.
       const float index =
-          std::clamp(x / w * count - 0.5f, 0.0f, float(count - 1));
+          std::clamp(x / w * (count - 1), 0.0f, float(count - 1));
       const int left = int(index), right = std::min(count - 1, left + 1);
       const float t = index - left;
       const QColor a = barColors_[left].value<QColor>();
@@ -333,10 +337,12 @@ private:
     };
     QPointF previous = sample(0);
     for (int i = 0; i < std::max(1, count - 1); ++i) {
-      const QPointF control = sample(i);
-      const QPointF next = count > 1 ? sample(i + 1) : QPointF(w, control.y());
       const QPointF start = previous;
-      const QPointF end = i + 1 < count - 1 ? (control + next) * 0.5 : next;
+      const bool last = i + 1 >= count - 1;
+      const QPointF next = count > 1 ? sample(std::min(count - 1, i + 2))
+                                     : QPointF(w, start.y());
+      const QPointF control = last ? (start + next) * 0.5 : sample(i + 1);
+      const QPointF end = last ? next : (control + next) * 0.5;
       for (int j = 1; j <= subdivisions; ++j) {
         const float t = float(j) / subdivisions, u = 1 - t;
         const QPointF point =

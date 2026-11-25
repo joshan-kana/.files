@@ -178,25 +178,40 @@ ShellSurface {
                 muted: deviceControl.muted
                 monitoring: deviceControl.active && deviceControl.visible && meter.visible
             }
-            ShellSlider {
-                id: levelSlider
+            Row {
                 width: parent.width
-                height: implicitHeight
-                theme: deviceControl.theme
-                motion: deviceControl.motion
-                enabled: deviceControl.available
-                value: deviceControl.level
-                accentColor: deviceControl.theme.audioLevelColor(deviceControl.muted)
-                density: deviceControl.compact ? ShellSlider.Standard : ShellSlider.Compact
-                Accessible.role: Accessible.Slider
-                Accessible.name: deviceControl.microphone ? "Microphone volume" : "Output volume"
-                onInteractionStarted: deviceControl.selectedRequested()
-                onValueRequested: value => {
-                    deviceControl.selectedRequested();
-                    if (deviceControl.microphone)
-                        deviceControl.system.setMicrophoneVolume(value);
-                    else
-                        deviceControl.system.setVolume(value);
+                spacing: deviceControl.theme.spacing2
+                ShellSlider {
+                    id: levelSlider
+                    width: Math.max(1, parent.width - levelHint.width - (levelHint.width > 0 ? parent.spacing : 0))
+                    height: implicitHeight
+                    theme: deviceControl.theme
+                    motion: deviceControl.motion
+                    enabled: deviceControl.available
+                    value: deviceControl.level
+                    accentColor: deviceControl.theme.audioLevelColor(deviceControl.muted)
+                    density: deviceControl.compact ? ShellSlider.Standard : ShellSlider.Compact
+                    Accessible.role: Accessible.Slider
+                    Accessible.name: deviceControl.microphone ? "Microphone volume" : "Output volume"
+                    onInteractionStarted: deviceControl.selectedRequested()
+                    onValueRequested: value => {
+                        deviceControl.selectedRequested();
+                        if (deviceControl.microphone)
+                            deviceControl.system.setMicrophoneVolume(value);
+                        else
+                            deviceControl.system.setVolume(value);
+                    }
+                }
+                KeyHint {
+                    id: levelHint
+                    anchors.verticalCenter: parent.verticalCenter
+                    runtime: deviceControl.runtime
+                    theme: deviceControl.theme
+                    compact: true
+                    visible: !deviceControl.compact
+                    width: visible ? implicitWidth : 0
+                    opacity: deviceControl.selected ? 1 : 0
+                    shortcut: deviceControl.runtime.shellHint("AudioMixerContent.level")
                 }
             }
         }

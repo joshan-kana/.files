@@ -142,6 +142,26 @@ QtObject {
         }
     }
 
+    function releaseSignal(): void {
+        if (!smoothingSilence)
+            bands = targetBands;
+        smoothingSilence = false;
+        targetBands = bands.map(() => 0);
+        decaying = hasEnergy;
+        interpolating = decaying;
+        if (!decaying) {
+            bands = [];
+            targetBands = [];
+            hasEnergy = false;
+        }
+        rms = 0;
+        peak = 0;
+        sub = 0;
+        bass = 0;
+        mid = 0;
+        high = 0;
+    }
+
     property Component socketComponent: Component {
         Socket {
             id: spectrumSocket
@@ -167,11 +187,24 @@ QtObject {
                         spectrum.bass = frame.bass || 0;
                         spectrum.mid = frame.mid || 0;
                         spectrum.high = frame.high || 0;
+                        spectrum.decaying = false;
                         spectrum.updateBands(frame.bands);
                         spectrum.sequence = frame.seq || 0;
                     } catch (error) {
                         console.warn("spectrum: invalid frame:", error);
                     }
+                }
+            }
+
+            onConnectedChanged: {
+                if (!connected && spectrum.active && spectrum.socketLoader.item === spectrumSocket) {
+                    Qt.callLater(() => {
+                        if (spectrum.active && spectrum.socketLoader.item === spectrumSocket && !spectrumSocket.connected) {
+                            spectrum.releaseSignal();
+                            spectrum.connectionGate = false;
+                            spectrum.reconnectTimer.restart();
+                        }
+                    });
                 }
             }
 
@@ -183,6 +216,7 @@ QtObject {
                     if (!spectrum.active || spectrum.socketLoader.item !== spectrumSocket)
                         return;
 
+                    spectrum.releaseSignal();
                     spectrum.connectionGate = false;
                     spectrum.reconnectTimer.restart();
                 });
@@ -211,25 +245,7 @@ QtObject {
             connectionGate = true;
         } else {
             reconnectTimer.stop();
-            if (!smoothingSilence)
-                bands = targetBands;
-            smoothingSilence = false;
-            // No more PipeWire work, but keep rendering the final frame until
-            // it reaches silence. FrameAnimation stops itself after the tail.
-            targetBands = bands.map(() => 0);
-            decaying = hasEnergy;
-            interpolating = decaying;
-            if (!decaying) {
-                bands = [];
-                targetBands = [];
-                hasEnergy = false;
-            }
-            rms = 0;
-            peak = 0;
-            sub = 0;
-            bass = 0;
-            mid = 0;
-            high = 0;
+            releaseSignal();
         }
     }
 }

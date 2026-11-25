@@ -905,10 +905,6 @@ FocusScope {
                     {
                         shortcut: mixer.runtime.shellHint("AudioMixerContent.select"),
                         label: "Select"
-                    },
-                    {
-                        shortcut: mixer.runtime.shellHint("AudioMixerContent.level"),
-                        label: "Level"
                     }
                 ]
             }

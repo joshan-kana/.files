@@ -15,7 +15,7 @@ FocusScope {
     property bool engaged: false
     property bool returnToControls: false
     property bool helpOpen: false
-    readonly property string visualizerMode: appearance.mediaVisualizerMode
+    readonly property string visualizerMode: appearance.spectrumPresentation("mediaVisualizerMode")
     readonly property bool lyricsVisible: appearance.mediaLyricsVisible
     property bool scrubbing: false
     property real scrubFraction: 0
@@ -551,7 +551,7 @@ FocusScope {
                     compact: true
                     horizontalCompact: true
                     icon: DesktopIcons.spectrumGlyph(content.visualizerMode)
-                    title: content.visualizerMode === "bars" ? "Bars" : "Curve"
+                    title: content.visualizerMode === "off" ? "Off" : content.visualizerMode === "bars" ? "Bars" : "Curve"
                     shortcut: content.runtime.shellHint("MediaContent.visualizer")
                     active: true
                     onActivated: content.toggleVisualizer()

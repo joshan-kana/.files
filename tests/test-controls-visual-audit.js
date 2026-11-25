@@ -1054,7 +1054,7 @@ test("capability headers describe their controls instead of repeating master sta
   assert.match(detail, /detail: panel.subtitleText/);
   assert.match(
     detail,
-    /title: \(panel.masterState \? "Disable " : "Enable "\) \+ \(panel.spectrumTuning \? "wallpaper spectrum" : panel.titleText\)/,
+    /title: \(panel.masterState \? "Disable " : "Enable "\) \+ panel.titleText/,
   );
 });
 

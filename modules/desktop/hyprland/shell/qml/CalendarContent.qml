@@ -150,7 +150,7 @@ FocusScope {
         focus: true
         Keys.onPressed: event => {
             if (calendar.calendarPickerOpen) {
-                if (event.key === calendar.runtime.shellKeyCode("calendar", "Escape") || event.key === calendar.runtime.shellKeyCode("calendar", "C")) {
+                if (event.key === calendar.runtime.shellKeyCode("calendar", "Escape") || calendar.runtime.shellMatchesHint("CalendarContent.calendars", event.key, event.modifiers)) {
                     calendar.navigateBack();
                 } else if (calendar.runtime.shellNavigates("calendar", "down", event.key)) {
                     calendar.calendarPickerIndex = Math.min(qmlAgenda.calendars.length - 1, calendar.calendarPickerIndex + 1);
@@ -164,9 +164,11 @@ FocusScope {
                 event.accepted = true;
                 return;
             }
-            if (event.key === calendar.runtime.shellKeyCode("calendar", "C") && qmlAgenda.calendars.length > 0) {
-                calendar.calendarPickerIndex = 0;
-                calendar.calendarPickerOpen = true;
+            if (calendar.runtime.shellMatchesHint("CalendarContent.calendars", event.key, event.modifiers) && qmlAgenda.calendars.length > 0) {
+                if (!event.isAutoRepeat) {
+                    calendar.calendarPickerIndex = 0;
+                    calendar.calendarPickerOpen = true;
+                }
                 event.accepted = true;
             } else if (event.key === calendar.runtime.shellKeyCode("calendar", "Escape")) {
                 calendar.navigateBack();
@@ -186,14 +188,17 @@ FocusScope {
             } else if (event.key === calendar.runtime.shellKeyCode("calendar", "U") || event.key === calendar.runtime.shellKeyCode("calendar", "D")) {
                 agendaView.scrollEvents(event.key === calendar.runtime.shellKeyCode("calendar", "U") ? -1 : 1);
                 event.accepted = true;
-            } else if (event.key === calendar.runtime.shellKeyCode("calendar", "R")) {
-                qmlAgenda.refresh();
+            } else if (calendar.runtime.shellMatchesHint("CalendarContent.refresh", event.key, event.modifiers)) {
+                if (!event.isAutoRepeat)
+                    qmlAgenda.refresh();
                 event.accepted = true;
-            } else if (event.key === calendar.runtime.shellKeyCode("calendar", "T")) {
-                calendar.today();
+            } else if (calendar.runtime.shellMatchesHint("CalendarContent.today", event.key, event.modifiers)) {
+                if (!event.isAutoRepeat)
+                    calendar.today();
                 event.accepted = true;
-            } else if (event.key === calendar.runtime.shellKeyCode("calendar", "F") || event.key === calendar.runtime.shellKeyCode("calendar", "Return") || event.key === calendar.runtime.shellKeyCode("calendar", "Enter")) {
-                calendar.forecastRequested();
+            } else if (calendar.runtime.shellMatchesHint("WeatherSummary.forecast", event.key, event.modifiers) || event.key === calendar.runtime.shellKeyCode("calendar", "Return") || event.key === calendar.runtime.shellKeyCode("calendar", "Enter")) {
+                if (!event.isAutoRepeat)
+                    calendar.forecastRequested();
                 event.accepted = true;
             }
         }

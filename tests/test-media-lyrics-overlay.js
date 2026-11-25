@@ -42,7 +42,10 @@ test("native curve outline and fill share the same sampled theme colours as bars
     ),
     "utf8",
   );
-  assert.match(renderer, /theme.spectrumColor\(\(i \+ 0.5\) \/ count\)/);
+  assert.match(
+    renderer,
+    /theme.spectrumColor\(curve \? i \/ Math.max\(1, count - 1\) : \(i \+ 0.5\) \/ count\)/,
+  );
   assert.match(native, /void renderCurve\(QSGGeometryNode \*node, int count\)/);
   assert.match(native, /strip\(fillA, fillB, h, h, 0.12f, 0.12f\)/);
   assert.match(

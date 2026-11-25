@@ -8,15 +8,16 @@ Item {
     required property string surfaceKey
     required property Motion motion
     property int baseDensity: 48
-    readonly property real baseOpacity: 0.8
+    property real baseOpacity: surfaceKey === "wallpaperVisualizerMode" ? 0.8 : 1
     // Wallpaper has independent demand even when its layer is hidden in silence.
     property bool drivesDemand: true
-    readonly property string mode: spectrum.appearance.spectrumMode(surfaceKey)
+    property string previewMode: ""
+    readonly property string mode: previewMode || spectrum.appearance.spectrumPresentation(surfaceKey)
     readonly property bool engaged: enabled && visible && width > 0 && height > 0 && opacity > 0
     readonly property int density: Math.max(2, Math.min(Math.round(baseDensity * spectrum.appearance.spectrumDensity), Math.floor(width / 3), Math.max(2, spectrum.targetBands.length)))
     property bool demandRegistered: false
     function syncDemand(): void {
-        const needed = engaged && drivesDemand;
+        const needed = engaged && drivesDemand && mode !== "off";
         if (!spectrum || needed === demandRegistered)
             return;
         spectrum.visualizerSubscribers += needed ? 1 : -1;
@@ -24,6 +25,7 @@ Item {
     }
     onEngagedChanged: syncDemand()
     onDrivesDemandChanged: syncDemand()
+    onModeChanged: syncDemand()
     Component.onCompleted: syncDemand()
     Component.onDestruction: {
         if (demandRegistered && spectrum)

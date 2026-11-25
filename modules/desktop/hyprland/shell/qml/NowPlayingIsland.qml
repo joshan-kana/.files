@@ -188,7 +188,7 @@ Item {
         Item {
             id: miniSpectrum
 
-            width: island.width >= 410 ? 148 : island.width >= 320 ? 75 : 0
+            width: !island.spectrum.appearance.spectrumEnabled("islandVisualizerMode") ? 0 : island.width >= 410 ? 148 : island.width >= 320 ? 75 : 0
             height: 30
             anchors {
                 right: playbackZone.left

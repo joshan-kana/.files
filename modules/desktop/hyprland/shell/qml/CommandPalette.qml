@@ -686,7 +686,7 @@ Item {
                         commandId: volumeRequest ? "audio.setVolume" : "brightness.set",
                         argument: direct[2],
                         name: "Set " + direct[1] + " to " + direct[2] + "%",
-                        genericName: "Set using the existing desktop service",
+                        genericName: "Set value",
                         icon: "preferences-system",
                         key: palette.runtime.shellHint("CommandPalette.confirm") + " SET"
                     } : {

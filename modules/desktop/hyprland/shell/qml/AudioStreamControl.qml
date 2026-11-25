@@ -149,22 +149,37 @@ Item {
                 monitoring: channel.monitoring && channel.available
             }
 
-            ShellSlider {
-                id: levelSlider
+            Row {
                 width: parent.width
-                height: implicitHeight
-                theme: channel.theme
-                motion: channel.motion
-                enabled: channel.available
-                value: channel.available ? channel.stream.audio.volume : 0
-                accentColor: channel.theme.audioLevelColor(channel.muted)
-                density: channel.compact ? ShellSlider.Compact : ShellSlider.Standard
-                Accessible.role: Accessible.Slider
-                Accessible.name: channel.displayName + " volume, " + channel.percent + " percent"
-                onInteractionStarted: channel.selectedRequested()
-                onValueRequested: value => {
-                    channel.selectedRequested();
-                    channel.system.setStreamVolume(channel.stream, value);
+                spacing: channel.theme.spacing2
+                ShellSlider {
+                    id: levelSlider
+                    width: Math.max(1, parent.width - levelHint.width - (levelHint.width > 0 ? parent.spacing : 0))
+                    height: implicitHeight
+                    theme: channel.theme
+                    motion: channel.motion
+                    enabled: channel.available
+                    value: channel.available ? channel.stream.audio.volume : 0
+                    accentColor: channel.theme.audioLevelColor(channel.muted)
+                    density: channel.compact ? ShellSlider.Compact : ShellSlider.Standard
+                    Accessible.role: Accessible.Slider
+                    Accessible.name: channel.displayName + " volume, " + channel.percent + " percent"
+                    onInteractionStarted: channel.selectedRequested()
+                    onValueRequested: value => {
+                        channel.selectedRequested();
+                        channel.system.setStreamVolume(channel.stream, value);
+                    }
+                }
+                KeyHint {
+                    id: levelHint
+                    anchors.verticalCenter: parent.verticalCenter
+                    runtime: channel.runtime
+                    theme: channel.theme
+                    compact: true
+                    visible: !channel.compact
+                    width: visible ? implicitWidth : 0
+                    opacity: channel.selected ? 1 : 0
+                    shortcut: channel.runtime.shellHint("AudioMixerContent.level")
                 }
             }
         }

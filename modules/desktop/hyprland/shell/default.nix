@@ -777,6 +777,11 @@ in
           default = 1.0;
           description = "Playback speed multiplier for animated VHS distortion.";
         };
+        mediaVisualizerEnabled = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Show the spectrum in Now Playing.";
+        };
         mediaVisualizerMode = lib.mkOption {
           type = lib.types.enum constraints.appearance.mediaVisualizerMode.values;
           default = "bars";
@@ -787,10 +792,20 @@ in
           default = "bars";
           description = "Spectrum presentation for the wallpaper: bars or curve.";
         };
+        islandVisualizerEnabled = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Show the spectrum in media island.";
+        };
         islandVisualizerMode = lib.mkOption {
           type = lib.types.enum constraints.appearance.mediaVisualizerMode.values;
           default = "bars";
           description = "Spectrum presentation for the ambient media island: bars or curve.";
+        };
+        controlsVisualizerEnabled = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Show the spectrum in Controls media.";
         };
         controlsVisualizerMode = lib.mkOption {
           type = lib.types.enum constraints.appearance.mediaVisualizerMode.values;

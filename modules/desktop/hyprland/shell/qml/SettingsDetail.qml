@@ -80,7 +80,7 @@ Item {
     implicitWidth: kind === "displays" ? theme.controlsDetailWidth : reactiveTuning || spectrumTuning || kind === "alerts" || kind === "nightLight" || kind === "power" ? theme.richDetailWidth : theme.compactDetailWidth
     implicitHeight: content.implicitHeight
 
-    readonly property bool hasMaster: ["windows", "glass", "nightLight", "alerts", "stay", "spectrum", "reactive", "bar", "frame", "motion"].includes(kind)
+    readonly property bool hasMaster: ["windows", "glass", "nightLight", "alerts", "stay", "reactive", "bar", "frame", "motion"].includes(kind)
     readonly property bool hasBlur: ["windows", "glass"].includes(kind)
     readonly property bool reactiveTuning: kind === "reactive"
     readonly property bool spectrumTuning: kind === "spectrum"
@@ -107,7 +107,7 @@ Item {
             alerts: "Delivery, quiet hours and notification history",
             stay: "Idle inhibition and timeout",
             power: "Choose a system power profile",
-            spectrum: "Shared response and independent visualizer styles",
+            spectrum: "",
             reactive: "Audio-driven tint and response",
             bar: "Desktop islands and bar layout",
             frame: "Connected desktop contour and thickness",
@@ -156,7 +156,7 @@ Item {
                 {
                     key: "barIslandHeight",
                     title: "Island height",
-                    description: "Shared bar density",
+                    description: "",
                     minimum: runtime.constraints.appearance.barIslandHeight.min,
                     maximum: runtime.constraints.appearance.barIslandHeight.max,
                     step: 2,
@@ -168,7 +168,7 @@ Item {
                 {
                     key: "frameThickness",
                     title: "Frame thickness",
-                    description: "Shared edge geometry",
+                    description: "",
                     minimum: runtime.constraints.appearance.frameThickness.min,
                     maximum: runtime.constraints.appearance.frameThickness.max,
                     step: 2,
@@ -180,7 +180,7 @@ Item {
                 {
                     key: "motionDuration",
                     title: "Transition duration",
-                    description: "Shell transitions only; key-down remains immediate",
+                    description: "",
                     minimum: runtime.constraints.motion.durationMultiplier.min * 100,
                     maximum: runtime.constraints.motion.durationMultiplier.max * 100,
                     step: 5,
@@ -201,7 +201,7 @@ Item {
                 {
                     key: "blurSize",
                     title: "Backdrop blur",
-                    description: "Compositor-wide shared blur radius",
+                    description: "",
                     minimum: runtime.constraints.appearance.blurSize.min,
                     maximum: runtime.constraints.appearance.blurSize.max,
                     step: 1,
@@ -222,7 +222,7 @@ Item {
                 {
                     key: "blurSize",
                     title: "Backdrop blur",
-                    description: "Same effective blur radius as Windows",
+                    description: "",
                     minimum: runtime.constraints.appearance.blurSize.min,
                     maximum: runtime.constraints.appearance.blurSize.max,
                     step: 1,
@@ -458,7 +458,6 @@ Item {
         }
         if (spectrumTuning) {
             appearance.resetSpectrumTuning();
-            appearance.clearOverride("wallpaperSpectrumEnabled");
             return;
         }
         if (kind === "windows") {
@@ -477,6 +476,7 @@ Item {
         }
     }
 
+    readonly property var spectrumModeActions: spectrumDetails.modeActions
     readonly property int choiceCount: spectrumTuning ? spectrumDetails.choiceCount : kind === "nightLight" ? nightModes.count + nightDays.count + nightPauses.count : reactiveTuning ? reactivePresets.count + reactiveEmphases.count : kind === "alerts" ? alertPauses.count + quietDays.count : kind === "power" ? powerProfiles.count : kind === "stay" ? stayDurations.count : 0
 
     function activateNumber(number: int): bool {
@@ -548,11 +548,16 @@ Item {
             if (repeatedAction || choice >= 0)
                 return true;
         }
+        if (spectrumTuning) {
+            const mode = spectrumModeActions.findIndex(mode => runtime.shellMatchesHint(mode.action, key, modifiers));
+            if (mode >= 0) {
+                if (!autoRepeat)
+                    spectrumDetails.chooseMode(mode);
+                return true;
+            }
+        }
         if (runtime.shellMatchesHint("SettingsDetail.toggle", key, modifiers) && hasMaster) {
-            if (spectrumTuning)
-                spectrumDetails.toggleWallpaper();
-            else
-                masterAction.trigger();
+            masterAction.trigger();
             return true;
         }
         if (runtime.shellMatchesHint("SettingsDetail.blur", key, modifiers) && hasBlur) {
@@ -623,7 +628,7 @@ Item {
     function openView(): void {
         selectedIndex = 0;
         if (spectrumTuning)
-            spectrumDetails.previewKey = "wallpaperVisualizerMode";
+            spectrumDetails.previewIndex = 0;
         open = true;
         keyboardRequested();
     }
@@ -649,7 +654,7 @@ Item {
             actions: [
                 ShellAction {
                     id: masterAction
-                    visible: panel.hasMaster && !panel.spectrumTuning
+                    visible: panel.hasMaster
                     width: visible ? implicitWidth : 0
                     height: visible ? implicitHeight : 0
                     runtime: panel.runtime
@@ -658,7 +663,7 @@ Item {
                     compact: true
                     iconOnly: true
                     switchControl: true
-                    title: (panel.masterState ? "Disable " : "Enable ") + (panel.spectrumTuning ? "wallpaper spectrum" : panel.titleText)
+                    title: (panel.masterState ? "Disable " : "Enable ") + panel.titleText
                     shortcut: panel.runtime.shellHint("SettingsDetail.toggle")
                     active: panel.masterState
                     enabled: panel.masterAvailable
@@ -810,7 +815,8 @@ Item {
                         theme: panel.theme
                         spectrum: panel.spectrum
                         motion: panel.motion
-                        surfaceKey: panel.spectrumTuning ? spectrumDetails.previewKey : "mediaVisualizerMode"
+                        surfaceKey: panel.spectrumTuning ? spectrumDetails.previewKey : "wallpaperVisualizerMode"
+                        previewMode: panel.reactiveTuning ? "curve" : ""
                     }
                     Row {
                         width: parent.width
@@ -865,7 +871,6 @@ Item {
                 theme: panel.theme
                 motion: panel.motion
                 appearance: panel.appearance
-                onToggleWallpaperRequested: panel.wallpaperSpectrumToggleRequested()
             }
             ShellText {
                 visible: panel.reactiveTuning

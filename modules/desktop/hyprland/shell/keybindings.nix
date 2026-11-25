@@ -104,7 +104,7 @@
     "SystemContent.windowsDetails" = "SHIFT+N";
     "SystemContent.glassDetails" = "SHIFT+O";
     "SystemContent.nightLightDetails" = "SHIFT+T";
-    "SystemContent.wallpaperSpectrumDetails" = "Y";
+    "SystemContent.spectrumDetails" = "Y";
     "SystemContent.musicReactiveDetails" = "U";
     "SystemContent.barDetails" = "SHIFT+J";
     "SystemContent.frameDetails" = "SHIFT+K";
@@ -149,6 +149,7 @@
           "CalendarContent.months" = "NAV_VERTICAL · PGUP/PGDN";
           "CalendarContent.selectCalendar" = "NAV_VERTICAL";
           "CalendarContent.today" = "T";
+          "CalendarContent.refresh" = "R";
           "CalendarContent.toggleCalendar" = "SPACE";
           "WeatherSummary.forecast" = "F";
         };
@@ -275,6 +276,9 @@
           "SessionPanel.shutdown" = "S";
           "SessionPanel.suspend" = "W";
           "SettingsDetail.toggle" = "T";
+          "SpectrumDetail.off" = "Q";
+          "SpectrumDetail.bars" = "W";
+          "SpectrumDetail.curve" = "E";
           "SettingsDetail.inhibitorsRefresh" = "F";
           "SettingsDetail.blur" = "B";
           "SettingsDetail.reset" = "R";
@@ -452,7 +456,7 @@
           "SystemContent.legend.slider_selection" = "NAV_VERTICAL · TAB/SHIFT+TAB";
           "SystemContent.legend.spectrum_reactive_windows_glass_bar_frame_motion" = {
             actions = [
-              "SystemContent.wallpaperSpectrum"
+              "SystemContent.spectrumDetails"
               "SystemContent.musicReactive"
               "SystemContent.windowTransparency"
               "SystemContent.shellGlass"
@@ -487,7 +491,6 @@
           "SystemContent.trayNavigate" = "[ / ]";
           "SystemContent.trayOpen" = "ENTER";
           "SystemContent.wallpaper" = "W";
-          "SystemContent.wallpaperSpectrum" = "SHIFT+Y";
           "VhsPanel.adjust" = "NAV_HORIZONTAL";
           "VhsPanel.toggle" = "T";
           "VhsPanel.reset" = "R";
@@ -567,18 +570,26 @@
           "ShellExpansionHost.helpScroll" = "NAV_VERTICAL";
           "ShellExpansionHost.helpUp" = "NAV_KEY_UP_PRIMARY";
           "ShellExpansionHost.legend.browse_forecast_days" = "NAV_ALL";
-          "ShellExpansionHost.legend.choose_visible_calendars" = "C";
+          "ShellExpansionHost.legend.choose_visible_calendars" = {
+            actions = [ "CalendarContent.calendars" ];
+          };
           "ShellExpansionHost.legend.close_home" = "ESC";
           "ShellExpansionHost.legend.close_weather" = "ESC";
           "ShellExpansionHost.legend.dismiss_selected_notification" = "DEL / BACKSPACE";
           "ShellExpansionHost.legend.esc" = "ESC";
           "ShellExpansionHost.legend.expand_group_or_open_selected_notification" = "E / ENTER";
-          "ShellExpansionHost.legend.go_to_today" = "T";
+          "ShellExpansionHost.legend.go_to_today" = {
+            actions = [ "CalendarContent.today" ];
+          };
           "ShellExpansionHost.legend.navigate_notifications" = "NAV_VERTICAL";
-          "ShellExpansionHost.legend.open_forecast" = "F / ENTER";
+          "ShellExpansionHost.legend.open_forecast" = {
+            actions = [ "WeatherSummary.forecast" ];
+          };
           "ShellExpansionHost.legend.previous_next_day" = "NAV_HORIZONTAL";
           "ShellExpansionHost.legend.previous_next_month" = "NAV_VERTICAL · PGUP/PGDN";
-          "ShellExpansionHost.legend.refresh_agenda" = "R";
+          "ShellExpansionHost.legend.refresh_agenda" = {
+            actions = [ "CalendarContent.refresh" ];
+          };
           "ShellExpansionHost.legend.refresh_forecast" = "R";
           "ShellExpansionHost.legend.return_to_calendar" = "C / BACKSPACE";
           "ShellExpansionHost.legend.select_a_notification_group" = "NAV_HORIZONTAL";

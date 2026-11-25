@@ -150,7 +150,7 @@ FocusScope {
     readonly property var helpBindings: settingsPanel.open ? [
         {
             key: root.runtime.shellHint("SettingsDetail.toggle"),
-            action: settingsPanel.panel?.kind === "spectrum" ? "Toggle wallpaper visualiser" : "Toggle this capability",
+            action: "Enable / disable",
             visible: !!settingsPanel.panel?.hasMaster
         },
         {
@@ -165,7 +165,7 @@ FocusScope {
         },
         {
             key: root.runtime.shellHint("SettingsDetail.reset"),
-            action: "Restore capability defaults",
+            action: "Restore defaults",
             visible: !!settingsPanel.panel?.hasReset
         },
         {
@@ -233,8 +233,11 @@ FocusScope {
                         action: root.powerProfile.label(profile)
                     })) : []), ...(settingsPanel.panel?.kind === "spectrum" ? root.appearance.spectrumSurfaces.map((surface, index) => ({
                         key: root.runtime.shellChoiceHint(index),
-                        action: "Change " + surface.title.toLowerCase() + " style"
-                    })) : [])].filter(entry => entry.visible !== false) : vhsPanel.open ? [
+                        action: "Preview " + surface.title.toLowerCase()
+                    })).concat(settingsPanel.panel.spectrumModeActions.map(mode => ({
+                        key: root.runtime.shellHint(mode.action),
+                        action: "Set visualiser to " + mode.title
+                    }))) : [])].filter(entry => entry.visible !== false) : vhsPanel.open ? [
         {
             key: root.runtime.shellHint("VhsPanel.select"),
             action: "Select VHS parameter"
@@ -341,7 +344,7 @@ FocusScope {
         },
         {
             key: root.runtime.shellHint("AudioHardwareSettings.apply"),
-            action: "Open field / apply native choice"
+            action: "Select / apply"
         },
         {
             key: root.runtime.shellHint("AudioHardwareSettings.refresh"),
@@ -1414,13 +1417,10 @@ FocusScope {
                             motion: root.motion
                             icon: DesktopIcons.glyphFor("spectrum")
                             title: "Spectrum"
-                            actionId: "SystemContent.wallpaperSpectrum"
-                            detailActionId: "SystemContent.wallpaperSpectrumDetails"
-                            detailName: "Spectrum settings"
+                            detailActionId: "SystemContent.spectrumDetails"
+                            detailName: "Spectrum"
                             onDetailsRequested: root.openSetting("spectrum")
-                            active: root.wallpaperSpectrumEnabled
                             activeColor: root.theme.roleColor("spectrum")
-                            onActivated: root.wallpaperSpectrumToggleRequested()
                         }
 
                         QuickSettingChip {

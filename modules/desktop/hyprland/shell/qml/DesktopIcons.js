@@ -16,7 +16,7 @@ const destinations = Object.freeze({
   glass: "󰊠",
   vhs: "󰨛",
   bar: "󰀻",
-  spectrum: "󰕰",
+  spectrum: "\u{F147D}",
   status: "󰋽",
 });
 
@@ -89,5 +89,5 @@ function powerProfileGlyph(profile) {
 }
 
 function spectrumGlyph(mode) {
-  return mode === "curve" ? "󰘮" : "󰕰";
+  return mode === "off" ? "󰝟" : mode === "curve" ? "\u{F012A}" : "\u{F0128}";
 }

@@ -20,8 +20,10 @@ Item {
     // change only when the display scale or bar count changes.
     readonly property var bandEdges: {
         const edges = [];
-        for (let i = 0; i <= count; i++)
-            edges.push(frequencyScale.toNormalized(i / Math.max(1, count)));
+        for (let i = 0; i <= count; i++) {
+            const position = curve ? Math.max(0, Math.min(1, (i - 0.5) / Math.max(1, count - 1))) : i / Math.max(1, count);
+            edges.push(frequencyScale.toNormalized(position));
+        }
         return edges;
     }
 
@@ -31,7 +33,7 @@ Item {
     readonly property var barColors: {
         const colors = [];
         for (let i = 0; i < count; i++)
-            colors.push(theme.spectrumColor((i + 0.5) / count));
+            colors.push(theme.spectrumColor(curve ? i / Math.max(1, count - 1) : (i + 0.5) / count));
         return colors;
     }
 

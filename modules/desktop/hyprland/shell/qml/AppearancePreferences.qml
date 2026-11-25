@@ -33,18 +33,22 @@ QtObject {
     readonly property var spectrumSurfaces: [
         {
             key: "wallpaperVisualizerMode",
+            enabledKey: "wallpaperSpectrumEnabled",
             title: "Wallpaper"
         },
         {
             key: "islandVisualizerMode",
+            enabledKey: "islandVisualizerEnabled",
             title: "Media island"
         },
         {
             key: "controlsVisualizerMode",
+            enabledKey: "controlsVisualizerEnabled",
             title: "Controls media"
         },
         {
             key: "mediaVisualizerMode",
+            enabledKey: "mediaVisualizerEnabled",
             title: "Now Playing"
         }
     ]
@@ -52,31 +56,31 @@ QtObject {
         {
             key: "spectrumSensitivity",
             title: "Sensitivity",
-            description: "Amplitude of every spectrum",
+            description: "Signal amplitude",
             step: 5
         },
         {
             key: "spectrumAttack",
             title: "Attack speed",
-            description: "Rise speed of every spectrum",
+            description: "Response to rising levels",
             step: 5
         },
         {
             key: "spectrumRelease",
             title: "Release speed",
-            description: "Fall speed of every spectrum",
+            description: "Response to falling levels",
             step: 5
         },
         {
             key: "spectrumDensity",
             title: "Density",
-            description: "Resolution relative to available space",
+            description: "Number of frequency samples",
             step: 5
         },
         {
             key: "spectrumOpacity",
-            title: "Opacity multiplier",
-            description: "Shared strength of every spectrum",
+            title: "Opacity",
+            description: "",
             step: 5
         }
     ].map(entry => Object.assign({}, entry, {
@@ -87,11 +91,42 @@ QtObject {
     function spectrumMode(key: string): string {
         return effective(key);
     }
+    function spectrumEnabled(key: string): bool {
+        const surface = spectrumSurfaces.find(entry => entry.key === key);
+        return !!surface && !!effective(surface.enabledKey);
+    }
+
+    function spectrumPresentation(key: string): string {
+        return spectrumEnabled(key) ? spectrumMode(key) : "off";
+    }
+
+    function setSpectrumPresentation(key: string, mode: string): void {
+        const surface = spectrumSurfaces.find(entry => entry.key === key);
+        if (!surface)
+            return;
+        if (mode === "off") {
+            storeOverride(surface.enabledKey, false);
+            return;
+        }
+        if (!runtime.constraints.appearance[key].values.includes(mode))
+            return;
+        if (Object.prototype.hasOwnProperty.call(sceneValues, surface.enabledKey)) {
+            storeOverride(key, mode);
+            storeOverride(surface.enabledKey, true);
+        } else {
+            saved.setMany({
+                [key]: mode,
+                [surface.enabledKey]: true
+            });
+        }
+    }
+
     function toggleSpectrumMode(key: string): void {
         if (!spectrumSurfaces.some(surface => surface.key === key))
             return;
         const values = runtime.constraints.appearance[key].values;
-        storeOverride(key, values[(values.indexOf(spectrumMode(key)) + 1) % values.length]);
+        const choices = ["off", ...values];
+        setSpectrumPresentation(key, choices[(choices.indexOf(spectrumPresentation(key)) + 1) % choices.length]);
     }
     readonly property var reactiveParameters: [
         {
@@ -133,7 +168,7 @@ QtObject {
         {
             key: "musicReactiveIntensity",
             title: "Tint intensity",
-            description: "Strength of the shared shell tint",
+            description: "Colour intensity",
             minimum: runtime.constraints.appearance.musicReactiveIntensity.min * 100,
             maximum: runtime.constraints.appearance.musicReactiveIntensity.max * 100,
             step: 5,
@@ -466,7 +501,7 @@ QtObject {
     }
 
     function resetSpectrumTuning(): void {
-        saved.resetMany(spectrumParameters.map(parameter => parameter.key).concat(spectrumSurfaces.map(surface => surface.key)));
+        saved.resetMany(spectrumParameters.map(parameter => parameter.key).concat(spectrumSurfaces.flatMap(surface => [surface.key, surface.enabledKey])));
     }
 
     function toggleFrame(): void {

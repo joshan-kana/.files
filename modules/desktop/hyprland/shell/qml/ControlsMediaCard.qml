@@ -36,7 +36,7 @@ Item {
     signal fullRequested
 
     readonly property real heroSize: 64
-    readonly property real visualizerWidth: width >= 520 ? Math.min(180, width * 0.27) : 0
+    readonly property real visualizerWidth: spectrum.appearance.spectrumEnabled("controlsVisualizerMode") && width >= 520 ? Math.min(180, width * 0.27) : 0
     // Use theme geometry, not the child Column's implicitHeight: the hub
     // measures our own implicitHeight to choose the expansion size.
     readonly property real contentTopInset: Math.max(theme.spacing3, theme.spacing2 * 2 + theme.keycapHeight)

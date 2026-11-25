@@ -366,7 +366,7 @@ test("compact detail open actions follow remapped keys in labels and dispatch", 
 test("reactive details have independent plain-letter assignments", () => {
   for (const [name, key] of [
     ["musicReactiveDetails", "U"],
-    ["wallpaperSpectrumDetails", "Y"],
+    ["spectrumDetails", "Y"],
   ]) {
     const id = "SystemContent." + name;
     assert.equal(f.hint(registry, id), key);
@@ -399,7 +399,7 @@ test("dashboard direct widget bindings are collision-free unmodified or shifted 
     "windowsDetails",
     "glassDetails",
     "nightLightDetails",
-    "wallpaperSpectrumDetails",
+    "spectrumDetails",
     "musicReactiveDetails",
     "barDetails",
     "frameDetails",
@@ -418,7 +418,6 @@ test("dashboard direct widget bindings are collision-free unmodified or shifted 
     "stayAwake",
     "themes",
     "wallpaper",
-    "wallpaperSpectrum",
     "windowTransparency",
   ]
     .map((name) => "SystemContent." + name)
@@ -623,7 +622,7 @@ test("single chord resolution handles shifted symbols and Qt Backtab without int
 test("action-based help follows remaps without becoming an executable shortcut", () => {
   const legend =
     "SystemContent.legend.spectrum_reactive_windows_glass_bar_frame_motion";
-  const action = "SystemContent.wallpaperSpectrum";
+  const action = "SystemContent.spectrumDetails";
   const changed = {
     ...registry,
     actions: { ...actionAssignments, [action]: "SHIFT+X" },

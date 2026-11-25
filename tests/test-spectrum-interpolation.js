@@ -334,15 +334,8 @@ test("spectrum mode changes remain local and legacy wallpaper tuning migrates on
   assert.deepEqual(migrate({ valid }, {}), {});
   const surfaces = ["wallpaper", "island", "controls", "media"].map((name) => ({
     key: name + "VisualizerMode",
+    enabledKey: name + "VisualizerEnabled",
   }));
-  const toggle = new Function(
-    "spectrumSurfaces",
-    "runtime",
-    "spectrumMode",
-    "storeOverride",
-    "key",
-    body("toggleSpectrumMode"),
-  );
   const runtime = {
     constraints: {
       appearance: Object.fromEntries(
@@ -350,27 +343,49 @@ test("spectrum mode changes remain local and legacy wallpaper tuning migrates on
       ),
     },
   };
-  for (let combination = 0; combination < 2 ** surfaces.length; combination++) {
-    const state = Object.fromEntries(
-      surfaces.map(({ key }, index) => [
-        key,
-        combination & (1 << index) ? "curve" : "bars",
-      ]),
-    );
-    for (const { key } of surfaces) {
-      const before = { ...state };
-      toggle(
-        surfaces,
-        runtime,
-        (key) => state[key],
-        (key, value) => (state[key] = value),
-        key,
-      );
-      assert.equal(state[key], before[key] === "bars" ? "curve" : "bars");
-      for (const other of surfaces.filter((surface) => surface.key !== key))
-        assert.equal(state[other.key], before[other.key]);
+  const setPresentation = new Function(
+    "spectrumSurfaces",
+    "runtime",
+    "sceneValues",
+    "saved",
+    "storeOverride",
+    "key",
+    "mode",
+    body("setSpectrumPresentation"),
+  );
+  const combinations = ["off", "bars", "curve"];
+  for (let n = 0; n < 81; n++) {
+    const state = {};
+    surfaces.forEach(({ key, enabledKey }, i) => {
+      const mode = combinations[Math.floor(n / 3 ** i) % 3];
+      state[key] = mode === "off" ? "curve" : mode;
+      state[enabledKey] = mode !== "off";
+    });
+    for (const { key, enabledKey } of surfaces) {
+      for (const mode of combinations) {
+        const before = { ...state };
+        const next = { ...state };
+        setPresentation(
+          surfaces,
+          runtime,
+          {},
+          { setMany: (values) => Object.assign(next, values) },
+          (k, v) => (next[k] = v),
+          key,
+          mode,
+        );
+        assert.equal(next[enabledKey], mode !== "off");
+        assert.equal(next[key], mode === "off" ? before[key] : mode);
+        for (const other of surfaces.filter((s) => s.key !== key)) {
+          assert.equal(next[other.key], before[other.key]);
+          assert.equal(next[other.enabledKey], before[other.enabledKey]);
+        }
+      }
     }
   }
+  const preview = qml("SpectrumDetail.qml");
+  assert.match(preview, /onActivated: detail.previewIndex = row.index/);
+  assert.match(preview, /model: detail\.modeActions/);
   const wrapper = qml("SpectrumVisualizer.qml");
   for (const [name, key] of [
     ["WallpaperSpectrum.qml", "wallpaperVisualizerMode"],
@@ -410,6 +425,7 @@ test("visible spectrum renderers register demand exactly once and release it", (
     spectrum: { visualizerSubscribers: 0 },
     engaged: true,
     drivesDemand: true,
+    mode: "bars",
     demandRegistered: false,
   };
   sync(state);
@@ -420,6 +436,9 @@ test("visible spectrum renderers register demand exactly once and release it", (
   sync(state);
   assert.equal(state.spectrum.visualizerSubscribers, 0);
   state.engaged = true;
+  state.mode = "off";
+  sync(state);
+  assert.equal(state.spectrum.visualizerSubscribers, 0);
   state.drivesDemand = false;
   sync(state);
   assert.equal(state.spectrum.visualizerSubscribers, 0);

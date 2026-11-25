@@ -23,8 +23,7 @@ function commands(options) {
     {
       id: "media.spectrumSettings",
       name: "Spectrum Settings",
-      description:
-        "Configure shared audio visualisation and independent presentation styles",
+      description: "Configure audio visualisers",
       icon: "audio-x-generic",
       glyph: options.glyphFor("spectrum"),
       keywords: [
