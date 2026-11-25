@@ -477,7 +477,7 @@
         };
         media = {
           "MediaContent.close" = "ESC";
-          "MediaContent.longer" = "+";
+          "MediaContent.longer" = "=";
           "MediaContent.lyrics" = "Y";
           "MediaContent.player" = "P";
           "MediaContent.raise" = "E";
