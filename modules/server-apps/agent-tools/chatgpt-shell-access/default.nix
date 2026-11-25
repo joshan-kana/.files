@@ -11,9 +11,7 @@ let
   tunnelSecret = "${server.secretsDir}/chatgpt-shell-tunnel.env";
   macSshKeySecret = "${server.secretsDir}/chatgpt-shell-mac";
   parallelsSshKeySecret = "${server.secretsDir}/chatgpt-shell-nixos-arm-parallels";
-  piSshKeySecret = "${server.secretsDir}/chatgpt-shell-nixos-pi";
   parallelsSudoSshKeySecret = "${server.secretsDir}/nixos-arm-parallels-sudo";
-  piSudoSshKeySecret = "${server.secretsDir}/nixos-pi-sudo";
   sudoSshKeySecret = "${server.secretsDir}/chatgpt-shell-sudo";
   githubSecret = "${server.secretsDir}/github-self-hosted-agents.env";
   knownHostsFile = "${config.users.users.${primary.name}.home}/.ssh/known_hosts";
@@ -21,7 +19,6 @@ let
 
   macHost = "mac.home";
   parallelsHost = "nixos-arm-parallels.home";
-  piHost = "nixos-pi.home";
 
   remoteTargets = {
     mac = {
@@ -33,12 +30,6 @@ let
     nixos-arm-parallels = {
       sshTarget = "${primary.name}@${parallelsHost}";
       credential = parallelsSshKeySecret;
-      shell = "/run/current-system/sw/bin/bash";
-      forwardAgent = true;
-    };
-    nixos-pi = {
-      sshTarget = "${primary.name}@${piHost}";
-      credential = piSshKeySecret;
       shell = "/run/current-system/sw/bin/bash";
       forwardAgent = true;
     };
@@ -89,7 +80,6 @@ in
       tunnelSecret
       sudoSshKeySecret
       parallelsSudoSshKeySecret
-      piSudoSshKeySecret
       githubSecret
       knownHostsFile
     ]
@@ -122,7 +112,6 @@ in
         ++ [
           "chatgpt-shell-sudo:${sudoSshKeySecret}"
           "nixos-arm-parallels-sudo:${parallelsSudoSshKeySecret}"
-          "nixos-pi-sudo:${piSudoSshKeySecret}"
           "chatgpt-shell-known-hosts:${knownHostsFile}"
         ];
       ExecStart = pkgs.writeShellScript "chatgpt-shell-access-start" ''
@@ -140,9 +129,6 @@ in
           ${pkgs.bash}/bin/bash -c \
             'SSH_AUTH_SOCK="$1" exec ${pkgs.openssh}/bin/ssh-add -' _ "$SSH_AUTH_SOCK"
         cat "$CREDENTIALS_DIRECTORY/nixos-arm-parallels-sudo" | \
-          ${pkgs.bash}/bin/bash -c \
-            'SSH_AUTH_SOCK="$1" exec ${pkgs.openssh}/bin/ssh-add -' _ "$CHATGPT_SHELL_REMOTE_AUTH_AGENT"
-        cat "$CREDENTIALS_DIRECTORY/nixos-pi-sudo" | \
           ${pkgs.bash}/bin/bash -c \
             'SSH_AUTH_SOCK="$1" exec ${pkgs.openssh}/bin/ssh-add -' _ "$CHATGPT_SHELL_REMOTE_AUTH_AGENT"
         exec ${pkgs.openai-tunnel-client}/bin/tunnel-client run --log.level=info --log.format=struct-text
