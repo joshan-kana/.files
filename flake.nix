@@ -5,6 +5,11 @@
     # Nixpkgs: package collections and system modules.
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
+    nixos-hardware = {
+      url = "github:NixOS/nixos-hardware";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Declarative Sonarr, Radarr, and Prowlarr application configuration.
     # Use the upstream flake and its own dependency lock.
     configarr.url = "github:raydak-labs/configarr";
@@ -469,6 +474,7 @@
         nixos-pi = {
           system = "aarch64-linux";
           hostModule = ./hosts/nixos-pi;
+          extraModules = [ inputs.nixos-hardware.nixosModules.raspberry-pi-4 ];
         };
 
         mac = {
@@ -480,7 +486,7 @@
       nixosPiImage = mkHost "nixos-pi" (
         hostSpecs.nixos-pi
         // {
-          extraModules = [ ./hosts/nixos-pi/image.nix ];
+          extraModules = hostSpecs.nixos-pi.extraModules ++ [ ./hosts/nixos-pi/image.nix ];
         }
       );
 
@@ -788,6 +794,7 @@
             assert import ./tests/nixos-pi-media.nix {
               configuration = self.nixosConfigurations.nixos-pi;
               imageConfiguration = nixosPiImage;
+              configurations = self.nixosConfigurations // self.darwinConfigurations;
             };
             pkgs.emptyFile;
           option-host-discovery =

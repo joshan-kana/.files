@@ -42,20 +42,12 @@
       ln -s ../run files/var/run
     '';
 
-    populateFirmwareCommands = lib.mkAfter ''
-      mkdir -p firmware/overlays
-      cp ${pkgs.raspberrypifw}/share/raspberrypi/boot/overlays/vc4-kms-v3d.dtbo firmware/overlays/
-      chmod u+w firmware/config.txt
-      cat >> firmware/config.txt <<'EOF_CONFIG'
-
-      [pi4]
-      dtoverlay=vc4-kms-v3d
-      hdmi_enable_4kp60=1
-      max_framebuffers=2
-      EOF_CONFIG
-
-      ${config.boot.loader.generic-extlinux-compatible.populateCmd} -c ${config.system.build.toplevel} -d ./firmware
-    '';
+    # The hardware profile owns firmware population; extlinux uses the same FAT partition.
+    populateFirmwareCommands = lib.mkForce (
+      lib.mkAfter ''
+        ${config.boot.loader.generic-extlinux-compatible.populateCmd} -c ${config.system.build.toplevel} -d ./firmware
+      ''
+    );
 
     postBuildCommands = ''
       sfdisk --activate "$img" 1

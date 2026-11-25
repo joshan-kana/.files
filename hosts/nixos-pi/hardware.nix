@@ -7,21 +7,19 @@
     kernelParams = [ "cma=256M" ];
     supportedFilesystems.btrfs = true;
 
-    # The Pi 4 USB controller sits behind Broadcom PCIe.
     initrd.availableKernelModules = [
-      "pcie-brcmstb"
       "uas"
-      "usbhid"
-      "usb_storage"
       "sd_mod"
     ];
+  };
 
-    loader = {
-      grub.enable = false;
-      generic-extlinux-compatible = {
-        enable = true;
-      };
+  hardware.raspberry-pi = {
+    firmware = {
+      enable = true;
+      path = "/boot";
+      uboot.enable = true;
     };
+    configtxt.settings.pi4.hdmi_enable_4kp60 = true;
   };
 
   fileSystems = {
