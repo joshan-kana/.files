@@ -143,6 +143,8 @@ QtObject {
     }
 
     function releaseSignal(): void {
+        if (decaying)
+            return;
         if (!smoothingSilence)
             bands = targetBands;
         smoothingSilence = false;
@@ -240,8 +242,6 @@ QtObject {
 
     onActiveChanged: {
         if (active) {
-            decaying = false;
-            smoothingSilence = false;
             connectionGate = true;
         } else {
             reconnectTimer.stop();

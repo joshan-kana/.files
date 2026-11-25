@@ -167,7 +167,7 @@ test("global and detail reset share the serialized Night Light reset operation",
   );
   assert.match(
     actions,
-    /waitingForNightLightReset = true;\s*nightLightState.resetToDeclared\(\)/,
+    /waitingForNightLightReset = true;\s*resetDeadline.restart\(\);\s*nightLightState.resetToDeclared\(\)/,
   );
   assert.match(actions, /function onResetFinished\(success, reason\)/);
   assert.match(controls, /shellActions\.restoreDesktopDefaults\(\)/);
@@ -191,6 +191,8 @@ test("desktop reset completes independently of the Controls view and reports bac
     resetErrors: [],
     resetIndex: 0,
     waitingForNightLightReset: false,
+    resetTimedOut: false,
+    resetDeadline: { restart: () => {}, stop: () => {} },
     scenes: { stop: record("scene") },
     appearance: {
       resetToDeclared: record("appearance"),

@@ -107,8 +107,14 @@ test("compact and expanded audio handling retain the complete keyboard contract"
   assert.match(mixer, /if \(picker\) \{/);
   assert.match(mixer, /picker\.moveDeviceSelection\(1\)/);
   assert.match(mixer, /picker\.commitChooser\(\)/);
-  assert.match(mixer, /key === mixer\.runtime\.shellKeyCode\("mixer", "M"\)/);
-  assert.match(mixer, /key === mixer\.runtime\.shellKeyCode\("mixer", "P"\)/);
+  assert.match(
+    mixer,
+    /shellMatchesHint\(selectedTarget\?\.kind === "stream" \? "AudioStreamControl.mute" : "AudioDeviceControl.mute", key, modifiers\)/,
+  );
+  assert.match(
+    mixer,
+    /shellMatchesHint\("AudioDeviceControl.chooser", key, modifiers\)/,
+  );
   assert.match(
     mixer,
     /key === mixer\.runtime\.shellKeyCode\("mixer", "Tab"\) \|\| key === mixer\.runtime\.shellKeyCode\("mixer", "Backtab"\)/,

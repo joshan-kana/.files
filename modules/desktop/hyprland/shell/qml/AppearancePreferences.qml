@@ -501,7 +501,13 @@ QtObject {
     }
 
     function resetSpectrumTuning(): void {
-        saved.resetMany(spectrumParameters.map(parameter => parameter.key).concat(spectrumSurfaces.flatMap(surface => [surface.key, surface.enabledKey])));
+        const keys = spectrumParameters.map(parameter => parameter.key).concat(spectrumSurfaces.flatMap(surface => [surface.key, surface.enabledKey]));
+        const nextScene = Object.assign({}, sceneValues);
+        for (const key of keys)
+            if (Object.prototype.hasOwnProperty.call(nextScene, key))
+                nextScene[key] = runtime.appearanceDefaults[key];
+        sceneValues = nextScene;
+        saved.resetMany(keys.filter(key => !Object.prototype.hasOwnProperty.call(nextScene, key)));
     }
 
     function toggleFrame(): void {

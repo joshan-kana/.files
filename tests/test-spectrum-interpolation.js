@@ -264,7 +264,7 @@ test("spectrum tuning is persistent, resettable, and independent of reactive tin
   ]) {
     assert.ok(preferences.includes(`effective("${name}")`));
     assert.ok(preferences.includes(`key: "${name}"`));
-    assert.match(preferences, /saved\.resetMany\(spectrumParameters\.map/);
+    assert.match(preferences, /saved\.resetMany\(keys\.filter/);
     assert.match(detail, /return appearance\.spectrumParameters/);
     assert.ok(shell.includes(`qmlAppearance.${name}`));
     assert.ok(!reactive.includes(name));

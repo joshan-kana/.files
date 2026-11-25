@@ -389,11 +389,11 @@ FocusScope {
             }
             return true;
         }
-        if (!compact && runtime.shellModifier("mixer", "Shift", modifiers) && runtime.shellNavigates("mixer", "left", key, "primary")) {
+        if (!compact && runtime.shellMatchesHint("AudioMixerContent.balanceLeft", key, modifiers)) {
             adjustBalance(-0.1);
             return true;
         }
-        if (!compact && runtime.shellModifier("mixer", "Shift", modifiers) && runtime.shellNavigates("mixer", "right", key, "primary")) {
+        if (!compact && runtime.shellMatchesHint("AudioMixerContent.balanceRight", key, modifiers)) {
             adjustBalance(0.1);
             return true;
         }
@@ -445,13 +445,13 @@ FocusScope {
             adjustSelected(-system.volumeStep);
         } else if (mixer.runtime.shellNavigates("mixer", "right", key)) {
             adjustSelected(system.volumeStep);
-        } else if (key === mixer.runtime.shellKeyCode("mixer", "M") || (!compact && (key === mixer.runtime.shellKeyCode("mixer", "Return") || key === mixer.runtime.shellKeyCode("mixer", "Enter")))) {
+        } else if (mixer.runtime.shellMatchesHint(selectedTarget?.kind === "stream" ? "AudioStreamControl.mute" : "AudioDeviceControl.mute", key, modifiers) || (!compact && (key === mixer.runtime.shellKeyCode("mixer", "Return") || key === mixer.runtime.shellKeyCode("mixer", "Enter")))) {
             if (!autoRepeat)
                 toggleSelectedMute();
-        } else if (key === mixer.runtime.shellKeyCode("mixer", "P")) {
+        } else if (mixer.runtime.shellMatchesHint("AudioDeviceControl.chooser", key, modifiers)) {
             if (!autoRepeat)
                 triggerSelectedDeviceChooser();
-        } else if (key === mixer.runtime.shellKeyCode("mixer", "X")) {
+        } else if (mixer.runtime.shellMatchesHint("AudioDeviceControl.muteMicrophone", key, modifiers)) {
             if (!autoRepeat)
                 inputDevice.triggerMute();
         } else {

@@ -54,6 +54,23 @@ QtObject {
     property var resetErrors: []
     property int resetIndex: 0
     property bool waitingForNightLightReset: false
+    property bool resetTimedOut: false
+    property Timer resetDeadline: Timer {
+        interval: 15000
+        repeat: false
+        onTriggered: {
+            if (!actions.resetRunning)
+                return;
+            if (actions.waitingForNightLightReset) {
+                actions.waitingForNightLightReset = false;
+                actions.resetErrors = [...actions.resetErrors, "Night Light timed out"];
+                actions.resetNextPreference();
+            } else {
+                actions.resetTimedOut = true;
+                actions.preferenceReset.signal(9);
+            }
+        }
+    }
 
     function resetStepSucceeded(step: var, code: int, output: string): bool {
         if (code !== 0)
@@ -76,7 +93,8 @@ QtObject {
             id: resetOutput
         }
         onExited: (code, status) => {
-            if (!actions.resetStepSucceeded(actions.resetSteps[actions.resetIndex], code, resetOutput.text))
+            actions.resetDeadline.stop();
+            if (actions.resetTimedOut || !actions.resetStepSucceeded(actions.resetSteps[actions.resetIndex], code, resetOutput.text))
                 actions.resetErrors = [...actions.resetErrors, actions.resetSteps[actions.resetIndex].label];
             actions.resetIndex++;
             actions.resetNextPreference();
@@ -88,6 +106,7 @@ QtObject {
         function onResetFinished(success, reason) {
             if (!actions.waitingForNightLightReset)
                 return;
+            actions.resetDeadline.stop();
             actions.waitingForNightLightReset = false;
             if (!success)
                 actions.resetErrors = [...actions.resetErrors, "Night Light"];
@@ -99,7 +118,7 @@ QtObject {
         if (resetRunning)
             return;
         resetRunning = true;
-        resetStatus = "Restoring declared desktop preferences…";
+        resetStatus = "Restoring defaults…";
         scenes.stop();
         appearance.resetToDeclared(false);
         motion.resetToDeclared(false);
@@ -139,6 +158,7 @@ QtObject {
         resetIndex = 0;
         if (runtime.nightLightControl) {
             waitingForNightLightReset = true;
+            resetDeadline.restart();
             nightLightState.resetToDeclared();
         } else {
             resetNextPreference();
@@ -148,9 +168,11 @@ QtObject {
     function resetNextPreference(): void {
         if (resetIndex >= resetSteps.length) {
             resetRunning = false;
-            resetStatus = resetErrors.length > 0 ? "Could not restore: " + resetErrors.join(", ") + ". Other defaults restored." : "Declared desktop defaults restored";
+            resetStatus = resetErrors.length > 0 ? "Could not restore: " + resetErrors.join(", ") + "." : "Defaults restored";
             return;
         }
+        resetTimedOut = false;
+        resetDeadline.restart();
         preferenceReset.exec(resetSteps[resetIndex].command);
     }
 

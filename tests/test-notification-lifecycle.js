@@ -117,7 +117,7 @@ test("history shortcut is handled before ordinary H navigation", () => {
     "utf8",
   );
   const history = content.indexOf(
-    'event.key === center.runtime.shellKeyCode("activity", "H") && (center.runtime.shellModifier("activity", "Shift", event.modifiers))',
+    'center.runtime.shellMatchesHint("NotificationContent.history", event.key, event.modifiers)',
   );
   const nav = content.indexOf(
     'center.runtime.shellNavigates("activity", "left", event.key)',

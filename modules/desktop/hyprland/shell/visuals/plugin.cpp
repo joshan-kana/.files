@@ -78,6 +78,8 @@ public:
     if (targetBands_ == v)
       return;
     targetBands_ = v;
+    if (v.isEmpty())
+      resetPending_ = true;
     animating_.store(true, std::memory_order_relaxed);
     emit targetBandsChanged();
     update();
@@ -163,7 +165,8 @@ protected:
       delete old;
       return nullptr;
     }
-    if (int(current_.size()) != binCount) {
+    if (resetPending_ || int(current_.size()) != binCount) {
+      resetPending_ = false;
       current_.resize(binCount);
       for (int i = 0; i < binCount; ++i)
         current_[i] = targetBands_[i].toFloat();
@@ -367,7 +370,7 @@ private:
   QVariantList targetBands_, edges_, barColors_;
   std::vector<float> current_, levels_;
   double lowHz_ = 20.0, highHz_ = 20000.0;
-  bool decaying_ = false, curve_ = false;
+  bool decaying_ = false, curve_ = false, resetPending_ = false;
   double sensitivity_ = 1.0, attackMultiplier_ = 1.0, releaseMultiplier_ = 1.0;
   QElapsedTimer frameClock_;
   QMetaObject::Connection frameConnection_;

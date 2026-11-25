@@ -10,6 +10,14 @@ const appearanceKeys = [
   "blurEnabled",
 ];
 
+const spectrumKeys = [
+  "islandVisualizerEnabled",
+  "controlsVisualizerEnabled",
+  "mediaVisualizerEnabled",
+];
+const requiredAppearanceKeys = [...appearanceKeys];
+appearanceKeys.push(...spectrumKeys);
+
 function validProfile(profile) {
   return !!(
     profile &&
@@ -18,8 +26,13 @@ function validProfile(profile) {
     profile.name.length > 0 &&
     profile.name.length <= 40 &&
     profile.appearance &&
-    appearanceKeys.every(
+    requiredAppearanceKeys.every(
       (key) => typeof profile.appearance[key] === "boolean",
+    ) &&
+    spectrumKeys.every(
+      (key) =>
+        !(key in profile.appearance) ||
+        typeof profile.appearance[key] === "boolean",
     ) &&
     typeof profile.animations === "boolean" &&
     typeof profile.silent === "boolean" &&
@@ -41,6 +54,8 @@ function cleanProfiles(items) {
 
 function appearanceValues(profile) {
   const values = {};
-  for (const key of appearanceKeys) values[key] = profile.appearance[key];
+  for (const key of appearanceKeys)
+    if (typeof profile.appearance[key] === "boolean")
+      values[key] = profile.appearance[key];
   return values;
 }

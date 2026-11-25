@@ -150,7 +150,7 @@ Column {
             compact: true
             enabled: !panel.naming
             title: modelData.name
-            subtitle: [modelData.appearance.wallpaperSpectrumEnabled ? "Spectrum" : "", modelData.appearance.musicReactiveEnabled ? "Reactive" : "", modelData.appearance.shellGlassEnabled ? "Glass" : "", modelData.appearance.vhsEnabled ? "VHS" : "", modelData.animations ? "Motion" : "Reduced motion", modelData.silent ? "Silent" : "", modelData.presentation ? "Presentation" : ""].filter(Boolean).join(" · ")
+            subtitle: [modelData.appearance.wallpaperSpectrumEnabled ? "Wallpaper spectrum" : "", modelData.appearance.musicReactiveEnabled ? "Reactive" : "", modelData.appearance.shellGlassEnabled ? "Glass" : "", modelData.appearance.vhsEnabled ? "VHS" : "", modelData.animations ? "Motion" : "Reduced motion", modelData.silent ? "Silent" : "", modelData.presentation ? "Presentation" : ""].filter(Boolean).join(" · ")
             icon: active ? DesktopIcons.actionGlyph("confirm") : DesktopIcons.glyphFor("scenes")
             active: panel.scenes.activeName === modelData.name
             highlighted: index === panel.selectedIndex

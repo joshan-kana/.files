@@ -559,7 +559,8 @@ FocusScope {
                             onActivated: {
                                 center.selectedIndex = groupItem.modelData.groupIndex;
                                 center.selectedMemberIndex = 0;
-                                center.toggleExpanded();
+                                if (!event.isAutoRepeat)
+                                    center.toggleExpanded();
                             }
                         }
                     }
@@ -613,15 +614,17 @@ FocusScope {
                                 center.selectedIndex = groupItem.modelData.groupIndex;
                                 center.selectedMemberIndex = member.index;
                                 if (sameSelection)
-                                    center.toggleExpanded();
-                                else
-                                    center.expandedGroupKey = groupItem.group.key;
+                                    if (!event.isAutoRepeat)
+                                        center.toggleExpanded();
+                                    else
+                                        center.expandedGroupKey = groupItem.group.key;
                                 center.rememberSelection();
                                 center.focusKeyboard();
                             }
                             onDefaultRequested: {
                                 if (!center.notificationState.invokeDefault(member.modelData))
-                                    center.toggleExpanded();
+                                    if (!event.isAutoRepeat)
+                                        center.toggleExpanded();
                             }
                             onActionRequested: action => center.notificationState.invokeAction(member.modelData, action)
                             onReplyRequested: message => {
@@ -636,7 +639,8 @@ FocusScope {
                                 center.selectedIndex = groupItem.modelData.groupIndex;
                                 center.selectedMemberIndex = member.index;
                                 center.rememberSelection();
-                                center.focusReply();
+                                if (!event.isAutoRepeat)
+                                    center.focusReply();
                             }
                             onReplyFocusChanged: focused => {
                                 if (focused) {
@@ -711,51 +715,55 @@ FocusScope {
                 } else if (center.runtime.shellNavigates("activity", "down", event.key)) {
                     center.navigate(1);
                     event.accepted = true;
-                } else if (event.key === center.runtime.shellKeyCode("activity", "H") && (center.runtime.shellModifier("activity", "Shift", event.modifiers))) {
+                } else if (center.runtime.shellMatchesHint("NotificationContent.history", event.key, event.modifiers)) {
                     if (!event.isAutoRepeat)
                         historyAction.trigger();
                     event.accepted = true;
                 } else if (center.runtime.shellNavigates("activity", "left", event.key) || center.runtime.shellNavigates("activity", "right", event.key)) {
                     center.selectGroup((center.runtime.shellNavigates("activity", "left", event.key)) ? -1 : 1);
                     event.accepted = true;
-                } else if (event.key === center.runtime.shellKeyCode("activity", "P")) {
+                } else if (center.runtime.shellMatchesHint("NotificationContent.presentation", event.key, event.modifiers)) {
                     if (!event.isAutoRepeat)
                         presentationAction.trigger();
                     event.accepted = true;
-                } else if (event.key === center.runtime.shellKeyCode("activity", "M") && (center.runtime.shellModifier("activity", "Shift", event.modifiers))) {
+                } else if (center.runtime.shellMatchesHint("NotificationContent.markAllRead", event.key, event.modifiers)) {
                     if (!event.isAutoRepeat)
                         markAllReadAction.trigger();
                     event.accepted = true;
-                } else if (event.key === center.runtime.shellKeyCode("activity", "N") && (center.runtime.shellModifier("activity", "Shift", event.modifiers))) {
+                } else if (center.runtime.shellMatchesHint("NotificationContent.markAllUnread", event.key, event.modifiers)) {
                     if (!event.isAutoRepeat)
                         markAllUnreadAction.trigger();
                     event.accepted = true;
-                } else if (event.key === center.runtime.shellKeyCode("activity", "M")) {
-                    center.notificationState.toggleRead(center.selectedNotification());
+                } else if (center.runtime.shellMatchesHint("NotificationCard.mark", event.key, event.modifiers)) {
+                    if (!event.isAutoRepeat)
+                        center.notificationState.toggleRead(center.selectedNotification());
                     event.accepted = true;
                 } else if (event.key === center.runtime.shellKeyCode("activity", "U") || event.key === center.runtime.shellKeyCode("activity", "PageUp") || event.key === center.runtime.shellKeyCode("activity", "D") || event.key === center.runtime.shellKeyCode("activity", "PageDown")) {
                     const rowHeight = list.currentItem ? list.currentItem.height + list.spacing : 92;
                     const steps = Math.max(1, Math.floor(list.height / Math.max(1, rowHeight) / 2));
                     center.selectGroup(((event.key === center.runtime.shellKeyCode("activity", "D") || event.key === center.runtime.shellKeyCode("activity", "PageDown")) ? 1 : -1) * steps);
                     event.accepted = true;
-                } else if (event.key === center.runtime.shellKeyCode("activity", "E")) {
-                    center.toggleExpanded();
-                    event.accepted = true;
-                } else if (event.key === center.runtime.shellKeyCode("activity", "R")) {
-                    center.focusReply();
-                    event.accepted = true;
-                } else if (event.key === center.runtime.shellKeyCode("activity", "Return") || event.key === center.runtime.shellKeyCode("activity", "Enter")) {
-                    if (!center.notificationState.invokeDefault(center.selectedNotification()))
+                } else if (center.runtime.shellMatchesHint("NotificationContent.expand", event.key, event.modifiers)) {
+                    if (!event.isAutoRepeat)
                         center.toggleExpanded();
                     event.accepted = true;
-                } else if (event.key === center.runtime.shellKeyCode("activity", "Delete") || event.key === center.runtime.shellKeyCode("activity", "Backspace")) {
-                    center.dismissSelected();
+                } else if (center.runtime.shellMatchesHint("NotificationCard.reply", event.key, event.modifiers)) {
+                    if (!event.isAutoRepeat)
+                        center.focusReply();
                     event.accepted = true;
-                } else if (event.key === center.runtime.shellKeyCode("activity", "S")) {
+                } else if (event.key === center.runtime.shellKeyCode("activity", "Return") || event.key === center.runtime.shellKeyCode("activity", "Enter")) {
+                    if (!event.isAutoRepeat && !center.notificationState.invokeDefault(center.selectedNotification()))
+                        center.toggleExpanded();
+                    event.accepted = true;
+                } else if (center.runtime.shellMatchesHint("NotificationCard.dismiss", event.key, event.modifiers) || event.key === center.runtime.shellKeyCode("activity", "Backspace")) {
+                    if (!event.isAutoRepeat)
+                        center.dismissSelected();
+                    event.accepted = true;
+                } else if (center.runtime.shellMatchesHint("NotificationContent.silent", event.key, event.modifiers)) {
                     if (!event.isAutoRepeat)
                         silentAction.trigger();
                     event.accepted = true;
-                } else if (event.key === center.runtime.shellKeyCode("activity", "C")) {
+                } else if (center.runtime.shellMatchesHint("NotificationContent.clearAll", event.key, event.modifiers)) {
                     if (!event.isAutoRepeat)
                         clearAllAction.trigger();
                     event.accepted = true;

@@ -67,3 +67,19 @@ test("scene application does not persist ordinary preferences; stopping clears o
     /sceneDelivery === null \? settings.value\("silent"\)/,
   );
 });
+
+test("old scenes do not override visualisers they never captured", () => {
+  const old = profile();
+  for (const name of [
+    "islandVisualizerEnabled",
+    "controlsVisualizerEnabled",
+    "mediaVisualizerEnabled",
+  ])
+    delete old.appearance[name];
+  assert.ok(f.validProfile(old));
+  assert.equal("mediaVisualizerEnabled" in f.appearanceValues(old), false);
+  const next = profile();
+  assert.equal(f.appearanceValues(next).mediaVisualizerEnabled, false);
+  next.appearance.mediaVisualizerEnabled = "off";
+  assert.equal(f.validProfile(next), false);
+});

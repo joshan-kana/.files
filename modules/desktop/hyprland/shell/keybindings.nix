@@ -575,9 +575,13 @@
           };
           "ShellExpansionHost.legend.close_home" = "ESC";
           "ShellExpansionHost.legend.close_weather" = "ESC";
-          "ShellExpansionHost.legend.dismiss_selected_notification" = "DEL / BACKSPACE";
+          "ShellExpansionHost.legend.dismiss_selected_notification" = {
+            actions = [ "NotificationCard.dismiss" ];
+          };
           "ShellExpansionHost.legend.esc" = "ESC";
-          "ShellExpansionHost.legend.expand_group_or_open_selected_notification" = "E / ENTER";
+          "ShellExpansionHost.legend.expand_group_or_open_selected_notification" = {
+            actions = [ "NotificationContent.expand" ];
+          };
           "ShellExpansionHost.legend.go_to_today" = {
             actions = [ "CalendarContent.today" ];
           };
@@ -590,11 +594,23 @@
           "ShellExpansionHost.legend.refresh_agenda" = {
             actions = [ "CalendarContent.refresh" ];
           };
-          "ShellExpansionHost.legend.refresh_forecast" = "R";
+          "ShellExpansionHost.legend.refresh_forecast" = {
+            actions = [ "WeatherContent.refresh" ];
+          };
           "ShellExpansionHost.legend.return_to_calendar" = "C / BACKSPACE";
           "ShellExpansionHost.legend.select_a_notification_group" = "NAV_HORIZONTAL";
-          "ShellExpansionHost.legend.toggle_read_mark_all_read" = "M / SHIFT+M";
-          "ShellExpansionHost.legend.toggle_silence_clear_history" = "S / C";
+          "ShellExpansionHost.legend.toggle_read_mark_all_read" = {
+            actions = [
+              "NotificationCard.mark"
+              "NotificationContent.markAllRead"
+            ];
+          };
+          "ShellExpansionHost.legend.toggle_silence_clear_history" = {
+            actions = [
+              "NotificationContent.silent"
+              "NotificationContent.clearAll"
+            ];
+          };
           "ShellExpansionHost.page" = "PGUP/PGDN";
           "ShellExpansionHost.pageDown" = "PgDown";
           "ShellExpansionHost.pageUp" = "PgUp";

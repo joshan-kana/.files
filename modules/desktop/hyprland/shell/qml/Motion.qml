@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import Quickshell.Hyprland
 
 QtObject {
     id: root
@@ -144,6 +145,20 @@ QtObject {
     readonly property int spatialType: Easing.BezierSpline
     readonly property int morphType: Easing.BezierSpline
     readonly property int effectsType: Easing.BezierSpline
+
+    property Connections compositorReload: Connections {
+        target: Hyprland
+        function onRawEvent(event): void {
+            if (event.name === "configreloaded")
+                root.syncCompositorMotion();
+        }
+    }
+    property Connections runtimeChanges: Connections {
+        target: root.runtime
+        function onHyprctlChanged(): void {
+            root.syncCompositorMotion();
+        }
+    }
 
     function compositorMotionCommand(): var {
         return [runtime.hyprctl, "eval", "hl.config({ animations = { enabled = " + (enabled ? "true" : "false") + " } })"];
