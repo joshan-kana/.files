@@ -10,6 +10,7 @@ Column {
     property string detail: ""
     property bool emphasized: false
     property var hints: []
+    property alias actions: headerActions.data
     default property alias contentData: body.data
 
     width: parent ? parent.width : implicitWidth
@@ -17,7 +18,7 @@ Column {
 
     Row {
         width: parent.width
-        height: Math.max(titleText.implicitHeight, detailText.implicitHeight, headerHints.implicitHeight)
+        height: Math.max(titleText.implicitHeight, detailText.implicitHeight, headerHints.implicitHeight, headerActions.implicitHeight)
         spacing: root.theme.spacing2
 
         ShellText {
@@ -33,14 +34,14 @@ Column {
         }
 
         Item {
-            width: Math.max(0, parent.width - titleText.implicitWidth - (headerHints.visible ? headerHints.width : detailText.width) - parent.spacing * 2)
+            width: Math.max(0, parent.width - titleText.implicitWidth - (headerActions.implicitWidth > 0 ? headerActions.implicitWidth : headerHints.visible ? headerHints.width : detailText.implicitWidth) - parent.spacing * 2)
             height: 1
         }
 
         ShellText {
             id: detailText
             anchors.verticalCenter: parent.verticalCenter
-            visible: root.detail.length > 0 && root.hints.length === 0
+            visible: root.detail.length > 0 && root.hints.length === 0 && headerActions.implicitWidth === 0
             runtime: root.runtime
             theme: root.theme
             text: root.detail
@@ -51,12 +52,18 @@ Column {
         KeyHintStrip {
             id: headerHints
             anchors.verticalCenter: parent.verticalCenter
-            visible: root.hints.length > 0
+            visible: root.hints.length > 0 && headerActions.implicitWidth === 0
             width: visible ? Math.max(0, parent.width - titleText.implicitWidth - parent.spacing * 2) : 0
             runtime: root.runtime
             theme: root.theme
             hints: root.hints
             trailing: true
+        }
+
+        Row {
+            id: headerActions
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: root.theme.spacing1
         }
     }
 

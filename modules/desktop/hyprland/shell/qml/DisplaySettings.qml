@@ -576,81 +576,77 @@ Column {
             onActivated: panel.previewOrKeep()
         }
     }
-    Row {
-        width: parent.width
-        spacing: panel.theme.spacing2
-        ShellText {
-            width: Math.max(1, parent.width - saveProfileAction.width - parent.spacing)
-            anchors.verticalCenter: parent.verticalCenter
-            runtime: panel.runtime
-            theme: panel.theme
-            text: "Saved layouts"
-            textRole: ShellText.Section
-        }
-        ShellUtilityAction {
-            id: saveProfileAction
-            runtime: panel.runtime
-            theme: panel.theme
-            motion: panel.motion
-            icon: DesktopIcons.actionGlyph("save")
-            title: "Save current layout"
-            shortcut: panel.runtime.shellHint("DisplaySettings.saveProfile")
-            enabled: panel.canSaveProfile
-            onActivated: panel.run("save-profile")
-        }
-    }
-    ShellText {
-        visible: panel.profiles.length === 0
+    ShellSection {
         width: parent.width
         runtime: panel.runtime
         theme: panel.theme
-        text: "No saved layouts"
-        textRole: ShellText.Supporting
-    }
-    Row {
-        visible: panel.profiles.length > 0
-        width: parent.width
-        spacing: panel.theme.spacing2
-        ShellValueSelector {
-            id: profileSelector
-            width: Math.max(1, parent.width - loadProfileAction.width - deleteProfileAction.width - parent.spacing * 2)
-            runtime: panel.runtime
-            theme: panel.theme
-            motion: panel.motion
-            title: "Layout"
-            shortcut: panel.runtime.shellHint("DisplaySettings.nextProfile")
-            confirmShortcut: panel.runtime.shellHint("DisplaySettings.apply")
-            options: panel.profiles.map(entry => entry.label + (entry.compatible ? "" : " · Different displays"))
-            selectedIndex: panel.profileIndex
-            enabled: panel.profileActionsAvailable && panel.profiles.length > 0
-            onOpened: {
-                resolutionSelector.cancel();
-                refreshSelector.cancel();
+        title: "Saved layouts"
+        actions: [
+            ShellUtilityAction {
+                id: saveProfileAction
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                icon: DesktopIcons.actionGlyph("save")
+                title: "Save current layout"
+                shortcut: panel.runtime.shellHint("DisplaySettings.saveProfile")
+                enabled: panel.canSaveProfile
+                onActivated: panel.run("save-profile")
             }
-            onChosen: index => panel.profileIndex = index
-        }
-        ShellUtilityAction {
-            id: loadProfileAction
+        ]
+        ShellText {
+            visible: panel.profiles.length === 0
+            width: parent.width
             runtime: panel.runtime
             theme: panel.theme
-            motion: panel.motion
-            icon: DesktopIcons.actionGlyph("confirm")
-            title: "Preview saved layout"
-            shortcut: panel.runtime.shellHint("DisplaySettings.previewProfile")
-            enabled: panel.profileActionsAvailable && !!panel.profile?.compatible && !profileSelector.expanded
-            onActivated: panel.run("preview-profile", [String(panel.profileIndex)])
+            text: "No saved layouts"
+            textRole: ShellText.Supporting
         }
-        ShellUtilityAction {
-            id: deleteProfileAction
-            runtime: panel.runtime
-            theme: panel.theme
-            motion: panel.motion
-            icon: DesktopIcons.actionGlyph("delete")
-            title: "Remove selected layout"
-            activeColor: panel.theme.critical
-            shortcut: panel.runtime.shellHint("DisplaySettings.deleteProfile")
-            enabled: panel.profileActionsAvailable && !!panel.profile && !profileSelector.expanded
-            onActivated: panel.run("delete-profile", [String(panel.profileIndex)])
+        Row {
+            visible: panel.profiles.length > 0
+            width: parent.width
+            spacing: panel.theme.spacing2
+            ShellValueSelector {
+                id: profileSelector
+                width: Math.max(1, parent.width - loadProfileAction.width - deleteProfileAction.width - parent.spacing * 2)
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                title: "Layout"
+                shortcut: panel.runtime.shellHint("DisplaySettings.nextProfile")
+                confirmShortcut: panel.runtime.shellHint("DisplaySettings.apply")
+                options: panel.profiles.map(entry => entry.label + (entry.compatible ? "" : " · Different displays"))
+                selectedIndex: panel.profileIndex
+                enabled: panel.profileActionsAvailable && panel.profiles.length > 0
+                onOpened: {
+                    resolutionSelector.cancel();
+                    refreshSelector.cancel();
+                }
+                onChosen: index => panel.profileIndex = index
+            }
+            ShellUtilityAction {
+                id: loadProfileAction
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                icon: DesktopIcons.actionGlyph("confirm")
+                title: "Preview saved layout"
+                shortcut: panel.runtime.shellHint("DisplaySettings.previewProfile")
+                enabled: panel.profileActionsAvailable && !!panel.profile?.compatible && !profileSelector.expanded
+                onActivated: panel.run("preview-profile", [String(panel.profileIndex)])
+            }
+            ShellUtilityAction {
+                id: deleteProfileAction
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                icon: DesktopIcons.actionGlyph("delete")
+                title: "Remove selected layout"
+                activeColor: panel.theme.critical
+                shortcut: panel.runtime.shellHint("DisplaySettings.deleteProfile")
+                enabled: panel.profileActionsAvailable && !!panel.profile && !profileSelector.expanded
+                onActivated: panel.run("delete-profile", [String(panel.profileIndex)])
+            }
         }
     }
 }

@@ -1110,3 +1110,24 @@ test("detail panel geometry follows the owning loader rather than dashboard widt
   assert.match(detail, /Flow \{\s+id: durationFlow/);
   assert.match(detail, /modelData === 0 \? durationFlow.width : Math.floor/);
 });
+
+test("saved scenes and display layouts share collection header action slots", () => {
+  const section = read("ShellSection.qml");
+  const scenes = read("ScenePanel.qml");
+  const displays = read("DisplaySettings.qml");
+  assert.match(section, /property alias actions: headerActions.data/);
+  assert.match(
+    scenes,
+    /ShellSection \{[\s\S]*?title: "Saved scenes"[\s\S]*?actions: \[[\s\S]*?id: saveAction/,
+  );
+  assert.match(
+    displays,
+    /ShellSection \{[\s\S]*?title: "Saved layouts"[\s\S]*?actions: \[[\s\S]*?id: saveProfileAction/,
+  );
+  assert.match(scenes, /text: "No saved scenes"/);
+  assert.match(
+    scenes,
+    /text: panel.scenes.profiles\[panel.selectedIndex\] \? "Selected: "/,
+  );
+  assert.match(scenes, /row.mapToItem\(panel, 0, 0\).y/);
+});
