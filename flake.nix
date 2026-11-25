@@ -10,6 +10,9 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Cached Raspberry Pi kernel and matched firmware use their upstream package lock.
+    nixos-raspberrypi.url = "github:nvmd/nixos-raspberrypi/main";
+
     # Declarative Sonarr, Radarr, and Prowlarr application configuration.
     # Use the upstream flake and its own dependency lock.
     configarr.url = "github:raydak-labs/configarr";
@@ -474,7 +477,10 @@
         nixos-pi = {
           system = "aarch64-linux";
           hostModule = ./hosts/nixos-pi;
-          extraModules = [ inputs.nixos-hardware.nixosModules.raspberry-pi-4 ];
+          extraModules = [
+            inputs.nixos-hardware.nixosModules.raspberry-pi-4
+            inputs.nixos-raspberrypi.nixosModules.trusted-nix-caches
+          ];
         };
 
         mac = {

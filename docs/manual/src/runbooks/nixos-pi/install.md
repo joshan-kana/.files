@@ -249,7 +249,7 @@ run0 sh -c '
 '
 ```
 
-Check `/boot/extlinux/extlinux.conf` and verify that the `nixos-default` entry points to the recovered generation's initrd. Keep the previous generation available until the replacement has booted successfully on the Pi. A successful build or bootloader installation alone is not a boot validation.
+Check `/boot/extlinux/extlinux.conf` and verify that the `nixos-default` entry points to the recovered generation's initrd. Each generation must use its own kernel device tree; the firmware device tree can be incompatible with another kernel and cause repeated HDMI audio probe failures. Keep the previous generation available until the replacement has booted successfully on the Pi. A successful build or bootloader installation alone is not a boot validation.
 
 ## Secrets backup
 
@@ -262,5 +262,12 @@ Reload the generated host exports before verifying or initializing its secrets b
 {{#include ../_shared/secrets-backup-first-boot.inc}}
 
 The Pi 4 supports a single 4K/60 Hz display on HDMI0, the micro-HDMI port next to USB-C power. The installation image enables the necessary firmware clock setting, but the connected display, HDMI input mode, and cable must also support 4K/60 Hz. The Pi hardware module manages the firmware partition and applies the 4K/60 Hz setting on system activation; reboot for the firmware and kernel changes to take effect. Firmware files are shared by boot generations, so retain a backup of the known-working FAT partition when testing changes to the boot pipeline. Verify the active HDMI mode; use `wlr-randr` from the Labwc session to inspect or change the output mode. HDR10 requires a capable display and a playback pipeline that passes HDR metadata; enabling a high-refresh-rate output does not automatically enable HDR.
+
+The Pi uses the cached downstream kernel and matching GPU firmware from `nixos-raspberrypi`. Keep that input's own nixpkgs lock to preserve binary substitution. The host and image trust its signed Cachix cache. Before the first upgrade from a configuration without that cache, pass its substituter and signing key to the rebuild command:
+
+```sh
+sbt --option extra-substituters https://nixos-raspberrypi.cachix.org \
+  --option extra-trusted-public-keys nixos-raspberrypi.cachix.org-1:4iMO9LXa8BqhU+Rpg6LQKiGa2lsNh/j2oiYLNOQ5sPI=
+```
 
 Test HDMI output and audio, Kodi, Chromium, Moonlight and Jellyfin MPV Shim on the Pi. Verify the selected display mode and HDR signalling with representative media on the physical display. Video decoding and codec compatibility depend on the actual hardware and media. Reinstall by writing a current image to the drive and copying the host credentials onto its root partition. Restore additional mutable data from its normal backups where applicable.

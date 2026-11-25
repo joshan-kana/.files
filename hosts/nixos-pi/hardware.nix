@@ -1,10 +1,22 @@
-{ lib, pkgs, ... }:
+{
+  inputs,
+  lib,
+  system,
+  ...
+}:
+
+let
+  rpi = inputs.nixos-raspberrypi.packages.${system};
+in
 
 {
   hardware.enableRedistributableFirmware = true;
+  # The cached vendor kernel predates these nixpkgs kernel metadata fields.
+  hardware.deviceTree.enable = true;
+  system.boot.loader.kernelFile = "Image";
 
   boot = {
-    kernelPackages = pkgs.linuxPackages_latest;
+    kernelPackages = rpi.linuxPackages_rpi4;
     loader.generic-extlinux-compatible.useGenerationDeviceTree = true;
     kernelParams = [ "cma=256M" ];
     supportedFilesystems.btrfs = true;
@@ -19,6 +31,7 @@
     firmware = {
       enable = true;
       path = "/boot";
+      package = rpi.raspberrypifw;
       uboot.enable = true;
     };
     configtxt.settings.pi4.hdmi_enable_4kp60 = true;
