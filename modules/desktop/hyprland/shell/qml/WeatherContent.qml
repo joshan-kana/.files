@@ -259,6 +259,28 @@ FocusScope {
                         font.family: panel.runtime.fontSans
                         font.pixelSize: panel.theme.fontSize(14)
                     }
+                    Row {
+                        spacing: panel.theme.spacing3
+                        visible: panel.weather.forecast.length > 0
+                        Text {
+                            text: "Low " + panel.weather.temperatureText(panel.weather.forecast[0]?.low ?? 0)
+                            color: panel.theme.readableRoleColor("cold")
+                            font.family: panel.runtime.fontMono
+                            font.pixelSize: panel.theme.fontSize(11)
+                        }
+                        Text {
+                            text: "High " + panel.weather.temperatureText(panel.weather.forecast[0]?.high ?? 0)
+                            color: panel.theme.readableRoleColor("temperature")
+                            font.family: panel.runtime.fontMono
+                            font.pixelSize: panel.theme.fontSize(11)
+                        }
+                        Text {
+                            text: "Rain " + Math.round(panel.weather.forecast[0]?.rain ?? 0) + "%"
+                            color: panel.theme.readableRoleColor("precipitation")
+                            font.family: panel.runtime.fontMono
+                            font.pixelSize: panel.theme.fontSize(11)
+                        }
+                    }
                 }
             }
         }
