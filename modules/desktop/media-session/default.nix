@@ -9,7 +9,7 @@ let
   session = pkgs.writeShellScript "media-session" ''
     export XDG_SESSION_TYPE=wayland
     export XDG_CURRENT_DESKTOP=labwc
-    ${lib.getExe pkgs.labwc}
+    ${lib.getExe' pkgs.systemd "systemd-cat"} --identifier=labwc ${lib.getExe pkgs.labwc}
     status=$?
     systemctl --user stop labwc-session.target
     exit "$status"

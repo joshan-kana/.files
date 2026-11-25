@@ -44,7 +44,6 @@ lib.recursiveUpdate (import ../../profiles/media.nix { inherit lib moduleRegistr
           # Keep the validated hardware player free of extra scripts.
           scripts = lib.mkForce [ ];
           config = {
-            target-colorspace-hint = lib.mkForce "no";
             input-commands-append = lib.mkForce [ ];
             vo = "dmabuf-wayland,gpu";
             hwdec = "drm,v4l2m2m";
@@ -52,7 +51,7 @@ lib.recursiveUpdate (import ../../profiles/media.nix { inherit lib moduleRegistr
             hwdec-extra-frames = 0;
             vd-queue-enable = false;
           };
-          # The SDR DMA-BUF output does not support the shared HDR profiles.
+          # DMA-BUF playback forwards the video color description to the compositor.
           profiles = lib.mkForce { };
         };
       };
@@ -76,6 +75,21 @@ lib.recursiveUpdate (import ../../profiles/media.nix { inherit lib moduleRegistr
           actions.update-props."priority.session" = 1500;
         }
       ];
+    };
+  };
+
+  desktop = editScope moduleRegistry.desktop {
+    mediaSession = _: {
+      home = _: {
+        wayland.windowManager.labwc = {
+          environment = [
+            "WLR_RENDERER=vulkan"
+            # VC4 owns scanout; Vulkan must use the separate V3D render node.
+            "WLR_RENDER_DRM_DEVICE=/dev/dri/by-path/platform-fec00000.v3d-render"
+          ];
+          rc.core.hdr = "yes";
+        };
+      };
     };
   };
 
