@@ -249,7 +249,7 @@ run0 sh -c '
 '
 ```
 
-Check `/boot/extlinux/extlinux.conf` and verify that the `nixos-default` entry points to the recovered generation's initrd. Each generation must use its own kernel device tree; the firmware device tree can be incompatible with another kernel and cause repeated HDMI audio probe failures. Keep the previous generation available until the replacement has booted successfully on the Pi. A successful build or bootloader installation alone is not a boot validation.
+Check `/boot/extlinux/extlinux.conf` and verify that the `nixos-default` entry points to the recovered generation's initrd. The downstream kernel uses its matching firmware device tree so firmware-applied KMS overlays and board fixups survive U-Boot. When recovering an older mainline kernel generation, restore its original extlinux entry (including its `FDTDIR`) from the saved firmware partition; the downstream firmware device tree is not compatible with that kernel. Keep the previous generation available until the replacement has booted successfully on the Pi. A successful build or bootloader installation alone is not a boot validation.
 
 ## Secrets backup
 

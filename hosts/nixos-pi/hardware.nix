@@ -1,4 +1,9 @@
-{ lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 {
   hardware.enableRedistributableFirmware = true;
@@ -8,7 +13,8 @@
 
   boot = {
     kernelPackages = pkgs.linuxPackages_rpi4;
-    loader.generic-extlinux-compatible.useGenerationDeviceTree = true;
+    # Preserve firmware-applied KMS overlays and board-specific fixups.
+    loader.generic-extlinux-compatible.useGenerationDeviceTree = false;
     kernelParams = [ "cma=256M" ];
     supportedFilesystems.btrfs = true;
 
@@ -27,6 +33,12 @@
     };
     configtxt.settings.pi4.hdmi_enable_4kp60 = true;
   };
+
+  # V4L2 request decoding allocates buffers through the DMA heap.
+  services.udev.extraRules = ''
+    SUBSYSTEM=="dma_heap", GROUP="video", MODE="0660"
+  '';
+  users.users.${config.dotfiles.users.primary.name}.extraGroups = [ "video" ];
 
   fileSystems = {
     "/" = {
