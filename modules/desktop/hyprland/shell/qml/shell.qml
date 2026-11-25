@@ -10,6 +10,7 @@ import Quickshell.Wayland
 ShellRoot {
     id: root
 
+    readonly property Actions actionsRef: actions
     readonly property RuntimeConfig runtimeRef: qmlRuntime
     readonly property Theme themeRef: qmlTheme
     readonly property Motion motionRef: qmlMotion
@@ -163,6 +164,7 @@ ShellRoot {
         id: systemExpansionComponent
 
         SystemContent {
+            actions: root.actionsRef
             appearance: qmlAppearance
             scenes: qmlScenes
             runtime: root.runtimeRef
@@ -197,14 +199,6 @@ ShellRoot {
                 qmlExpansionState.close();
                 if (qmlRuntime.displaySettings.length > 0)
                     Quickshell.execDetached([qmlRuntime.displaySettings]);
-            }
-            onRestoreDefaultsRequested: {
-                qmlScenes.stop();
-                qmlAppearance.resetToDeclared();
-                qmlMotion.resetToDeclared();
-                screenshotPicker.resetToDeclared();
-                weather.resetLocation();
-                weather.resetUnits();
             }
             requestedView: qmlExpansionState.currentView
             returnToControls: qmlExpansionState.backDestination === "controls"
@@ -254,6 +248,7 @@ ShellRoot {
 
     SystemState {
         id: qmlSystem
+        runtime: qmlRuntime
     }
 
     PowerProfileState {
@@ -622,6 +617,11 @@ ShellRoot {
         nightLightState: nightLight
         notificationState: qmlNotifications
         motion: qmlMotion
+        appearance: qmlAppearance
+        scenes: qmlScenes
+        resources: root.resourcesRef
+        weather: root.weatherRef
+        capture: screenshotPicker
         onFrozenCaptureRequested: copy => screenshotPicker.begin(copy, qmlScreens.focusedScreen, "image")
         onRecordingSelectionRequested: {
             actions.hideTransient("");

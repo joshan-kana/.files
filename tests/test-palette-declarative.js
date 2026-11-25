@@ -189,7 +189,7 @@ test("Preference reset returns control to Nix instead of freezing the old defaul
   for (const component of [
     "AppearancePreferences",
     "Motion",
-    "SessionPanel",
+    "SystemState",
     "ScreenshotPicker",
     "NotificationState",
     "ResourceState",

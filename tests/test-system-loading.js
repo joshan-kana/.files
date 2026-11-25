@@ -154,6 +154,7 @@ test("navigation cannot clear ongoing operation state", () => {
 test("global and detail reset share the serialized Night Light reset operation", () => {
   const state = source("NightLightState.qml");
   const controls = source("SystemContent.qml");
+  const actions = source("Actions.qml");
   const detail = source("SettingsDetail.qml");
   assert.match(
     state,
@@ -165,9 +166,100 @@ test("global and detail reset share the serialized Night Light reset operation",
     /actionProcess.exec\(\[runtime.nightLightControl, "reset"\]\)/,
   );
   assert.match(
-    controls,
-    /waitingForNightLightReset = true;\s*nightLight.resetToDeclared\(\)/,
+    actions,
+    /waitingForNightLightReset = true;\s*nightLightState.resetToDeclared\(\)/,
   );
-  assert.match(controls, /function onResetFinished\(success, reason\)/);
+  assert.match(actions, /function onResetFinished\(success, reason\)/);
+  assert.match(controls, /actions\.restoreDesktopDefaults\(\)/);
+  assert.doesNotMatch(
+    controls,
+    /property var resetSteps|sessionPanel\.invoke\("resetToDeclared"/,
+  );
   assert.match(detail, /nightLight.resetToDeclared\(\)/);
+});
+
+test("desktop reset completes independently of the Controls view and reports backend failures", () => {
+  const vm = require("node:vm");
+  const code = source("Actions.qml");
+  const body = (signature) => code.split(signature)[1].split("\n    }")[0];
+  const calls = [];
+  const record = (name) => () => calls.push(name);
+  const context = vm.createContext({
+    resetRunning: false,
+    resetStatus: "",
+    resetSteps: [],
+    resetErrors: [],
+    resetIndex: 0,
+    waitingForNightLightReset: false,
+    scenes: { stop: record("scene") },
+    appearance: { resetToDeclared: record("appearance") },
+    motion: { resetToDeclared: record("motion") },
+    capture: { resetToDeclared: record("capture") },
+    weather: {
+      resetLocation: record("weather location"),
+      resetUnits: record("weather units"),
+    },
+    systemState: { resetSessionPreferences: record("session") },
+    notificationState: { resetToDeclared: record("notifications") },
+    resources: { resetSampling: record("resources") },
+    nightLightState: { resetToDeclared: record("night light") },
+    runtime: {
+      captureLocations: "capture",
+      wallpaperLibrary: "wallpaper",
+      wallpaperPolicy: "schedule",
+      nightLightControl: "night",
+    },
+    Quickshell: { screens: [{ name: "Virtual-1" }] },
+    preferenceReset: {
+      exec: (command) => calls.push(Array.from(command).join(" ")),
+    },
+  });
+  vm.runInContext(
+    "function restoreDesktopDefaults() {" +
+      body("function restoreDesktopDefaults(): void {") +
+      "}\nfunction resetNextPreference() {" +
+      body("function resetNextPreference(): void {") +
+      "}",
+    context,
+  );
+  context.restoreDesktopDefaults();
+  assert.equal(context.resetRunning, true);
+  assert.equal(context.waitingForNightLightReset, true);
+  assert.deepEqual(calls, [
+    "scene",
+    "appearance",
+    "motion",
+    "capture",
+    "weather location",
+    "weather units",
+    "session",
+    "notifications",
+    "resources",
+    "night light",
+  ]);
+  context.restoreDesktopDefaults();
+  assert.equal(calls.length, 10);
+  context.waitingForNightLightReset = false;
+  context.resetErrors.push("Night Light");
+  context.resetNextPreference();
+  while (context.resetRunning) {
+    context.resetIndex++;
+    context.resetNextPreference();
+  }
+  assert.deepEqual(calls.slice(10), [
+    "capture reset",
+    "wallpaper reset Virtual-1",
+    "wallpaper reset all",
+    "schedule reset",
+  ]);
+  assert.match(context.resetStatus, /Could not restore: Night Light/);
+  assert.equal(context.resetRunning, false);
+  assert.doesNotMatch(
+    source("SessionPanel.qml"),
+    /PreferenceStore|function resetToDeclared/,
+  );
+  assert.match(
+    source("SessionPanel.qml"),
+    /panel.system.resetSessionPreferences/,
+  );
 });

@@ -197,7 +197,10 @@ test("one-shot detail actions execute on initial key-down without auto-repeat", 
     /function handleKey\(key: int, modifiers: int, autoRepeat: bool\): bool \{/,
   );
   assert.match(detail, /if \(autoRepeat\) \{[\s\S]*?SettingsDetail\.toggle/);
-  assert.match(detail, /runtime\.shellChoiceIndex\(key, modifiers, 5\)/);
+  assert.match(
+    detail,
+    /runtime\.shellChoiceIndex\(key, modifiers, choiceCount\)/,
+  );
   assert.match(
     stateLayer,
     /Keys\.onPressed: event => \{[\s\S]*?if \(!event\.isAutoRepeat\) \{[\s\S]*?playPressFeedback\([\s\S]*?activated\(event\)/,

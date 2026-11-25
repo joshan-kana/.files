@@ -8,6 +8,26 @@ import "AudioRouting.js" as Routing
 
 QtObject {
     id: system
+    required property RuntimeConfig runtime
+
+    property PreferenceStore sessionPreferences: PreferenceStore {
+        category: "Session"
+        defaults: ({
+                restoreWindowsOnExit: system.runtime.restoreWindowsOnExit
+            })
+    }
+    readonly property bool restoreWindowsOnExit: sessionPreferences.value("restoreWindowsOnExit")
+    Component.onCompleted: sessionPreferences.initialize({
+        restoreWindowsOnExit: sessionPreferences.legacyMarked("restoreWindowsOnExit", "preferenceSource")
+    })
+
+    function resetSessionPreferences(): void {
+        sessionPreferences.resetAll();
+    }
+
+    function toggleRestoreWindows(): void {
+        sessionPreferences.set("restoreWindowsOnExit", !restoreWindowsOnExit);
+    }
 
     // Session-only inhibition, with a wall-clock deadline so elapsed time
     // during suspension does not extend a timed request.

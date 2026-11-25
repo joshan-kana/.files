@@ -40,6 +40,96 @@ QtObject {
     required property NightLightState nightLightState
     required property NotificationState notificationState
     required property Motion motion
+    required property AppearancePreferences appearance
+    required property SceneState scenes
+    required property ResourceState resources
+    required property WeatherState weather
+    required property ScreenshotPicker capture
+
+    // Reset is a shell operation, independent of the lifetime of Controls.
+    property bool resetRunning: false
+    property string resetStatus: ""
+    property var resetSteps: []
+    property var resetErrors: []
+    property int resetIndex: 0
+    property bool waitingForNightLightReset: false
+
+    property Process preferenceReset: Process {
+        onExited: (code, status) => {
+            if (code !== 0)
+                actions.resetErrors = [...actions.resetErrors, actions.resetSteps[actions.resetIndex].label];
+            actions.resetIndex++;
+            actions.resetNextPreference();
+        }
+    }
+
+    property Connections nightLightReset: Connections {
+        target: actions.nightLightState
+        function onResetFinished(success, reason) {
+            if (!actions.waitingForNightLightReset)
+                return;
+            actions.waitingForNightLightReset = false;
+            if (!success)
+                actions.resetErrors = [...actions.resetErrors, "Night Light"];
+            actions.resetNextPreference();
+        }
+    }
+
+    function restoreDesktopDefaults(): void {
+        if (resetRunning)
+            return;
+        resetRunning = true;
+        resetStatus = "Restoring declared desktop preferences…";
+        scenes.stop();
+        appearance.resetToDeclared();
+        motion.resetToDeclared();
+        capture.resetToDeclared();
+        weather.resetLocation();
+        weather.resetUnits();
+        systemState.resetSessionPreferences();
+        notificationState.resetToDeclared();
+        resources.resetSampling();
+
+        resetErrors = [];
+        const steps = [];
+        if (runtime.captureLocations)
+            steps.push({
+                label: "Capture locations",
+                command: [runtime.captureLocations, "reset"]
+            });
+        if (runtime.wallpaperLibrary) {
+            for (const output of Quickshell.screens.map(screen => screen.name).filter(name => !!name).concat(["all"]))
+                steps.push({
+                    label: "Wallpaper (" + output + ")",
+                    command: [runtime.wallpaperLibrary, "reset", output]
+                });
+        } else {
+            resetErrors.push("Wallpaper library unavailable");
+        }
+        if (runtime.wallpaperPolicy)
+            steps.push({
+                label: "Wallpaper schedule",
+                command: [runtime.wallpaperPolicy, "reset"]
+            });
+        resetSteps = steps;
+        resetIndex = 0;
+        if (runtime.nightLightControl) {
+            waitingForNightLightReset = true;
+            nightLightState.resetToDeclared();
+        } else {
+            resetNextPreference();
+        }
+    }
+
+    function resetNextPreference(): void {
+        if (resetIndex >= resetSteps.length) {
+            resetRunning = false;
+            resetStatus = resetErrors.length > 0 ? "Could not restore: " + resetErrors.join(", ") + ". Other defaults restored." : "Declared desktop defaults restored";
+            return;
+        }
+        preferenceReset.exec(resetSteps[resetIndex].command);
+    }
+
     signal frozenCaptureRequested(bool copy)
     signal recordingSelectionRequested
     signal wallpaperSpectrumToggleRequested

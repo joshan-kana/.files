@@ -3,12 +3,12 @@ import QtQuick
 import "ClockFormatting.js" as ClockFormatting
 import "DesktopIcons.js" as DesktopIcons
 import Quickshell
-import Quickshell.Io
 
 FocusScope {
     id: root
 
     required property RuntimeConfig runtime
+    required property Actions actions
     required property Theme theme
     required property Motion motion
     required property AppearancePreferences appearance
@@ -38,7 +38,6 @@ FocusScope {
     signal windowTransparencyToggleRequested
     signal shellGlassToggleRequested
     signal displaySettingsRequested
-    signal restoreDefaultsRequested
 
     property bool engaged: false
     property bool presentationActive: false
@@ -55,34 +54,8 @@ FocusScope {
     readonly property string presentedDetail: settingsPanel.open ? settingKind : vhsPanel.open ? "vhs" : themePanel.open ? "theme" : wallpaperPanel.open ? "wallpaper" : networkPanel.open ? "network" : bluetoothPanel.open ? "bluetooth" : sessionPanel.open ? "session" : resourcesPanel.open ? "resources" : statusOpen ? "status" : mixerOpen ? "mixer" : recordingsPanel.open ? "recordings" : ""
     readonly property bool detailsVisible: settingsPanel.open || vhsPanel.open || trayMenu.open || networkPanel.open || bluetoothPanel.open || themePanel.open || wallpaperPanel.open || sessionPanel.open || resourcesPanel.open || statusOpen || mixerOpen || recordingsPanel.open
     property bool resetConfirmPending: false
-    property bool resetRunning: false
-    property string resetStatus: ""
-    property var resetSteps: []
-    property var resetErrors: []
-    property int resetIndex: 0
-    property bool waitingForNightLightReset: false
-
-    Process {
-        id: preferenceReset
-        onExited: (code, status) => {
-            if (code !== 0)
-                root.resetErrors = [...root.resetErrors, root.resetSteps[root.resetIndex].label];
-            root.resetIndex++;
-            root.resetNextPreference();
-        }
-    }
-
-    Connections {
-        target: root.nightLight
-        function onResetFinished(success, reason) {
-            if (!root.waitingForNightLightReset)
-                return;
-            root.waitingForNightLightReset = false;
-            if (!success)
-                root.resetErrors = [...root.resetErrors, "Night Light"];
-            root.resetNextPreference();
-        }
-    }
+    readonly property bool resetRunning: actions.resetRunning
+    readonly property string resetStatus: actions.resetStatus
 
     function findDashboardAction(key: int, modifiers: int): var {
         for (const section of [controlsHeading, connectionTiles, actionTiles, visualTiles]) {
@@ -106,49 +79,7 @@ FocusScope {
         if (!resetConfirmPending || resetRunning)
             return;
         resetConfirmPending = false;
-        resetRunning = true;
-        resetStatus = "Restoring declared desktop preferences…";
-        restoreDefaultsRequested();
-        sessionPanel.invoke("resetToDeclared");
-        notificationState.resetToDeclared();
-        resourceState.resetSampling();
-        resetErrors = [];
-        resetSteps = [];
-        if (runtime.captureLocations)
-            resetSteps.push({
-                label: "Capture locations",
-                command: [runtime.captureLocations, "reset"]
-            });
-        if (runtime.wallpaperLibrary) {
-            for (const output of Quickshell.screens.map(screen => screen.name).filter(name => !!name).concat(["all"]))
-                resetSteps.push({
-                    label: "Wallpaper (" + output + ")",
-                    command: [runtime.wallpaperLibrary, "reset", output]
-                });
-        } else {
-            resetErrors.push("Wallpaper library unavailable");
-        }
-        if (runtime.wallpaperPolicy)
-            resetSteps.push({
-                label: "Wallpaper schedule",
-                command: [runtime.wallpaperPolicy, "reset"]
-            });
-        resetIndex = 0;
-        if (runtime.nightLightControl) {
-            waitingForNightLightReset = true;
-            nightLight.resetToDeclared();
-        } else {
-            resetNextPreference();
-        }
-    }
-
-    function resetNextPreference(): void {
-        if (resetIndex >= resetSteps.length) {
-            resetRunning = false;
-            resetStatus = resetErrors.length > 0 ? "Could not restore: " + resetErrors.join(", ") + ". Other defaults restored." : "Declared desktop defaults restored";
-            return;
-        }
-        preferenceReset.exec(resetSteps[resetIndex].command);
+        actions.restoreDesktopDefaults();
     }
 
     property string requestedView: ""
@@ -1415,7 +1346,7 @@ FocusScope {
                             activeColor: root.theme.roleColor("warning")
                             onActivated: {
                                 root.resetConfirmPending = true;
-                                root.resetStatus = "";
+                                root.actions.resetStatus = "";
                             }
                         }
                     }
@@ -2070,6 +2001,7 @@ FocusScope {
             sourceComponent: Component {
                 SessionPanel {
                     scenes: root.scenes
+                    system: root.system
                     onScenesRequested: root.openSetting("scenes")
                     runtime: root.runtime
                     theme: root.theme

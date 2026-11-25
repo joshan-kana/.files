@@ -7,6 +7,7 @@ Item {
     id: panel
 
     required property RuntimeConfig runtime
+    required property SystemState system
     required property Theme theme
     required property Motion motion
 
@@ -24,25 +25,10 @@ Item {
     property string statusText: ""
     property bool statusError: false
 
-    PreferenceStore {
-        id: preferences
-        category: "Session"
-        defaults: ({
-                restoreWindowsOnExit: panel.runtime.restoreWindowsOnExit
-            })
-    }
-    readonly property bool restoreWindowsOnExit: preferences.value("restoreWindowsOnExit")
-
-    Component.onCompleted: preferences.initialize({
-        restoreWindowsOnExit: preferences.legacyMarked("restoreWindowsOnExit", "preferenceSource")
-    })
-
-    function resetToDeclared(): void {
-        preferences.resetAll();
-    }
+    readonly property bool restoreWindowsOnExit: system.restoreWindowsOnExit
 
     function toggleRestore(): void {
-        preferences.set("restoreWindowsOnExit", !restoreWindowsOnExit);
+        system.toggleRestoreWindows();
         statusText = restoreWindowsOnExit ? "WINDOW RESTORATION ENABLED" : "FRESH SESSION ENABLED";
         statusError = false;
     }
@@ -308,7 +294,7 @@ Item {
                 title: "Restore session defaults"
                 shortcut: panel.runtime.shellHint("SessionPanel.defaults")
                 enabled: panel.armedAction.length === 0
-                onActivated: panel.resetToDeclared()
+                onActivated: panel.system.resetSessionPreferences()
             }
         ]
     }
