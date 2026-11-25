@@ -100,4 +100,18 @@ function M.open(name, bundleID)
 	ui.show(name .. " has no New Window command", { kind = "warning" })
 end
 
+-- Executable names that differ from their macOS application identities.
+local defaultAppBundleIDs = {
+	["zen-beta"] = "app.zen-browser.zen",
+	brave = "com.brave.Browser",
+	["google-chrome"] = "com.google.Chrome",
+	["google-chrome-stable"] = "com.google.Chrome",
+	iterm2 = "com.googlecode.iterm2",
+	["warp-terminal"] = "dev.warp.Warp-Stable",
+}
+
+function M.openDefault(executable)
+	M.open(executable, defaultAppBundleIDs[executable])
+end
+
 return M

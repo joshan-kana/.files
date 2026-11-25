@@ -1,6 +1,7 @@
 {
   lib,
   pkgs,
+  browser,
   terminal,
   ...
 }:
@@ -20,6 +21,7 @@ in
       runtime = ''
         return {
           yabai = ${builtins.toJSON (lib.getExe pkgs.yabai)},
+          browser = ${builtins.toJSON browser},
           terminal = ${builtins.toJSON terminal},
         }
       '';

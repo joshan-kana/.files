@@ -59,7 +59,7 @@ in
     lib.optionalAttrs isDarwin (
       (import ./hammerspoon) {
         inherit lib pkgs;
-        terminal = config.dotfiles.defaults.terminal;
+        inherit (config.dotfiles.defaults) browser terminal;
       }
     );
 

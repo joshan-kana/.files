@@ -98,10 +98,10 @@ local bindings = {
 		mods = "meh",
 		key = "a",
 		fn = function()
-			app_switcher.open("Zen", "app.zen-browser.zen")
+			app_switcher.openDefault(require("nix_runtime").browser)
 		end,
 		section = "APPS",
-		desc = "Zen Browser",
+		desc = "Default browser",
 	},
 	{
 		mods = "meh",
@@ -143,7 +143,7 @@ local bindings = {
 		mods = "meh",
 		key = "f",
 		fn = function()
-			app_switcher.open(require("nix_runtime").terminal)
+			app_switcher.openDefault(require("nix_runtime").terminal)
 		end,
 		section = "APPS",
 		desc = "Default terminal",
