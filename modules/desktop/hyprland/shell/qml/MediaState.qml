@@ -44,7 +44,6 @@ QtObject {
     readonly property bool canRaise: available && player.canRaise
     readonly property bool rateAvailable: available && player.canControl && [player.rate, player.minRate, player.maxRate].every(Number.isFinite) && player.minRate < player.maxRate && player.rate !== 0 && player.rate >= player.minRate && player.rate <= player.maxRate
     readonly property real rate: rateAvailable ? player.rate : 1
-    readonly property string preferenceStatus: persistentPreference === "" ? "Automatic" : preferredCurrent ? "Preferred player" : "Preferred app unavailable or session selection"
     onPlayersChanged: {
         if (preferredPlayerId !== "" && !players.some(candidate => playerId(candidate) === preferredPlayerId))
             preferredPlayerId = "";
@@ -54,15 +53,19 @@ QtObject {
         return Selection.stablePlayerId(candidate);
     }
 
-    function togglePreferredPlayer(): void {
-        if (preferredCurrent || !available) {
-            appearance.setMediaPreferredPlayer("");
-        } else {
-            const identity = stablePlayerId(player);
-            if (identity)
-                appearance.setMediaPreferredPlayer(identity);
-        }
+    function useAutomaticSelection(): void {
         preferredPlayerId = "";
+        appearance.setMediaPreferredPlayer("");
+    }
+
+    function preferCurrentPlayer(): void {
+        if (!available)
+            return;
+        const identity = stablePlayerId(player);
+        if (identity) {
+            preferredPlayerId = "";
+            appearance.setMediaPreferredPlayer(identity);
+        }
     }
 
     function resetPreferredPlayer(): void {
