@@ -22,6 +22,16 @@ Item {
     implicitHeight: layout.implicitHeight
 
     signal keyboardRequested
+    signal revealSelection(real top, real bottom)
+
+    function revealSelector(selector: ShellValueSelector): void {
+        Qt.callLater(() => {
+            if (panel.open && selector.expanded) {
+                const top = selector.mapToItem(panel, 0, 0).y;
+                panel.revealSelection(top, top + selector.height);
+            }
+        });
+    }
 
     function activateAction(action: string): void {
         switch (action) {
@@ -594,7 +604,10 @@ Item {
                 readonly property var values: panel.runtime.constraints.resourceSampling.intervalSeconds.values
                 options: values.map(value => value + "s")
                 selectedIndex: values.indexOf(panel.resourceState.intervalSeconds)
-                onOpened: historySelector.cancel()
+                onOpened: {
+                    historySelector.cancel();
+                    panel.revealSelector(intervalSelector);
+                }
                 onChosen: index => panel.resourceState.setInterval(values[index])
             }
             ShellValueSelector {
@@ -610,7 +623,10 @@ Item {
                 readonly property var values: panel.runtime.constraints.resourceSampling.historyLength.values
                 options: values.map(value => value + " samples")
                 selectedIndex: values.indexOf(panel.resourceState.historyLength)
-                onOpened: intervalSelector.cancel()
+                onOpened: {
+                    intervalSelector.cancel();
+                    panel.revealSelector(historySelector);
+                }
                 onChosen: index => panel.resourceState.setHistory(values[index])
             }
             ShellUtilityAction {

@@ -1944,6 +1944,7 @@ FocusScope {
                     theme: root.theme
                     motion: root.motion
                     resourceState: root.resourceState
+                    onRevealSelection: (top, bottom) => root.revealContent(top, bottom)
                     onKeyboardRequested: keyboardFocus.forceActiveFocus()
                 }
             }

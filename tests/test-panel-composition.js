@@ -137,6 +137,13 @@ test("overflowing static detail editors retain the hub scroll path", () => {
   );
   for (const name of ["SettingsDetail.qml", "VhsPanel.qml"])
     assert.match(qml(name), /revealSelection\(top, top \+ card.height\)/);
+  const resources = qml("ResourceDashboard.qml");
+  assert.match(
+    resources,
+    /panel.revealSelection\(top, top \+ selector.height\)/,
+  );
+  assert.match(resources, /panel.revealSelector\(intervalSelector\)/);
+  assert.match(resources, /panel.revealSelector\(historySelector\)/);
 });
 
 test("forecast rows are read-only and retain accessible weather details without duplicate footer actions", () => {
