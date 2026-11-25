@@ -89,7 +89,7 @@ in
   /**
     macOS tiling window management.
   */
-  yabai = { lib, system, ... }: lib.optionalAttrs isDarwin ((import ./yabai) { inherit lib system; });
+  yabai = _: lib.optionalAttrs isDarwin ((import ./yabai) { });
 
   /**
     macOS battery charging management.
