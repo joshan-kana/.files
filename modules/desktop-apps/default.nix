@@ -132,7 +132,7 @@ in
   };
 
   kitty = _: {
-    home = _: {
+    home = { config, pkgs, ... }: {
       programs.kitty = {
         enable = true;
         settings = {
@@ -144,6 +144,40 @@ in
           cursor_trail_decay = "0.16 0.16";
           cursor_trail_start_threshold = "0 0";
           remember_window_size = false;
+          include = lib.mkIf ((config.programs.kitty.font.package or null) != null) (
+            toString (
+              pkgs.runCommand "kitty-font-faces.conf"
+                {
+                  nativeBuildInputs = [ pkgs.fontconfig ];
+                  FONTCONFIG_FILE = pkgs.makeFontsConf {
+                    fontDirectories = [ config.programs.kitty.font.package ];
+                  };
+                  family = config.programs.kitty.font.name;
+                }
+                ''
+                  # Resolve exact faces only for static families with multiple widths.
+                  # Other families retain kitty's native matching.
+                  if [ -n "$(fc-list "$family:variable=true" -f '%{file}')" ] ||
+                     [ "$(fc-list "$family" -f '%{width}\n' | sort -u | wc -l)" -le 1 ]; then
+                    touch "$out"
+                    exit 0
+                  fi
+
+                  face() {
+                    name=$(fc-match -f '%{postscriptname}' "$family:width=normal:weight=$2:slant=$3")
+                    test -n "$name"
+                    printf '%s postscript_name=%s\n' "$1" "$name"
+                  }
+
+                  {
+                    face font_family regular roman
+                    face bold_font demibold roman
+                    face italic_font regular italic
+                    face bold_italic_font demibold italic
+                  } > "$out"
+                ''
+            )
+          );
         };
       };
     };
