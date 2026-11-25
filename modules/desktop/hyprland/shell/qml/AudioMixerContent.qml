@@ -442,9 +442,9 @@ FocusScope {
             const rows = Math.max(1, Math.floor(list.height / (compact ? 72 : 106)));
             selectIndex(Math.max(0, Math.min(targets.length - 1, selectedIndex + ((key === mixer.runtime.shellKeyCode("mixer", "D") || key === mixer.runtime.shellKeyCode("mixer", "PageDown")) ? rows : -rows))));
         } else if (mixer.runtime.shellNavigates("mixer", "left", key)) {
-            adjustSelected(-0.05);
+            adjustSelected(-system.volumeStep);
         } else if (mixer.runtime.shellNavigates("mixer", "right", key)) {
-            adjustSelected(0.05);
+            adjustSelected(system.volumeStep);
         } else if (key === mixer.runtime.shellKeyCode("mixer", "M") || (!compact && (key === mixer.runtime.shellKeyCode("mixer", "Return") || key === mixer.runtime.shellKeyCode("mixer", "Enter")))) {
             if (!autoRepeat)
                 toggleSelectedMute();

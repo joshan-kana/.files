@@ -160,7 +160,7 @@ Item {
             }
             onWheel: event => {
                 if (event.angleDelta.y !== 0 && island.system.audioAvailable) {
-                    island.system.adjustVolume((event.angleDelta.y > 0 ? 1 : -1) * 0.05);
+                    island.system.adjustVolume((event.angleDelta.y > 0 ? 1 : -1) * island.system.volumeStep);
                     event.accepted = true;
                 }
             }

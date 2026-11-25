@@ -308,7 +308,7 @@ Item {
                     description: "Warmer at lower Kelvin values",
                     minimum: runtime.constraints.nightLight.temperature.min,
                     maximum: runtime.constraints.nightLight.temperature.max,
-                    step: 100,
+                    step: runtime.constraints.nightLight.temperature.step,
                     suffix: " K"
                 }
             ];

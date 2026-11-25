@@ -273,10 +273,9 @@ def main(argv):
             ]
             saved[key] = validated(key, int(argv[1]))
         elif command in ("warmer", "cooler"):
-            saved["temperature"] = max(
-                CONSTRAINTS["temperature"]["min"],
-                min(CONSTRAINTS["temperature"]["max"], config["temperature"] + (-500 if command == "warmer" else 500)),
-            )
+            rule = CONSTRAINTS["temperature"]
+            delta = rule["shortcutStep"] * (-1 if command == "warmer" else 1)
+            saved["temperature"] = max(rule["min"], min(rule["max"], config["temperature"] + delta))
         elif command != "apply":
             raise ValueError("Unknown Night Light action")
         if saved.get("until", 0) <= now.timestamp():

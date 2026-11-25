@@ -300,6 +300,7 @@ test("QML consumes evaluated runtime values without its own default adapter", ()
     "accessibility",
     "defaults",
     "motion",
+    "adjustmentSteps",
     "resourceSampling",
     "session",
     "palette",

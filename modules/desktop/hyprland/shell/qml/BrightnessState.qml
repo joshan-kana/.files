@@ -6,6 +6,7 @@ QtObject {
 
     required property RuntimeConfig runtime
 
+    readonly property int adjustmentStep: runtime.adjustmentSteps.brightnessPercent
     property bool supported: false
     property bool initialized: false
     property string device: ""

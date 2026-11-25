@@ -58,7 +58,7 @@ test("direct keyboard adjustments and drag previews use the same expressive thum
     );
   assert.match(
     qml("SystemContent.qml"),
-    /brightnessSlider\.beginKeyboardAdjustment\(\);\s*brightness\.adjust\(direction \* 5\)/,
+    /brightnessSlider\.beginKeyboardAdjustment\(\);\s*brightness\.adjust\(direction \* brightness\.adjustmentStep\)/,
   );
   assert.match(
     qml("SystemContent.qml"),
@@ -107,4 +107,32 @@ test("every shared slider smooths external changes and holds feedback until real
       /onActiveFocusChanged: if \(!activeFocus\)\s+(?:root|content)\.motion\.endKeyboardAdjustment/,
     );
   }
+});
+
+test("relative hardware adjustments share evaluated increments", () => {
+  const qml = (name) =>
+    fs.readFileSync(
+      path.join(__dirname, "../modules/desktop/hyprland/shell/qml", name),
+      "utf8",
+    );
+  assert.match(
+    qml("SystemState.qml"),
+    /volumeStep: runtime\.adjustmentSteps\.volumePercent \/ 100/,
+  );
+  assert.match(
+    qml("BrightnessState.qml"),
+    /adjustmentStep: runtime\.adjustmentSteps\.brightnessPercent/,
+  );
+  for (const name of [
+    "Actions.qml",
+    "AudioMixerContent.qml",
+    "SystemContent.qml",
+    "SystemIsland.qml",
+  ]) {
+    assert.match(qml(name), /volumeStep/);
+  }
+  assert.match(
+    qml("Actions.qml"),
+    /brightnessState\.adjust\(brightnessState\.adjustmentStep\)/,
+  );
 });

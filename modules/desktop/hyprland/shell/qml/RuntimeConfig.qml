@@ -84,6 +84,7 @@ QtObject {
 
     readonly property real textScale: root.configData.accessibility.textScale
     readonly property real motionDurationMultiplier: root.configData.motion.durationMultiplier
+    readonly property var adjustmentSteps: root.configData.adjustmentSteps
     readonly property var resourceSampling: root.configData.resourceSampling
     readonly property bool animationsEnabled: root.configData.motion.animationsEnabled
     readonly property bool restoreWindowsOnExit: root.configData.session.restoreWindowsOnExit
@@ -212,7 +213,7 @@ QtObject {
     function parseConfig(text: string): var {
         try {
             const config = JSON.parse(text);
-            for (const key of ["fallbackTheme", "constraints", "accessibility", "defaults", "motion", "resourceSampling", "session", "palette", "appearance", "capture", "notifications", "weather", "tools", "shortcuts", "shortcutHints", "shellBindings", "nightLight", "wallpaperRotation"]) {
+            for (const key of ["fallbackTheme", "constraints", "accessibility", "defaults", "motion", "adjustmentSteps", "resourceSampling", "session", "palette", "appearance", "capture", "notifications", "weather", "tools", "shortcuts", "shortcutHints", "shellBindings", "nightLight", "wallpaperRotation"]) {
                 if (!config[key] || typeof config[key] !== "object" || Array.isArray(config[key]))
                     throw new Error("Missing runtime configuration object: " + key);
             }

@@ -109,29 +109,12 @@ FocusScope {
     function adjustSlider(direction: int): void {
         if (selectedSlider === "brightness" && brightness.supported) {
             brightnessSlider.beginKeyboardAdjustment();
-            brightness.adjust(direction * 5);
-        } else if (selectedSlider === "windows")
-            appearance.setWindowOpacity(Math.max(0.20, Math.min(1, Math.round((appearance.windowOpacity + direction * 0.05) * 100) / 100)));
-        else if (selectedSlider === "glass")
-            appearance.setGlassOpacity(Math.max(0.20, Math.min(1, Math.round((appearance.glassOpacity + direction * 0.05) * 100) / 100)));
-        else if (selectedSlider === "blur")
-            appearance.setBlurSize(appearance.blurSize + direction);
-        else if (selectedSlider === "vhs")
-            appearance.setVhsIntensity(appearance.vhsIntensity + direction * 0.05);
-        else if (selectedSlider === "nightLight" && nightLight.supported)
-            nightLight.adjustTemperature(direction * 200);
+            brightness.adjust(direction * brightness.adjustmentStep);
+        }
     }
 
     function activateSlider(): void {
-        if (selectedSlider === "windows")
-            windowTransparencyToggleRequested();
-        else if (selectedSlider === "glass")
-            shellGlassToggleRequested();
-        else if (selectedSlider === "vhs")
-            appearance.toggleVhs();
-        else if (selectedSlider === "nightLight")
-            nightLight.toggle();
-        else if (selectedSlider === "brightness")
+        if (selectedSlider === "brightness")
             brightness.refresh();
     }
     readonly property bool audioChooserOpen: audioDeck.deviceChooserOpen
@@ -2540,9 +2523,9 @@ FocusScope {
                 } else if (root.runtime.shellMatchesHint("MediaTransport.forwardCompact", event.key, event.modifiers)) {
                     mediaCard.triggerTransport("forward", event.isAutoRepeat);
                 } else if (event.modifiers === Qt.NoModifier && (root.runtime.shellNavigates("controls", "left", event.key))) {
-                    root.adjustSelectedAudio(-0.05);
+                    root.adjustSelectedAudio(-root.system.volumeStep);
                 } else if (event.modifiers === Qt.NoModifier && (root.runtime.shellNavigates("controls", "right", event.key))) {
-                    root.adjustSelectedAudio(0.05);
+                    root.adjustSelectedAudio(root.system.volumeStep);
                 } else if (event.modifiers === Qt.NoModifier && (root.runtime.shellNavigates("controls", "up", event.key))) {
                     root.moveAudioSelection(-1);
                 } else if (event.modifiers === Qt.NoModifier && (root.runtime.shellNavigates("controls", "down", event.key))) {

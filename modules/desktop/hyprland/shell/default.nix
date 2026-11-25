@@ -237,6 +237,8 @@ let
       temperature = {
         min = 2500;
         max = 6500;
+        step = 100;
+        shortcutStep = 500;
       };
       startMinute = {
         min = 0;
@@ -1072,6 +1074,25 @@ in
     description = "Duration multiplier for animated shell transitions, independent of compositor animation rules.";
   };
 
+  scopeOptions.adjustmentSteps = lib.mkOption {
+    type = lib.types.submodule {
+      options = {
+        volumePercent = lib.mkOption {
+          type = lib.types.ints.between 1 100;
+          default = 5;
+          description = "Audio gain adjustment in percentage points for desktop shortcuts and wheel input.";
+        };
+        brightnessPercent = lib.mkOption {
+          type = lib.types.ints.between 1 100;
+          default = 5;
+          description = "Display brightness adjustment in percentage points for desktop shortcuts.";
+        };
+      };
+    };
+    default = { };
+    description = "Relative desktop audio and brightness adjustment increments.";
+  };
+
   scopeOptions.resourceSampling = lib.mkOption {
     type = lib.types.submodule {
       options = {
@@ -1351,7 +1372,12 @@ in
         accessibility.textScale = scopeConfig.textScale;
         motion.animationsEnabled = scopeConfig.animationsEnabled;
         motion.durationMultiplier = scopeConfig.shellMotionSpeed;
-        inherit (scopeConfig) resourceSampling nightLight wallpaperRotation;
+        inherit (scopeConfig)
+          adjustmentSteps
+          resourceSampling
+          nightLight
+          wallpaperRotation
+          ;
         session.restoreWindowsOnExit = scopeConfig.restoreWindowsOnExit;
         palette = {
           inherit (scopeConfig) quicklinks;

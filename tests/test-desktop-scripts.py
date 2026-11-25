@@ -68,7 +68,7 @@ class DesktopScriptTests(unittest.TestCase):
                 "DESKTOP_NIGHT_LIGHT_CONSTRAINTS": json.dumps(
                     {
                         "mode": {"values": ["off", "manual", "custom", "solar"]},
-                        "temperature": {"min": 2500, "max": 6500},
+                        "temperature": {"min": 2500, "max": 6500, "step": 100, "shortcutStep": 500},
                         "startMinute": {"min": 0, "max": 1439},
                         "endMinute": {"min": 0, "max": 1439},
                         "days": {"min": 0, "max": 127},
@@ -207,6 +207,13 @@ esac
         run("set", "4100")
         self.assertEqual(json.loads(run("state"))["effectiveTemperature"], 4100)
         self.assertEqual((self.runtime / "light-command").read_text().strip(), "hyprsunset temperature 4100")
+        constraints = json.loads(self.env["DESKTOP_NIGHT_LIGHT_CONSTRAINTS"])
+        constraints["temperature"]["shortcutStep"] = 200
+        self.env["DESKTOP_NIGHT_LIGHT_CONSTRAINTS"] = json.dumps(constraints)
+        run("warmer")
+        self.assertEqual(json.loads(run("state"))["temperature"], 3900)
+        run("cooler")
+        self.assertEqual(json.loads(run("state"))["temperature"], 4100)
         run("pause", "30")
         self.assertFalse(json.loads(run("state"))["active"])
         run("toggle")

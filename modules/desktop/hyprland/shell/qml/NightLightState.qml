@@ -209,12 +209,13 @@ QtObject {
     function setTemperature(target: real): void {
         if (!supported || !isFinite(target))
             return;
-        adjustTemperature(Math.round(runtime.bounded("nightLight", "temperature", target) / 100) * 100 - temperature);
+        const step = runtime.constraints.nightLight.temperature.step;
+        adjustTemperature(Math.round(runtime.bounded("nightLight", "temperature", target) / step) * step - temperature);
     }
     function warmer(): void {
-        adjustTemperature(-500);
+        adjustTemperature(-runtime.constraints.nightLight.temperature.shortcutStep);
     }
     function cooler(): void {
-        adjustTemperature(500);
+        adjustTemperature(runtime.constraints.nightLight.temperature.shortcutStep);
     }
 }

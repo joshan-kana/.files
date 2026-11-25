@@ -358,11 +358,11 @@ QtObject {
     }
 
     function volumeUp(): void {
-        systemState.adjustVolume(0.05);
+        systemState.adjustVolume(systemState.volumeStep);
     }
 
     function volumeDown(): void {
-        systemState.adjustVolume(-0.05);
+        systemState.adjustVolume(-systemState.volumeStep);
     }
 
     function toggleMute(): void {
@@ -370,11 +370,11 @@ QtObject {
     }
 
     function brightnessUp(): void {
-        brightnessState.adjust(5);
+        brightnessState.adjust(brightnessState.adjustmentStep);
     }
 
     function brightnessDown(): void {
-        brightnessState.adjust(-5);
+        brightnessState.adjust(-brightnessState.adjustmentStep);
     }
 
     function toggleRecording(): void {

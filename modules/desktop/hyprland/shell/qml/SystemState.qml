@@ -68,6 +68,7 @@ QtObject {
 
     readonly property var audioSink: Pipewire.defaultAudioSink
     readonly property bool audioAvailable: audioSink !== null && audioSink.audio !== null
+    readonly property real volumeStep: runtime.adjustmentSteps.volumePercent / 100
     readonly property real volume: audioAvailable ? audioSink.audio.volume : 0
     readonly property int volumePercent: Math.round(volume * 100)
     readonly property bool muted: audioAvailable ? audioSink.audio.muted : false
