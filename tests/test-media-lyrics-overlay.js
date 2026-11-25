@@ -65,7 +65,18 @@ test("lyrics omit redundant local status labels while preserving frequency marke
   );
   assert.match(lyrics, /No local track · Lyrics are never fetched online/);
   assert.match(lyrics, /height: parent.height/);
-  assert.match(media, /id: frequencyLabels[\s\S]*?visible: true/);
+  assert.match(
+    media,
+    /id: frequencyLabels[\s\S]*?visible: content\.visualizerMode !== "off"/,
+  );
+  assert.match(
+    media,
+    /id: spectrumSlot[\s\S]*?visible: content\.visualizerMode !== "off" \|\| content\.lyricsVisible/,
+  );
+  assert.match(
+    media,
+    /id: spectrumSlot[\s\S]*?height: visible \? implicitHeight : 0/,
+  );
   assert.match(media, /id: frequencyLabels[\s\S]*?z: 1/);
   assert.match(
     qml("SpectrumVisualizer.qml"),

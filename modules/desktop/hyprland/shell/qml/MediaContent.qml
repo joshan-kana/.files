@@ -279,6 +279,8 @@ FocusScope {
 
         Column {
             id: spectrumSlot
+            visible: content.visualizerMode !== "off" || content.lyricsVisible
+            height: visible ? implicitHeight : 0
             anchors {
                 top: header.bottom
                 left: parent.left
@@ -337,7 +339,7 @@ FocusScope {
                     id: frequencyLabels
 
                     height: 18
-                    visible: true
+                    visible: content.visualizerMode !== "off"
                     z: 1
                     anchors {
                         right: parent.right
