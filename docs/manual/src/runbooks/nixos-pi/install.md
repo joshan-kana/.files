@@ -278,6 +278,6 @@ sup
 systemctl --user start jellyfin-mpv-shim.service
 ```
 
-Verify the journal reports `Using external mpv playback backend.` The Pi-specific MPV uses V4L2 hardware decoding and DMA-BUF presentation with two hardware decoder threads.
+Verify the journal reports `Using external mpv playback backend.` The Pi-specific MPV uses V4L2 hardware decoding and DMA-BUF presentation with two hardware decoder threads. Kodi uses the same MPV as its external player for common video file formats, rather than a separate downstream FFmpeg 6 build. Kodi-specific streams retain the internal player. External playback does not provide all of Kodi's native playback controls or progress tracking; use Jellyfin MPV Shim for Jellyfin library playback.
 
 Test HDMI output and audio, Kodi, Chromium, Moonlight and Jellyfin MPV Shim on the Pi. Verify the selected display mode and HDR signalling with representative media on the physical display. Video decoding and codec compatibility depend on the actual hardware and media. Reinstall by writing a current image to the drive and copying the host credentials onto its root partition. Restore additional mutable data from its normal backups where applicable.

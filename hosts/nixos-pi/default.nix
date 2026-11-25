@@ -28,6 +28,24 @@ lib.recursiveUpdate profile {
     };
 
   desktopApps = editScope profile.desktopApps {
+    kodi = _: {
+      home = { config, pkgs, ... }: {
+        home.file.".kodi/userdata/playercorefactory.xml".text = ''
+          <playercorefactory>
+            <players>
+              <player name="MPV" type="ExternalPlayer" audio="false" video="true">
+                <filename>${lib.getExe pkgs.mpv-rpi}</filename>
+                <args>--no-config --include="${config.xdg.configHome}/jellyfin-mpv-shim/mpv.conf" --fullscreen "{1}"</args>
+                <hidexbmc>true</hidexbmc>
+              </player>
+            </players>
+            <rules action="prepend">
+              <rule video="true" filetypes="mkv|mp4|m4v|mov|webm|avi|ts|m2ts" player="MPV"/>
+            </rules>
+          </playercorefactory>
+        '';
+      };
+    };
     moonlight = _: {
       nixpkgs.overlays = lib.mkAfter [
         (_final: prev: { moonlight-qt = prev.moonlight-qt-rpi; })
