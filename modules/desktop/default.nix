@@ -50,7 +50,18 @@ in
     macOS automation, window management, and keyboard shortcuts.
   */
   hammerspoon =
-    { lib, pkgs, ... }: lib.optionalAttrs isDarwin ((import ./hammerspoon) { inherit lib pkgs; });
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
+    lib.optionalAttrs isDarwin (
+      (import ./hammerspoon) {
+        inherit lib pkgs;
+        terminal = config.dotfiles.defaults.terminal;
+      }
+    );
 
   /**
     Raycast launcher and system command palette.

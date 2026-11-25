@@ -143,10 +143,10 @@ local bindings = {
 		mods = "meh",
 		key = "f",
 		fn = function()
-			app_switcher.open("iTerm")
+			app_switcher.open(require("nix_runtime").terminal)
 		end,
 		section = "APPS",
-		desc = "iTerm",
+		desc = "Default terminal",
 	},
 	{
 		mods = "meh",
