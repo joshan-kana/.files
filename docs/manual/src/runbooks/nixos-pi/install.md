@@ -61,7 +61,8 @@ Inspect the connected storage before choosing a device:
 lsblk -o NAME,PATH,MODEL,SERIAL,TRAN,RM,SIZE,FSTYPE,MOUNTPOINTS
 printf 'Verified removable USB whole-disk path: '
 read -r SD_DISK
-[ "$(lsblk -ndo TRAN "$SD_DISK")" = usb ] &&
+[ "$(lsblk -ndo TYPE "$SD_DISK")" = disk ] &&
+  [ "$(lsblk -ndo TRAN "$SD_DISK")" = usb ] &&
   [ "$(lsblk -ndo RM "$SD_DISK")" = 1 ] || exit 1
 
 printf 'Type FLASH after verifying the disk model and size: '
@@ -70,10 +71,10 @@ read -r CONFIRM
 
 IMAGE=$(find -L /tmp/nixos-pi-image/sd-image -maxdepth 1 -name '*.img' -print -quit)
 test -n "$IMAGE" || exit 1
-dd if="$IMAGE" of="$SD_DISK" bs=4M status=progress conv=fsync
-sync
-blockdev --rereadpt "$SD_DISK"
-udevadm settle
+dd if="$IMAGE" of="$SD_DISK" bs=4M status=progress conv=fsync &&
+  sync &&
+  blockdev --rereadpt "$SD_DISK" &&
+  udevadm settle
 ```
 
 ### Verify the flashed partitions
@@ -84,7 +85,8 @@ In the Linux root shell (native Linux or OrbStack), identify the **current** tar
 lsblk -o NAME,PATH,MODEL,SERIAL,TRAN,RM,SIZE,FSTYPE,LABEL,MOUNTPOINTS
 printf 'Verified USB whole-disk path: '
 read -r SD_DISK
-[ "$(lsblk -ndo TRAN "$SD_DISK")" = usb ] &&
+[ "$(lsblk -ndo TYPE "$SD_DISK")" = disk ] &&
+  [ "$(lsblk -ndo TRAN "$SD_DISK")" = usb ] &&
   [ "$(lsblk -ndo RM "$SD_DISK")" = 1 ] || exit 1
 ```
 
@@ -99,52 +101,57 @@ Prepare directories containing this host's required secrets and its Restic backu
 Use the partitions of the **verified installation drive**, not another disk that happens to have the same labels:
 
 ```sh
-BOOT_PART=$(lsblk -lnpo PATH "$SD_DISK" | sed -n '2p')
-ROOT_PART=$(lsblk -lnpo PATH "$SD_DISK" | sed -n '3p')
-[ "$(blkid -s LABEL -o value "$BOOT_PART")" = "${BOOT_DEVICE##*/}" ]
-[ "$(blkid -s TYPE -o value "$BOOT_PART")" = "$BOOT_FS" ]
-[ "$(blkid -s LABEL -o value "$ROOT_PART")" = "${ROOT_DEVICE##*/}" ]
-[ "$(blkid -s TYPE -o value "$ROOT_PART")" = "$ROOT_FS" ]
+(
+  set -eu
+  BOOT_PART=$(lsblk -nrpo PATH,PARTN "$SD_DISK" | awk '$2 == 1 {print $1}')
+  ROOT_PART=$(lsblk -nrpo PATH,PARTN "$SD_DISK" | awk '$2 == 2 {print $1}')
+  [ "$(blkid -s LABEL -o value "$BOOT_PART")" = "${BOOT_DEVICE##*/}" ]
+  [ "$(blkid -s TYPE -o value "$BOOT_PART")" = "$BOOT_FS" ]
+  [ "$(blkid -s LABEL -o value "$ROOT_PART")" = "${ROOT_DEVICE##*/}" ]
+  [ "$(blkid -s TYPE -o value "$ROOT_PART")" = "$ROOT_FS" ]
 
-mkdir -p /mnt/nixos-pi-boot /mnt/nixos-pi-root
-mount -t "$BOOT_FS" -o ro "$BOOT_PART" /mnt/nixos-pi-boot
-[ -s /mnt/nixos-pi-boot/u-boot.bin ]
-[ -s /mnt/nixos-pi-boot/config.txt ]
-[ -s /mnt/nixos-pi-boot/extlinux/extlinux.conf ]
-umount /mnt/nixos-pi-boot
+  MNT=$(mktemp -d)
+  trap 'if mountpoint -q "$MNT"; then umount "$MNT"; fi; rmdir "$MNT"' EXIT
+  mount -t "$BOOT_FS" -o ro "$BOOT_PART" "$MNT"
+  [ -s "$MNT/u-boot.bin" ]
+  [ -s "$MNT/config.txt" ]
+  [ -s "$MNT/extlinux/extlinux.conf" ]
+  umount "$MNT"
 
-printf 'Host secrets directory: '
-read -r PI_SECRETS_SOURCE
-printf 'Backup bootstrap directory: '
-read -r PI_BACKUP_SOURCE
-[ -s "$PI_SECRETS_SOURCE/comin-github" ]
-[ -s "$PI_SECRETS_SOURCE/attic-token" ]
-[ -s "$PI_BACKUP_SOURCE/$(basename "$SECRETS_RCLONE_CONFIG")" ]
-[ -s "$PI_BACKUP_SOURCE/$(basename "$SECRETS_PASSWORD_FILE")" ]
+  printf 'Host secrets directory: '
+  read -r PI_SECRETS_SOURCE
+  printf 'Backup bootstrap directory: '
+  read -r PI_BACKUP_SOURCE
+  [ -s "$PI_SECRETS_SOURCE/comin-github" ]
+  [ -s "$PI_SECRETS_SOURCE/attic-token" ]
+  [ -s "$PI_BACKUP_SOURCE/$(basename "$SECRETS_RCLONE_CONFIG")" ]
+  [ -s "$PI_BACKUP_SOURCE/$(basename "$SECRETS_PASSWORD_FILE")" ]
 
-umask 077
-mount -t "$ROOT_FS" "$ROOT_PART" /mnt/nixos-pi-root
-MNT=/mnt/nixos-pi-root
-for path in "$MNT" "$MNT/nix" "$MNT/nix/store" "$MNT/boot"; do
-  [ "$(stat -c %u "$path")" = 0 ] || { echo "Incorrect root ownership: $path" >&2; exit 1; }
-done
-[ -L "$MNT/var/run" ] && [ "$(readlink "$MNT/var/run")" = ../run ] || {
-  echo 'Missing /var/run link in the image.' >&2
-  exit 1
-}
-if [ -n "$(find "$MNT/nix/store" -mindepth 1 -maxdepth 1 ! -uid 0 -print -quit)" ]; then
-  echo 'Nix store contains incorrectly owned outputs.' >&2
-  exit 1
-fi
-test -n "$PRIMARY_UID" && test -n "$PRIMARY_GID"
-install -d -o "$PRIMARY_UID" -g "$PRIMARY_GID" -m 0700 "$MNT$PRIMARY_HOME" "$MNT$USER_SECRETS_DIR"
-install -o "$PRIMARY_UID" -g "$PRIMARY_GID" -m 0600 "$PI_SECRETS_SOURCE/comin-github" "$MNT$USER_SECRETS_DIR/comin-github"
-install -o "$PRIMARY_UID" -g "$PRIMARY_GID" -m 0600 "$PI_SECRETS_SOURCE/attic-token" "$MNT$USER_SECRETS_DIR/attic-token"
-install -d -m 0700 "$(dirname "$MNT$SECRETS_RCLONE_CONFIG")" "$(dirname "$MNT$SECRETS_PASSWORD_FILE")"
-install -m 0600 "$PI_BACKUP_SOURCE/$(basename "$SECRETS_RCLONE_CONFIG")" "$MNT$SECRETS_RCLONE_CONFIG"
-install -m 0600 "$PI_BACKUP_SOURCE/$(basename "$SECRETS_PASSWORD_FILE")" "$MNT$SECRETS_PASSWORD_FILE"
-sync
-umount /mnt/nixos-pi-root
+  umask 077
+  mount -t "$ROOT_FS" "$ROOT_PART" "$MNT"
+  for path in "$MNT" "$MNT/nix" "$MNT/nix/store" "$MNT/boot"; do
+    [ "$(stat -c %u "$path")" = 0 ] || { echo "Incorrect root ownership: $path" >&2; exit 1; }
+  done
+  [ -L "$MNT/var/run" ] && [ "$(readlink "$MNT/var/run")" = ../run ] || {
+    echo 'Missing /var/run link in the image.' >&2
+    exit 1
+  }
+  incorrect=$(find "$MNT/nix/store" -mindepth 1 -maxdepth 1 ! -uid 0 -print -quit)
+  if [ -n "$incorrect" ]; then
+    echo 'Nix store contains incorrectly owned outputs.' >&2
+    exit 1
+  fi
+  test -n "$PRIMARY_UID"
+  test -n "$PRIMARY_GID"
+  install -d -o "$PRIMARY_UID" -g "$PRIMARY_GID" -m 0700 "$MNT$PRIMARY_HOME" "$MNT$USER_SECRETS_DIR"
+  install -o "$PRIMARY_UID" -g "$PRIMARY_GID" -m 0600 "$PI_SECRETS_SOURCE/comin-github" "$MNT$USER_SECRETS_DIR/comin-github"
+  install -o "$PRIMARY_UID" -g "$PRIMARY_GID" -m 0600 "$PI_SECRETS_SOURCE/attic-token" "$MNT$USER_SECRETS_DIR/attic-token"
+  install -d -m 0700 "$(dirname "$MNT$SECRETS_RCLONE_CONFIG")" "$(dirname "$MNT$SECRETS_PASSWORD_FILE")"
+  install -m 0600 "$PI_BACKUP_SOURCE/$(basename "$SECRETS_RCLONE_CONFIG")" "$MNT$SECRETS_RCLONE_CONFIG"
+  install -m 0600 "$PI_BACKUP_SOURCE/$(basename "$SECRETS_PASSWORD_FILE")" "$MNT$SECRETS_PASSWORD_FILE"
+  sync
+  umount "$MNT"
+)
 ```
 
 Safely unmount and eject the drive. On macOS, leave the OrbStack root shell and run `orb usb detach "$USB_ID"` using its current ID before unplugging the USB. The installed credentials reside on an unencrypted filesystem: keep the drive physically secure and do not publish or share its contents.
@@ -211,13 +218,14 @@ The ChatGPT shell gateway on `nixos-server` uses its own SSH login and elevation
 ```
 
 ```sh
-ssh-keyscan -t ed25519 "$HOST_NAME.home" 2>/dev/null | ssh-keygen -lf -
+HOST_KEY=$(ssh-keyscan -H -t ed25519 "$HOST_NAME.home" 2>/dev/null)
+printf '%s\n' "$HOST_KEY" | ssh-keygen -lf -
 ```
 
 Compare that fingerprint with the console output, then add the verified host key to the gateway account's known-hosts file:
 
 ```sh
-ssh-keyscan -H -t ed25519 "$HOST_NAME.home" 2>/dev/null >> ~/.ssh/known_hosts
+printf '%s\n' "$HOST_KEY" >> ~/.ssh/known_hosts
 ```
 
 The remote target becomes accessible through ChatGPT Shell Access after the server has deployed the configuration containing that target and its SSH keys. Keep the Pi reachable by its configured LAN hostname.
