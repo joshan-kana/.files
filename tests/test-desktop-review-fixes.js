@@ -148,19 +148,26 @@ test("app history and global clear are separate, and clearing requires confirmat
   assert.match(ui, /History is off; popups may still appear/);
 });
 
-test("small tile actions highlight the existing keycap without a second painted rectangle", () => {
+test("small tile hit targets paint hover and press feedback inside the existing keycap", () => {
   const quick = source("TileQuickAction.qml");
   assert.match(quick, /width: Math.max\(36, hint.implicitWidth/);
-  assert.match(quick, /showHover: false/);
-  assert.doesNotMatch(quick, /localFeedback|feedbackParent/);
-  assert.match(
-    source("QuickSettingChip.qml"),
-    /emphasized: chip.active \|\| quickAction.pointerHovered \|\| quickAction.visualPressed/,
-  );
-  assert.match(
-    source("ConnectivityTile.qml"),
-    /emphasized: tile.connected \|\| quickAction.pointerHovered \|\| quickAction.visualPressed/,
-  );
+  assert.match(quick, /height: Math.max\(36, hint.implicitHeight/);
+  assert.match(quick, /feedbackParent: action.hint/);
+  assert.match(quick, /cornerRadius: Math.min\(9, action.hint.height \/ 3\)/);
+  assert.match(quick, /hoverOpacity: 0.14/);
+  assert.match(quick, /pressOpacity: 0.24/);
+  assert.doesNotMatch(quick, /showHover: false|localFeedback/);
+  for (const [name, expression] of [
+    [
+      "QuickSettingChip.qml",
+      /emphasized: chip.active \|\| quickAction.pointerHovered \|\| quickAction.visualPressed/,
+    ],
+    [
+      "ConnectivityTile.qml",
+      /emphasized: tile.connected \|\| quickAction.pointerHovered \|\| quickAction.visualPressed/,
+    ],
+  ])
+    assert.match(source(name), expression);
 });
 
 test("desktop scenes are owned by Visual Modes, not Power & Session", () => {

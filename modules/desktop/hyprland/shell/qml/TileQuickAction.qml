@@ -37,12 +37,15 @@ Item {
 
     StateLayer {
         id: interaction
-        // The visible keycap provides feedback; a second hover surface
-        // would draw a rectangular plate outside the keycap's contour.
-        showHover: false
+        // The hit target stays large, but the feedback is painted inside
+        // the existing keycap contour rather than around its hit rectangle.
+        feedbackParent: action.hint
         theme: action.theme
         motion: action.motion
-        cornerRadius: action.theme.radiusSmall
+        cornerRadius: Math.min(9, action.hint.height / 3)
+        hoverOpacity: 0.14
+        pressOpacity: 0.24
+        stateColor: action.emphasisColor
         selected: action.selected
         disabled: !action.available
         Accessible.role: Accessible.Button

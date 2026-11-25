@@ -162,15 +162,15 @@ test("whole tile visuals share one press geometry and fixed action owners", () =
   }
 });
 
-test("secondary actions keep a generous hit target while the keycap owns visual feedback", () => {
+test("secondary actions keep a generous hit target with shaped feedback on the keycap", () => {
   const action = qml("TileQuickAction.qml");
   assert.match(action, /width: Math.max\(36, hint.implicitWidth/);
   assert.match(action, /height: Math.max\(36, hint.implicitHeight/);
-  assert.match(action, /id: interaction[\s\S]*?showHover: false/);
-  assert.doesNotMatch(
-    action,
-    /localFeedback|feedbackParent|StateLayer \{[\s\S]*?hoverOpacity:/,
-  );
+  assert.match(action, /id: interaction[\s\S]*?feedbackParent: action.hint/);
+  assert.match(action, /cornerRadius: Math.min\(9, action.hint.height \/ 3\)/);
+  assert.match(action, /hoverOpacity: 0.14/);
+  assert.match(action, /pressOpacity: 0.24/);
+  assert.doesNotMatch(action, /showHover: false|localFeedback/);
   assert.match(
     qml("QuickSettingChip.qml"),
     /emphasized: chip.active \|\| quickAction.pointerHovered \|\| quickAction.visualPressed/,
