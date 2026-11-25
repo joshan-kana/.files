@@ -20,6 +20,10 @@ FocusScope {
     property int selectedMemberIndex: 0
     property string expandedGroupKey: ""
     property bool policyOpen: false
+    property bool appSettingsOpen: false
+    property ConfirmationState clearConfirmation: ConfirmationState {
+        id: clearConfirmation
+    }
 
     readonly property var items: [...(notificationState.history || [])].reverse()
     // Like end-4's grouped history, but backed by the single Quickshell notification server.
@@ -54,7 +58,7 @@ FocusScope {
 
     signal closeRequested
     implicitWidth: 620
-    implicitHeight: header.implicitHeight + footer.implicitHeight + theme.spacing4 + theme.spacing2 + (groups.length === 0 ? emptyState.implicitHeight : Math.min(theme.fontSize(510), Math.max(theme.fontSize(80), list.contentHeight)))
+    implicitHeight: header.implicitHeight + footer.implicitHeight + theme.spacing4 + theme.spacing2 + (appSettingsOpen ? theme.fontSize(360) : groups.length === 0 ? emptyState.implicitHeight : Math.min(theme.fontSize(510), Math.max(theme.fontSize(80), list.contentHeight)))
     focus: engaged
 
     function focusRequested(): void {
@@ -82,6 +86,8 @@ FocusScope {
             focusRequested();
             Qt.callLater(focusKeyboard);
         } else {
+            clearConfirmation.cancel();
+            appSettingsOpen = false;
             replyEditing = false;
             replyOwner = null;
         }
@@ -142,7 +148,11 @@ FocusScope {
     }
 
     function navigateBack(): void {
-        if (replyEditing) {
+        if (clearConfirmation.pending) {
+            clearConfirmation.cancel();
+        } else if (appSettingsOpen) {
+            appSettingsOpen = false;
+        } else if (replyEditing) {
             replyOwner = null;
             replyEditing = false;
             focusKeyboard();
@@ -234,6 +244,14 @@ FocusScope {
             if (card && card.notification === notification)
                 card.focusReply();
         });
+    }
+
+    function requestClearAll(): void {
+        if (!clearConfirmation.request("all"))
+            return;
+        notificationState.clearAll();
+        selectedIndex = 0;
+        selectedMemberIndex = 0;
     }
 
     function dismissNotification(notification): void {
@@ -368,6 +386,24 @@ FocusScope {
                         onActivated: center.notificationState.togglePresentation()
                     }
                     ShellAction {
+                        id: applicationSettingsAction
+                        runtime: center.runtime
+                        theme: center.theme
+                        motion: center.motion
+                        compact: true
+                        iconOnly: true
+                        icon: "󰒓"
+                        title: center.appSettingsOpen ? "Back to notifications" : "App notification settings"
+                        shortcut: center.runtime.shellHint("NotificationContent.apps")
+                        active: center.appSettingsOpen
+                        width: Math.max(center.theme.minActionTarget, implicitWidth)
+                        height: Math.max(center.theme.minActionTarget, implicitHeight)
+                        onActivated: {
+                            center.clearConfirmation.cancel();
+                            center.appSettingsOpen = !center.appSettingsOpen;
+                        }
+                    }
+                    ShellAction {
                         id: historyAction
                         runtime: center.runtime
                         theme: center.theme
@@ -395,16 +431,22 @@ FocusScope {
                         height: Math.max(center.theme.minActionTarget, implicitHeight)
                         iconOnly: true
                         icon: "󰆴"
-                        title: "Clear all"
+                        title: center.clearConfirmation.pending ? "Confirm clear all" : "Clear all"
+                        active: center.clearConfirmation.pending.length > 0
                         shortcut: center.runtime.shellHint("NotificationContent.clearAll")
                         iconHint: true
-                        onActivated: {
-                            center.notificationState.clearAll();
-                            center.selectedIndex = 0;
-                            center.selectedMemberIndex = 0;
-                        }
+                        onActivated: center.requestClearAll()
                     }
                 }
+            }
+            ShellText {
+                width: parent.width
+                visible: center.clearConfirmation.pending.length > 0
+                runtime: center.runtime
+                theme: center.theme
+                text: "Clear saved notifications? Press C or Enter again within 5 seconds; Esc cancels."
+                color: center.theme.readableRoleColor("warning")
+                wrapMode: Text.WordWrap
             }
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
@@ -420,7 +462,7 @@ FocusScope {
             id: emptyState
             anchors.fill: list
             implicitHeight: Math.max(center.theme.fontSize(148), emptyContents.implicitHeight + center.theme.spacing4 * 2)
-            visible: center.groups.length === 0
+            visible: center.groups.length === 0 && !center.appSettingsOpen
             theme: center.theme
             motion: center.motion
             surfaceLayer: ShellSurface.Group
@@ -447,7 +489,7 @@ FocusScope {
                 }
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    text: "New notifications will appear here"
+                    text: center.notificationState.historyEnabled ? "New saved notifications will appear here" : "History is off; popups may still appear. Use App settings to manage rules."
                     font.family: center.runtime.fontSans
                     font.pixelSize: center.theme.fontSize(10)
                     color: center.theme.textMuted
@@ -464,7 +506,7 @@ FocusScope {
             hints: [
                 {
                     shortcut: center.runtime.shellHint("NotificationContent.navigate"),
-                    label: "Navigate"
+                    label: center.appSettingsOpen ? "Select app" : "Navigate"
                 },
                 {
                     shortcut: center.runtime.shellHint("NotificationContent.groups"),
@@ -483,6 +525,7 @@ FocusScope {
                 topMargin: center.theme.spacing4
                 bottomMargin: center.theme.spacing2
             }
+            visible: !center.appSettingsOpen
             model: center.rows
             cacheBuffer: 120
             spacing: center.theme.spacing3
@@ -659,12 +702,53 @@ FocusScope {
                 positionViewAtIndex(currentIndex, ListView.Contain)
         }
 
+        NotificationAppSettings {
+            id: appSettings
+            anchors.fill: list
+            visible: center.appSettingsOpen
+            notificationState: center.notificationState
+            runtime: center.runtime
+            theme: center.theme
+            motion: center.motion
+        }
+
         FocusScope {
             id: keySink
             anchors.fill: parent
             focus: center.engaged
 
             Keys.onPressed: event => {
+                if (center.runtime.shellMatchesHint("NotificationContent.apps", event.key, event.modifiers)) {
+                    if (!event.isAutoRepeat)
+                        applicationSettingsAction.trigger();
+                    event.accepted = true;
+                    return;
+                }
+                if (center.clearConfirmation.pending) {
+                    if (!event.isAutoRepeat && (center.runtime.shellMatchesHint("NotificationContent.clearAll", event.key, event.modifiers) || event.key === center.runtime.shellKeyCode("activity", "Return") || event.key === center.runtime.shellKeyCode("activity", "Enter")))
+                        center.requestClearAll();
+                    else
+                        center.clearConfirmation.cancel();
+                    event.accepted = true;
+                    return;
+                }
+                if (center.appSettingsOpen) {
+                    if (event.key === center.runtime.shellKeyCode("activity", "Escape") || event.key === center.runtime.shellKeyCode("activity", "Backspace")) {
+                        center.appSettingsOpen = false;
+                    } else if (center.runtime.shellNavigates("activity", "down", event.key)) {
+                        appSettings.move(1);
+                    } else if (center.runtime.shellNavigates("activity", "up", event.key)) {
+                        appSettings.move(-1);
+                    } else if (!event.isAutoRepeat && center.runtime.shellMatchesHint("NotificationCard.history", event.key, event.modifiers)) {
+                        appSettings.toggle("history");
+                    } else if (!event.isAutoRepeat && center.runtime.shellMatchesHint("NotificationCard.popup", event.key, event.modifiers)) {
+                        appSettings.toggle("popups");
+                    } else if (!event.isAutoRepeat && center.runtime.shellMatchesHint("NotificationCard.defaults", event.key, event.modifiers)) {
+                        appSettings.reset();
+                    }
+                    event.accepted = true;
+                    return;
+                }
                 const appActions = {
                     "NotificationCard.popup": "popups",
                     "NotificationCard.history": "history",

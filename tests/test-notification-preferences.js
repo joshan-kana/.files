@@ -117,5 +117,6 @@ test("inheriting notification history policy does not delete archived records", 
   const history = source
     .split("function toggleHistory")[1]
     .split("function applicationPreferences")[0];
-  assert.match(history, /if \(!enabled\)\s*clearAll\(\)/);
+  assert.match(history, /settings.set\("historyEnabled", !historyEnabled\)/);
+  assert.doesNotMatch(history, /clearAll\(\)|applyJournal\(/);
 });

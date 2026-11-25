@@ -131,6 +131,7 @@
           "NotificationCard.criticalOnly" = "SHIFT+U";
           "NotificationCard.privatePreview" = "SHIFT+V";
           "NotificationCard.defaults" = "SHIFT+R";
+          "NotificationContent.apps" = "SHIFT+A";
           "NotificationContent.clearAll" = "C";
           "NotificationContent.expand" = "E";
           "NotificationContent.groups" = "NAV_HORIZONTAL";

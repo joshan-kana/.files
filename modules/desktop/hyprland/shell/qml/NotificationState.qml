@@ -207,23 +207,31 @@ QtObject {
     }
 
     function toggleHistory(): void {
-        const enabled = !historyEnabled;
-        settings.set("historyEnabled", enabled);
-        // Explicitly disabling history retains its existing clearing behavior.
-        // Inheriting a changed default or resetting preferences is not deletion.
-        if (!enabled)
-            clearAll();
+        settings.set("historyEnabled", !historyEnabled);
+    }
+
+    readonly property var managedApplications: {
+        const overrides = settings.value("applications");
+        const declared = runtime.notificationApplications;
+        return [...new Set([...Object.keys(declared), ...Object.keys(overrides)])].sort().map(key => ({
+                    key: key,
+                    name: overrides[key]?.name || declared[key]?.name || key.replace(/^(desktop|name):/, "")
+                }));
+    }
+
+    function applicationKey(notification): string {
+        return typeof notification === "string" ? notification : NotificationSemantics.groupKey(notification);
     }
 
     function applicationPreferences(notification): var {
-        const key = NotificationSemantics.groupKey(notification);
+        const key = applicationKey(notification);
         const all = settings.value("applications");
         return Object.assign({}, runtime.notificationApplications[key] || {}, all[key] || {});
     }
 
     function resetApplicationPreferences(notification): void {
         const all = Object.assign({}, settings.value("applications"));
-        const key = NotificationSemantics.groupKey(notification);
+        const key = applicationKey(notification);
         delete all[key];
         settings.set("applications", all);
         hideApplicationPopups(key);
@@ -233,18 +241,17 @@ QtObject {
         if (!["popups", "history", "silent", "criticalOnly", "privatePreview"].includes(field))
             return;
         const all = Object.assign({}, settings.value("applications"));
-        const key = NotificationSemantics.groupKey(notification);
+        const key = applicationKey(notification);
         const updated = Object.assign({}, all[key] || {});
         updated[field] = value;
+        if (typeof notification !== "string" && notification.appName)
+            updated.name = notification.appName;
         all[key] = updated;
         settings.set("applications", all);
         if ((field === "popups" || field === "silent") && (field === "popups" ? !value : value))
             hideApplicationPopups(key);
         if ((field === "criticalOnly" || field === "privatePreview") && value)
             hideApplicationPopups(key);
-        if (field === "history" && !value) {
-            applyJournal(journal.filter(record => NotificationSemantics.groupKey(record) !== key));
-        }
     }
 
     Component.onCompleted: {
