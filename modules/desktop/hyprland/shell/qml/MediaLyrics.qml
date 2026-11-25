@@ -21,6 +21,7 @@ Item {
         // Only read a local media-side .lrc file while the user requests it.
         path: root.active ? root.media.lyricsPath : ""
         blockLoading: false
+        printErrors: false
         onLoadedChanged: {
             if (loaded)
                 root.lines = Lyrics.parse(text());
