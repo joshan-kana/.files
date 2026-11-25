@@ -50,7 +50,14 @@ in
   /**
     Full-screen television session with a lightweight compositor and media launcher.
   */
-  mediaSession = linuxScope (import ./media-session);
+  mediaSession =
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
+    lib.optionalAttrs isLinux ((import ./media-session) { inherit config lib pkgs; });
 
   # Keep GNOME available as an opt-in desktop without changing current hosts.
   /**
