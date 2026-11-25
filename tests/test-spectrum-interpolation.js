@@ -264,7 +264,7 @@ test("spectrum tuning is persistent, resettable, and independent of reactive tin
   ]) {
     assert.ok(preferences.includes(`effective("${name}")`));
     assert.ok(preferences.includes(`key: "${name}"`));
-    assert.match(preferences, /saved\.resetMany\(keys\.filter/);
+    assert.match(preferences, /saved\.resetMany\(keys\)/);
     assert.match(detail, /return appearance\.spectrumParameters/);
     assert.ok(shell.includes(`qmlAppearance.${name}`));
     assert.ok(!reactive.includes(name));
@@ -458,4 +458,53 @@ test("settling a quiet frame publishes its final values and clears stale energy"
   assert.deepEqual(state.bands, [0.0015, 0.0015]);
   assert.equal(state.hasEnergy, false);
   assert.equal(state.interpolating, false);
+});
+
+test("spectrum reset uses the Qt Quick JavaScript subset and preserves scene and saved ownership", () => {
+  const src = fs.readFileSync(
+    path.join(
+      __dirname,
+      "../modules/desktop/hyprland/shell/qml/AppearancePreferences.qml",
+    ),
+    "utf8",
+  );
+  assert.doesNotMatch(src, /\.flatMap\(/);
+  const body = src
+    .split("function resetSpectrumTuning(): void {")[1]
+    .split("\n    }")[0];
+  const run = new Function("ctx", "with (ctx) {" + body + "}");
+  const parameters = [{ key: "spectrumAttack" }, { key: "spectrumOpacity" }];
+  const surfaces = [
+    { key: "wallpaperVisualizerMode", enabledKey: "wallpaperSpectrumEnabled" },
+    { key: "mediaVisualizerMode", enabledKey: "mediaVisualizerEnabled" },
+  ];
+  const defaults = {
+    spectrumAttack: 1,
+    spectrumOpacity: 1,
+    wallpaperVisualizerMode: "bars",
+    wallpaperSpectrumEnabled: true,
+    mediaVisualizerMode: "bars",
+    mediaVisualizerEnabled: true,
+  };
+  const calls = [];
+  const ctx = {
+    spectrumParameters: parameters,
+    spectrumSurfaces: surfaces,
+    sceneValues: { wallpaperSpectrumEnabled: false },
+    runtime: { appearanceDefaults: defaults },
+    saved: { resetMany: (keys) => calls.push(keys) },
+  };
+  run(ctx);
+  assert.deepEqual(
+    calls[0].sort(),
+    [
+      "spectrumAttack",
+      "spectrumOpacity",
+      "wallpaperVisualizerMode",
+      "wallpaperSpectrumEnabled",
+      "mediaVisualizerMode",
+      "mediaVisualizerEnabled",
+    ].sort(),
+  );
+  assert.equal(ctx.sceneValues.wallpaperSpectrumEnabled, true);
 });
