@@ -92,6 +92,8 @@ QtObject {
             }
         }
 
+        bands = targetBands;
+        hasEnergy = incomingEnergy;
         interpolating = false;
         if (!hasEnergy)
             smoothingSilence = false;

@@ -164,6 +164,7 @@ Item {
                     theme: card.theme
                     motion: card.motion
                     surfaceKey: "controlsVisualizerMode"
+                    drivesDemand: card.media.playing
                     baseDensity: 24
                 }
             }

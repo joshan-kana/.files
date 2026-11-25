@@ -48,3 +48,20 @@ test("FFT remains active for visible media and wallpaper even when reactive styl
     /readonly property bool musicReactiveEnabled: qmlAppearance\.musicReactiveEnabled/,
   );
 });
+
+test("paused media does not retain an analyser subscription just to render its decay", () => {
+  for (const [name, owner] of [
+    ["ControlsMediaCard", "card"],
+    ["MediaContent", "content"],
+  ]) {
+    const source = fs.readFileSync(
+      path.join(
+        __dirname,
+        "../modules/desktop/hyprland/shell/qml",
+        name + ".qml",
+      ),
+      "utf8",
+    );
+    assert.ok(source.includes("drivesDemand: " + owner + ".media.playing"));
+  }
+});

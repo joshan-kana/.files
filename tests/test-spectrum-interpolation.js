@@ -368,9 +368,9 @@ test("spectrum mode changes remain local and legacy wallpaper tuning migrates on
   );
   assert.equal(old.wallpaperSpectrumBars, 32);
   assert.deepEqual(migrate({ valid }, {}), {});
-  const surfaces = ["wallpaper", "island", "controls", "media", "preview"].map(
-    (name) => ({ key: name + "VisualizerMode" }),
-  );
+  const surfaces = ["wallpaper", "island", "controls", "media"].map((name) => ({
+    key: name + "VisualizerMode",
+  }));
   const toggle = new Function(
     "spectrumSurfaces",
     "runtime",
@@ -413,11 +413,16 @@ test("spectrum mode changes remain local and legacy wallpaper tuning migrates on
     ["NowPlayingIsland.qml", "islandVisualizerMode"],
     ["ControlsMediaCard.qml", "controlsVisualizerMode"],
     ["MediaContent.qml", "mediaVisualizerMode"],
-    ["SettingsDetail.qml", "previewVisualizerMode"],
   ]) {
     assert.match(qml(name), /SpectrumVisualizer \{/);
     assert.ok(qml(name).includes('surfaceKey: "' + key + '"'));
   }
+  assert.match(
+    qml("SettingsDetail.qml"),
+    /surfaceKey: panel.spectrumTuning \? spectrumDetails.previewKey/,
+  );
+  assert.doesNotMatch(qml("SpectrumDetail.qml"), /previewVisualizerMode/);
+  assert.deepEqual(migrate({ valid }, { previewVisualizerMode: "curve" }), {});
   assert.match(wrapper, /baseDensity \* spectrum\.appearance\.spectrumDensity/);
   assert.match(
     wrapper,
@@ -454,4 +459,20 @@ test("visible spectrum renderers register demand exactly once and release it", (
   state.drivesDemand = false;
   sync(state);
   assert.equal(state.spectrum.visualizerSubscribers, 0);
+});
+
+test("settling a quiet frame publishes its final values and clears stale energy", () => {
+  const state = {
+    curveSubscribers: 1,
+    decaying: false,
+    smoothingSilence: false,
+    hasEnergy: true,
+    interpolating: false,
+    bands: [0.003, 0.003],
+    targetBands: [0.003, 0.003],
+  };
+  qmlFunction("updateBands")(state, [0.0015, 0.0015]);
+  assert.deepEqual(state.bands, [0.0015, 0.0015]);
+  assert.equal(state.hasEnergy, false);
+  assert.equal(state.interpolating, false);
 });

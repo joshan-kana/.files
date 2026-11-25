@@ -37,7 +37,7 @@ QtObject {
         },
         {
             key: "islandVisualizerMode",
-            title: "Now Playing island"
+            title: "Media island"
         },
         {
             key: "controlsVisualizerMode",
@@ -46,10 +46,6 @@ QtObject {
         {
             key: "mediaVisualizerMode",
             title: "Now Playing"
-        },
-        {
-            key: "previewVisualizerMode",
-            title: "Live preview"
         }
     ]
     readonly property var spectrumParameters: [
@@ -79,8 +75,8 @@ QtObject {
         },
         {
             key: "spectrumOpacity",
-            title: "Opacity",
-            description: "Opacity multiplier for every spectrum",
+            title: "Opacity multiplier",
+            description: "Shared strength of every spectrum",
             step: 5
         }
     ].map(entry => Object.assign({}, entry, {
@@ -300,6 +296,7 @@ QtObject {
             next.spectrumOpacity = opacity;
         delete next.wallpaperSpectrumBars;
         delete next.wallpaperSpectrumOpacity;
+        delete next.previewVisualizerMode;
         return next;
     }
 
@@ -323,7 +320,7 @@ QtObject {
                     old[key] = saved.legacy(key, 0);
             }
             saved.initialize(migrateSpectrumOverrides(old));
-        } else if (["wallpaperSpectrumBars", "wallpaperSpectrumOpacity"].some(key => Object.prototype.hasOwnProperty.call(saved.overrides, key))) {
+        } else if (["wallpaperSpectrumBars", "wallpaperSpectrumOpacity", "previewVisualizerMode"].some(key => Object.prototype.hasOwnProperty.call(saved.overrides, key))) {
             saved.write(migrateSpectrumOverrides(saved.overrides));
         }
         applyVhs();
@@ -380,8 +377,7 @@ QtObject {
     }
 
     function resetReactiveTuning(): void {
-        for (const key of musicReactiveParameterKeys)
-            clearOverride(key);
+        saved.resetMany(musicReactiveParameterKeys);
     }
 
     function presetNames(presets: var, keys: var): var {
@@ -446,6 +442,7 @@ QtObject {
             if (event.name === "configreloaded") {
                 appearance.applyWindowTransparency();
                 appearance.applyShellGlass();
+                appearance.applyBlurSize();
                 appearance.applyVhs();
             }
         }

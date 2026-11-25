@@ -116,7 +116,6 @@ let
       wallpaperVisualizerMode = constraints.appearance.mediaVisualizerMode;
       islandVisualizerMode = constraints.appearance.mediaVisualizerMode;
       controlsVisualizerMode = constraints.appearance.mediaVisualizerMode;
-      previewVisualizerMode = constraints.appearance.mediaVisualizerMode;
       mediaSeekSeconds = {
         values = [
           5
@@ -797,11 +796,6 @@ in
           type = lib.types.enum constraints.appearance.mediaVisualizerMode.values;
           default = "bars";
           description = "Spectrum presentation for Controls media: bars or curve.";
-        };
-        previewVisualizerMode = lib.mkOption {
-          type = lib.types.enum constraints.appearance.mediaVisualizerMode.values;
-          default = "bars";
-          description = "Spectrum presentation for the live settings preview: bars or curve.";
         };
         mediaLyricsVisible = lib.mkOption {
           type = lib.types.bool;

@@ -312,6 +312,7 @@ FocusScope {
                     theme: content.theme
                     motion: content.motion
                     surfaceKey: "mediaVisualizerMode"
+                    drivesDemand: content.media.playing
                 }
 
                 MediaLyrics {
@@ -549,7 +550,7 @@ FocusScope {
                     motion: content.motion
                     compact: true
                     horizontalCompact: true
-                    icon: content.visualizerMode === "bars" ? "󰕰" : "󰘮"
+                    icon: DesktopIcons.spectrumGlyph(content.visualizerMode)
                     title: content.visualizerMode === "bars" ? "Bars" : "Curve"
                     shortcut: content.runtime.shellHint("MediaContent.visualizer")
                     active: true

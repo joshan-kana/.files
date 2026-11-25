@@ -150,7 +150,7 @@ FocusScope {
     readonly property var helpBindings: settingsPanel.open ? [
         {
             key: root.runtime.shellHint("SettingsDetail.toggle"),
-            action: "Toggle this capability",
+            action: settingsPanel.panel?.kind === "spectrum" ? "Toggle wallpaper visualiser" : "Toggle this capability",
             visible: !!settingsPanel.panel?.hasMaster
         },
         {
@@ -231,6 +231,9 @@ FocusScope {
             ] : []), ...(settingsPanel.panel?.kind === "power" ? root.powerProfile.profiles.map((profile, index) => ({
                         key: root.runtime.shellChoiceHint(index),
                         action: root.powerProfile.label(profile)
+                    })) : []), ...(settingsPanel.panel?.kind === "spectrum" ? root.appearance.spectrumSurfaces.map((surface, index) => ({
+                        key: root.runtime.shellChoiceHint(index),
+                        action: "Change " + surface.title.toLowerCase() + " style"
                     })) : [])].filter(entry => entry.visible !== false) : vhsPanel.open ? [
         {
             key: root.runtime.shellHint("VhsPanel.select"),
@@ -1410,7 +1413,7 @@ FocusScope {
                             theme: root.theme
                             motion: root.motion
                             icon: DesktopIcons.glyphFor("spectrum")
-                            title: "Spectrum · wallpaper " + (root.wallpaperSpectrumEnabled ? "on" : "off")
+                            title: "Spectrum"
                             actionId: "SystemContent.wallpaperSpectrum"
                             detailActionId: "SystemContent.wallpaperSpectrumDetails"
                             detailName: "Spectrum settings"

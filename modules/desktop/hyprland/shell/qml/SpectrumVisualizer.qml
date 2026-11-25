@@ -8,7 +8,7 @@ Item {
     required property string surfaceKey
     required property Motion motion
     property int baseDensity: 48
-    property real baseOpacity: 1
+    readonly property real baseOpacity: 0.8
     // Wallpaper has independent demand even when its layer is hidden in silence.
     property bool drivesDemand: true
     readonly property string mode: spectrum.appearance.spectrumMode(surfaceKey)

@@ -477,7 +477,7 @@ Item {
         }
     }
 
-    readonly property int choiceCount: spectrumTuning ? spectrumModes.count : kind === "nightLight" ? nightModes.count + nightDays.count + nightPauses.count : reactiveTuning ? reactivePresets.count + reactiveEmphases.count : kind === "alerts" ? alertPauses.count + quietDays.count : kind === "power" ? powerProfiles.count : kind === "stay" ? stayDurations.count : 0
+    readonly property int choiceCount: spectrumTuning ? spectrumDetails.choiceCount : kind === "nightLight" ? nightModes.count + nightDays.count + nightPauses.count : reactiveTuning ? reactivePresets.count + reactiveEmphases.count : kind === "alerts" ? alertPauses.count + quietDays.count : kind === "power" ? powerProfiles.count : kind === "stay" ? stayDurations.count : 0
 
     function activateNumber(number: int): bool {
         let repeater = null;
@@ -497,7 +497,7 @@ Item {
             if (number > alertPauses.count)
                 index -= alertPauses.count;
         } else if (spectrumTuning) {
-            repeater = spectrumModes;
+            return spectrumDetails.activateChoice(index);
         } else if (reactiveTuning) {
             repeater = number <= reactivePresets.count ? reactivePresets : reactiveEmphases;
             if (number > reactivePresets.count)
@@ -549,7 +549,10 @@ Item {
                 return true;
         }
         if (runtime.shellMatchesHint("SettingsDetail.toggle", key, modifiers) && hasMaster) {
-            masterAction.trigger();
+            if (spectrumTuning)
+                spectrumDetails.toggleWallpaper();
+            else
+                masterAction.trigger();
             return true;
         }
         if (runtime.shellMatchesHint("SettingsDetail.blur", key, modifiers) && hasBlur) {
@@ -619,6 +622,8 @@ Item {
 
     function openView(): void {
         selectedIndex = 0;
+        if (spectrumTuning)
+            spectrumDetails.previewKey = "wallpaperVisualizerMode";
         open = true;
         keyboardRequested();
     }
@@ -644,7 +649,7 @@ Item {
             actions: [
                 ShellAction {
                     id: masterAction
-                    visible: panel.hasMaster
+                    visible: panel.hasMaster && !panel.spectrumTuning
                     width: visible ? implicitWidth : 0
                     height: visible ? implicitHeight : 0
                     runtime: panel.runtime
@@ -794,7 +799,7 @@ Item {
                         ShellText {
                             runtime: panel.runtime
                             theme: panel.theme
-                            text: panel.spectrum.connected ? panel.spectrum.hasEnergy ? "Live audio" : "Listening · silence" : "Analyser disconnected"
+                            text: (panel.spectrumTuning ? "Preview · " + (spectrumDetails.previewSurface?.title || "Wallpaper") + " · " : "") + (panel.spectrum.connected ? panel.spectrum.hasEnergy ? "Live audio" : "Listening · silence" : "Analyser disconnected")
                             textRole: ShellText.Section
                         }
                     }
@@ -805,7 +810,7 @@ Item {
                         theme: panel.theme
                         spectrum: panel.spectrum
                         motion: panel.motion
-                        surfaceKey: "previewVisualizerMode"
+                        surfaceKey: panel.spectrumTuning ? spectrumDetails.previewKey : "mediaVisualizerMode"
                     }
                     Row {
                         width: parent.width
@@ -852,36 +857,15 @@ Item {
                 }
             }
 
-            ShellText {
-                visible: panel.spectrumTuning
-                runtime: panel.runtime
-                theme: panel.theme
-                text: "Visualizer styles · wallpaper " + (panel.wallpaperSpectrumEnabled ? "on" : "off")
-                textRole: ShellText.Section
-            }
-            Flow {
-                id: spectrumStyleFlow
+            SpectrumDetail {
+                id: spectrumDetails
                 visible: panel.spectrumTuning
                 width: parent.width
-                height: visible ? implicitHeight : 0
-                spacing: panel.theme.spacing2
-                Repeater {
-                    id: spectrumModes
-                    model: panel.spectrumTuning ? panel.appearance.spectrumSurfaces : []
-                    delegate: ShellAction {
-                        required property int index
-                        required property var modelData
-                        width: Math.floor((spectrumStyleFlow.width - spectrumStyleFlow.spacing) / 2)
-                        height: Math.max(44, implicitHeight)
-                        runtime: panel.runtime
-                        theme: panel.theme
-                        motion: panel.motion
-                        title: modelData.title + " · " + (panel.appearance.spectrumMode(modelData.key) === "curve" ? "Curve" : "Bars")
-                        shortcut: panel.runtime.shellChoiceHint(index)
-                        icon: DesktopIcons.glyphFor("spectrum")
-                        onActivated: panel.appearance.toggleSpectrumMode(modelData.key)
-                    }
-                }
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                appearance: panel.appearance
+                onToggleWallpaperRequested: panel.wallpaperSpectrumToggleRequested()
             }
             ShellText {
                 visible: panel.reactiveTuning

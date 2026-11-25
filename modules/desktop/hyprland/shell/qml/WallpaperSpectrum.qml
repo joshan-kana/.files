@@ -58,7 +58,6 @@ Variants {
                 motion: visuals.motion
                 surfaceKey: "wallpaperVisualizerMode"
                 baseDensity: 64
-                baseOpacity: 0.8
                 drivesDemand: false
                 enabled: wallpaperLayer.visible
             }
