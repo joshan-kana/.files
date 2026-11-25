@@ -170,11 +170,26 @@ test("desktop scenes are owned by Visual Modes, not Power & Session", () => {
     path.join(root, "keybindings.nix"),
     "utf8",
   );
-  assert.match(
+  const visualModes = controls
+    .split("id: visualTiles")[1]
+    .split("id: mediaMatrix")[0];
+  assert.match(visualModes, /QuickSettingChip \{/);
+  assert.match(visualModes, /icon: DesktopIcons.glyphFor\("scenes"\)/);
+  assert.match(visualModes, /actionId: "SystemContent.scenes"/);
+  assert.match(visualModes, /onActivated: root.openSetting\("scenes"\)/);
+  assert.match(visualModes, /active: root.scenes.active/);
+  assert.doesNotMatch(
     controls,
-    /text: "VISUAL MODES"[\s\S]*?id: scenesButton[\s\S]*?actionId: "SystemContent.scenes"/,
+    /scenesButton|ShellAction \{[\s\S]*?id: scenesButton/,
   );
-  assert.match(controls, /root.openSetting\("scenes"\)/);
+  const lookup = controls
+    .split("function findDashboardAction(key: int, modifiers: int): var {")[1]
+    .split("\n    }")[0];
+  assert.doesNotMatch(lookup, /SystemContent.scenes|scenesButton/);
+  assert.match(
+    lookup,
+    /for \(const section of \[controlsHeading, connectionTiles, actionTiles, visualTiles\]\)/,
+  );
   assert.doesNotMatch(
     session,
     /scenesAction|scenesRequested|SessionPanel.scenes/,

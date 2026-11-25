@@ -59,11 +59,6 @@ FocusScope {
     readonly property string resetStatus: shellActions.resetStatus
 
     function findDashboardAction(key: int, modifiers: int): var {
-        if (runtime.shellMatchesHint("SystemContent.scenes", key, modifiers))
-            return {
-                item: scenesButton,
-                detail: false
-            };
         for (const section of [controlsHeading, connectionTiles, actionTiles, visualTiles]) {
             for (const item of section.children) {
                 if (item.actionId && runtime.shellMatchesHint(item.actionId, key, modifiers))
@@ -1395,7 +1390,7 @@ FocusScope {
 
                     Row {
                         width: parent.width
-                        height: Math.max(32, scenesButton.implicitHeight)
+                        height: 24
                         spacing: root.theme.spacing2
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
@@ -1405,23 +1400,6 @@ FocusScope {
                             font.pixelSize: root.theme.fontPanelEyebrow
                             font.weight: Font.DemiBold
                             font.letterSpacing: 1.0
-                        }
-                        Item {
-                            width: Math.max(0, parent.width - scenesButton.width - parent.spacing - parent.children[0].implicitWidth)
-                            height: 1
-                        }
-                        ShellAction {
-                            id: scenesButton
-                            width: implicitWidth
-                            height: 32
-                            runtime: root.runtime
-                            theme: root.theme
-                            motion: root.motion
-                            compact: true
-                            horizontalCompact: true
-                            title: root.scenes.active ? "Scenes · " + root.scenes.activeName : "Scenes"
-                            actionId: "SystemContent.scenes"
-                            onActivated: root.openSetting("scenes")
                         }
                     }
 
@@ -1587,6 +1565,19 @@ FocusScope {
                             onActivated: if (root.nightLight.supported && !root.nightLight.busy)
                                 root.nightLight.toggle()
                             onDetailsRequested: root.openSetting("nightLight")
+                        }
+                        QuickSettingChip {
+                            width: visualTiles.cellWidth(this)
+                            height: Math.max(root.dashboardTileHeight, implicitHeight)
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: DesktopIcons.glyphFor("scenes")
+                            title: root.scenes.active ? "Scene active" : "Scenes"
+                            actionId: "SystemContent.scenes"
+                            active: root.scenes.active
+                            activeColor: root.theme.roleColor("display")
+                            onActivated: root.openSetting("scenes")
                         }
                     }
                 }

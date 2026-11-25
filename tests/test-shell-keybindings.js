@@ -306,7 +306,8 @@ test("semantic action bindings change their handler and hint without changing a 
     actionId: "SystemContent.frame",
     detailActionId: "SystemContent.frameDetails",
   };
-  sections.visualTiles.children.push(frame);
+  const scenes = { actionId: "SystemContent.scenes" };
+  sections.visualTiles.children.push(frame, scenes);
   const lookup = new Function(
     "key",
     "modifiers",
@@ -321,6 +322,10 @@ test("semantic action bindings change their handler and hint without changing a 
   assert.equal(
     lookup(90, Qt.AltModifier, runtime, ...Object.values(sections)).item,
     frame,
+  );
+  assert.equal(
+    lookup(76, Qt.ShiftModifier, runtime, ...Object.values(sections)).item,
+    scenes,
   );
   assert.equal(
     lookup(90, Qt.ShiftModifier, runtime, ...Object.values(sections)),

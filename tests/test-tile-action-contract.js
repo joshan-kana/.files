@@ -169,7 +169,7 @@ test("dashboard destination-only tiles advertise a right-corner detail action wi
   const tiles = [
     ...controls.matchAll(/QuickSettingChip \{([\s\S]*?)\n {24}\}/g),
   ].map((match) => match[1]);
-  assert.equal(tiles.length, 17);
+  assert.equal(tiles.length, 18);
   for (const name of [
     "resources",
     "captures",
