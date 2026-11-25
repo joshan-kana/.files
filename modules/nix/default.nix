@@ -47,13 +47,7 @@ in
     package = pkgs.determinate-nix-cli;
     inherit settings;
   };
-}
-// lib.optionalAttrs isLinux {
-  environment.systemPackages = [
-    pkgs.determinate-nix-manpages
-  ];
-}
-// {
+
   builders = _: {
     nix = {
       distributedBuilds = true;
@@ -93,8 +87,7 @@ in
         ];
     };
   };
-}
-// {
+
   home = _: {
     programs.attic-client = {
       enable = true;
@@ -126,5 +119,6 @@ in
   };
 }
 // lib.optionalAttrs isLinux {
+  environment.systemPackages = [ pkgs.determinate-nix-manpages ];
   programs.nix-ld.enable = true;
 }
