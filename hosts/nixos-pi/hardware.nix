@@ -15,7 +15,8 @@
     kernelPackages = pkgs.linuxPackages_rpi4;
     # Preserve firmware-applied KMS overlays and board-specific fixups.
     loader.generic-extlinux-compatible.useGenerationDeviceTree = false;
-    kernelParams = [ "cma=256M" ];
+    # The 4K compositor and hardware HEVC decoder share contiguous buffers.
+    kernelParams = [ "cma=512M" ];
     supportedFilesystems.btrfs = true;
 
     initrd.availableKernelModules = [
