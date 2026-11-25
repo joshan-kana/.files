@@ -1,5 +1,5 @@
 {
-  description = "My first flake!";
+  description = "Declarative NixOS, Darwin, Home Manager, and home infrastructure configuration";
 
   inputs = {
     # Nixpkgs: package collections and system modules.
