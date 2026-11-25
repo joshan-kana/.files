@@ -14,11 +14,14 @@ in
     (
       _final: prev:
       let
+        pname = "brave";
+        homepage = "https://brave.com/";
+        license = prev.lib.licenses.mpl20;
         system = prev.stdenv.hostPlatform.system;
         inherit (release) version;
         passthru = rec {
           autoUpdate = true;
-          updateGroup = "brave";
+          updateGroup = pname;
           updateUrl = "https://brave-browser-apt-release.s3.brave.com/dists/stable/main/binary-amd64/Packages";
           updateRegex = ''(?ms)^Package: brave-browser\n(?:(?!^Package: ).)*?^Version: ([0-9]+(?:\.[0-9]+)+)$'';
           updateFilename = "overlays/brave/default.nix";
@@ -33,10 +36,9 @@ in
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
         brave = import ../../lib/mac-app.nix { inherit prev; } {
           inherit release passthru;
-          pname = "brave";
+          inherit pname;
           appName = "Brave Browser.app";
-          homepage = "https://brave.com/";
-          license = prev.lib.licenses.mpl20;
+          inherit homepage license;
           url =
             r: "https://github.com/brave/brave-browser/releases/download/v${r.version}/Brave-Browser-arm64.dmg";
         };
@@ -102,8 +104,7 @@ in
                 rpath = prev.lib.makeLibraryPath deps + ":" + prev.lib.makeSearchPathOutput "lib" "lib64" deps;
               in
               prev.stdenv.mkDerivation {
-                pname = "brave";
-                inherit version;
+                inherit pname version;
 
                 src = prev.fetchurl {
                   url = "https://github.com/brave/brave-browser/releases/download/v${version}/brave-browser_${version}_${
@@ -197,8 +198,7 @@ in
 
                 meta = with prev.lib; {
                   description = "Privacy-oriented web browser";
-                  homepage = "https://brave.com/";
-                  license = licenses.mpl20;
+                  inherit homepage license;
                   platforms = [
                     "x86_64-linux"
                     "aarch64-linux"

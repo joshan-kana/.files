@@ -9,15 +9,14 @@ _: {
             python3Packages,
           }:
           let
+            pname = "cptr";
             version = "0.9.21";
           in
           stdenvNoCC.mkDerivation {
-            pname = "cptr";
-            inherit version;
+            inherit pname version;
 
             src = python3Packages.fetchPypi {
-              pname = "cptr";
-              inherit version;
+              inherit pname version;
               format = "wheel";
               dist = "py3";
               python = "py3";
@@ -25,7 +24,7 @@ _: {
             };
 
             # Keep the PyPI wheel pin separate from Open WebUI itself.
-            passthru.updateUrl = "https://pypi/project/cptr";
+            passthru.updateUrl = "https://pypi.org/project/cptr/";
 
             passthru.autoUpdate = true;
             dontUnpack = true;
