@@ -467,6 +467,7 @@
           "MediaContent.longer" = "+";
           "MediaContent.lyrics" = "Y";
           "MediaContent.player" = "P";
+          "MediaContent.raise" = "E";
           "MediaContent.prefer" = "F";
           "MediaContent.preferReset" = "SHIFT+F";
           "MediaContent.rateDown" = "A";

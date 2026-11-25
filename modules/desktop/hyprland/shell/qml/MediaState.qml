@@ -38,7 +38,8 @@ QtObject {
     readonly property bool seekable: available && player.canSeek && player.positionSupported && player.lengthSupported
     readonly property string persistentPreference: appearance.mediaPreferredPlayer
     readonly property bool preferredCurrent: available && persistentPreference !== "" && stablePlayerId(player) === persistentPreference
-    readonly property bool rateAvailable: available && player.canControl && player.minRate < player.maxRate && Number.isFinite(player.rate)
+    readonly property bool canRaise: available && player.canRaise
+    readonly property bool rateAvailable: available && player.canControl && [player.rate, player.minRate, player.maxRate].every(Number.isFinite) && player.minRate < player.maxRate && player.rate !== 0 && player.rate >= player.minRate && player.rate <= player.maxRate
     readonly property real rate: rateAvailable ? player.rate : 1
     readonly property string preferenceStatus: persistentPreference === "" ? "Automatic" : preferredCurrent ? "Preferred player" : "Preferred app unavailable or session selection"
     onPlayersChanged: {
@@ -69,7 +70,9 @@ QtObject {
     function adjustRate(delta: real): void {
         if (!rateAvailable)
             return;
-        player.rate = Math.max(player.minRate, Math.min(player.maxRate, Math.round((rate + delta) * 100) / 100));
+        const next = Selection.adjustedRate(rate, player.minRate, player.maxRate, delta);
+        if (next !== rate)
+            player.rate = next;
     }
 
     readonly property int playerCount: players.length
@@ -98,6 +101,11 @@ QtObject {
         const index = players.indexOf(current);
         const nextIndex = index < 0 ? 0 : (index + 1) % players.length;
         preferredPlayerId = playerId(players[nextIndex]);
+    }
+
+    function raisePlayer(): void {
+        if (canRaise)
+            player.raise();
     }
 
     function togglePlaying(): void {

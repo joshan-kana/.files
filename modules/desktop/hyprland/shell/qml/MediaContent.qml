@@ -56,7 +56,12 @@ FocusScope {
             key: content.runtime.shellHint("MediaContent.player"),
             action: "Cycle connected media players"
         },
-        ...(media.rateAvailable ? [
+        ...(media.canRaise ? [
+                {
+                    key: content.runtime.shellHint("MediaContent.raise"),
+                    action: "Open current media player"
+                }
+            ] : []), ...(media.rateAvailable ? [
                 {
                     key: [content.runtime.shellHint("MediaContent.rateDown"), content.runtime.shellHint("MediaContent.rateUp")].join(" / "),
                     action: "Adjust selected player's playback speed"
@@ -201,12 +206,37 @@ FocusScope {
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: content.theme.spacing2
 
-                Text {
-                    text: content.media.available ? "Now playing" : "Media"
-                    color: content.theme.readableRoleColor("media")
-                    font.family: content.runtime.fontSans
-                    font.pixelSize: content.theme.fontSize(12)
-                    font.weight: Font.Medium
+                Row {
+                    width: parent.width
+                    spacing: content.theme.spacing2
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: Math.max(1, parent.width - (raiseAction.visible ? raiseAction.width + parent.spacing : 0))
+                        text: content.media.available ? "Now playing" : "Media"
+                        color: content.theme.readableRoleColor("media")
+                        font.family: content.runtime.fontSans
+                        font.pixelSize: content.theme.fontSize(12)
+                        font.weight: Font.Medium
+                        elide: Text.ElideRight
+                    }
+                    ShellAction {
+                        id: raiseAction
+                        visible: content.media.canRaise
+                        enabled: visible
+                        width: implicitWidth
+                        height: implicitHeight
+                        runtime: content.runtime
+                        theme: content.theme
+                        motion: content.motion
+                        compact: true
+                        horizontalCompact: true
+                        title: "Open player"
+                        shortcut: content.runtime.shellHint("MediaContent.raise")
+                        onActivated: {
+                            content.media.raisePlayer();
+                            content.closeRequested();
+                        }
+                    }
                 }
 
                 MarqueeText {
@@ -729,6 +759,10 @@ FocusScope {
                 } else if (content.runtime.shellMatchesHint("MediaContent.rateUp", event.key, event.modifiers)) {
                     if (!event.isAutoRepeat && content.media.rateAvailable)
                         speedStepper.increase();
+                    event.accepted = true;
+                } else if (content.media.canRaise && content.runtime.shellMatchesHint("MediaContent.raise", event.key, event.modifiers)) {
+                    if (!event.isAutoRepeat)
+                        raiseAction.trigger();
                     event.accepted = true;
                 } else if (content.runtime.shellMatchesHint("MediaContent.player", event.key, event.modifiers)) {
                     if (!event.isAutoRepeat)
