@@ -40,5 +40,5 @@ in
     };
   };
 
-  virtualisation.vmVariant.services.immich.enable = lib.mkForce false;
+  virtualisation.vmVariant.dotfiles.scopes.serverApps.immich.enable = lib.mkForce false;
 }

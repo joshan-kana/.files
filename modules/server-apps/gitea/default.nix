@@ -26,5 +26,5 @@ in
     lib.optionals config.services.gitea.enable
       [ config.services.gitea.settings.server.HTTP_PORT ];
 
-  virtualisation.vmVariant.services.gitea.enable = lib.mkForce false;
+  virtualisation.vmVariant.dotfiles.scopes.serverApps.gitea.enable = lib.mkForce false;
 }

@@ -73,5 +73,5 @@ in
     lib.optionals config.services.paperless.enable
       [ config.services.paperless.port ];
 
-  virtualisation.vmVariant.services.paperless.enable = lib.mkForce false;
+  virtualisation.vmVariant.dotfiles.scopes.serverApps.paperless.enable = lib.mkForce false;
 }

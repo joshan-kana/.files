@@ -49,5 +49,6 @@ in
   ];
 
   services.restic.backups.apps.paths = [ "/var/lib/gerrit" ];
-  virtualisation.vmVariant.services.gerrit.enable = lib.mkForce false;
+
+  virtualisation.vmVariant.dotfiles.scopes.serverApps.gerrit.enable = lib.mkForce false;
 }
