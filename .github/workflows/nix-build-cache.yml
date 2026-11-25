@@ -184,7 +184,7 @@ jobs:
       - name: Enable Attic
         shell: bash
         run: |
-          nix run nixpkgs#attic-client -- login ci "$ATTIC_ENDPOINT" "$ATTIC_TOKEN"
+          nix run --inputs-from . nixpkgs#attic-client -- login ci "$ATTIC_ENDPOINT" "$ATTIC_TOKEN"
 
       - name: Build host closure
         shell: bash
@@ -206,7 +206,7 @@ jobs:
         run: |
           sudo install -d -m 1777 /nix/attic-tmp
           for attempt in 1 2 3; do
-            if TMPDIR=/nix/attic-tmp nix run nixpkgs#attic-client -- push --jobs 5 ci:dotfiles --stdin < "$RUNNER_TEMP/built-paths.txt"; then
+            if TMPDIR=/nix/attic-tmp nix run --inputs-from . nixpkgs#attic-client -- push --jobs 5 ci:dotfiles --stdin < "$RUNNER_TEMP/built-paths.txt"; then
               break
             fi
             if (( attempt == 3 )); then
