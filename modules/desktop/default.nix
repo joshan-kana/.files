@@ -55,9 +55,22 @@ in
       config,
       lib,
       pkgs,
+      scopeConfig,
       ...
     }:
-    lib.optionalAttrs isLinux ((import ./media-session) { inherit config lib pkgs; });
+    lib.optionalAttrs isLinux (
+      {
+        scopeOptions.nativeKodi = lib.mkOption {
+          type = lib.types.nullOr lib.types.package;
+          default = null;
+          description = "Kodi package requiring exclusive DRM display ownership.";
+        };
+      }
+      // (import ./media-session) {
+        inherit config lib pkgs;
+        inherit (scopeConfig) nativeKodi;
+      }
+    );
 
   # Keep GNOME available as an opt-in desktop without changing current hosts.
   /**

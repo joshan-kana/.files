@@ -237,6 +237,10 @@ The graphical session starts automatically under the primary user. Physical acce
 
 Configure application-managed accounts and pair remote-control or streaming clients using their normal interfaces. Validate representative media playback, HDMI audio, display mode and remote input on the physical device. See the [evaluated system reference](../../systems/nixos-pi.md) for configuration and packages.
 
+Use the Kodi tile for native HDR playback. Kodi temporarily takes exclusive ownership of the display so its hardware decoder and video plane have sufficient contiguous memory. Its interface is rendered at up to 1080p while the video plane retains the native display mode. Quit Kodi to return to the launcher and its Wayland applications.
+
+The WayVNC server and graphical Jellyfin cast receiver are available in the Wayland session, not during exclusive Kodi playback. Use Kodi's own input and media-library integration during that session. Physical input devices are available to the active local seat rather than through permanent input-group membership. In Kodi's HDMI-CEC adapter settings, disable powering off devices when stopping Kodi if the television should remain on when returning to the launcher.
+
 For remote access, verify the SSH host-key fingerprint at the console before accepting it on a trusted client:
 
 ```sh

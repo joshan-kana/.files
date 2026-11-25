@@ -263,11 +263,15 @@ in
   };
 
   kodi =
-    _:
+    { scopeConfig, ... }:
     lib.optionalAttrs isLinux {
+      scopeOptions.package = lib.mkOption {
+        type = lib.types.package;
+        default = pkgs.kodi-wayland.withPackages (addons: [ addons.jellyfin ]);
+        description = "Kodi package with media-library integration.";
+      };
       home = _: {
-        # Jellyfin is the repository's shared media library.
-        home.packages = [ (pkgs.kodi-wayland.withPackages (addons: [ addons.jellyfin ])) ];
+        home.packages = [ scopeConfig.package ];
       };
     };
 

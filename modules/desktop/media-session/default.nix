@@ -2,21 +2,51 @@
   config,
   lib,
   pkgs,
+  nativeKodi,
   ...
 }:
 
 let
+  openNativeKodi = pkgs.writeShellScript "media-open-native-kodi" ''
+    set -eu
+    request="$XDG_RUNTIME_DIR/media-native-kodi"
+    touch "$request"
+    if ! ${lib.getExe pkgs.labwc} --exit; then
+      rm -f "$request"
+      exit 1
+    fi
+  '';
   session = pkgs.writeShellScript "media-session" ''
-    export XDG_SESSION_TYPE=wayland
-    export XDG_CURRENT_DESKTOP=labwc
-    ${lib.getExe' pkgs.systemd "systemd-cat"} --identifier=labwc ${lib.getExe pkgs.labwc}
-    status=$?
-    systemctl --user stop labwc-session.target
-    exit "$status"
+    request="$XDG_RUNTIME_DIR/media-native-kodi"
+    rm -f "$request"
+    while true; do
+      export XDG_SESSION_TYPE=wayland
+      export XDG_CURRENT_DESKTOP=labwc
+      ${lib.getExe' pkgs.systemd "systemd-cat"} --identifier=labwc ${lib.getExe pkgs.labwc}
+      status=$?
+      systemctl --user stop labwc-session.target
+      ${lib.optionalString (nativeKodi != null) ''
+        if [ -f "$request" ]; then
+          rm -f "$request"
+          unset DISPLAY WAYLAND_DISPLAY
+          export XDG_SESSION_TYPE=tty
+          export XDG_CURRENT_DESKTOP=Kodi
+          ${lib.getExe nativeKodi} --windowing=gbm --standalone
+          continue
+        fi
+      ''}
+      exit "$status"
+    done
   '';
 in
 {
   hardware.graphics.enable = true;
+  # Native Kodi opens evdev directly, so grant access only to the active local seat.
+  services.udev.packages = lib.optional (nativeKodi != null) (
+    pkgs.writeTextDir "lib/udev/rules.d/70-media-input.rules" ''
+      SUBSYSTEM=="input", KERNEL=="event[0-9]*", ENV{ID_INPUT}=="1", TAG+="uaccess"
+    ''
+  );
   environment.systemPackages = [
     pkgs.wlr-randr
   ];
@@ -41,7 +71,9 @@ in
       hasProgram =
         name: lib.any (package: (package.meta.mainProgram or null) == name) config.home.packages;
       entries =
-        lib.optional (hasProgram "kodi") "Kodi;${icons}/kodi.png;kodi"
+        lib.optional (hasProgram "kodi") "Kodi;${icons}/kodi.png;${
+          if nativeKodi == null then "kodi" else openNativeKodi
+        }"
         ++ lib.optional config.services.jellyfin-mpv-shim.enable "Jellyfin;${config.services.jellyfin-mpv-shim.package}/share/icons/hicolor/256x256/apps/com.github.iwalton3.jellyfin-mpv-shim.png;jellyfin-mpv-shim"
         ++ lib.optional (hasProgram browser) "Browser;${pkgs.adwaita-icon-theme}/share/icons/Adwaita/symbolic/legacy/web-browser-symbolic.svg;${browser}"
         ++ lib.optional (hasProgram "moonlight") "Moonlight;${config.home.profileDirectory}/share/icons/hicolor/scalable/apps/moonlight.svg;moonlight"

@@ -3,6 +3,7 @@
   extendScope,
   lib,
   moduleRegistry,
+  pkgs,
   ...
 }:
 
@@ -79,54 +80,61 @@ lib.recursiveUpdate (import ../../profiles/media.nix { inherit lib moduleRegistr
     };
   };
 
+  desktop = editScope moduleRegistry.desktop {
+    mediaSession.nativeKodi = pkgs.kodi-gbm-rpi;
+  };
+
   desktopApps =
     extendScope
-      (editScope moduleRegistry.desktopApps {
-        kodi = _: {
-          home = { config, lib, ... }: {
-            home.file.".kodi/userdata/playercorefactory.xml".text = ''
-              <playercorefactory>
-                <players>
-                  <player name="MPV" type="ExternalPlayer" audio="false" video="true">
-                    <filename>${lib.getExe config.programs.mpv.finalPackage}</filename>
-                    <args>--fullscreen "{1}"</args>
-                    <hidexbmc>true</hidexbmc>
-                  </player>
-                </players>
-                <rules action="prepend">
-                  <rule video="true" filetypes="mkv|mp4|m4v|mov|webm|avi|ts|m2ts" player="MPV"/>
-                </rules>
-              </playercorefactory>
-            '';
-          };
-        };
-        jellyfin = _: {
-          home = { config, lib, ... }: {
-            services.jellyfin-mpv-shim.settings = {
-              mpv_ext = true;
-              mpv_ext_path = lib.getExe config.programs.mpv.finalPackage;
+      (editScope
+        (editScope moduleRegistry.desktopApps {
+          kodi.package = pkgs.kodi-gbm-rpi;
+        })
+        {
+          kodi = _: {
+            home = _: {
+              home.file.".kodi/userdata/advancedsettings.xml".text = ''
+                <advancedsettings>
+                  <videoplayer>
+                    <useprimedecoder>true</useprimedecoder>
+                    <useprimedecoderforhw>true</useprimedecoderforhw>
+                    <useprimerenderer>0</useprimerenderer>
+                  </videoplayer>
+                  <videoscreen>
+                    <limitguisize>3</limitguisize>
+                  </videoscreen>
+                </advancedsettings>
+              '';
             };
-            systemd.user.services.jellyfin-mpv-shim.Install.WantedBy = lib.mkForce [
-              "graphical-session.target"
-            ];
-            # The running shim can write stale settings back during the upstream merge.
-            home.activation.stopJellyfinMpvShim =
-              lib.hm.dag.entryBetween [ "jellyfinMpvShimSettingsActivation" ] [ "writeBoundary" ]
-                ''
-                  jellyfinWasActive=false
-                  if env XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" ${config.systemd.user.systemctlPath} --user is-active --quiet jellyfin-mpv-shim.service; then
-                    jellyfinWasActive=true
-                    run env XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" ${config.systemd.user.systemctlPath} --user stop jellyfin-mpv-shim.service
-                  fi
-                '';
-            home.activation.restartJellyfinMpvShim = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
-              if [ "$jellyfinWasActive" = true ] && env XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" ${config.systemd.user.systemctlPath} --user is-active --quiet graphical-session.target; then
-                run env XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" ${config.systemd.user.systemctlPath} --user start jellyfin-mpv-shim.service
-              fi
-            '';
           };
-        };
-      })
+          jellyfin = _: {
+            home = { config, lib, ... }: {
+              services.jellyfin-mpv-shim.settings = {
+                mpv_ext = true;
+                mpv_ext_path = lib.getExe config.programs.mpv.finalPackage;
+              };
+              systemd.user.services.jellyfin-mpv-shim.Install.WantedBy = lib.mkForce [
+                "graphical-session.target"
+              ];
+              # The running shim can write stale settings back during the upstream merge.
+              home.activation.stopJellyfinMpvShim =
+                lib.hm.dag.entryBetween [ "jellyfinMpvShimSettingsActivation" ] [ "writeBoundary" ]
+                  ''
+                    jellyfinWasActive=false
+                    if env XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" ${config.systemd.user.systemctlPath} --user is-active --quiet jellyfin-mpv-shim.service; then
+                      jellyfinWasActive=true
+                      run env XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" ${config.systemd.user.systemctlPath} --user stop jellyfin-mpv-shim.service
+                    fi
+                  '';
+              home.activation.restartJellyfinMpvShim = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
+                if [ "$jellyfinWasActive" = true ] && env XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" ${config.systemd.user.systemctlPath} --user is-active --quiet graphical-session.target; then
+                  run env XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" ${config.systemd.user.systemctlPath} --user start jellyfin-mpv-shim.service
+                fi
+              '';
+            };
+          };
+        }
+      )
       {
         # Home Manager merges package lists, so replace only the Moonlight scope.
         moonlightRpi = _: {
