@@ -3,14 +3,19 @@
   extendScope,
   lib,
   moduleRegistry,
-  pkgs,
   ...
 }:
 
 lib.recursiveUpdate (import ../../profiles/media.nix { inherit lib moduleRegistry; }) {
   hardware = import ./hardware.nix;
 
-  dotfiles.scopes.system.boot.loader.enable = false;
+  dotfiles.scopes = {
+    system.boot.loader.enable = false;
+    desktopApps = {
+      moonlight.enable = false;
+      moonlightRpi.enable = true;
+    };
+  };
 
   system = editScope moduleRegistry.system {
     identity = { config, ... }: {
@@ -68,36 +73,44 @@ lib.recursiveUpdate (import ../../profiles/media.nix { inherit lib moduleRegistr
     };
   };
 
-  desktopApps = editScope moduleRegistry.desktopApps {
-    moonlight.package = pkgs.moonlight-qt-rpi;
-    kodi = _: {
-      home = { config, lib, ... }: {
-        home.file.".kodi/userdata/playercorefactory.xml".text = ''
-          <playercorefactory>
-            <players>
-              <player name="MPV" type="ExternalPlayer" audio="false" video="true">
-                <filename>${lib.getExe config.programs.mpv.finalPackage}</filename>
-                <args>--fullscreen "{1}"</args>
-                <hidexbmc>true</hidexbmc>
-              </player>
-            </players>
-            <rules action="prepend">
-              <rule video="true" filetypes="mkv|mp4|m4v|mov|webm|avi|ts|m2ts" player="MPV"/>
-            </rules>
-          </playercorefactory>
-        '';
-      };
-    };
-    jellyfin = _: {
-      home = { config, lib, ... }: {
-        services.jellyfin-mpv-shim.settings = {
-          mpv_ext = true;
-          mpv_ext_path = lib.getExe config.programs.mpv.finalPackage;
+  desktopApps =
+    extendScope
+      (editScope moduleRegistry.desktopApps {
+        kodi = _: {
+          home = { config, lib, ... }: {
+            home.file.".kodi/userdata/playercorefactory.xml".text = ''
+              <playercorefactory>
+                <players>
+                  <player name="MPV" type="ExternalPlayer" audio="false" video="true">
+                    <filename>${lib.getExe config.programs.mpv.finalPackage}</filename>
+                    <args>--fullscreen "{1}"</args>
+                    <hidexbmc>true</hidexbmc>
+                  </player>
+                </players>
+                <rules action="prepend">
+                  <rule video="true" filetypes="mkv|mp4|m4v|mov|webm|avi|ts|m2ts" player="MPV"/>
+                </rules>
+              </playercorefactory>
+            '';
+          };
         };
-        systemd.user.services.jellyfin-mpv-shim.Install.WantedBy = lib.mkForce [
-          "graphical-session.target"
-        ];
+        jellyfin = _: {
+          home = { config, lib, ... }: {
+            services.jellyfin-mpv-shim.settings = {
+              mpv_ext = true;
+              mpv_ext_path = lib.getExe config.programs.mpv.finalPackage;
+            };
+            systemd.user.services.jellyfin-mpv-shim.Install.WantedBy = lib.mkForce [
+              "graphical-session.target"
+            ];
+          };
+        };
+      })
+      {
+        moonlightRpi = _: {
+          home = { pkgs, ... }: {
+            home.packages = [ pkgs.moonlight-qt-rpi ];
+          };
+        };
       };
-    };
-  };
 }
