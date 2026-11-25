@@ -9,26 +9,23 @@ Item {
     implicitHeight: layout.height
     height: implicitHeight
 
-    readonly property var layout: {
+    readonly property var rows: {
         const rows = [];
-        let row = [], widthUsed = 0, rowHeight = 0;
+        let row = [], widthUsed = 0;
         const limit = Math.max(1, flow.width);
         for (const item of body.children) {
             const preferredWidth = flow.fillWidth ? Math.min(limit, item.implicitWidth) : item.width;
-            if (!item.visible || preferredWidth <= 0 || item.height <= 0)
+            if (!item.visible || preferredWidth <= 0 || (!flow.fillWidth && item.height <= 0))
                 continue;
             if (row.length && widthUsed + flow.spacing + preferredWidth > limit) {
                 rows.push({
                     items: row,
-                    width: widthUsed,
-                    height: rowHeight
+                    width: widthUsed
                 });
                 row = [];
                 widthUsed = 0;
-                rowHeight = 0;
             }
             widthUsed += (row.length ? flow.spacing : 0) + preferredWidth;
-            rowHeight = Math.max(rowHeight, item.height);
             row.push({
                 item,
                 preferredWidth
@@ -37,27 +34,29 @@ Item {
         if (row.length)
             rows.push({
                 items: row,
-                width: widthUsed,
-                height: rowHeight
+                width: widthUsed
             });
+        return rows;
+    }
+
+    readonly property var layout: {
         const positions = [];
         let y = 0;
-        for (const current of rows) {
-            const extra = flow.fillWidth ? Math.max(0, limit - current.width) : 0;
-            let x = flow.fillWidth ? 0 : Math.max(0, (limit - current.width) / 2);
-            const preferredTotal = current.width - (current.items.length - 1) * flow.spacing;
+        for (const current of flow.rows) {
+            const rowHeight = Math.max(...current.items.map(entry => entry.item.height));
+            let x = flow.fillWidth ? 0 : Math.max(0, (flow.width - current.width) / 2);
             for (const entry of current.items) {
                 const item = entry.item;
-                const itemWidth = entry.preferredWidth + extra * entry.preferredWidth / preferredTotal;
+                const itemWidth = flow.actionWidth(item);
                 positions.push({
                     item: item,
                     x: x,
                     width: itemWidth,
-                    y: y + (current.height - item.height) / 2
+                    y: y + (rowHeight - item.height) / 2
                 });
                 x += itemWidth + flow.spacing;
             }
-            y += current.height + flow.spacing;
+            y += rowHeight + flow.spacing;
         }
         return {
             positions: positions,
@@ -66,7 +65,16 @@ Item {
     }
 
     function actionWidth(item: Item): real {
-        return layout.positions.find(position => position.item === item)?.width ?? Math.min(width, item.implicitWidth);
+        if (!fillWidth)
+            return item.width;
+        for (const row of rows) {
+            const entry = row.items.find(candidate => candidate.item === item);
+            if (entry) {
+                const preferredTotal = row.width - (row.items.length - 1) * spacing;
+                return entry.preferredWidth + Math.max(0, width - row.width) * entry.preferredWidth / preferredTotal;
+            }
+        }
+        return Math.min(width, item.implicitWidth);
     }
 
     Item {

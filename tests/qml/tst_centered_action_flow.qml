@@ -53,7 +53,7 @@ Item {
             id: fillThird
             implicitWidth: 90
             width: filled.actionWidth(fillThird)
-            height: 30
+            height: width >= 100 ? 30 : 60
         }
     }
 
@@ -69,6 +69,10 @@ Item {
             tryVerify(() => Math.abs(fillSecond.x + fillSecond.width - filled.width) < 0.01);
             tryCompare(fillThird, "x", 0);
             tryCompare(fillThird, "width", 340);
+            tryCompare(fillThird, "height", 30);
+            filled.width = 80;
+            tryCompare(fillThird, "width", 80);
+            tryCompare(fillThird, "height", 60);
             filled.width = 500;
             tryVerify(() => Math.abs(fillThird.x + fillThird.width - filled.width) < 0.01);
         }
