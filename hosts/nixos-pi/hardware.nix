@@ -1,9 +1,11 @@
-{ lib, ... }:
+{ lib, pkgs, ... }:
 
 {
   hardware.enableRedistributableFirmware = true;
 
   boot = {
+    kernelPackages = pkgs.linuxPackages_latest;
+    loader.generic-extlinux-compatible.useGenerationDeviceTree = true;
     kernelParams = [ "cma=256M" ];
     supportedFilesystems.btrfs = true;
 
