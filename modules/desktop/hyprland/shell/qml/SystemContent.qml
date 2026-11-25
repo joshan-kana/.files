@@ -2345,7 +2345,7 @@ FocusScope {
                     } else if (event.key === root.runtime.shellKeyCode("controls", "U") || event.key === root.runtime.shellKeyCode("controls", "PageUp") || event.key === root.runtime.shellKeyCode("controls", "PageDown") || (event.key === root.runtime.shellKeyCode("controls", "D") && !(root.runtime.shellModifier("controls", "Shift", event.modifiers)))) {
                         themePanel.invoke("moveHalfPage", (event.key === root.runtime.shellKeyCode("controls", "U") || event.key === root.runtime.shellKeyCode("controls", "PageUp")) ? -1 : 1);
                         event.accepted = true;
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "X") && themePanel.operationRunning) {
+                    } else if (root.runtime.shellMatchesHint("ThemePanel.cancel", event.key, event.modifiers) && themePanel.operationRunning) {
                         if (!event.isAutoRepeat)
                             themePanel.invoke("cancelOperation");
                         event.accepted = true;

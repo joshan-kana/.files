@@ -715,7 +715,7 @@
         polkit = {
           "PolkitDialog.authorize" = "ENTER";
           "PolkitDialog.cancel" = "ESC";
-          "PolkitDialog.identity" = "I";
+          "PolkitDialog.identity" = "CTRL+I";
         };
         resize = {
           "ResizeOverlay.balance" = "B";

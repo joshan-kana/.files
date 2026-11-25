@@ -243,7 +243,7 @@ Scope {
                             } else if (event.key === auth.runtime.shellKeyCode("polkit", "Return") || event.key === auth.runtime.shellKeyCode("polkit", "Enter")) {
                                 auth.submit();
                                 event.accepted = true;
-                            } else if (event.key === auth.runtime.shellKeyCode("polkit", "I") && (auth.runtime.shellModifier("polkit", "Control", event.modifiers))) {
+                            } else if (auth.runtime.shellMatchesHint("PolkitDialog.identity", event.key, event.modifiers)) {
                                 auth.switchIdentity();
                                 event.accepted = true;
                             }
