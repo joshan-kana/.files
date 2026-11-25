@@ -47,7 +47,7 @@ index db47699..270c3b0 100644
 +	Build:   key.NewBinding(key.WithKeys("b"), key.WithHelp("b", "build")),
 +	Deploy:  key.NewBinding(key.WithKeys("d"), key.WithHelp("d", "deploy")),
 +	Logs:    key.NewBinding(key.WithKeys("l"), key.WithHelp("l", "logs")),
-+	History: key.NewBinding(key.WithKeys("g"), key.WithHelp("g", "history")),
++	History: key.NewBinding(key.WithKeys("h"), key.WithHelp("h", "history")),
 +	Confirm: key.NewBinding(key.WithKeys("c"), key.WithHelp("c", "confirm")),
  	Suspend: key.NewBinding(
  		key.WithKeys("s"),
@@ -674,13 +674,13 @@ index 0000000..d0018c5
 +	if model.panel != "logs" {
 +		t.Fatal("l must open logs")
 +	}
-+	press('g')
++	press('h')
 +	if model.panel != "history" {
-+		t.Fatal("g must open history")
++		t.Fatal("h must open history")
 +	}
-+	press('g')
++	press('h')
 +	if model.panel != "" {
-+		t.Fatal("g must close history")
++		t.Fatal("h must close history")
 +	}
 +	press('b')
 +	if model.notice != "Not connected" {
@@ -743,7 +743,7 @@ index 0000000..d0018c5
 +	if first != "f fetch • b build • d deploy • c confirm" {
 +		t.Fatalf("unexpected primary control row: %q", first)
 +	}
-+	if second != "s suspend • l logs • g history • q quit" {
++	if second != "s suspend • l logs • h history • q quit" {
 +		t.Fatalf("unexpected secondary control row: %q", second)
 +	}
 +}
