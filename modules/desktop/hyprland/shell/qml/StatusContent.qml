@@ -102,7 +102,7 @@ Item {
             motion: content.motion
             glyph: DesktopIcons.glyphFor("status")
             glyphFont: "Symbols Nerd Font"
-            glyphColor: content.theme.roleColor("connectivity")
+            glyphColor: content.theme.roleColor(content.theme.capabilityRole("status"))
             title: "System status"
             detail: content.keyboard.pending ? "Reading keyboard state…" : content.keyboard.stale ? "Keyboard state unavailable or stale" : content.keyboard.deviceName + " · Current device and interaction state"
             actions: [

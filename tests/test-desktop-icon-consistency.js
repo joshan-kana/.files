@@ -207,3 +207,15 @@ test("Controls header destination glyphs use their detail semantic colours witho
   assert.match(action, /text: root.title[\s\S]*?color: root.actionForeground/);
   assert.match(action, /selected: root.active/);
 });
+
+test("System Status tile and detail resolve the same semantic colour", () => {
+  assert.match(qml("Theme.qml"), /status: "resources"/);
+  assert.match(
+    qml("SystemContent.qml"),
+    /icon: DesktopIcons\.glyphFor\("status"\)[\s\S]*?activeColor: root\.theme\.roleColor\(root\.theme\.capabilityRole\("status"\)\)/,
+  );
+  assert.match(
+    qml("StatusContent.qml"),
+    /glyph: DesktopIcons\.glyphFor\("status"\)\s+glyphFont: "Symbols Nerd Font"\s+glyphColor: content\.theme\.roleColor\(content\.theme\.capabilityRole\("status"\)\)/,
+  );
+});

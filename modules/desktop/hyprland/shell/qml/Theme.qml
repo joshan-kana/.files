@@ -60,7 +60,8 @@ QtObject {
                 bar: "workspace",
                 frame: "display",
                 motion: "motion",
-                displays: "display"
+                displays: "display",
+                status: "resources"
             })[kind] || "display";
     }
 

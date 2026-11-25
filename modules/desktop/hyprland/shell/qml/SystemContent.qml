@@ -1396,7 +1396,7 @@ FocusScope {
                             icon: DesktopIcons.glyphFor("status")
                             title: "Status"
                             detailActionId: "SystemContent.statusInspection"
-                            activeColor: root.theme.roleColor("resources")
+                            activeColor: root.theme.roleColor(root.theme.capabilityRole("status"))
                             onDetailsRequested: root.openStatus()
                         }
 
