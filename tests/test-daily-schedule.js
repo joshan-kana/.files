@@ -54,10 +54,7 @@ test("notification suppression and VHS presets retain one authoritative owner", 
   assert.match(notification, /Schedule.nextTransition/);
   assert.match(notification, /settings\.reset\("quiet"\)/);
   assert.match(preferences, /function applyVhsPreset\(name: string\): void/);
-  assert.match(
-    preferences,
-    /for \(const key of vhsParameterKeys\)\s*clearOverride\(key\)/,
-  );
+  assert.match(preferences, /saved\.resetMany\(vhsParameterKeys\)/);
   assert.match(preferences, /saved\.setMany\(reactivePresets\[name\]\)/);
   assert.match(preferences, /saved\.setMany\(vhsPresets\[name\]\)/);
   assert.doesNotMatch(preferences, /Object\.fromEntries/);

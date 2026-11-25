@@ -34,8 +34,8 @@ QtObject {
     function resetDurationMultiplier(): void {
         qmlPreferences.reset("durationMultiplier");
     }
-    readonly property int fast: enabled ? 100 : 0
-    readonly property int normal: enabled ? 160 : 0
+    readonly property int fast: enabled ? Math.round(100 * durationMultiplier) : 0
+    readonly property int normal: enabled ? Math.round(160 * durationMultiplier) : 0
     readonly property int contourLap: enabled ? 1900 : 0
     readonly property int contourEasing: Easing.InOutSine
     // One eased phase for visible busy contours. Keep it alive across a
@@ -145,8 +145,13 @@ QtObject {
     readonly property int morphType: Easing.BezierSpline
     readonly property int effectsType: Easing.BezierSpline
 
+    function compositorMotionCommand(): var {
+        return [runtime.hyprctl, "eval", "hl.config({ animations = { enabled = " + (enabled ? "true" : "false") + " } })"];
+    }
+
     function syncCompositorMotion(): void {
-        Quickshell.execDetached([runtime.hyprctl, "eval", "hl.config({ animations = { enabled = " + (enabled ? "true" : "false") + " } })"]);
+        if (runtime.hyprctl)
+            Quickshell.execDetached(compositorMotionCommand());
     }
 
     function syncWallpaperMotion(): void {
@@ -164,14 +169,41 @@ QtObject {
         syncWallpaperMotion();
     }
 
-    function resetToDeclared(): void {
+    function resetToDeclared(apply = true): void {
         if (sceneEnabled !== null) {
             sceneEnabled = runtime.animationsEnabled;
             qmlPreferences.reset("durationMultiplier");
         } else
             qmlPreferences.resetAll();
-        syncCompositorMotion();
-        syncWallpaperMotion();
+        if (apply) {
+            syncCompositorMotion();
+            syncWallpaperMotion();
+        }
+    }
+
+    function resetOperations(): var {
+        const steps = [];
+        if (runtime.hyprctl)
+            steps.push({
+                label: "Compositor motion",
+                command: compositorMotionCommand(),
+                expectedText: "ok"
+            }, {
+                label: "Compositor motion readback",
+                command: [runtime.hyprctl, "-j", "getoption", "animations:enabled"],
+                expectedField: "bool",
+                expectedValue: enabled
+            });
+        if (runtime.wallpaperLibrary)
+            steps.push({
+                label: "Wallpaper motion",
+                command: [runtime.wallpaperLibrary, "motion", enabled ? "on" : "off"]
+            }, {
+                label: "Wallpaper motion readback",
+                command: [runtime.wallpaperLibrary, "motion", "status"],
+                expectedText: enabled ? "on" : "off"
+            });
+        return steps;
     }
 
     function toggle(): void {

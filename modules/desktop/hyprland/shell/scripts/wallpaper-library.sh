@@ -74,6 +74,10 @@ state_file="$state_dir/$output.wall"
 if [ "$action" = motion ]; then
   quiet="$XDG_RUNTIME_DIR/desktop-shell-wallpaper-motion-disabled"
   case "$output" in
+  status)
+    if [ -f "$quiet" ]; then printf 'off\n'; else printf 'on\n'; fi
+    exit 0
+    ;;
   off) touch "$quiet" ;;
   on) rm -f "$quiet" ;;
   *) exit 2 ;;
@@ -247,7 +251,7 @@ reset)
   systemctl --user start --no-block desktop-shell-wallpaper-image.service
   ;;
 *)
-  printf 'Usage: desktop-shell-wallpaper-library {list|current [output]|set output crop\|fit /abs/file|reset [output]|thumbnail /abs/file|poster /abs/file|thumbnail-animated /abs/file|motion on\|off}\n' >&2
+  printf 'Usage: desktop-shell-wallpaper-library {list|current [output]|set output crop\|fit /abs/file|reset [output]|thumbnail /abs/file|poster /abs/file|thumbnail-animated /abs/file|motion on\|off\|status}\n' >&2
   exit 2
   ;;
 esac

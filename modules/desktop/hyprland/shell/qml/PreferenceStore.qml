@@ -77,7 +77,10 @@ QtObject {
     }
 
     function write(next: var): void {
-        persisted.overridesJson = JSON.stringify(next);
+        const serialized = JSON.stringify(next);
+        if (serialized === persisted.overridesJson)
+            return;
+        persisted.overridesJson = serialized;
         backend.setValue("overridesJson", persisted.overridesJson);
         backend.sync();
     }

@@ -55,9 +55,28 @@ QtObject {
     property int resetIndex: 0
     property bool waitingForNightLightReset: false
 
+    function resetStepSucceeded(step: var, code: int, output: string): bool {
+        if (code !== 0)
+            return false;
+        if (step.expectedText !== undefined)
+            return output.trim() === step.expectedText;
+        if (step.expectedField !== undefined) {
+            try {
+                const value = JSON.parse(output)[step.expectedField];
+                return typeof value === "number" && typeof step.expectedValue === "number" ? Math.abs(value - step.expectedValue) < 0.00001 : value === step.expectedValue;
+            } catch (_) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     property Process preferenceReset: Process {
+        stdout: StdioCollector {
+            id: resetOutput
+        }
         onExited: (code, status) => {
-            if (code !== 0)
+            if (!actions.resetStepSucceeded(actions.resetSteps[actions.resetIndex], code, resetOutput.text))
                 actions.resetErrors = [...actions.resetErrors, actions.resetSteps[actions.resetIndex].label];
             actions.resetIndex++;
             actions.resetNextPreference();
@@ -82,8 +101,8 @@ QtObject {
         resetRunning = true;
         resetStatus = "Restoring declared desktop preferences…";
         scenes.stop();
-        appearance.resetToDeclared();
-        motion.resetToDeclared();
+        appearance.resetToDeclared(false);
+        motion.resetToDeclared(false);
         capture.resetToDeclared();
         weather.resetLocation();
         weather.resetUnits();
@@ -92,7 +111,11 @@ QtObject {
         resources.resetSampling();
 
         resetErrors = [];
-        const steps = [];
+        if (!runtime.hyprctl)
+            resetErrors.push("Compositor unavailable");
+        if (!runtime.vhsControl)
+            resetErrors.push("VHS backend unavailable");
+        const steps = appearance.resetOperations().concat(motion.resetOperations());
         if (runtime.captureLocations)
             steps.push({
                 label: "Capture locations",

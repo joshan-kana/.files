@@ -329,16 +329,74 @@ QtObject {
         applyBlurSize();
     }
 
-    function resetToDeclared(): void {
+    function resetToDeclared(apply = true): void {
         sceneValues = {};
         saved.resetAll();
         windowOpacityApply.stop();
         blurSizeApply.stop();
         vhsApply.stop();
-        applyVhs();
-        applyWindowTransparency();
-        applyShellGlass();
-        applyBlurSize();
+        if (apply) {
+            applyVhs();
+            applyWindowTransparency();
+            applyShellGlass();
+            applyBlurSize();
+        }
+    }
+
+    function resetOperations(): var {
+        const steps = [];
+        if (runtime.vhsControl)
+            steps.push({
+                label: "VHS",
+                command: vhsCommand()
+            });
+        if (runtime.hyprctl) {
+            const opacity = Number((windowTransparencyEnabled ? windowOpacity : 1).toFixed(2));
+            steps.push({
+                label: "Window opacity",
+                command: windowTransparencyCommand(),
+                expectedText: "ok"
+            }, {
+                label: "Compositor blur",
+                command: blurCommand(),
+                expectedText: "ok"
+            });
+            for (const rule of glassRules)
+                steps.push({
+                    label: "Glass " + rule.name,
+                    command: glassRuleCommand(rule.name, rule.namespace, rule.exposed),
+                    expectedText: "ok"
+                });
+            for (const option of [
+                {
+                    name: "decoration:active_opacity",
+                    field: "float",
+                    value: opacity
+                },
+                {
+                    name: "decoration:inactive_opacity",
+                    field: "float",
+                    value: opacity
+                },
+                {
+                    name: "decoration:blur:size",
+                    field: "int",
+                    value: blurSize
+                },
+                {
+                    name: "decoration:blur:enabled",
+                    field: "bool",
+                    value: blurEnabled
+                }
+            ])
+                steps.push({
+                    label: option.name,
+                    command: [runtime.hyprctl, "-j", "getoption", option.name],
+                    expectedField: option.field,
+                    expectedValue: option.value
+                });
+        }
+        return steps;
     }
 
     function setWallpaperTargetOutput(output: string): void {
@@ -468,10 +526,13 @@ QtObject {
         onTriggered: appearance.applyVhs()
     }
 
+    function vhsCommand(): var {
+        return [runtime.vhsControl, vhsEnabled ? "on" : "off", String(Math.round(vhsIntensity * 100)), String(Math.round(vhsTracking * 100)), String(Math.round(vhsChroma * 100)), String(Math.round(vhsNoise * 100)), String(Math.round(vhsScanlines * 100)), String(Math.round(vhsSpeed * 100)), String(Math.round(vhsDropouts * 100))];
+    }
+
     function applyVhs(): void {
-        if (runtime.vhsControl.length === 0)
-            return;
-        Quickshell.execDetached([runtime.vhsControl, vhsEnabled ? "on" : "off", String(Math.round(vhsIntensity * 100)), String(Math.round(vhsTracking * 100)), String(Math.round(vhsChroma * 100)), String(Math.round(vhsNoise * 100)), String(Math.round(vhsScanlines * 100)), String(Math.round(vhsSpeed * 100)), String(Math.round(vhsDropouts * 100))]);
+        if (runtime.vhsControl.length > 0)
+            Quickshell.execDetached(vhsCommand());
     }
 
     // A preset changes only VHS parameters; it does not toggle the effect
@@ -480,8 +541,7 @@ QtObject {
         if (!vhsPresetNames.includes(name))
             return;
         if (name === "Default") {
-            for (const key of vhsParameterKeys)
-                clearOverride(key);
+            saved.resetMany(vhsParameterKeys);
         } else {
             saved.setMany(vhsPresets[name]);
         }
@@ -531,10 +591,13 @@ QtObject {
         vhsApply.restart();
     }
 
+    function blurCommand(): var {
+        return [runtime.hyprctl, "eval", "hl.config({ decoration = { blur = { enabled = " + (blurEnabled ? "true" : "false") + ", size = " + blurSize + " } } })"];
+    }
+
     function applyBlurSize(): void {
-        if (runtime.hyprctl.length === 0)
-            return;
-        Quickshell.execDetached([runtime.hyprctl, "eval", "hl.config({ decoration = { blur = { enabled = " + (blurEnabled ? "true" : "false") + ", size = " + blurSize + " } } })"]);
+        if (runtime.hyprctl.length > 0)
+            Quickshell.execDetached(blurCommand());
     }
 
     function clearOverride(key: string): void {
@@ -562,11 +625,14 @@ QtObject {
         blurSizeApply.restart();
     }
 
-    function applyWindowTransparency(): void {
-        if (runtime.hyprctl.length === 0)
-            return;
+    function windowTransparencyCommand(): var {
         const opacity = (windowTransparencyEnabled ? windowOpacity : 1).toFixed(2);
-        Quickshell.execDetached([runtime.hyprctl, "eval", "hl.config({ decoration = { active_opacity = " + opacity + ", inactive_opacity = " + opacity + " } })"]);
+        return [runtime.hyprctl, "eval", "hl.config({ decoration = { active_opacity = " + opacity + ", inactive_opacity = " + opacity + " } })"];
+    }
+
+    function applyWindowTransparency(): void {
+        if (runtime.hyprctl.length > 0)
+            Quickshell.execDetached(windowTransparencyCommand());
     }
 
     function setWindowOpacity(value: real): void {
@@ -599,25 +665,59 @@ QtObject {
         applyWindowTransparency();
     }
 
-    function applyGlassRule(name: string, namespace: string, exposed: bool): void {
-        if (runtime.hyprctl.length === 0)
-            return;
+    readonly property var glassRules: [
+        {
+            name: "desktop-shell-shell-glass",
+            namespace: "^desktop-shell-bar$",
+            exposed: barGlassExposed
+        },
+        {
+            name: "desktop-shell-shell-glass-frame",
+            namespace: "^desktop-shell-frame$",
+            exposed: frameGlassExposed
+        },
+        {
+            name: "desktop-shell-shell-glass-expansion",
+            namespace: "^desktop-shell-expansion$",
+            exposed: expansionGlassExposed
+        },
+        {
+            name: "desktop-shell-shell-glass-modal",
+            namespace: "^desktop-shell-modal$",
+            exposed: modalGlassExposed
+        },
+        {
+            name: "desktop-shell-shell-glass-notification",
+            namespace: "^desktop-shell-notification-popup$",
+            exposed: notificationGlassExposed
+        },
+        {
+            name: "desktop-shell-shell-glass-osd",
+            namespace: "^desktop-shell-osd$",
+            exposed: osdGlassExposed
+        },
+        {
+            name: "desktop-shell-shell-glass-resize",
+            namespace: "^desktop-shell-resize-controls$",
+            exposed: resizeGlassExposed
+        },
+    ]
+
+    function glassRuleCommand(name: string, namespace: string, exposed: bool): var {
         const enabled = shellGlassEnabled && exposed ? "true" : "false";
         // Sample application windows as well as bottom/background layers.
-        // X-ray would drop intervening windows from the glass backdrop.
-        Quickshell.execDetached([runtime.hyprctl, "eval", "hl.layer_rule({name = \"" + name + "\", match = {namespace = \"" + namespace + "\"}, blur = true, xray = false, ignore_alpha = 0.08, enabled = " + enabled + "})"]);
+        return [runtime.hyprctl, "eval", "hl.layer_rule({name = \"" + name + "\", match = {namespace = \"" + namespace + "\"}, blur = true, xray = false, ignore_alpha = 0.08, enabled = " + enabled + "})"];
+    }
+
+    function applyGlassRule(name: string, namespace: string, exposed: bool): void {
+        if (runtime.hyprctl.length > 0)
+            Quickshell.execDetached(glassRuleCommand(name, namespace, exposed));
     }
 
     function applyShellGlass(): void {
-        // Only visible layers need backdrop blur. Preloaded modal and hub
-        // surfaces keep their fast first-open path without idle blur passes.
-        applyGlassRule("desktop-shell-shell-glass", "^desktop-shell-bar$", barGlassExposed);
-        applyGlassRule("desktop-shell-shell-glass-frame", "^desktop-shell-frame$", frameGlassExposed);
-        applyGlassRule("desktop-shell-shell-glass-expansion", "^desktop-shell-expansion$", expansionGlassExposed);
-        applyGlassRule("desktop-shell-shell-glass-modal", "^desktop-shell-modal$", modalGlassExposed);
-        applyGlassRule("desktop-shell-shell-glass-notification", "^desktop-shell-notification-popup$", notificationGlassExposed);
-        applyGlassRule("desktop-shell-shell-glass-osd", "^desktop-shell-osd$", osdGlassExposed);
-        applyGlassRule("desktop-shell-shell-glass-resize", "^desktop-shell-resize-controls$", resizeGlassExposed);
+        // Only visible layers need backdrop blur.
+        for (const rule of glassRules)
+            applyGlassRule(rule.name, rule.namespace, rule.exposed);
     }
 
     function toggleShellGlass(): void {

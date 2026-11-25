@@ -192,8 +192,16 @@ test("desktop reset completes independently of the Controls view and reports bac
     resetIndex: 0,
     waitingForNightLightReset: false,
     scenes: { stop: record("scene") },
-    appearance: { resetToDeclared: record("appearance") },
-    motion: { resetToDeclared: record("motion") },
+    appearance: {
+      resetToDeclared: record("appearance"),
+      resetOperations: () => [{ label: "Blur", command: ["hyprctl", "blur"] }],
+    },
+    motion: {
+      resetToDeclared: record("motion"),
+      resetOperations: () => [
+        { label: "Motion", command: ["hyprctl", "motion"] },
+      ],
+    },
     capture: { resetToDeclared: record("capture") },
     weather: {
       resetLocation: record("weather location"),
@@ -204,6 +212,8 @@ test("desktop reset completes independently of the Controls view and reports bac
     resources: { resetSampling: record("resources") },
     nightLightState: { resetToDeclared: record("night light") },
     runtime: {
+      hyprctl: "hyprctl",
+      vhsControl: "vhs",
       captureLocations: "capture",
       wallpaperLibrary: "wallpaper",
       wallpaperPolicy: "schedule",
@@ -247,6 +257,8 @@ test("desktop reset completes independently of the Controls view and reports bac
     context.resetNextPreference();
   }
   assert.deepEqual(calls.slice(10), [
+    "hyprctl blur",
+    "hyprctl motion",
     "capture reset",
     "wallpaper reset Virtual-1",
     "wallpaper reset all",
@@ -262,4 +274,37 @@ test("desktop reset completes independently of the Controls view and reports bac
     source("SessionPanel.qml"),
     /panel.system.resetSessionPreferences/,
   );
+});
+
+test("reset verifies compositor command replies and authoritative option readback", () => {
+  const code = source("Actions.qml");
+  const body = code
+    .split(
+      "function resetStepSucceeded(step: var, code: int, output: string): bool {",
+    )[1]
+    .split("\n    }")[0];
+  const check = new Function("step", "code", "output", body);
+  assert.equal(check({ expectedText: "ok" }, 0, "ok\n"), true);
+  assert.equal(check({ expectedText: "ok" }, 0, "error"), false);
+  assert.equal(
+    check({ expectedField: "bool", expectedValue: false }, 0, '{"bool":false}'),
+    true,
+  );
+  assert.equal(
+    check({ expectedField: "bool", expectedValue: false }, 0, '{"bool":true}'),
+    false,
+  );
+  assert.equal(
+    check({ expectedField: "int", expectedValue: 17 }, 0, '{"int":12}'),
+    false,
+  );
+  assert.equal(
+    check({ expectedField: "float", expectedValue: 0.8 }, 0, '{"float":0.8}'),
+    true,
+  );
+  assert.equal(
+    check({ expectedField: "int", expectedValue: 17 }, 0, "unknown option"),
+    false,
+  );
+  assert.equal(check({}, 1, "ok"), false);
 });
