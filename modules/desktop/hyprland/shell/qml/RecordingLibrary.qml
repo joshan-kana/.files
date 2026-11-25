@@ -819,8 +819,10 @@ Item {
                             font.pixelSize: library.theme.fontSize(12)
                             background: null
                             Keys.onEscapePressed: event => {
-                                library.closeText();
-                                library.keyboardRequested();
+                                if (!event.isAutoRepeat) {
+                                    library.closeText();
+                                    library.keyboardRequested();
+                                }
                                 event.accepted = true;
                             }
                         }

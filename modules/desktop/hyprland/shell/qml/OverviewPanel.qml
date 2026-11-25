@@ -641,6 +641,10 @@ Item {
         anchors.fill: parent
         focus: overview.open
         Keys.onPressed: event => {
+            if (event.isAutoRepeat && event.key === overview.runtime.shellKeyCode("overview", "Escape")) {
+                event.accepted = true;
+                return;
+            }
             if (event.key === overview.runtime.shellKeyCode("overview", "Escape")) {
                 if (overview.moveMode)
                     overview.cancelMove();

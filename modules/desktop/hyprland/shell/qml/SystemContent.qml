@@ -2033,7 +2033,8 @@ FocusScope {
             Keys.onPressed: event => {
                 root.motion.noteKeyDown(event.key);
                 if (event.key === root.runtime.shellKeyCode("controls", "Escape")) {
-                    root.navigateBack();
+                    if (!event.isAutoRepeat)
+                        root.navigateBack();
                     event.accepted = true;
                     return;
                 }

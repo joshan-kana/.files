@@ -939,6 +939,10 @@ Item {
         z: 4
         focus: picker.open
         Keys.onPressed: event => {
+            if (event.isAutoRepeat && event.key === picker.runtime.shellKeyCode("capture", "Escape")) {
+                event.accepted = true;
+                return;
+            }
             if (!picker.open || picker.exporting)
                 return;
             if (picker.countingDown) {

@@ -1109,7 +1109,8 @@ Item {
                     clip: true
                     Keys.onPressed: event => {
                         if (event.key === panel.runtime.shellKeyCode("controls", "Escape")) {
-                            panel.finishProfileText(false);
+                            if (!event.isAutoRepeat)
+                                panel.finishProfileText(false);
                             event.accepted = true;
                         } else if ((event.key === panel.runtime.shellKeyCode("controls", "Return") || event.key === panel.runtime.shellKeyCode("controls", "Enter"))) {
                             panel.finishProfileText(true);
@@ -1259,7 +1260,8 @@ Item {
 
                     Keys.onPressed: event => {
                         if (event.key === panel.runtime.shellKeyCode("controls", "Escape")) {
-                            panel.cancelPassword();
+                            if (!event.isAutoRepeat)
+                                panel.cancelPassword();
                             event.accepted = true;
                         } else if (event.key === panel.runtime.shellKeyCode("controls", "Return") || event.key === panel.runtime.shellKeyCode("controls", "Enter")) {
                             panel.submitPassword();

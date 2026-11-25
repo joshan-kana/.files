@@ -160,7 +160,7 @@ test("Escape has one shared owner and describes reply editing accurately", () =>
   );
   assert.match(
     card,
-    /event\.key === card\.runtime\.shellKeyCode\("activity", "Escape"\)\) \{\s+card\.replyFinished\(\);/,
+    /event\.key === card\.runtime\.shellKeyCode\("activity", "Escape"\)\) \{\s+if \(!event\.isAutoRepeat\)\s+card\.replyFinished\(\);/,
   );
 });
 

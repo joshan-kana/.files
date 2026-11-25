@@ -648,6 +648,10 @@ FocusScope {
     }
 
     Keys.onPressed: event => {
+        if (event.isAutoRepeat && event.key === content.runtime.shellKeyCode("media", "Escape")) {
+            event.accepted = true;
+            return;
+        }
         if (!content.engaged)
             return;
         content.motion.noteKeyDown(event.key);
@@ -677,7 +681,8 @@ FocusScope {
             content.helpOpen = true;
             event.accepted = true;
         } else if (content.runtime.shellMatchesHint("MediaContent.close", event.key, event.modifiers)) {
-            content.closeRequested();
+            if (!event.isAutoRepeat)
+                content.closeRequested();
             event.accepted = true;
         } else if (content.runtime.shellMatchesHint("MediaTransport.play", event.key, event.modifiers)) {
             fullTransport.triggerAction("play", event.isAutoRepeat);

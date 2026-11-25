@@ -575,6 +575,7 @@ PanelWindow {
 
     Shortcut {
         sequence: host.runtime.shellSequence("ShellExpansionHost.closeAll")
+        autoRepeat: false
         context: Qt.ApplicationShortcut
         enabled: host.expansionState.hasCurrent
         onActivated: host.expansionState.close()

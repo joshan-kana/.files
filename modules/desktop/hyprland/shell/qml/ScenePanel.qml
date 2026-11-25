@@ -210,7 +210,8 @@ Column {
                 Accessible.name: "Scene name"
                 Keys.onPressed: event => {
                     if (event.key === panel.runtime.shellKeyCode("controls", "Escape")) {
-                        panel.cancelNested();
+                        if (!event.isAutoRepeat)
+                            panel.cancelNested();
                         event.accepted = true;
                     } else if (event.key === panel.runtime.shellKeyCode("controls", "Return") || event.key === panel.runtime.shellKeyCode("controls", "Enter")) {
                         if (!event.isAutoRepeat)

@@ -164,7 +164,8 @@ PanelWindow {
             const opposite = !!(overlay.runtime.shellModifier("resize", "Shift", event.modifiers));
             const size = opposite ? -50 : 50;
             if (event.key === overlay.runtime.shellKeyCode("resize", "Escape") || event.key === overlay.runtime.shellKeyCode("resize", "Return") || overlay.runtime.shellMatchesHint("ResizeOverlay.doneAlternate", event.key, event.modifiers)) {
-                overlay.open = false;
+                if (!event.isAutoRepeat)
+                    overlay.open = false;
             } else if (overlay.runtime.shellNavigates("resize", "left", event.key)) {
                 overlay.resizeWindow(-size, 0);
             } else if (overlay.runtime.shellNavigates("resize", "down", event.key)) {

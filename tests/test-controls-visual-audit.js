@@ -204,7 +204,7 @@ test("slider keyboard workflow respects direct actions, detail Escape and global
   assert.match(controls, /root\.selectedSlider = ""/);
   assert.match(
     controls,
-    /if \(event\.key === root\.runtime\.shellKeyCode\("controls", "Escape"\)\) \{\s*root\.navigateBack\(\);/,
+    /if \(event\.key === root\.runtime\.shellKeyCode\("controls", "Escape"\)\) \{\s*if \(!event\.isAutoRepeat\)\s*root\.navigateBack\(\);/,
   );
   assert.match(
     controls,
@@ -313,7 +313,10 @@ test("one focused Controls handler owns forward and reverse slider traversal", (
   );
   assert.match(controls, /keyboardFocus\.forceActiveFocus\(\)/);
   assert.doesNotMatch(host, /sequence: "Shift\+Tab"/);
-  assert.doesNotMatch(host, /autoRepeat: false/);
+  assert.doesNotMatch(
+    host,
+    /sequence: host\.runtime\.shortcutHint\("hub(?:Previous|Next)"\)[^}]*autoRepeat: false/,
+  );
   assert.match(
     read("shell.qml"),
     /function controlsSelectedSlider\(\): string/,

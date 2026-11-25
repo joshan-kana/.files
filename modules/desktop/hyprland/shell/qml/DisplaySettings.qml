@@ -201,6 +201,8 @@ Column {
         return busy;
     }
     function handleKey(key: int, modifiers: int, autoRepeat: bool): bool {
+        if (autoRepeat && key === runtime.shellKeyCode("controls", "Escape"))
+            return true;
         if (openSelector) {
             if (runtime.shellNavigates("controls", "up", key))
                 openSelector.moveHighlight(-1);

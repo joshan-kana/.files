@@ -238,7 +238,8 @@ Scope {
                         inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
                         Keys.onPressed: event => {
                             if (event.key === auth.runtime.shellKeyCode("polkit", "Escape")) {
-                                auth.cancel();
+                                if (!event.isAutoRepeat)
+                                    auth.cancel();
                                 event.accepted = true;
                             } else if (event.key === auth.runtime.shellKeyCode("polkit", "Return") || event.key === auth.runtime.shellKeyCode("polkit", "Enter")) {
                                 auth.submit();

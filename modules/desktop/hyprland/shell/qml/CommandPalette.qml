@@ -501,6 +501,7 @@ Item {
 
     Shortcut {
         sequence: palette.runtime.shellSequence("CommandPalette.closeAll")
+        autoRepeat: false
         context: Qt.ApplicationShortcut
         enabled: palette.open
         onActivated: palette.hide()
@@ -1504,7 +1505,8 @@ Item {
                                 results.forceActiveFocus();
                             event.accepted = true;
                         } else if (event.key === palette.runtime.shellKeyCode("palette", "Escape")) {
-                            palette.dismissOrReset();
+                            if (!event.isAutoRepeat)
+                                palette.dismissOrReset();
                             event.accepted = true;
                         } else if (palette.runtime.shellNavigates("palette", "down", event.key, "arrows")) {
                             results.currentIndex = Math.min(displayedModel.values.length - 1, results.currentIndex + 1);
@@ -1559,7 +1561,8 @@ Item {
                     } else if (event.key === palette.runtime.shellKeyCode("palette", "Tab") || event.key === palette.runtime.shellKeyCode("palette", "I") || event.key === palette.runtime.shellKeyCode("palette", "Slash")) {
                         search.forceActiveFocus();
                     } else if (event.key === palette.runtime.shellKeyCode("palette", "Escape")) {
-                        palette.dismissOrReset();
+                        if (!event.isAutoRepeat)
+                            palette.dismissOrReset();
                     } else if (palette.runtime.shellNavigates("palette", "down", event.key)) {
                         results.currentIndex = Math.min(displayedModel.values.length - 1, results.currentIndex + 1);
                     } else if (palette.runtime.shellNavigates("palette", "up", event.key)) {

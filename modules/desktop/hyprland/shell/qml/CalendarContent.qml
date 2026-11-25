@@ -149,6 +149,10 @@ FocusScope {
         anchors.fill: parent
         focus: true
         Keys.onPressed: event => {
+            if (event.isAutoRepeat && event.key === calendar.runtime.shellKeyCode("calendar", "Escape")) {
+                event.accepted = true;
+                return;
+            }
             if (calendar.calendarPickerOpen) {
                 if (event.key === calendar.runtime.shellKeyCode("calendar", "Escape") || calendar.runtime.shellMatchesHint("CalendarContent.calendars", event.key, event.modifiers)) {
                     calendar.navigateBack();

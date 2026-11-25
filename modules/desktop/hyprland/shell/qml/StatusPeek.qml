@@ -98,7 +98,8 @@ PanelWindow {
         }
         Keys.onPressed: event => {
             if (event.key === peek.runtime.shellKeyCode("status", "Escape") || event.key === peek.runtime.shellKeyCode("status", "Return") || event.key === peek.runtime.shellKeyCode("status", "Enter")) {
-                peek.closeRequested();
+                if (!event.isAutoRepeat)
+                    peek.closeRequested();
                 event.accepted = true;
             } else if (peek.runtime.shellMatchesHint("StatusContent.copy", event.key, event.modifiers)) {
                 if (!event.isAutoRepeat)

@@ -399,11 +399,13 @@ WlSessionLock {
                                             lock.submitPassword();
                                         event.accepted = true;
                                     } else if (event.key === lock.runtime.shellKeyCode("lock", "Escape") || (lock.runtime.shellModifier("lock", "Control", event.modifiers) && event.key === lock.runtime.shellKeyCode("lock", "U"))) {
-                                        lock.password = "";
-                                        text = "";
-                                        lock.authRevealed = false;
-                                        lock.statusText = "";
-                                        lock.statusError = false;
+                                        if (!event.isAutoRepeat) {
+                                            lock.password = "";
+                                            text = "";
+                                            lock.authRevealed = false;
+                                            lock.statusText = "";
+                                            lock.statusError = false;
+                                        }
                                         event.accepted = true;
                                     }
                                 }

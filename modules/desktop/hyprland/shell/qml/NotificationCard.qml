@@ -463,7 +463,8 @@ SquircleSurface {
                             card.sendReply();
                             event.accepted = true;
                         } else if (event.key === card.runtime.shellKeyCode("activity", "Escape")) {
-                            card.replyFinished();
+                            if (!event.isAutoRepeat)
+                                card.replyFinished();
                             event.accepted = true;
                         }
                     }

@@ -83,6 +83,10 @@ Item {
     }
 
     function handleNavigation(event: var): void {
+        if (event.isAutoRepeat && event.key === window.runtime.shellKeyCode("help", "Escape")) {
+            event.accepted = true;
+            return;
+        }
         if (event.key === window.runtime.shellKeyCode("help", "Escape")) {
             if (helpOpen)
                 helpOpen = false;

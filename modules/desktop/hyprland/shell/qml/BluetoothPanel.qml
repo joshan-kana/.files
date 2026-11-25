@@ -356,7 +356,8 @@ Item {
                     clip: true
                     Keys.onPressed: event => {
                         if (event.key === panel.runtime.shellKeyCode("controls", "Escape")) {
-                            panel.finishRename(false);
+                            if (!event.isAutoRepeat)
+                                panel.finishRename(false);
                             event.accepted = true;
                         } else if (event.key === panel.runtime.shellKeyCode("controls", "Return") || event.key === panel.runtime.shellKeyCode("controls", "Enter")) {
                             panel.finishRename(true);

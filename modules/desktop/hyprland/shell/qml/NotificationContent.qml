@@ -719,6 +719,10 @@ FocusScope {
             focus: center.engaged
 
             Keys.onPressed: event => {
+                if (event.isAutoRepeat && event.key === center.runtime.shellKeyCode("activity", "Escape")) {
+                    event.accepted = true;
+                    return;
+                }
                 if (center.runtime.shellMatchesHint("NotificationContent.apps", event.key, event.modifiers)) {
                     if (!event.isAutoRepeat)
                         applicationSettingsAction.trigger();

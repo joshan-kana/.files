@@ -472,6 +472,10 @@ Item {
                         }
 
                         Keys.onPressed: event => {
+                            if (event.isAutoRepeat && event.key === panel.runtime.shellKeyCode("clipboard", "Escape")) {
+                                event.accepted = true;
+                                return;
+                            }
                             if (event.isAutoRepeat && (event.key === panel.runtime.shellKeyCode("clipboard", "Return") || event.key === panel.runtime.shellKeyCode("clipboard", "Enter"))) {
                                 event.accepted = true;
                                 return;
@@ -571,6 +575,10 @@ Item {
 
                 Keys.priority: Keys.BeforeItem
                 Keys.onPressed: event => {
+                    if (event.isAutoRepeat && event.key === panel.runtime.shellKeyCode("clipboard", "Escape")) {
+                        event.accepted = true;
+                        return;
+                    }
                     if (event.isAutoRepeat && (event.key === panel.runtime.shellKeyCode("clipboard", "Return") || event.key === panel.runtime.shellKeyCode("clipboard", "Enter"))) {
                         event.accepted = true;
                         return;

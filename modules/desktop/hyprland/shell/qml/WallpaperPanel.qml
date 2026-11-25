@@ -661,7 +661,8 @@ Item {
                 focus: false
                 Keys.onPressed: event => {
                     if (event.key === panel.runtime.shellKeyCode("controls", "Escape")) {
-                        panel.leaveSearch();
+                        if (!event.isAutoRepeat)
+                            panel.leaveSearch();
                         event.accepted = true;
                     } else if (event.key === panel.runtime.shellKeyCode("controls", "Return") || event.key === panel.runtime.shellKeyCode("controls", "Enter")) {
                         panel.applySelected();

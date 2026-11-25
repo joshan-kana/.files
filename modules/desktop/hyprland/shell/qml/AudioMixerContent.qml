@@ -340,6 +340,8 @@ FocusScope {
     function handleKey(key: int, modifiers: int, autoRepeat: bool): bool {
         if (!active)
             return false;
+        if (autoRepeat && key === runtime.shellKeyCode("mixer", "Escape"))
+            return true;
         if (hardwareOpen) {
             if (key === runtime.shellKeyCode("mixer", "Escape") || runtime.shellMatchesHint("AudioMixerContent.hardware", key, modifiers)) {
                 if (!autoRepeat && !hardwareView.cancelNested())

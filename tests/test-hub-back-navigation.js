@@ -46,7 +46,7 @@ test("Escape and Back share the same Controls cancellation priorities", () => {
 
   assert.ok(keyHandler !== -1 && escapeHandler > keyHandler);
   assert.match(
-    system.slice(escapeHandler, escapeHandler + 155),
+    system.slice(escapeHandler, escapeHandler + 220),
     /root\.navigateBack\(\)/,
   );
   assert.match(
@@ -233,5 +233,77 @@ test("Weather Back and Escape discard the same location draft before leaving the
   assert.match(
     host,
     /escapeHintLabel: [^\n]*weatherContent.locationEditing[^\n]*"Exit search"/,
+  );
+});
+
+test("Escape autorepeat is consumed before nested navigation can change focus again", () => {
+  const repeated = [
+    ["NotificationContent.qml", "center", "activity", 1],
+    ["CalendarContent.qml", "calendar", "calendar", 1],
+    ["OverviewPanel.qml", "overview", "overview", 1],
+    ["ScreenshotPicker.qml", "picker", "capture", 1],
+    ["ShortcutCheatsheet.qml", "window", "help", 1],
+    ["MediaContent.qml", "content", "media", 1],
+    ["ClipboardPanel.qml", "panel", "clipboard", 2],
+  ];
+  for (const [file, owner, scope, count] of repeated) {
+    const guard = `if (event.isAutoRepeat && event.key === ${owner}.runtime.shellKeyCode("${scope}", "Escape")) {`;
+    const source = qml(file);
+    const blocks = source.split(guard).slice(1);
+    assert.equal(blocks.length, count, file);
+    for (const block of blocks)
+      assert.match(block, /^\s*event\.accepted = true;\s*return;\s*\}/, file);
+  }
+  for (const [file, count] of [
+    ["SystemContent.qml", 1],
+    ["NetworkPanel.qml", 2],
+    ["BluetoothPanel.qml", 1],
+    ["ScenePanel.qml", 1],
+    ["WallpaperPanel.qml", 1],
+    ["ThemePanel.qml", 1],
+    ["NotificationCard.qml", 1],
+    ["PolkitDialog.qml", 1],
+    ["WeatherContent.qml", 2],
+  ]) {
+    const guarded = qml(file).matchAll(
+      /shellKeyCode\("[^"]+", "Escape"\)\) \{\s*if \(!event\.isAutoRepeat\)\s*[^;]+;\s*event\.accepted = true;/g,
+    );
+    assert.equal([...guarded].length, count, file);
+  }
+  for (const [file, scope] of [
+    ["AudioMixerContent.qml", "mixer"],
+    ["DisplaySettings.qml", "controls"],
+  ])
+    assert.ok(
+      qml(file).includes(
+        `if (autoRepeat && key === runtime.shellKeyCode("${scope}", "Escape"))\n            return true;`,
+      ),
+      file,
+    );
+  assert.match(
+    qml("RecordingLibrary.qml"),
+    /Keys\.onEscapePressed: event => \{\s*if \(!event\.isAutoRepeat\) \{[\s\S]*?\}\s*event\.accepted = true;/,
+  );
+  for (const [file, action] of [
+    ["ShellExpansionHost.qml", "ShellExpansionHost.closeAll"],
+    ["CommandPalette.qml", "CommandPalette.closeAll"],
+  ])
+    assert.ok(
+      qml(file).includes(
+        `shellSequence("${action}")\n        autoRepeat: false`,
+      ),
+      file,
+    );
+});
+
+test("palette consumes repeated Escape in both search and results focus", () => {
+  const src = qml("CommandPalette.qml");
+  assert.equal(
+    [
+      ...src.matchAll(
+        /shellKeyCode\("palette", "Escape"\)\) \{\s*if \(!event\.isAutoRepeat\)\s*palette\.dismissOrReset\(\);/g,
+      ),
+    ].length,
+    2,
   );
 });
