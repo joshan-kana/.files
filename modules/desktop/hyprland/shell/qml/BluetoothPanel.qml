@@ -60,7 +60,7 @@ Item {
     property int selectedIndex: 0
     property bool startedDiscovery: false
     property alias forgetAddress: forgetConfirmation.pending
-    property ConfirmationState forgetConfirmation: ConfirmationState {
+    ConfirmationState {
         id: forgetConfirmation
         onExpired: {
             panel.statusText = "";

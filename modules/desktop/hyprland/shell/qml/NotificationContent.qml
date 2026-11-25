@@ -21,7 +21,7 @@ FocusScope {
     property string expandedGroupKey: ""
     property bool policyOpen: false
     property bool appSettingsOpen: false
-    property ConfirmationState clearConfirmation: ConfirmationState {
+    ConfirmationState {
         id: clearConfirmation
     }
 

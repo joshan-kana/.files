@@ -20,7 +20,7 @@ Item {
     readonly property int gridColumns: width < 340 ? 1 : width < 510 ? 2 : 3
     onGridColumnsChanged: preferredColumn = selectedIndex % gridColumns
     property alias armedAction: confirmation.pending
-    property ConfirmationState confirmation: ConfirmationState {
+    ConfirmationState {
         id: confirmation
         onExpired: {
             panel.statusText = "";

@@ -31,7 +31,7 @@ Item {
     readonly property bool wordSelectionAvailable: wordSelectionStart >= 0 && wordSelectionEnd >= 0
     property alias deletePending: deleteConfirmation.pending
     property string deletingName: ""
-    property ConfirmationState deleteConfirmation: ConfirmationState {
+    ConfirmationState {
         id: deleteConfirmation
         onExpired: {
             library.statusText = "";
