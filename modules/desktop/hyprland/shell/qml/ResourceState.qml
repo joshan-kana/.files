@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "ResourceDisks.js" as Disks
 
 QtObject {
     id: root
@@ -30,7 +31,60 @@ QtObject {
     property real diskTotal: 0
     property real diskUsed: 0
     readonly property real diskPercent: diskTotal > 0 ? diskUsed / diskTotal : 0
+    property var disks: []
+    property string diskTarget: "/"
+    readonly property var selectedDisk: disks.find(entry => entry.target === diskTarget) || null
+    property real diskRead: 0
+    property real diskWrite: 0
+    property bool diskIoKnown: false
+    property var diskHistory: []
+    property var previousDiskStats: null
+    property real previousDiskTime: 0
+    property string diskQueryTarget: ""
     property int diskTicks: 0
+    function clearDiskHistory(): void {
+        previousDiskStats = null;
+        previousDiskTime = 0;
+        diskRead = 0;
+        diskWrite = 0;
+        diskIoKnown = false;
+        diskHistory = [];
+    }
+    function selectDisk(index: int): void {
+        if (index >= 0 && index < disks.length)
+            diskTarget = disks[index].target;
+    }
+    onDiskTargetChanged: {
+        diskTotal = 0;
+        diskUsed = 0;
+        clearDiskHistory();
+        refreshCapacity();
+    }
+    function refreshCapacity(): void {
+        if (active && selectedDisk && !diskProcess.running && runtime.df.length > 0) {
+            diskQueryTarget = diskTarget;
+            diskProcess.exec([runtime.df, "--block-size=1", "--output=size,used", "--", diskTarget]);
+        }
+    }
+    function updateDiskIo(raw: string): void {
+        if (!active)
+            return;
+        const current = Disks.counters(raw, selectedDisk);
+        const now = Date.now();
+        const rate = Disks.rates(previousDiskStats, current, (now - previousDiskTime) / 1000);
+        previousDiskStats = current;
+        previousDiskTime = now;
+        diskIoKnown = rate !== null;
+        if (rate) {
+            diskRead = rate.read;
+            diskWrite = rate.write;
+            diskHistory = updateHistory(diskHistory, diskRead + diskWrite);
+        } else {
+            diskRead = 0;
+            diskWrite = 0;
+            diskHistory = [];
+        }
+    }
     property int sensorTicks: 0
     property real gpuPercent: -1
     property real cpuTemperature: -1
@@ -70,6 +124,7 @@ QtObject {
         previousCpuStats = null;
         previousCoreStats = {};
         previousNetworkStats = null;
+        clearDiskHistory();
         cpuHistory = [];
         memoryHistory = [];
         receiveHistory = [];
@@ -80,6 +135,7 @@ QtObject {
         memoryHistory = memoryHistory.slice(-historyLength);
         receiveHistory = receiveHistory.slice(-historyLength);
         sendHistory = sendHistory.slice(-historyLength);
+        diskHistory = diskHistory.slice(-historyLength);
     }
     property bool showProcesses: false
     property var processes: []
@@ -194,6 +250,7 @@ QtObject {
         fileStat.reload();
         fileNetDev.reload();
         fileRoute.reload();
+        diskStats.reload();
         const mem = fileMeminfo.text();
 
         memoryTotal = Number(mem.match(/^MemTotal:\s*(\d+)/m)?.[1] || 0);
@@ -241,8 +298,9 @@ QtObject {
         }
         if (++diskTicks >= Math.ceil(10 / intervalSeconds)) {
             diskTicks = 0;
-            if (!diskProcess.running)
-                diskProcess.exec(["df", "-Pk", "/"]);
+            if (!diskListProcess.running && runtime.findmnt.length > 0)
+                diskListProcess.exec([runtime.findmnt, "--json", "--list", "--real", "--output", "TARGET,SOURCE,FSTYPE,MAJ:MIN"]);
+            refreshCapacity();
         }
     }
 
@@ -258,6 +316,7 @@ QtObject {
             receiveHistory = [];
             sendHistory = [];
             previousNetworkStats = null;
+            clearDiskHistory();
             diskTicks = Math.ceil(10 / intervalSeconds);
             sensorTicks = Math.ceil(10 / intervalSeconds);
             refresh();
@@ -279,17 +338,45 @@ QtObject {
     property FileView fileRoute: FileView {
         path: "/proc/net/route"
     }
+    property FileView diskStats: FileView {
+        path: "/proc/diskstats"
+        onLoaded: root.updateDiskIo(text())
+    }
+    property StdioCollector diskListOutput: StdioCollector {}
+    property Process diskListProcess: Process {
+        stdout: root.diskListOutput
+        onExited: (code, status) => {
+            if (!root.active || code !== 0)
+                return;
+            const next = Disks.filesystems(root.diskListOutput.text);
+            const previous = root.selectedDisk;
+            root.disks = next;
+            if (!root.selectedDisk) {
+                root.diskTarget = next.length ? next[0].target : "";
+                root.diskTotal = 0;
+                root.diskUsed = 0;
+                root.clearDiskHistory();
+            } else if (!previous || previous.source !== root.selectedDisk.source || previous.device !== root.selectedDisk.device) {
+                root.clearDiskHistory();
+                root.diskTotal = 0;
+                root.diskUsed = 0;
+            }
+            root.refreshCapacity();
+        }
+    }
     property StdioCollector diskOutput: StdioCollector {}
     property Process diskProcess: Process {
         stdout: root.diskOutput
         onExited: (exitCode, exitStatus) => {
-            if (exitCode !== 0)
+            if (!root.active)
                 return;
-            const fields = root.diskOutput.text.trim().split("\n").slice(1)[0]?.trim().split(/\s+/) || [];
-            if (fields.length >= 4) {
-                root.diskTotal = Number(fields[1]) || 0;
-                root.diskUsed = Number(fields[2]) || 0;
+            if (root.diskQueryTarget !== root.diskTarget) {
+                root.refreshCapacity();
+                return;
             }
+            const fields = root.diskOutput.text.trim().split("\n").slice(1)[0]?.trim().split(/\s+/) || [];
+            root.diskTotal = exitCode === 0 && fields.length >= 2 ? Number(fields[0]) / 1024 : 0;
+            root.diskUsed = exitCode === 0 && fields.length >= 2 ? Number(fields[1]) / 1024 : 0;
         }
     }
     property StdioCollector sensorOutput: StdioCollector {}

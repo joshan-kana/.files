@@ -462,6 +462,10 @@ FocusScope {
         }
     ] : resourcesPanel.open ? [
         {
+            key: root.runtime.shellHint("ResourceDashboard.disk"),
+            action: "Choose storage filesystem"
+        },
+        {
             key: root.runtime.shellHint("SystemContent.legend.switch_between_sampled_resource_history_and_per_core_cpu_activity"),
             action: "Switch between sampled resource history and per-core CPU activity"
         },

@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import QtQuick.Layouts
 import "DesktopIcons.js" as DesktopIcons
 
 Item {
@@ -58,10 +59,10 @@ Item {
         }
     }
     function cancelNested(): bool {
-        return intervalSelector.cancel() || historySelector.cancel();
+        return diskSelector.cancel() || intervalSelector.cancel() || historySelector.cancel();
     }
     function handleKey(key: int, modifiers: int, autoRepeat: bool): bool {
-        const selector = intervalSelector.expanded ? intervalSelector : historySelector.expanded ? historySelector : null;
+        const selector = diskSelector.expanded ? diskSelector : intervalSelector.expanded ? intervalSelector : historySelector.expanded ? historySelector : null;
         if (selector) {
             if (runtime.shellNavigates("controls", "up", key))
                 selector.moveHighlight(-1);
@@ -75,21 +76,38 @@ Item {
             }
             return true;
         }
-        for (const action of ["refresh", "interval", "history", "processes", "sort", "defaults"]) {
+        for (const action of ["refresh", "interval", "history", "processes", "sort", "defaults", "disk"]) {
             const id = "ResourceDashboard." + action;
             if (runtime.shellMatchesHint(id, key, modifiers)) {
                 if (!autoRepeat) {
-                    if (action === "refresh")
+                    switch (action) {
+                    case "refresh":
                         refreshResources.trigger();
-                    else
+                        break;
+                    case "defaults":
+                        resetSampling.trigger();
+                        break;
+                    case "disk":
+                        diskSelector.toggle();
+                        break;
+                    case "processes":
+                        processesAction.trigger();
+                        break;
+                    case "sort":
+                        if (sortAction.visible)
+                            sortAction.trigger();
+                        break;
+                    default:
                         activateAction(id);
+                        break;
+                    }
                 }
                 return true;
             }
         }
         if (runtime.shellMatchesHint("ResourceDashboard.toggleCores", key, modifiers)) {
             if (!autoRepeat)
-                toggleCoreView();
+                coresAction.trigger();
             return true;
         }
         return false;
@@ -109,79 +127,121 @@ Item {
         width: parent.width
         spacing: panel.theme.spacing3
 
-        Row {
+        DetailHero {
             width: parent.width
-            spacing: panel.theme.spacing2
-            DetailHero {
-                width: Math.max(1, parent.width - refreshResources.width - parent.spacing)
-                runtime: panel.runtime
-                theme: panel.theme
-                motion: panel.motion
-                glyph: DesktopIcons.glyphFor("resources")
-                glyphFont: "Symbols Nerd Font"
-                glyphColor: panel.theme.roleColor("resources")
-                eyebrow: "Performance / live"
-                title: "Resources"
-                detail: "CPU · Memory · GPU · Temperature · Network · Disk · Last " + panel.resourceState.historySeconds + "s"
-            }
-            ShellUtilityAction {
-                id: refreshResources
-                anchors.verticalCenter: parent.verticalCenter
-                runtime: panel.runtime
-                theme: panel.theme
-                motion: panel.motion
-                icon: DesktopIcons.actionGlyph("refresh")
-                title: "Refresh resources"
-                shortcut: panel.runtime.shellHint("ResourceDashboard.refresh")
-                onActivated: panel.activateAction("ResourceDashboard.refresh")
-            }
+            runtime: panel.runtime
+            theme: panel.theme
+            motion: panel.motion
+            glyph: DesktopIcons.glyphFor("resources")
+            glyphFont: "Symbols Nerd Font"
+            glyphColor: panel.theme.roleColor("resources")
+            eyebrow: "Performance / live"
+            title: "Resources"
+            detail: "CPU · Memory · GPU · Temperature · Network · Disk · Last " + panel.resourceState.historySeconds + "s"
+            actions: [
+                ShellUtilityAction {
+                    id: resetSampling
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    motion: panel.motion
+                    icon: DesktopIcons.actionGlyph("reset")
+                    title: "Restore sampling defaults"
+                    shortcut: panel.runtime.shellHint("ResourceDashboard.defaults")
+                    onActivated: {
+                        panel.cancelNested();
+                        panel.resourceState.resetSampling();
+                    }
+                },
+                ShellUtilityAction {
+                    id: refreshResources
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    motion: panel.motion
+                    icon: DesktopIcons.actionGlyph("refresh")
+                    title: "Refresh resources"
+                    shortcut: panel.runtime.shellHint("ResourceDashboard.refresh")
+                    onActivated: panel.activateAction("ResourceDashboard.refresh")
+                }
+            ]
         }
 
-        Flow {
+        ShellValueSelector {
+            id: diskSelector
+            width: parent.width
+            runtime: panel.runtime
+            theme: panel.theme
+            motion: panel.motion
+            title: "Storage filesystem"
+            shortcut: panel.runtime.shellHint("ResourceDashboard.disk")
+            confirmShortcut: panel.runtime.shellHint("SystemContent.legend.activate_confirm")
+            accentColor: panel.theme.roleColor("positive")
+            options: panel.resourceState.disks.map(entry => entry.target + " · " + entry.source)
+            selectedIndex: panel.resourceState.disks.findIndex(entry => entry.target === panel.resourceState.diskTarget)
+            onOpened: {
+                intervalSelector.cancel();
+                historySelector.cancel();
+                panel.revealSelector(diskSelector);
+            }
+            onChosen: index => panel.resourceState.selectDisk(index)
+        }
+
+        GridLayout {
             id: primaryMetrics
             width: parent.width
-            spacing: panel.theme.spacing3
-            readonly property int columns: Math.max(1, Math.min(3, Math.floor((width + spacing) / (panel.theme.fontSize(210) + spacing))))
+            columnSpacing: panel.theme.spacing3
+            rowSpacing: panel.theme.spacing3
+            columns: Math.max(1, Math.min(3, Math.floor((width + columnSpacing) / (panel.theme.fontSize(210) + columnSpacing))))
+            uniformCellWidths: true
+            uniformCellHeights: true
+            readonly property var metrics: [
+                {
+                    title: "CPU",
+                    glyph: "󰍛",
+                    role: "resources",
+                    fraction: panel.resourceState.cpuPercent,
+                    known: panel.resourceState.cpuSampleReady,
+                    detail: "Processor activity",
+                    history: panel.resourceState.cpuHistory
+                },
+                {
+                    title: "Memory",
+                    glyph: "󰘚",
+                    role: "connectivity",
+                    fraction: panel.resourceState.memoryPercent,
+                    known: panel.resourceState.memoryTotal > 0,
+                    detail: panel.resourceState.kibString(panel.resourceState.memoryUsed) + " / " + panel.resourceState.kibString(panel.resourceState.memoryTotal),
+                    history: panel.resourceState.memoryHistory
+                },
+                {
+                    title: "Storage",
+                    glyph: "󰋊",
+                    role: "positive",
+                    fraction: panel.resourceState.diskPercent,
+                    known: panel.resourceState.diskTotal > 0,
+                    detail: panel.resourceState.diskTotal > 0 ? panel.resourceState.kibString(panel.resourceState.diskUsed) + " / " + panel.resourceState.kibString(panel.resourceState.diskTotal) : "Capacity unavailable",
+                    history: panel.resourceState.diskHistory,
+                    maximum: Math.max(131072, ...panel.resourceState.diskHistory),
+                    io: true
+                }
+            ]
             Repeater {
-                model: [
-                    {
-                        title: "CPU",
-                        glyph: "󰍛",
-                        role: "resources",
-                        fraction: panel.resourceState.cpuPercent,
-                        known: panel.resourceState.cpuSampleReady,
-                        detail: "Processor activity",
-                        history: panel.resourceState.cpuHistory
-                    },
-                    {
-                        title: "Memory",
-                        glyph: "󰘚",
-                        role: "connectivity",
-                        fraction: panel.resourceState.memoryPercent,
-                        known: panel.resourceState.memoryTotal > 0,
-                        detail: panel.resourceState.kibString(panel.resourceState.memoryUsed) + " / " + panel.resourceState.kibString(panel.resourceState.memoryTotal),
-                        history: panel.resourceState.memoryHistory
-                    },
-                    {
-                        title: "Storage",
-                        glyph: "󰋊",
-                        role: "positive",
-                        fraction: panel.resourceState.diskPercent,
-                        known: panel.resourceState.diskTotal > 0,
-                        detail: panel.resourceState.diskTotal > 0 ? panel.resourceState.kibString(panel.resourceState.diskUsed) + " used" : "Capacity unavailable"
-                    }
-                ]
+                id: primaryMetricCards
+                model: primaryMetrics.metrics.length
                 delegate: ShellSurface {
                     id: metricTile
                     required property int index
-                    required property var modelData
-                    width: primaryMetrics.columns === 2 && index === 2 ? primaryMetrics.width : Math.floor((primaryMetrics.width - (primaryMetrics.columns - 1) * primaryMetrics.spacing) / primaryMetrics.columns)
-                    height: metricContent.implicitHeight + panel.theme.spacing4 * 2
+                    readonly property var metric: primaryMetrics.metrics[index]
+                    Layout.columnSpan: primaryMetrics.columns === 2 && index === 2 ? 2 : 1
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    Layout.minimumWidth: 1
+                    Layout.preferredWidth: (primaryMetrics.width - (primaryMetrics.columns - 1) * primaryMetrics.columnSpacing) / primaryMetrics.columns
+                    implicitHeight: metricContent.implicitHeight + panel.theme.spacing4 * 2
                     theme: panel.theme
                     motion: panel.motion
                     surfaceLayer: ShellSurface.Group
                     cornerRadius: panel.theme.radiusLarge
-                    readonly property color metricColor: panel.theme.roleColor(modelData.role)
+                    readonly property color metricColor: panel.theme.roleColor(metric.role)
                     fillColor: panel.theme.blend(panel.theme.groupBase, metricColor, panel.theme.dark ? 0.08 : 0.045)
                     Column {
                         id: metricContent
@@ -191,7 +251,7 @@ Item {
                         Row {
                             spacing: panel.theme.spacing2
                             Text {
-                                text: metricTile.modelData.glyph
+                                text: metricTile.metric.glyph
                                 color: metricTile.metricColor
                                 font.family: "Symbols Nerd Font"
                                 font.pixelSize: panel.theme.iconRegular
@@ -199,46 +259,47 @@ Item {
                             ShellText {
                                 runtime: panel.runtime
                                 theme: panel.theme
-                                text: metricTile.modelData.title
+                                text: metricTile.metric.title
                                 textRole: ShellText.Section
                             }
                         }
-                        ShellText {
-                            runtime: panel.runtime
-                            theme: panel.theme
-                            text: metricTile.modelData.known ? Math.round(metricTile.modelData.fraction * 100) + "%" : "—"
-                            textRole: ShellText.Display
-                            color: metricTile.metricColor
-                        }
-                        LevelTrack {
-                            visible: !metricTile.modelData.history
-                            width: parent.width
+                        ResourceGauge {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            width: Math.min(parent.width, implicitWidth)
+                            height: width
                             theme: panel.theme
                             motion: panel.motion
-                            fraction: metricTile.modelData.fraction
-                            known: metricTile.modelData.known
+                            value: metricTile.metric.fraction
+                            known: metricTile.metric.known
                             accentColor: metricTile.metricColor
                         }
                         ShellText {
                             width: parent.width
                             runtime: panel.runtime
                             theme: panel.theme
-                            text: metricTile.modelData.known ? metricTile.modelData.detail : "Unavailable or sampling"
+                            text: metricTile.metric.known ? metricTile.metric.detail : "Unavailable or sampling"
                             textRole: ShellText.Supporting
                             wrapMode: Text.WordWrap
                         }
-                        ResourceHistoryGraph {
-                            visible: !!metricTile.modelData.history
+                        ShellText {
                             width: parent.width
-                            height: visible ? panel.theme.fontSize(80) : 0
                             runtime: panel.runtime
                             theme: panel.theme
-                            label: metricTile.modelData.title
+                            text: metricTile.metric.io ? (panel.resourceState.diskIoKnown ? "↓ " + panel.resourceState.speedString(panel.resourceState.diskRead) + " · ↑ " + panel.resourceState.speedString(panel.resourceState.diskWrite) : "Device I/O unavailable or sampling") : "Utilisation history"
+                            textRole: ShellText.Utility
+                            wrapMode: Text.WordWrap
+                        }
+                        ResourceHistoryGraph {
+                            width: parent.width
+                            height: panel.theme.fontSize(80)
+                            runtime: panel.runtime
+                            theme: panel.theme
+                            label: metricTile.metric.title
                             currentText: ""
                             showHeader: false
                             graphColor: metricTile.metricColor
-                            values: metricTile.modelData.history || []
-                            maximum: 1
+                            values: metricTile.metric.history || []
+                            maximum: metricTile.metric.maximum || 1
                             sampleLimit: panel.resourceState.historyLength
                         }
                     }
@@ -390,6 +451,7 @@ Item {
             width: parent.width
             spacing: panel.theme.spacing2
             ShellAction {
+                id: coresAction
                 width: Math.min(parent.width, implicitWidth)
                 height: implicitHeight
                 runtime: panel.runtime
@@ -405,6 +467,7 @@ Item {
                 onActivated: panel.toggleCoreView()
             }
             ShellAction {
+                id: processesAction
                 width: Math.min(parent.width, implicitWidth)
                 height: implicitHeight
                 runtime: panel.runtime
@@ -420,6 +483,7 @@ Item {
                 onActivated: panel.activateAction("ResourceDashboard.processes")
             }
             ShellAction {
+                id: sortAction
                 visible: panel.showProcesses
                 width: Math.min(parent.width, implicitWidth)
                 height: implicitHeight
@@ -593,7 +657,7 @@ Item {
             spacing: panel.theme.spacing2
             ShellValueSelector {
                 id: intervalSelector
-                width: Math.max(1, (parent.width - resetSampling.width - parent.spacing * 2) / 2)
+                width: Math.max(1, (parent.width - parent.spacing) / 2)
                 runtime: panel.runtime
                 theme: panel.theme
                 motion: panel.motion
@@ -606,6 +670,7 @@ Item {
                 selectedIndex: values.indexOf(panel.resourceState.intervalSeconds)
                 onOpened: {
                     historySelector.cancel();
+                    diskSelector.cancel();
                     panel.revealSelector(intervalSelector);
                 }
                 onChosen: index => panel.resourceState.setInterval(values[index])
@@ -625,22 +690,10 @@ Item {
                 selectedIndex: values.indexOf(panel.resourceState.historyLength)
                 onOpened: {
                     intervalSelector.cancel();
+                    diskSelector.cancel();
                     panel.revealSelector(historySelector);
                 }
                 onChosen: index => panel.resourceState.setHistory(values[index])
-            }
-            ShellUtilityAction {
-                id: resetSampling
-                runtime: panel.runtime
-                theme: panel.theme
-                motion: panel.motion
-                icon: DesktopIcons.actionGlyph("reset")
-                title: "Restore sampling defaults"
-                shortcut: panel.runtime.shellHint("ResourceDashboard.defaults")
-                onActivated: {
-                    panel.cancelNested();
-                    panel.resourceState.resetSampling();
-                }
             }
         }
     }

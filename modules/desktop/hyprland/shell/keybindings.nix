@@ -254,6 +254,7 @@
           "ResourceDashboard.refresh" = "R";
           "ResourceDashboard.interval" = "T";
           "ResourceDashboard.history" = "H";
+          "ResourceDashboard.disk" = "F";
           "ResourceDashboard.processes" = "P";
           "ResourceDashboard.sort" = "S";
           "ResourceDashboard.defaults" = "D";

@@ -1390,6 +1390,8 @@ in
           cliphist = lib.getExe pkgs.cliphist;
           emojiTest = "${pkgs.unicode-emoji}/share/unicode/emoji/emoji-test.txt";
           resourceProbe = lib.getExe resourceProbe;
+          findmnt = lib.getExe' pkgs.util-linux "findmnt";
+          df = lib.getExe' pkgs.coreutils "df";
           clipboardCopy = lib.getExe clipboardCopy;
           copyText = lib.getExe' pkgs.wl-clipboard "wl-copy";
           clipboardPreview = lib.getExe clipboardPreview;

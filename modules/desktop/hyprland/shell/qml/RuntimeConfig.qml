@@ -22,6 +22,8 @@ QtObject {
     readonly property string cliphist: root.configData.tools.cliphist
     readonly property string emojiTest: root.configData.tools.emojiTest
     readonly property string resourceProbe: root.configData.tools.resourceProbe
+    readonly property string findmnt: root.configData.tools.findmnt
+    readonly property string df: root.configData.tools.df
     readonly property string copyText: root.configData.tools.copyText
     readonly property string clipboardCopy: root.configData.tools.clipboardCopy
     readonly property string clipboardPreview: root.configData.tools.clipboardPreview

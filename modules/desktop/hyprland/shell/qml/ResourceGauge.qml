@@ -20,13 +20,15 @@ Item {
     property real compactIconOffsetY: 0
     property real animatedValue: Math.max(0, Math.min(1, value))
 
-    implicitWidth: compact ? 34 : 126
-    implicitHeight: compact ? 34 : 126
+    implicitWidth: compact ? 34 : Math.max(126, theme.fontSize(110), readbackContent.implicitWidth + theme.spacing4 * 2)
+    implicitHeight: implicitWidth
 
     onAnimatedValueChanged: face.requestPaint()
     onKnownChanged: face.requestPaint()
     onAccentColorChanged: face.requestPaint()
     onCompactChanged: face.requestPaint()
+    readonly property color trackColor: theme.layer3
+    onTrackColorChanged: face.requestPaint()
 
     Behavior on animatedValue {
         Anim {
@@ -38,6 +40,8 @@ Item {
     Canvas {
         id: face
         anchors.fill: parent
+        onWidthChanged: requestPaint()
+        onHeightChanged: requestPaint()
         onPaint: {
             const ctx = getContext("2d");
             ctx.clearRect(0, 0, width, height);
@@ -49,7 +53,7 @@ Item {
             ctx.lineWidth = gauge.compact ? 3 : 9;
             ctx.lineCap = "round";
             ctx.beginPath();
-            ctx.strokeStyle = gauge.theme.layer3;
+            ctx.strokeStyle = gauge.trackColor;
             ctx.arc(width / 2, height / 2, radius, start, start + sweep);
             ctx.stroke();
             ctx.beginPath();
@@ -60,6 +64,7 @@ Item {
     }
 
     Column {
+        id: readbackContent
         anchors.centerIn: parent
         spacing: 2
         visible: !gauge.compact
@@ -73,6 +78,7 @@ Item {
         }
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
+            visible: gauge.label.length > 0
             text: gauge.label
             color: gauge.theme.textMuted
             font.family: gauge.theme.runtime.fontSans
