@@ -20,30 +20,28 @@ let
   '';
 in
 {
-  config = lib.mkIf gatewayEnabled {
-    systemd.services.chatgpt-shared-tools = {
-      description = "Shared agent MCP tools through OpenAI Secure MCP Tunnel";
-      wantedBy = [ "multi-user.target" ];
-      after = [ "agentgateway.service" ];
-      requires = [ "agentgateway.service" ];
+  systemd.services.chatgpt-shared-tools = lib.mkIf gatewayEnabled {
+    description = "Shared agent MCP tools through OpenAI Secure MCP Tunnel";
+    wantedBy = [ "multi-user.target" ];
+    after = [ "agentgateway.service" ];
+    requires = [ "agentgateway.service" ];
 
-      unitConfig.AssertPathExists = tunnelSecret;
+    unitConfig.AssertPathExists = tunnelSecret;
 
-      environment = {
-        HEALTH_LISTEN_ADDR = "127.0.0.1:18793";
-        MCP_SERVER_URL = "url=http://127.0.0.1:4444/mcp";
-        MCP_STARTUP_WAIT_TIMEOUT = "30s";
-        CONTROL_PLANE_POLL_CHANNELS = "main";
-      };
+    environment = {
+      HEALTH_LISTEN_ADDR = "127.0.0.1:18793";
+      MCP_SERVER_URL = "url=http://127.0.0.1:4444/mcp";
+      MCP_STARTUP_WAIT_TIMEOUT = "30s";
+      CONTROL_PLANE_POLL_CHANNELS = "main";
+    };
 
-      serviceConfig = {
-        DynamicUser = true;
-        EnvironmentFile = tunnelSecret;
-        ExecStart = start;
-        Restart = "always";
-        RestartSec = "2s";
-        UMask = "0077";
-      };
+    serviceConfig = {
+      DynamicUser = true;
+      EnvironmentFile = tunnelSecret;
+      ExecStart = start;
+      Restart = "always";
+      RestartSec = "2s";
+      UMask = "0077";
     };
   };
 }
