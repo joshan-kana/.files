@@ -110,7 +110,7 @@ test("media and audio cards reserve measured top-left keycap safe space", () => 
   );
   assert.match(
     mixer,
-    /implicitHeight: body\.implicitHeight \+ \(compact \? compactTopInset \+ theme\.spacing3/,
+    /implicitHeight: \(hardwareOpen \? hardwareView\.implicitHeight : body\.implicitHeight\) \+ \(compact \? compactTopInset \+ theme\.spacing3/,
   );
   assert.match(mixer, /TileKeyHint \{[\s\S]*?primary: false/);
   assert.match(

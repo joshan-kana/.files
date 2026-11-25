@@ -1378,6 +1378,9 @@ in
 
         tools = {
           pwMetadata = lib.getExe' pkgs.pipewire "pw-metadata";
+          pwDump = lib.getExe' pkgs.pipewire "pw-dump";
+          wpctl = lib.getExe' pkgs.wireplumber "wpctl";
+          timeout = lib.getExe' pkgs.coreutils "timeout";
           busctl = lib.getExe' pkgs.systemd "busctl";
           bluetoothctl = lib.getExe' pkgs.bluez "bluetoothctl";
           weatherCurl = lib.getExe pkgs.curl;

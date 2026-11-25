@@ -487,6 +487,11 @@
         };
         mixer = {
           "AudioMixerContent.effectsToggle" = "B";
+          "AudioMixerContent.hardware" = "G";
+          "AudioHardwareSettings.refresh" = "R";
+          "AudioHardwareSettings.select" = "NAV_VERTICAL";
+          "AudioHardwareSettings.device" = "NAV_HORIZONTAL";
+          "AudioHardwareSettings.apply" = "ENTER";
           "AudioMixerContent.balanceLeft" = "NAV_KEY_LEFT_PRIMARY_SHIFT";
           "AudioMixerContent.balanceRight" = "NAV_KEY_RIGHT_PRIMARY_SHIFT";
           "AudioMixerContent.balanceReset" = "C";

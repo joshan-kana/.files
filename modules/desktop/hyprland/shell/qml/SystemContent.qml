@@ -363,7 +363,32 @@ FocusScope {
             key: root.runtime.shellHint("SystemContent.legend.esc_13"),
             action: root.returnToControls ? "Back to Controls" : "Close"
         }
+    ] : mixerOpen && mixerView.panel?.hardwareOpen ? [
+        {
+            key: root.runtime.shellHint("AudioHardwareSettings.device"),
+            action: "Choose audio device"
+        },
+        {
+            key: root.runtime.shellHint("AudioHardwareSettings.select"),
+            action: "Choose profile or physical port"
+        },
+        {
+            key: root.runtime.shellHint("AudioHardwareSettings.apply"),
+            action: "Apply selected native choice"
+        },
+        {
+            key: root.runtime.shellHint("AudioHardwareSettings.refresh"),
+            action: "Refresh devices"
+        },
+        {
+            key: root.runtime.shellHint("SystemContent.legend.esc_18"),
+            action: "Back to mixer"
+        }
     ] : mixerOpen ? [
+        {
+            key: root.runtime.shellHint("AudioMixerContent.hardware"),
+            action: "Device profiles and ports"
+        },
         {
             key: root.runtime.shellHint("SystemContent.legend.select_output_input_or_stream_half_page"),
             action: "Select output, input or stream / half page"

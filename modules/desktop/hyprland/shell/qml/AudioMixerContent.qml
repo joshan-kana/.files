@@ -114,7 +114,8 @@ FocusScope {
     readonly property var selectedTarget: targets[Math.max(0, Math.min(selectedIndex, targets.length - 1))] || null
 
     readonly property string foregroundRole: "audio"
-    readonly property bool foregroundBusy: routeProcess.running || pendingRoute !== "" || effectsState.awaitingConfirmation || effectsState.requestedPreset !== null
+    readonly property bool hardwareOpen: hardwareView.open
+    readonly property bool foregroundBusy: hardwareView.busy || routeProcess.running || pendingRoute !== "" || effectsState.awaitingConfirmation || effectsState.requestedPreset !== null
     property bool presetOpen: false
     property int presetIndex: 0
     function togglePresetPicker(): void {
@@ -218,7 +219,7 @@ FocusScope {
 
     implicitWidth: compact ? 490 : 950
     readonly property real compactTopInset: Math.max(theme.spacing4, theme.spacing2 * 2 + theme.keycapHeight)
-    implicitHeight: body.implicitHeight + (compact ? compactTopInset + theme.spacing3 : theme.spacing2 * 2)
+    implicitHeight: (hardwareOpen ? hardwareView.implicitHeight : body.implicitHeight) + (compact ? compactTopInset + theme.spacing3 : theme.spacing2 * 2)
     visible: active
     focus: active && !compact
 
@@ -240,6 +241,7 @@ FocusScope {
             inputDevice.chooserOpen = false;
             routeOpen = false;
             presetOpen = false;
+            hardwareView.open = false;
             return;
         }
         selectIndex(selectedIndex);
@@ -327,6 +329,19 @@ FocusScope {
     function handleKey(key: int, modifiers: int, autoRepeat: bool): bool {
         if (!active)
             return false;
+        if (hardwareOpen) {
+            if (key === runtime.shellKeyCode("mixer", "Escape") || runtime.shellMatchesHint("AudioMixerContent.hardware", key, modifiers)) {
+                if (!autoRepeat)
+                    hardwareView.open = false;
+                return true;
+            }
+            return hardwareView.handleKey(key, modifiers, autoRepeat);
+        }
+        if (!compact && runtime.shellMatchesHint("AudioMixerContent.hardware", key, modifiers)) {
+            if (!autoRepeat)
+                hardwareAction.trigger();
+            return true;
+        }
         if (presetOpen) {
             if (key === runtime.shellKeyCode("mixer", "Escape") || runtime.shellMatchesHint("AudioMixerContent.effectsPresets", key, modifiers)) {
                 if (!autoRepeat)
@@ -468,8 +483,19 @@ FocusScope {
             fillColor: mixer.theme.groupBase
         }
 
+        AudioHardwareSettings {
+            id: hardwareView
+            x: mixer.theme.spacing2
+            y: mixer.theme.spacing2
+            width: Math.max(1, parent.width - mixer.theme.spacing2 * 2)
+            runtime: mixer.runtime
+            theme: mixer.theme
+            motion: mixer.motion
+        }
+
         Column {
             id: body
+            visible: !mixer.hardwareOpen
             z: 1
             x: mixer.compact ? mixer.theme.spacing4 : mixer.theme.spacing2
             y: mixer.compact ? mixer.compactTopInset : mixer.theme.spacing2
@@ -540,6 +566,27 @@ FocusScope {
                             outputDevice.chooserOpen = false;
                     }
                     onSelectedRequested: mixer.selectIndex(mixer.microphoneIndex)
+                }
+            }
+
+            ShellAction {
+                id: hardwareAction
+                visible: !mixer.compact
+                width: parent.width
+                height: Math.max(40, implicitHeight)
+                runtime: mixer.runtime
+                theme: mixer.theme
+                motion: mixer.motion
+                compact: true
+                horizontalCompact: true
+                title: "Device profiles and ports"
+                shortcut: mixer.runtime.shellHint("AudioMixerContent.hardware")
+                onActivated: {
+                    mixer.routeOpen = false;
+                    mixer.presetOpen = false;
+                    outputDevice.chooserOpen = false;
+                    inputDevice.chooserOpen = false;
+                    hardwareView.open = true;
                 }
             }
 

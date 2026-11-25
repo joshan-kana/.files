@@ -459,7 +459,7 @@ test("The compact mixer uses content-driven height and does not delay rendering"
   const mixer = read("AudioMixerContent.qml");
   assert.match(
     mixer,
-    /implicitHeight: body.implicitHeight \+ \(compact \? compactTopInset \+ theme.spacing3/,
+    /implicitHeight: \(hardwareOpen \? hardwareView\.implicitHeight : body\.implicitHeight\) \+ \(compact \? compactTopInset \+ theme\.spacing3/,
   );
   assert.match(mixer, /onActivated: mixer.expandRequested\(\)/);
   assert.doesNotMatch(mixer, /id: expandAction/);
