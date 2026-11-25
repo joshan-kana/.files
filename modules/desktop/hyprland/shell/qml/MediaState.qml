@@ -7,6 +7,9 @@ QtObject {
 
     required property AppearancePreferences appearance
     readonly property int seekSeconds: appearance.mediaSeekSeconds
+    readonly property int seekIntervalIndex: appearance.seekIntervals.indexOf(seekSeconds)
+    readonly property bool canDecreaseSeekInterval: seekIntervalIndex > 0
+    readonly property bool canIncreaseSeekInterval: seekIntervalIndex >= 0 && seekIntervalIndex < appearance.seekIntervals.length - 1
 
     readonly property var players: Mpris.players.values
     property string preferredPlayerId: ""

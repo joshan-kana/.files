@@ -625,8 +625,8 @@ FocusScope {
                     readback: content.media.seekSeconds + "s"
                     decreaseShortcut: content.runtime.shellHint("MediaContent.shorter")
                     increaseShortcut: content.runtime.shellHint("MediaContent.longer")
-                    canDecrease: content.media.seekSeconds > 5
-                    canIncrease: content.media.seekSeconds < 60
+                    canDecrease: content.media.canDecreaseSeekInterval
+                    canIncrease: content.media.canIncreaseSeekInterval
                     onDecreased: content.media.adjustSeekStep(-1)
                     onIncreased: content.media.adjustSeekStep(1)
                 }

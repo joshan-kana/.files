@@ -25,11 +25,44 @@ test("seek interval has one validated persistent preference and a declarative de
     /storeOverride\("mediaSeekSeconds", seekIntervals\[index\]\)/,
   );
   assert.match(appearance, /saved\.set\(key, value\)/);
-  const steps = [5, 10, 15, 30, 60];
-  for (const i of steps.keys()) {
-    assert.equal(steps[Math.max(0, i - 1)], steps[i - 1] || 5);
-    assert.equal(steps[Math.min(4, i + 1)], steps[i + 1] || 60);
+  const media = read("MediaState.qml");
+  const indexExpression = media.match(
+    /readonly property int seekIntervalIndex: (.+)/,
+  )[1];
+  const decreaseExpression = media.match(
+    /readonly property bool canDecreaseSeekInterval: (.+)/,
+  )[1];
+  const increaseExpression = media.match(
+    /readonly property bool canIncreaseSeekInterval: (.+)/,
+  )[1];
+  const indexFor = new Function(
+    "appearance",
+    "seekSeconds",
+    "return " + indexExpression,
+  );
+  const canDecrease = new Function(
+    "seekIntervalIndex",
+    "return " + decreaseExpression,
+  );
+  const canIncrease = new Function(
+    "appearance",
+    "seekIntervalIndex",
+    "return " + increaseExpression,
+  );
+  for (const seekIntervals of [[5, 10, 15, 30, 60], [2, 20, 120], [30]]) {
+    const appearance = { seekIntervals };
+    for (const [i, seconds] of seekIntervals.entries()) {
+      const index = indexFor(appearance, seconds);
+      assert.equal(canDecrease(index), i > 0);
+      assert.equal(
+        canIncrease(appearance, index),
+        i < seekIntervals.length - 1,
+      );
+    }
   }
+  const page = read("MediaContent.qml");
+  assert.match(page, /canDecrease: content\.media\.canDecreaseSeekInterval/);
+  assert.match(page, /canIncrease: content\.media\.canIncreaseSeekInterval/);
 });
 test("all media transport buttons and global shortcuts use the same step", () => {
   const media = read("MediaState.qml");
