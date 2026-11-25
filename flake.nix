@@ -523,34 +523,27 @@
       # Derive update candidates from the registered overlays and package metadata.
       updatePackagesFor =
         system:
-        lib.foldl'
-          (
-            packages: cfg:
-            if cfg.pkgs.stdenv.hostPlatform.system != system then
-              packages
-            else
-              let
-                names = lib.unique (
-                  lib.concatMap (overlay: builtins.attrNames (overlay cfg.pkgs cfg.pkgs)) cfg.config.nixpkgs.overlays
-                );
-                updateable = lib.filterAttrs (
-                  name: package:
-                  let
-                    # Some unrelated nixpkgs overlay attributes fail when forced.
-                    policy = builtins.tryEval (package.passthru.autoUpdate or null);
-                  in
-                  if !policy.success || policy.value == null then
-                    false
-                  else
-                    assert lib.assertMsg (builtins.isBool policy.value)
-                      "Package ${name}: passthru.autoUpdate must be a Boolean.";
-                    true
-                ) (lib.genAttrs names (name: cfg.pkgs.${name}));
-              in
-              packages // updateable
-          )
-          { }
-          ((builtins.attrValues self.nixosConfigurations) ++ (builtins.attrValues self.darwinConfigurations));
+        let
+          overlays = overlaysFor system;
+          pkgs = import nixpkgs {
+            inherit system overlays;
+            config.allowUnfree = true;
+          };
+          names = lib.unique (lib.concatMap (overlay: builtins.attrNames (overlay pkgs pkgs)) overlays);
+        in
+        lib.filterAttrs (
+          name: package:
+          let
+            # Some unrelated nixpkgs overlay attributes fail when forced.
+            policy = builtins.tryEval (package.passthru.autoUpdate or null);
+          in
+          if !policy.success || policy.value == null then
+            false
+          else
+            assert lib.assertMsg (builtins.isBool policy.value)
+              "Package ${name}: passthru.autoUpdate must be a Boolean.";
+            true
+        ) (lib.genAttrs names (name: pkgs.${name}));
 
       docsCommandsFor =
         system:
