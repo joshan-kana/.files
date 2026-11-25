@@ -130,32 +130,40 @@ if [[ $interactive == true ]]; then
       commit_hint='Ctrl-O: show commits'
     fi
 
+    choices=$(
+      set -e
+      printf 'working-tree\tCurrent\tWorking tree\n'
+      printf 'HEAD\tCurrent\tHEAD\n'
+      git -C "$repo" for-each-ref --sort=refname \
+        --format='%(refname)%09%(refname:short)' refs/heads refs/remotes refs/tags |
+        while IFS=$'\t' read -r full ref; do
+          case "$full" in
+          refs/heads/*) kind=Local ;;
+          refs/remotes/*/HEAD) continue ;;
+          refs/remotes/*) kind=Remote ;;
+          refs/tags/*) kind=Tag ;;
+          esac
+          printf '%s\t%s\t%s\n' "$full" "$kind" "$ref"
+        done
+      if [[ $show_commits == true ]]; then
+        git -C "$repo" log --all -60 --format='%H%x09Commit%x09%h  %s'
+      fi
+    )
     selection=$(
-      {
-        printf 'working-tree\tCurrent\tWorking tree\n'
-        printf 'HEAD\tCurrent\tHEAD\n'
-        git -C "$repo" for-each-ref --sort=refname \
-          --format='%(refname)%09%(refname:short)' refs/heads refs/remotes refs/tags |
-          while IFS=$'\t' read -r full ref; do
-            case "$full" in
-            refs/heads/*) kind=Local ;;
-            refs/remotes/*/HEAD) continue ;;
-            refs/remotes/*) kind=Remote ;;
-            refs/tags/*) kind=Tag ;;
-            esac
-            printf '%s\t%s\t%s\n' "$full" "$kind" "$ref"
-          done
-        if [[ $show_commits == true ]]; then
-          git -C "$repo" log --all -60 --format='%H%x09Commit%x09%h  %s'
-        fi
-      } | fzf --layout=reverse --border --height=85% \
+      fzf --layout=reverse --border --height=85% \
         --delimiter=$'\t' --with-nth=2,3 --nth=2 \
         --prompt='> ' \
         --query="$query" --print-query --expect=ctrl-b,ctrl-o,ctrl-t \
         --header="Mode: $mode  |  Reference: $base_label  |  Enter: compare  ·  Ctrl-T: mode  ·  Ctrl-B: reference  ·  $commit_hint  ·  Esc: cancel" \
         --preview="$preview" \
-        --preview-window=right:50%:wrap,border-left
-    ) || exit 0
+        --preview-window=right:50%:wrap,border-left <<<"$choices"
+    ) || {
+      status=$?
+      case "$status" in
+      1 | 130) exit 0 ;;
+      *) exit "$status" ;;
+      esac
+    }
 
     mapfile -t choice <<<"$selection"
     query=${choice[0]-}
