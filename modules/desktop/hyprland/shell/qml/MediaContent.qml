@@ -209,7 +209,7 @@ FocusScope {
                     spacing: content.theme.spacing2
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
-                        width: Math.max(1, parent.width - (raiseAction.visible ? raiseAction.width + parent.spacing : 0))
+                        width: Math.max(1, parent.width - resetPreferredAction.width - parent.spacing - (raiseAction.visible ? raiseAction.width + parent.spacing : 0))
                         text: content.media.available ? "Now playing" : "Media"
                         color: content.theme.readableRoleColor("media")
                         font.family: content.runtime.fontSans
@@ -234,6 +234,17 @@ FocusScope {
                             content.media.raisePlayer();
                             content.closeRequested();
                         }
+                    }
+                    ShellUtilityAction {
+                        id: resetPreferredAction
+                        width: implicitWidth
+                        runtime: content.runtime
+                        theme: content.theme
+                        motion: content.motion
+                        title: "Restore default player"
+                        icon: DesktopIcons.actionGlyph("reset")
+                        shortcut: content.runtime.shellHint("MediaContent.preferReset")
+                        onActivated: content.media.resetPreferredPlayer()
                     }
                 }
 
@@ -584,58 +595,21 @@ FocusScope {
                 width: parent.width
                 anchors.horizontalCenter: parent.horizontalCenter
                 spacing: content.theme.spacing2
-                Row {
-                    spacing: Math.max(2, content.theme.spacing1 / 2)
-
-                    Repeater {
-                        id: preferenceChoices
-                        model: ["Auto", "Prefer app"]
-                        delegate: ShellChoice {
-                            required property int index
-                            required property var modelData
-                            height: Math.max(40, implicitHeight)
-                            runtime: content.runtime
-                            theme: content.theme
-                            motion: content.motion
-                            compact: true
-                            horizontalCompact: true
-                            choices: preferenceChoices
-                            choiceIndex: index
-                            title: modelData
-                            width: content.theme.fontSize(124)
-                            Accessible.description: index === 0 ? "Select media player automatically" : "Prefer " + (content.media.identity || "the selected player")
-                            shortcut: index === (content.media.persistentPreference === "" && content.media.available ? 1 : 0) ? content.runtime.shellHint("MediaContent.prefer") : ""
-                            active: index === 0 ? content.media.persistentPreference === "" : content.media.persistentPreference !== ""
-                            enabled: index === 0 || content.media.available
-                            onActivated: {
-                                if (index === 0)
-                                    content.media.useAutomaticSelection();
-                                else
-                                    content.media.preferCurrentPlayer();
-                            }
-                        }
-                    }
-                    ShellUtilityAction {
-                        id: resetPreferredAction
-                        width: implicitWidth
-                        runtime: content.runtime
-                        theme: content.theme
-                        motion: content.motion
-                        title: "Restore default player"
-                        icon: DesktopIcons.actionGlyph("reset")
-                        shortcut: content.runtime.shellHint("MediaContent.preferReset")
-                        onActivated: content.media.resetPreferredPlayer()
-                    }
-                }
-                ShellText {
-                    visible: content.media.persistentPreference !== "" && !content.media.preferredCurrent
+                ShellAction {
+                    id: preferredAction
+                    width: implicitWidth
+                    height: Math.max(40, implicitHeight)
                     runtime: content.runtime
                     theme: content.theme
-                    height: visible ? Math.max(40, implicitHeight) : 0
-                    verticalAlignment: Text.AlignVCenter
-                    text: "Preferred app not selected"
-                    color: content.theme.textMuted
-                    font.pixelSize: content.theme.fontSize(10)
+                    motion: content.motion
+                    compact: true
+                    horizontalCompact: true
+                    title: content.media.persistentPreference !== "" ? "Use auto selection" : "Prefer current app"
+                    shortcut: content.runtime.shellHint("MediaContent.prefer")
+                    active: content.media.persistentPreference !== ""
+                    activeColor: theme.toggleColor
+                    enabled: content.media.available || content.media.persistentPreference !== ""
+                    onActivated: content.media.togglePreferredPlayer()
                 }
                 ShellStepper {
                     id: speedStepper
@@ -725,12 +699,8 @@ FocusScope {
                 repeatAction.trigger();
             event.accepted = true;
         } else if (content.runtime.shellMatchesHint("MediaContent.prefer", event.key, event.modifiers)) {
-            if (!event.isAutoRepeat) {
-                const next = content.media.persistentPreference !== "" || !content.media.available ? 0 : 1;
-                const choice = preferenceChoices.itemAt(next) as ShellChoice;
-                if (choice)
-                    choice.trigger();
-            }
+            if (!event.isAutoRepeat)
+                preferredAction.trigger();
             event.accepted = true;
         } else if (content.runtime.shellMatchesHint("MediaContent.preferReset", event.key, event.modifiers)) {
             if (!event.isAutoRepeat)

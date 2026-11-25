@@ -53,19 +53,15 @@ QtObject {
         return Selection.stablePlayerId(candidate);
     }
 
-    function useAutomaticSelection(): void {
-        preferredPlayerId = "";
-        appearance.setMediaPreferredPlayer("");
-    }
-
-    function preferCurrentPlayer(): void {
-        if (!available)
-            return;
-        const identity = stablePlayerId(player);
-        if (identity) {
-            preferredPlayerId = "";
-            appearance.setMediaPreferredPlayer(identity);
+    function togglePreferredPlayer(): void {
+        if (persistentPreference !== "" || !available) {
+            appearance.setMediaPreferredPlayer("");
+        } else {
+            const identity = stablePlayerId(player);
+            if (identity)
+                appearance.setMediaPreferredPlayer(identity);
         }
+        preferredPlayerId = "";
     }
 
     function resetPreferredPlayer(): void {

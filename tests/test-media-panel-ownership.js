@@ -48,21 +48,41 @@ test("Now Playing recovers the active focus scope after Controls disengages", ()
   );
 });
 
-test("player preference uses one connected choice group with independent reset", () => {
+test("player preference uses one action and keeps reset alongside the other header utility", () => {
   const source = qml("MediaContent.qml");
   const state = qml("MediaState.qml");
-  assert.match(source, /model: \["Auto", "Prefer app"\]/);
-  assert.match(source, /delegate: ShellChoice \{/);
-  assert.match(source, /choices: preferenceChoices/);
-  assert.match(source, /content\.media\.useAutomaticSelection\(\)/);
-  assert.match(source, /content\.media\.preferCurrentPlayer\(\)/);
-  assert.match(source, /id: resetPreferredAction/);
+  assert.match(source, /id: preferredAction/);
+  assert.match(
+    source,
+    /title: content\.media\.persistentPreference !== "" \? "Use auto selection" : "Prefer current app"/,
+  );
+  assert.match(
+    source,
+    /shortcut: content\.runtime\.shellHint\("MediaContent\.prefer"\)/,
+  );
+  assert.match(
+    source,
+    /onActivated: content\.media\.togglePreferredPlayer\(\)/,
+  );
+  assert.match(source, /preferredAction\.trigger\(\)/);
+  assert.equal((source.match(/id: preferredAction/g) || []).length, 1);
   assert.doesNotMatch(
     source,
-    /Use auto selection|text: content\.media\.preferenceStatus/,
+    /id: preferenceChoices|model: \["Auto", "Prefer app"\]/,
   );
-  assert.match(state, /function useAutomaticSelection\(\): void/);
-  assert.match(state, /function preferCurrentPlayer\(\): void/);
+  assert.ok(
+    source.indexOf("id: resetPreferredAction") <
+      source.indexOf("id: spectrumSlot"),
+  );
+  assert.ok(
+    source.indexOf("id: resetPreferredAction") <
+      source.indexOf("id: preferredAction"),
+  );
+  assert.match(
+    source,
+    /width: Math\.max\(1, parent\.width - resetPreferredAction\.width/,
+  );
+  assert.match(state, /function togglePreferredPlayer\(\): void/);
 });
 
 test("each spectrum preview uses its destination density without duplicate per-surface constants", () => {
@@ -143,14 +163,13 @@ test("Now Playing measures only actual controls when both visualisations and lyr
   );
 });
 
-test("preferred player selection reflects the saved preference even when another player is temporarily active", () => {
+test("single preference action handles a saved preference even when another session player is active", () => {
   const source = qml("MediaContent.qml");
+  const state = qml("MediaState.qml");
+  assert.match(source, /active: content\.media\.persistentPreference !== ""/);
   assert.match(
     source,
-    /active: index === 0 \? content\.media\.persistentPreference === "" : content\.media\.persistentPreference !== ""/,
+    /enabled: content\.media\.available \|\| content\.media\.persistentPreference !== ""/,
   );
-  assert.match(
-    source,
-    /const next = content\.media\.persistentPreference !== "" \|\| !content\.media\.available \? 0 : 1/,
-  );
+  assert.match(state, /if \(persistentPreference !== "" \|\| !available\)/);
 });
