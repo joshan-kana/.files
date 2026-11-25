@@ -16,7 +16,7 @@ Variants {
     model: Quickshell.screens
 
     delegate: PanelWindow {
-        id: layer
+        id: wallpaperLayer
 
         required property var modelData
         screen: modelData
@@ -60,7 +60,7 @@ Variants {
                 baseDensity: 64
                 baseOpacity: 0.8
                 drivesDemand: false
-                enabled: layer.visible
+                enabled: wallpaperLayer.visible
             }
         }
     }
