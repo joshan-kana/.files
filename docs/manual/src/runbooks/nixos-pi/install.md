@@ -10,10 +10,18 @@ Build the installation image from the evaluated `nixos-pi` configuration. The im
 
 ## Build the image
 
-Build the image from the repository root using a Linux builder that supports the host's architecture:
+Build from the repository root on a Linux machine supporting the evaluated target architecture. On macOS, enter the OrbStack NixOS guest, open the same checkout, and load the generated target exports in that shell. Use the target's evaluated cache settings:
 
 ```sh
-nix build ".#${HOST_NAME}-image" --out-link "/tmp/${HOST_NAME}-image"
+substituters="$(nix eval --raw ".#nixosConfigurations.$HOST_NAME" \
+  --apply 'cfg: builtins.concatStringsSep " " (cfg.pkgs.lib.unique cfg.config.nix.settings.substituters)')"
+trusted_public_keys="$(nix eval --raw ".#nixosConfigurations.$HOST_NAME" \
+  --apply 'cfg: builtins.concatStringsSep " " (cfg.pkgs.lib.unique cfg.config.nix.settings.trusted-public-keys)')"
+
+nix build ".#${HOST_NAME}-image" \
+  --option extra-substituters "$substituters" \
+  --option extra-trusted-public-keys "$trusted_public_keys" \
+  --out-link "/tmp/${HOST_NAME}-image"
 ```
 
 On macOS, write the image using `diskutil` and `dd`. Use OrbStack USB passthrough only when mounting the Linux root filesystem to install credentials.
@@ -24,7 +32,7 @@ Writing the image erases the entire selected drive. Verify its model, capacity, 
 
 ### macOS
 
-The OrbStack NixOS guest builds the image, but macOS writes it directly to the USB drive:
+The OrbStack NixOS guest builds the image, but macOS writes it directly to the USB drive. Load the generated target exports in the Mac shell before continuing:
 
 ```sh
 GUEST_IMAGE=$(orb -m nixos-orbstack -u root find -L "/tmp/${HOST_NAME}-image/sd-image" -maxdepth 1 -name '*.img' -print -quit)
@@ -98,7 +106,9 @@ read -r SD_DISK
 
 ## Install host credentials on the installation drive
 
-Prepare directories containing this host's required secrets and its Restic backup bootstrap credentials. The files must remain outside Git and the Nix store. Load the evaluated target exports in the same root shell.
+Load the evaluated target exports in the Linux root shell. For a host with an existing encrypted secrets repository, prepare only the external backup bootstrap files and restore the existing snapshot onto the mounted installation drive. For first-ever provisioning, prepare the required bootstrap credentials individually. Keep credentials outside Git and the Nix store.
+
+Restore before first boot so the normal backup timer cannot snapshot an incomplete secrets tree. Do not initialize an existing repository.
 
 Use the partitions of the **verified installation drive**, not another disk that happens to have the same labels:
 
@@ -120,9 +130,12 @@ Use the partitions of the **verified installation drive**, not another disk that
   [ -s "$MNT/extlinux/extlinux.conf" ]
   umount "$MNT"
 
-  printf 'Host secrets directory: '
-  read -r PI_SECRETS_SOURCE
-  test -d "$PI_SECRETS_SOURCE"
+  printf 'Installation type (new/recover): '
+  read -r INSTALL_KIND
+  case "$INSTALL_KIND" in
+    new|recover) ;;
+    *) exit 1 ;;
+  esac
   test -n "$PRIMARY_UID"
   test -n "$PRIMARY_GID"
 
@@ -135,27 +148,47 @@ Use the partitions of the **verified installation drive**, not another disk that
   [ -z "$(find "$MNT/nix/store" -mindepth 1 -maxdepth 1 ! -uid 0 -print -quit)" ]
 
   install -d -o "$PRIMARY_UID" -g "$PRIMARY_GID" -m 0700 "$MNT$PRIMARY_HOME" "$MNT$USER_SECRETS_DIR"
-  printf '%s\n' "$USER_BOOTSTRAP_SECRET_FILES" | while IFS= read -r path; do
-    [ -n "$path" ] || continue
-    relative=${path#"$USER_SECRETS_DIR/"}
-    test -s "$PI_SECRETS_SOURCE/$relative"
-    install -D -o "$PRIMARY_UID" -g "$PRIMARY_GID" -m 0600 "$PI_SECRETS_SOURCE/$relative" "$MNT$path"
-  done
 
   if [ "$SECRETS_BACKUP_ENABLED" = true ]; then
     printf 'Backup bootstrap directory: '
-    read -r PI_BACKUP_SOURCE
+    read -r BACKUP_SOURCE
     for path in "$SECRETS_RCLONE_CONFIG" "$SECRETS_PASSWORD_FILE"; do
-      test -s "$PI_BACKUP_SOURCE/$(basename "$path")"
-      install -D -m 0600 "$PI_BACKUP_SOURCE/$(basename "$path")" "$MNT$path"
+      test -s "$BACKUP_SOURCE/$(basename "$path")"
+      install -d -m 0700 "$MNT$(dirname "$path")"
+      install -m 0600 "$BACKUP_SOURCE/$(basename "$path")" "$MNT$path"
     done
   fi
+
+  if [ "$INSTALL_KIND" = recover ] && [ "$SECRETS_BACKUP_ENABLED" = true ]; then
+    env RCLONE_CONFIG="$MNT$SECRETS_RCLONE_CONFIG" \
+      nix --extra-experimental-features "nix-command flakes" shell \
+      nixpkgs#restic nixpkgs#rclone -c restic \
+      -r "$SECRETS_REPOSITORY" \
+      --password-file "$MNT$SECRETS_PASSWORD_FILE" \
+      restore latest --target "$MNT"
+  else
+    printf 'Directory containing the required bootstrap files: '
+    read -r SECRETS_SOURCE
+    test -d "$SECRETS_SOURCE"
+    printf '%s\n' "$USER_BOOTSTRAP_SECRET_FILES" | while IFS= read -r path; do
+      [ -n "$path" ] || continue
+      relative=${path#"$USER_SECRETS_DIR/"}
+      test -s "$SECRETS_SOURCE/$relative"
+      install -D -o "$PRIMARY_UID" -g "$PRIMARY_GID" -m 0600 "$SECRETS_SOURCE/$relative" "$MNT$path"
+    done
+  fi
+
+  printf '%s\n' "$USER_BOOTSTRAP_SECRET_FILES" | while IFS= read -r path; do
+    [ -n "$path" ] || continue
+    test -s "$MNT$path"
+    [ "$(stat -c %u "$MNT$path")" = "$PRIMARY_UID" ]
+  done
   sync
   umount "$MNT"
 )
 ```
 
-Safely unmount and eject the drive. On macOS, leave the OrbStack root shell and run `orb usb detach "$USB_ID"` using its current ID before unplugging the USB. The installed credentials reside on an unencrypted filesystem: keep the drive physically secure and do not publish or share its contents.
+If provisioning or restoration fails, correct the failure before booting. Safely unmount and eject the drive. On macOS, leave the OrbStack root shell and run `orb usb detach "$USB_ID"` using its current ID before unplugging the USB. The installed credentials reside on an unencrypted filesystem: keep the drive physically secure and do not publish or share its contents.
 
 ## First boot
 
@@ -172,7 +205,10 @@ Verify the system and graphical session:
 ```sh
 hostname
 findmnt -T /
+findmnt -T /boot
 lsblk -f
+df -h /
+systemctl status expand-root-partition register-nix-paths --no-pager
 systemctl --failed --no-pager
 systemctl --user --failed --no-pager
 loginctl session-status
@@ -180,17 +216,19 @@ loginctl session-status
 
 Confirm that the root filesystem has expanded to fill the installation drive.
 
-## Restore and clone
+## Clone the configuration
 
-Reload the evaluated target exports. Restore existing secrets from their normal backup before starting a new backup repository. Git authentication is independent of service credentials: provision the intended Git SSH identity or use an authenticated forwarded agent.
+Reload the evaluated target exports. Git authentication is independent of service credentials: use the intended Git SSH identity or an authenticated forwarded agent.
 
 As the primary user, clone the configuration if it is not already present:
 
 ```sh
-test -n "$DOTFILES_REMOTE"
-git clone --recurse-submodules "$DOTFILES_REMOTE" "$DOTFILES_REPO"
+if [ ! -d "$DOTFILES_REPO/.git" ]; then
+  git clone --recurse-submodules "$DOTFILES_REMOTE" "$DOTFILES_REPO" || exit 1
+fi
 cd "$DOTFILES_REPO"
 git fetch
+nix eval --raw ".#nixosConfigurations.$HOST_NAME.config.system.build.toplevel.drvPath"
 ```
 
 ## Media and remote access
