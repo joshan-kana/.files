@@ -808,15 +808,26 @@ Item {
                             textRole: ShellText.Section
                         }
                     }
-                    SpectrumVisualizer {
+                    Item {
                         width: parent.width
                         height: panel.theme.fontSize(76)
-                        enabled: panel.open && (panel.spectrumTuning || panel.reactiveTuning)
-                        theme: panel.theme
-                        spectrum: panel.spectrum
-                        motion: panel.motion
-                        surfaceKey: panel.spectrumTuning ? spectrumDetails.previewKey : "wallpaperVisualizerMode"
-                        previewMode: panel.reactiveTuning ? "curve" : ""
+                        SpectrumVisualizer {
+                            anchors.fill: parent
+                            enabled: panel.open && (panel.spectrumTuning || panel.reactiveTuning)
+                            theme: panel.theme
+                            spectrum: panel.spectrum
+                            motion: panel.motion
+                            surfaceKey: panel.spectrumTuning ? spectrumDetails.previewKey : "wallpaperVisualizerMode"
+                            previewMode: panel.reactiveTuning ? "curve" : ""
+                        }
+                        ShellText {
+                            anchors.centerIn: parent
+                            visible: panel.spectrumTuning && panel.appearance.spectrumPresentation(spectrumDetails.previewKey) === "off"
+                            runtime: panel.runtime
+                            theme: panel.theme
+                            text: "Visualiser off"
+                            textRole: ShellText.Supporting
+                        }
                     }
                     Row {
                         width: parent.width

@@ -508,3 +508,18 @@ test("spectrum reset uses the Qt Quick JavaScript subset and preserves scene and
   );
   assert.equal(ctx.sceneValues.wallpaperSpectrumEnabled, true);
 });
+
+test("disabled spectrum preview explains the empty presentation instead of leaving blank space", () => {
+  const src = fs.readFileSync(
+    path.join(
+      __dirname,
+      "../modules/desktop/hyprland/shell/qml/SettingsDetail.qml",
+    ),
+    "utf8",
+  );
+  assert.match(src, /text: "Visualiser off"/);
+  assert.match(
+    src,
+    /visible: panel\.spectrumTuning && panel\.appearance\.spectrumPresentation\(spectrumDetails\.previewKey\) === "off"/,
+  );
+});
