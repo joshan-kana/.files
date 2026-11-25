@@ -1,4 +1,4 @@
-# Remove when upstream handles late BlueZ startup and publishes complete QML type metadata.
+# Remove when upstream handles late BlueZ startup, mono peak-monitor remixing and publishes complete QML type metadata.
 _final: prev:
 prev.lib.optionalAttrs prev.stdenv.hostPlatform.isLinux {
   quickshell =
@@ -19,9 +19,10 @@ prev.lib.optionalAttrs prev.stdenv.hostPlatform.isLinux {
         updateFilename = "overlays/quickshell/temporary.nix";
       };
 
-      # Bluetooth must recover when BlueZ appears after Quickshell starts.
+      # Recover late BlueZ startup and normalize peak gain for remixed mono streams.
       patches = (old.patches or [ ]) ++ [
         ../../patches/quickshell/bluez-late-start.patch
+        ../../patches/quickshell/peak-mono-remix.patch
       ];
 
       # Keep qmllint's generated type metadata usable until upstream emits
