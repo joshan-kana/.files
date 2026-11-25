@@ -32,7 +32,7 @@ in
           defaultApplications = lib.genAttrs browserMimeTypes (_: "default-browser.desktop");
         };
       };
-      home.sessionVariables.BROWSER = config.dotfiles.defaults.browser.command;
+      home.sessionVariables.BROWSER = config.dotfiles.defaults.browser;
     };
 
   brave = _: {

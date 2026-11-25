@@ -18,10 +18,7 @@ lib.recursiveUpdate (import ./minimal.nix { inherit lib moduleRegistry; }) {
   };
 
   dotfiles = {
-    defaults.browser = {
-      command = "chromium";
-      desktopId = "chromium-browser.desktop";
-    };
+    defaults.browser = "chromium";
     scopes = {
       virtualisation.enable = false;
       desktop = {
