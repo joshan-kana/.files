@@ -620,7 +620,7 @@ Item {
             glyphFont: "Symbols Nerd Font"
             glyphColor: panel.theme.roleColor("wallpaper")
             eyebrow: "Appearance / wallpapers"
-            title: "Wallpaper library"
+            title: "Wallpaper gallery"
             detail: panel.outputLabel + " · " + (panel.busy ? "Applying wallpaper…" : panel.resizeMode.toUpperCase() + " · Image / video")
             actions: [
                 ShellUtilityAction {
@@ -1035,7 +1035,7 @@ Item {
             glyph: DesktopIcons.glyphFor("wallpaper")
             glyphFont: "Symbols Nerd Font"
             glyphColor: panel.theme.roleColor("wallpaper")
-            eyebrow: "Wallpaper library"
+            eyebrow: "Wallpaper gallery"
             title: "Wallpaper schedule"
             detail: "One session schedule · selected target " + panel.outputLabel
             actions: [

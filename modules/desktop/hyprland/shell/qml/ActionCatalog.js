@@ -40,7 +40,9 @@ function commands(options) {
       name: options.wallpaperSpectrumEnabled
         ? "Disable Wallpaper Spectrum"
         : "Enable Wallpaper Spectrum",
-      description: "Show the live audio spectrum over the wallpaper",
+      description: options.wallpaperSpectrumEnabled
+        ? "Stop showing the live audio spectrum over the wallpaper"
+        : "Show the live audio spectrum over the wallpaper",
       icon: "audio-x-generic",
       keywords: [
         "spectrum",
