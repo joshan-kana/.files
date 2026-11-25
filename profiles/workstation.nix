@@ -13,4 +13,5 @@
     desktopApps
     backups
     ;
+  dotfiles.scopes.desktop.gnome.enable = false;
 }
