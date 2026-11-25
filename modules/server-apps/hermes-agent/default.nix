@@ -36,7 +36,6 @@ let
       docker
       jq
       nh
-      nix
       openssh
       rsync
       systemd
@@ -107,6 +106,8 @@ in
       toolsets = [ "all" ];
     };
   };
+
+  systemd.services.hermes-agent.path = lib.mkAfter [ "/run/current-system/sw" ];
 
   environment.systemPackages = [ hermesCli ];
 

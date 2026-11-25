@@ -66,7 +66,6 @@ in
       git
       jq
       nh
-      nix
       nodejs_24
       openssh
       python3
@@ -78,6 +77,7 @@ in
   environment.etc."openclaw/openclaw.json".mode = lib.mkForce "direct-symlink";
 
   systemd.services.openclaw-gateway = {
+    path = lib.mkAfter [ "/run/current-system/sw" ];
     unitConfig = {
       AssertPathExists = openclawSecrets ++ [
         openclawConfigFile

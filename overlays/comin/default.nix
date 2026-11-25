@@ -60,9 +60,6 @@ in
     # binary using the updated profile and config symlink.
     environment.etc."comin/config.yaml".source = cominConfig.cominConfigYaml;
 
-    # The upstream Comin module reads this option for its executable PATH.
-    # With `nix.enable = false`, Determinate still owns the daemon.
-    nix.package = lib.mkDefault pkgs.nix;
     launchd.daemons.comin = lib.mkIf config.services.comin.allowForcePush {
       serviceConfig.EnvironmentVariables.COMIN_ALLOW_FORCE_PUSH = "true";
     };

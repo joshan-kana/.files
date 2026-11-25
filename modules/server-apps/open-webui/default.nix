@@ -137,8 +137,8 @@ in
           git
           gh
           jq
-          nix
           systemd
+          "/run/current-system/sw"
         ];
         environment = {
           HOME = computerRoot;
