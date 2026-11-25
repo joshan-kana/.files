@@ -293,7 +293,7 @@ private:
   void renderCurve(QSGGeometryNode *node, int count) {
     const int subdivisions =
         std::clamp(int(width() / std::max(1, count - 1) / 3), 6, 24);
-    const int segmentCount = std::max(1, count - 1) * subdivisions;
+    const int segmentCount = std::max(0, count - 2) * subdivisions + 1;
     constexpr int verticesPerSegment = 18;
     auto *geometry = node->geometry();
     const int vertexCount = segmentCount * verticesPerSegment;
@@ -339,31 +339,30 @@ private:
       add(b.x(), by, cb, bottomAlpha);
     };
     QPointF previous = sample(0);
-    for (int i = 0; i < std::max(1, count - 1); ++i) {
-      const QPointF start = previous;
-      const bool last = i + 1 >= count - 1;
-      const QPointF next = count > 1 ? sample(std::min(count - 1, i + 2))
-                                     : QPointF(w, start.y());
-      const QPointF control = last ? (start + next) * 0.5 : sample(i + 1);
-      const QPointF end = last ? next : (control + next) * 0.5;
+    auto paintSegment = [&](const QPointF &point) {
+      // Fill the region below the ribbon without changing the outline.
+      const QPointF fillA(previous.x(),
+                          std::min(double(h), previous.y() + thickness));
+      const QPointF fillB(point.x(),
+                          std::min(double(h), point.y() + thickness));
+      strip(fillA, fillB, h, h, 0.12f, 0.12f);
+      strip(previous, point, fillA.y(), fillB.y(), 1, 1);
+      const QPointF outerA(previous.x(), std::max(0.0, previous.y() - feather));
+      const QPointF outerB(point.x(), std::max(0.0, point.y() - feather));
+      strip(outerA, outerB, previous.y(), point.y(), 0, 1);
+      previous = point;
+    };
+    // Match the former quadratic SVG path: each interior sample is a
+    // control point, followed by a straight segment to the final sample.
+    for (int i = 1; i < count - 1; ++i) {
+      const QPointF control = sample(i), next = sample(i + 1);
+      const QPointF start = previous, end = (control + next) * 0.5;
       for (int j = 1; j <= subdivisions; ++j) {
         const float t = float(j) / subdivisions, u = 1 - t;
-        const QPointF point =
-            start * (u * u) + control * (2 * u * t) + end * (t * t);
-        // Fill starts below the ribbon so the stroke retains its colour.
-        const QPointF fillA(previous.x(),
-                            std::min(double(h), previous.y() + thickness));
-        const QPointF fillB(point.x(),
-                            std::min(double(h), point.y() + thickness));
-        strip(fillA, fillB, h, h, 0.12f, 0.12f);
-        strip(previous, point, fillA.y(), fillB.y(), 1, 1);
-        const QPointF outerA(previous.x(),
-                             std::max(0.0, previous.y() - feather));
-        const QPointF outerB(point.x(), std::max(0.0, point.y() - feather));
-        strip(outerA, outerB, previous.y(), point.y(), 0, 1);
-        previous = point;
+        paintSegment(start * (u * u) + control * (2 * u * t) + end * (t * t));
       }
     }
+    paintSegment(count > 1 ? sample(count - 1) : QPointF(w, previous.y()));
     node->markDirty(QSGNode::DirtyGeometry);
   }
 
