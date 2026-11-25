@@ -68,7 +68,7 @@ lib.recursiveUpdate (import ../../profiles/workstation.nix { inherit moduleRegis
           shellAliases = {
             caf = "caffeinate -dims";
             sn = "ssh nixos-server";
-            pvm = "ssh nixos-arm-parallels";
+            sp = "ssh nixos-arm-parallels";
           };
         };
         programs.zsh.profileExtra = lib.mkBefore ''

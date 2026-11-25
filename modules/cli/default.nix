@@ -906,7 +906,7 @@ in
           login_redirect_uri = "http://127.0.0.1:8989/login";
         };
       };
-      home.shellAliases.sp = "spotify_player";
+      home.shellAliases.spo = "spotify_player";
     };
   };
 
