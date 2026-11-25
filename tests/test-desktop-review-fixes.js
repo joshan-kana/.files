@@ -253,3 +253,30 @@ test("all destructive owners use the same expiry and cancellation controller", (
     assert.match(source(name), /ConfirmationState \{/, name);
   assert.match(source("MediaLyrics.qml"), /printErrors: false/);
 });
+
+test("Restore Defaults requires Enter after arming; repeated clicks and shortcuts cannot confirm", () => {
+  const controls = source("SystemContent.qml");
+  const keybindings = fs.readFileSync(
+    path.join(root, "keybindings.nix"),
+    "utf8",
+  );
+  const resetTile = controls
+    .split('title: root.resetRunning ? "Restoring…" : "Restore defaults"')[1]
+    .split("ShellSurface {")[0];
+  assert.match(resetTile, /if \(!root.resetConfirmPending\)/);
+  assert.match(resetTile, /root.resetConfirmation.request\("desktop"\)/);
+  assert.doesNotMatch(resetTile, /startDefaultReset/);
+  const armedKeys = controls
+    .split("if (root.resetConfirmPending) {")
+    .at(-1)
+    .split("const helpKey")[0];
+  assert.match(
+    armedKeys,
+    /root.runtime.shellMatchesHint\("SystemContent.resetConfirm"/,
+  );
+  assert.doesNotMatch(
+    armedKeys,
+    /root.runtime.shellMatchesHint\("SystemContent.reset",/,
+  );
+  assert.match(keybindings, /"SystemContent.resetConfirm" = "ENTER"/);
+});

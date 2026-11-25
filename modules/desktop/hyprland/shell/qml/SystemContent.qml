@@ -1330,9 +1330,7 @@ FocusScope {
                             enabled: !root.resetRunning
                             activeColor: root.theme.roleColor("warning")
                             onActivated: {
-                                if (root.resetConfirmPending)
-                                    root.startDefaultReset();
-                                else {
+                                if (!root.resetConfirmPending) {
                                     root.resetConfirmation.request("desktop");
                                     root.shellActions.resetStatus = "";
                                 }
@@ -2052,7 +2050,7 @@ FocusScope {
                     return;
                 }
                 if (root.resetConfirmPending) {
-                    if (!event.isAutoRepeat && (root.runtime.shellMatchesHint("SystemContent.resetConfirm", event.key, event.modifiers) || root.runtime.shellMatchesHint("SystemContent.reset", event.key, event.modifiers)))
+                    if (!event.isAutoRepeat && root.runtime.shellMatchesHint("SystemContent.resetConfirm", event.key, event.modifiers))
                         root.startDefaultReset();
                     else if (root.runtime.shellMatchesHint("SystemContent.resetCancel", event.key, event.modifiers) || event.key === root.runtime.shellKeyCode("controls", "Backspace"))
                         root.resetConfirmation.cancel();
