@@ -198,6 +198,11 @@ test("expanded mixer sizes headings, selectors, meters and balance from their co
       control,
       /AudioPeakMeter \{[\s\S]*?height: visible \? implicitHeight : 0/,
     );
+  assert.match(
+    mixer,
+    /sectionHeight: sectionStart && !mixer.compact \? sectionLabel.implicitHeight/,
+  );
+  assert.match(mixer, /topMargin: streamRow.sectionHeight/);
   assert.match(meter, /channelLabel.height \+ parent.spacing/);
   assert.match(
     qml("SystemContent.qml"),

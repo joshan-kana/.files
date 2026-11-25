@@ -15,12 +15,12 @@ FocusScope {
         readonly property bool sectionStart: index === 0 || index === mixer.system.audioApplicationStreams.length
         readonly property bool inViewport: y + height > list.contentY && y < list.contentY + list.height
         width: list.width
-        height: streamCard.height + sectionLabel.height
+        readonly property real sectionHeight: sectionStart && !mixer.compact ? sectionLabel.implicitHeight + mixer.theme.spacing1 : 0
+        height: streamCard.height + sectionHeight
 
         Text {
             id: sectionLabel
             visible: streamRow.sectionStart && !mixer.compact
-            height: visible ? implicitHeight + mixer.theme.spacing1 : 0
             text: streamRow.capture ? "Capture" : "Playback"
             color: mixer.theme.readableRoleColor("audio")
             font.family: mixer.runtime.fontSans
@@ -33,7 +33,7 @@ FocusScope {
                 left: parent.left
                 right: parent.right
                 top: parent.top
-                topMargin: sectionLabel.height
+                topMargin: streamRow.sectionHeight
             }
             height: streamControl.implicitHeight + mixer.theme.spacing2 * 2
             theme: mixer.theme
