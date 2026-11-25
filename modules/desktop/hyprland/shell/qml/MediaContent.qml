@@ -285,7 +285,7 @@ FocusScope {
                 top: header.bottom
                 left: parent.left
                 right: parent.right
-                topMargin: content.compactHeight ? content.theme.spacing3 : content.theme.spacing5
+                topMargin: spectrumSlot.visible ? (content.compactHeight ? content.theme.spacing3 : content.theme.spacing5) : 0
             }
             spacing: 0
 
@@ -399,7 +399,7 @@ FocusScope {
                 top: spectrumSlot.bottom
                 left: parent.left
                 right: parent.right
-                topMargin: content.compactHeight ? content.theme.spacing3 : content.theme.spacing5
+                topMargin: spectrumSlot.visible ? (content.compactHeight ? content.theme.spacing3 : content.theme.spacing5) : content.theme.spacing3
             }
             spacing: content.compactHeight ? content.theme.spacing2 : content.theme.spacing3
 

@@ -173,3 +173,19 @@ test("single preference action handles a saved preference even when another sess
   );
   assert.match(state, /if \(persistentPreference !== "" \|\| !available\)/);
 });
+
+test("hidden visualiser contributes neither content nor vertical margins", () => {
+  const media = qml("MediaContent.qml");
+  assert.match(
+    media,
+    /id: spectrumSlot[\s\S]*?visible: content\.visualizerMode !== "off" \|\| content\.lyricsVisible/,
+  );
+  assert.match(
+    media,
+    /topMargin: spectrumSlot\.visible \? \(content\.compactHeight \? content\.theme\.spacing3 : content\.theme\.spacing5\) : 0/,
+  );
+  assert.match(
+    media,
+    /topMargin: spectrumSlot\.visible \? \(content\.compactHeight \? content\.theme\.spacing3 : content\.theme\.spacing5\) : content\.theme\.spacing3/,
+  );
+});
