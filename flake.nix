@@ -171,6 +171,7 @@
           typosConfig = pkgs.writeText "typos.toml" ''
             [default.extend-words]
             hass = "hass"
+            zink = "zink"
           '';
         in
         treefmt-nix.lib.evalModule pkgs {
@@ -459,6 +460,11 @@
         nixos-orbstack = {
           system = "aarch64-linux";
           hostModule = ./hosts/nixos-orbstack;
+        };
+
+        nixos-utm = {
+          system = "aarch64-linux";
+          hostModule = ./hosts/nixos-utm;
         };
 
         nixos-server = {
