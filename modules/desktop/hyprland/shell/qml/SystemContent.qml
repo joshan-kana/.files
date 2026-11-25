@@ -1358,7 +1358,7 @@ FocusScope {
                             Text {
                                 width: parent.width
                                 wrapMode: Text.WordWrap
-                                text: root.resetConfirmPending ? "Restore declared desktop preferences, including Night Light, weather, capture locations and wallpaper schedules? Personal files, favourites, history and the active system generation stay intact." : root.resetStatus
+                                text: root.resetConfirmPending ? "Restore desktop defaults, including Night Light, weather, capture locations and wallpaper schedules? Personal files, favourites and notification history will be kept." : root.resetStatus
                                 color: root.resetConfirmPending ? root.theme.textStrong : root.theme.textMuted
                                 font.family: root.runtime.fontSans
                                 font.pixelSize: root.theme.fontSize(11)

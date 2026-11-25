@@ -1005,7 +1005,7 @@ Item {
             width: parent.width
             runtime: library.runtime
             theme: library.theme
-            text: "Changing destinations does not move existing captures. The library shows the selected directories."
+            text: "Changing destinations will not move existing captures."
             color: library.theme.textMuted
             wrapMode: Text.WordWrap
             font.pixelSize: library.theme.fontSize(10)

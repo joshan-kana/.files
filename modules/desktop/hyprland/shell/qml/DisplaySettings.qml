@@ -346,7 +346,7 @@ Column {
         width: parent.width
         runtime: panel.runtime
         theme: panel.theme
-        text: "This layout is not a supported generated monitor rule. Use the native editor to configure it."
+        text: "This layout cannot be saved here. Use the display editor."
         color: panel.theme.textMuted
         wrapMode: Text.WordWrap
     }

@@ -327,7 +327,7 @@ in
         };
       }
     );
-    description = "Declarative website search providers for the command palette.";
+    description = "Website search providers for the command palette.";
     default = [
       {
         name = "Search Nix Packages";
@@ -615,7 +615,7 @@ in
       }
     );
     default = [ ];
-    description = "Non-secret default snippets. User-owned snippets.json overrides these at runtime.";
+    description = "Default snippets. Entries in snippets.json take precedence.";
   };
 
   scopeOptions.appearance = lib.mkOption {
@@ -644,7 +644,7 @@ in
         musicReactiveSensitivity = lib.mkOption {
           type = lib.types.numbers.between constraints.appearance.musicReactiveSensitivity.min constraints.appearance.musicReactiveSensitivity.max;
           default = 1.0;
-          description = "Sensitivity multiplier for the single shared audio-reactive envelope.";
+          description = "Sensitivity of the audio-reactive shell tint.";
         };
         musicReactiveAttack = lib.mkOption {
           type = lib.types.numbers.between constraints.appearance.musicReactiveAttack.min constraints.appearance.musicReactiveAttack.max;
@@ -664,7 +664,7 @@ in
         musicReactiveIntensity = lib.mkOption {
           type = lib.types.numbers.between constraints.appearance.musicReactiveIntensity.min constraints.appearance.musicReactiveIntensity.max;
           default = 1.0;
-          description = "Visual intensity multiplier of the shell's existing music-reactive tint.";
+          description = "Intensity of the music-reactive shell tint.";
         };
         musicReactiveEmphasis = lib.mkOption {
           type = lib.types.enum constraints.appearance.musicReactiveEmphasis.values;
@@ -674,7 +674,7 @@ in
         spectrumSensitivity = lib.mkOption {
           type = lib.types.numbers.between constraints.appearance.spectrumSensitivity.min constraints.appearance.spectrumSensitivity.max;
           default = 1.0;
-          description = "Visual amplitude without changing the reactive tint.";
+          description = "Spectrum amplitude.";
         };
         spectrumAttack = lib.mkOption {
           type = lib.types.numbers.between constraints.appearance.spectrumAttack.min constraints.appearance.spectrumAttack.max;
@@ -689,12 +689,12 @@ in
         spectrumDensity = lib.mkOption {
           type = lib.types.numbers.between constraints.appearance.spectrumDensity.min constraints.appearance.spectrumDensity.max;
           default = 1.0;
-          description = "Density multiplier for all spectrum presentations, bounded by available width and analyser bands.";
+          description = "Spectrum density multiplier.";
         };
         spectrumOpacity = lib.mkOption {
           type = lib.types.numbers.between constraints.appearance.spectrumOpacity.min constraints.appearance.spectrumOpacity.max;
           default = 1.0;
-          description = "Shared spectrum opacity multiplier, capped at full opacity.";
+          description = "Spectrum opacity multiplier, capped at 100%.";
         };
 
         barIslandHeight = lib.mkOption {
@@ -830,7 +830,7 @@ in
       };
     };
     default = { };
-    description = "Desktop appearance defaults. Explicit user preferences take precedence until restored to the declared values.";
+    description = "Desktop appearance defaults. Saved preferences take precedence until reset.";
   };
 
   scopeOptions.wallpaperRotation = lib.mkOption {
@@ -875,7 +875,7 @@ in
       };
     };
     default = { };
-    description = "Wallpaper rotation policy. Wallpaper paths and collections are relative to the user library; runtime overrides are independent.";
+    description = "Wallpaper rotation schedule. Paths and collections are relative to the wallpaper library.";
   };
 
   scopeOptions.captureLocations = lib.mkOption {
@@ -889,12 +889,12 @@ in
         recordings = lib.mkOption {
           type = lib.types.str;
           default = "";
-          description = "Absolute recording directory; empty uses the native recording directory.";
+          description = "Recording directory. Leave empty to use the recorder default.";
         };
       };
     };
     default = { };
-    description = "Capture destination defaults; runtime selections override each directory independently.";
+    description = "Default screenshot and recording destinations.";
   };
 
   scopeOptions.captureFreezeEnabled = lib.mkOption {
@@ -1016,7 +1016,7 @@ in
       };
     };
     default = { };
-    description = "Scheduled notification suppression defaults with per-field runtime overrides.";
+    description = "Default notification quiet hours and days.";
   };
 
   scopeOptions.notificationsPresentation = lib.mkOption {
@@ -1077,13 +1077,13 @@ in
       };
     };
     default = { };
-    description = "Night Light baseline, with individual runtime user overrides.";
+    description = "Night Light defaults.";
   };
 
   scopeOptions.weatherUnits = lib.mkOption {
     type = lib.types.enum constraints.weather.units.values;
     default = "metric";
-    description = "Default units for the shared weather forecast.";
+    description = "Default weather units.";
   };
 
   scopeOptions.weatherLocation = lib.mkOption {
@@ -1101,7 +1101,7 @@ in
   scopeOptions.shellMotionSpeed = lib.mkOption {
     type = lib.types.numbers.between constraints.motion.durationMultiplier.min constraints.motion.durationMultiplier.max;
     default = 1.0;
-    description = "Duration multiplier for animated shell transitions, independent of compositor animation rules.";
+    description = "Duration multiplier for shell transitions.";
   };
 
   scopeOptions.adjustmentSteps = lib.mkOption {
