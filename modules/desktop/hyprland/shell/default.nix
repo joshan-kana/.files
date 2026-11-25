@@ -1313,9 +1313,12 @@ in
         runtimeInputs = [
           pkgs.coreutils
           pkgs.gnused
+          pkgs.jq
           osConfig.programs.hyprland.package
         ];
         text = ''
+          export DESKTOP_VHS_DEFAULTS=${lib.escapeShellArg (builtins.toJSON scopeConfig.appearance)}
+          export DESKTOP_VHS_CONSTRAINTS=${lib.escapeShellArg (builtins.toJSON constraints.appearance)}
           export VHS_SHADER_SOURCE=${lib.escapeShellArg "${./shaders/vhs.frag}"}
           ${builtins.readFile ./scripts/vhs.sh}
         '';

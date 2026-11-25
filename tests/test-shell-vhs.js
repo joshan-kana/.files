@@ -97,6 +97,30 @@ function withCompositor(fn, options = {}) {
       HYPRLAND_INSTANCE_SIGNATURE: "test-session",
       VHS_CALLS: path.join(tmp, "calls"),
       VHS_SHADER_SOURCE: shader,
+      DESKTOP_VHS_DEFAULTS: JSON.stringify({
+        vhsIntensity: 0.45,
+        vhsTracking: 1,
+        vhsChroma: 1,
+        vhsNoise: 1,
+        vhsScanlines: 1,
+        vhsSpeed: 1,
+        vhsDropouts: 0,
+        ...options.defaults,
+      }),
+      DESKTOP_VHS_CONSTRAINTS: JSON.stringify({
+        ...Object.fromEntries(
+          [
+            "vhsIntensity",
+            "vhsTracking",
+            "vhsChroma",
+            "vhsNoise",
+            "vhsScanlines",
+            "vhsDropouts",
+          ].map((key) => [key, { min: 0, max: 1 }]),
+        ),
+        vhsSpeed: { min: 0.25, max: 2.5 },
+        ...options.constraints,
+      }),
       MOCK_DAMAGE: options.damage ?? "2",
       MOCK_VFR: options.vfr ?? "true",
       MOCK_SHADER: options.shader ?? "",
@@ -344,4 +368,27 @@ test("high tape noise cannot produce black dropout bands when scanlines and drop
     assert.match(enabledLines, /const float VHS_DROPOUTS = 1\.00;/);
     assert.equal(run("off").status, 0);
   });
+});
+
+test("VHS backend inherits modified Nix defaults and bounds", () => {
+  withCompositor(
+    ({ tmp, run }) => {
+      assert.equal(run("on", "80").status, 0);
+      assert.equal(run("on", "80", "70").status, 2);
+      assert.equal(run("on", "80", "60").status, 0);
+      assert.equal(run("on", "80", "60", "100", "100", "100", "175").status, 2);
+      const generated = path.join(tmp, "desktop-shell", path.basename(shader));
+      assert.deepEqual(fs.readdirSync(generated).sort(), [
+        "080-040-100-100-100-075-000.frag",
+        "080-060-100-100-100-075-000.frag",
+      ]);
+    },
+    {
+      defaults: { vhsTracking: 0.4, vhsSpeed: 0.75 },
+      constraints: {
+        vhsTracking: { min: 0, max: 0.6 },
+        vhsSpeed: { min: 0.5, max: 1.5 },
+      },
+    },
+  );
 });

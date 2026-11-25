@@ -3,7 +3,7 @@ set -euo pipefail
 
 mode="${1:-}"
 if [[ "$mode" != on && "$mode" != off ]]; then
-  printf 'Usage: desktop-shell-vhs on <intensity 0..100> | off\n' >&2
+  printf 'Usage: desktop-shell-vhs on <intensity percent> [tracking chroma noise scanlines speed dropouts] | off\n' >&2
   exit 2
 fi
 
@@ -53,23 +53,39 @@ if [[ "$mode" == off ]]; then
   exit 0
 fi
 
-level="${2:-}"
-tracking="${3:-100}"
-chroma="${4:-100}"
-noise="${5:-100}"
-scanlines="${6:-100}"
-speed="${7:-100}"
-dropouts="${8:-0}"
-for value in "$level" "$tracking" "$chroma" "$noise" "$scanlines" "$dropouts"; do
-  if ! [[ "$value" =~ ^([0-9]|[1-9][0-9]|100)$ ]]; then
-    printf 'VHS strengths must be whole percentages from 0 to 100\n' >&2
-    exit 2
-  fi
-done
-if ! [[ "$speed" =~ ^([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|250)$ ]] || ((speed < 25)); then
-  printf 'VHS speed must be 25 to 250 percent\n' >&2
+if [[ -z "${2:-}" ]] || (($# > 8)); then
+  printf 'VHS requires an intensity and accepts at most seven parameters\n' >&2
   exit 2
 fi
+
+# The compositor accepts whole percentages. Defaults and allowed ranges come
+# from the same evaluated appearance options as the shell controls.
+if ! resolved="$(jq -ern \
+  --argjson defaults "${DESKTOP_VHS_DEFAULTS:?}" \
+  --argjson constraints "${DESKTOP_VHS_CONSTRAINTS:?}" '
+    $ARGS.positional as $arguments
+    | ["vhsIntensity", "vhsTracking", "vhsChroma", "vhsNoise", "vhsScanlines", "vhsSpeed", "vhsDropouts"]
+    | to_entries[]
+    | .value as $name
+    | ($arguments[.key] // "") as $argument
+    | (if $argument == "" then ($defaults[$name] * 100 | round)
+       elif $argument | test("^(0|[1-9][0-9]*)$") then $argument | tonumber
+       else error("Invalid VHS percentage for " + $name) end) as $percent
+    | $constraints[$name] as $rule
+    | if $rule == null or $percent / 100 < $rule.min or $percent / 100 > $rule.max
+      then error("VHS percentage outside declared range for " + $name)
+      else $percent end
+  ' --args "${@:2}")"; then
+  exit 2
+fi
+mapfile -t values <<<"$resolved"
+level="${values[0]}"
+tracking="${values[1]}"
+chroma="${values[2]}"
+noise="${values[3]}"
+scanlines="${values[4]}"
+speed="${values[5]}"
+dropouts="${values[6]}"
 
 # An enabled zero-intensity effect should not waste cycles on a full-screen
 # animated compositor pass.
@@ -86,7 +102,6 @@ shader="$shaderDir/$shaderName"
 if [[ ! -f "$shader" ]]; then
   filters=()
   names=(INTENSITY TRACKING CHROMA NOISE SCANLINES SPEED DROPOUTS)
-  values=("$level" "$tracking" "$chroma" "$noise" "$scanlines" "$speed" "$dropouts")
   for index in "${!names[@]}"; do
     amount="${values[index]}"
     printf -v strength '%d.%02d' "$((amount / 100))" "$((amount % 100))"
