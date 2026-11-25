@@ -393,6 +393,7 @@ in
       '';
     }
     // lib.optionalAttrs isLinux {
+      stylix.targets.qt.platform = "qtct";
       stylix.targets.gtksourceview.enable = true;
       dconf.settings."org/gnome/desktop/interface".color-scheme = lib.mkForce (
         {
