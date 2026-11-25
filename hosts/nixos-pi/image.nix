@@ -1,3 +1,4 @@
+installedFileSystems:
 {
   config,
   lib,
@@ -27,7 +28,8 @@
   sdImage = {
     compressImage = false;
     firmwareSize = 512;
-    rootVolumeLabel = "ROOT";
+    rootVolumeLabel = lib.removePrefix "/dev/disk/by-label/" installedFileSystems."/".device;
+    firmwarePartitionName = lib.removePrefix "/dev/disk/by-label/" installedFileSystems."/boot".device;
     # The pinned fakeroot lacks nftw() ownership emulation used by mkfs.btrfs.
     rootFilesystemImage = pkgs.callPackage (modulesPath + "/../lib/make-btrfs-fs.nix") {
       inherit (config.sdImage) storePaths compressImage;
