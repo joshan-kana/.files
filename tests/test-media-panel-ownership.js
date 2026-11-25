@@ -130,3 +130,15 @@ test("native curve uses the original quadratic control points and straight termi
   );
   assert.match(native, /paintSegment\(count > 1 \? sample\(count - 1\)/);
 });
+
+test("Now Playing measures only actual controls when both visualisations and lyrics are off", () => {
+  const media = qml("MediaContent.qml");
+  assert.match(
+    media,
+    /implicitHeight: visualizerMode === "off" && !lyricsVisible \? header\.y \+ header\.implicitHeight/,
+  );
+  assert.match(
+    media,
+    /transport\.implicitHeight \+ mediaActions\.anchors\.topMargin \+ mediaActions\.implicitHeight/,
+  );
+});

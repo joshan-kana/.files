@@ -80,7 +80,7 @@ FocusScope {
     // Keep every action reachable without paging away from its controls on
     // 768p/compact screens; larger viewports retain the immersive spectrum.
     readonly property bool compactHeight: height < 760
-    implicitHeight: compactHeight ? 640 : 720
+    implicitHeight: visualizerMode === "off" && !lyricsVisible ? header.y + header.implicitHeight + spectrumSlot.anchors.topMargin + transport.anchors.topMargin + transport.implicitHeight + mediaActions.anchors.topMargin + mediaActions.implicitHeight + theme.spacing4 : compactHeight ? 640 : 720
     focus: engaged
 
     onEngagedChanged: {
