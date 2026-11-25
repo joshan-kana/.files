@@ -620,7 +620,7 @@ in
         };
         wallpaperTargetOutput = lib.mkOption {
           type = lib.types.str;
-          default = "";
+          default = "all";
           description = "Display name for wallpaper selections. Empty uses the active display; \\\"all\\\" targets every display.";
         };
         musicReactiveEnabled = lib.mkOption {
