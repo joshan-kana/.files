@@ -51,7 +51,7 @@ test("Escape and Back share the same Controls cancellation priorities", () => {
   );
   assert.match(
     system,
-    /if \(resetConfirmPending\)[\s\S]*?resetConfirmPending = false;/,
+    /if \(resetConfirmPending\)[\s\S]*?resetConfirmation.cancel\(\);/,
   );
   assert.match(system, /else if \(helpOpen\)[\s\S]*?helpOpen = false;/);
   assert.match(
@@ -129,7 +129,7 @@ test("Back cancels the Home calendar picker and inline Activity reply locally", 
   assert.match(calendar, /calendar\.navigateBack\(\)/);
   assert.match(
     activity,
-    /function navigateBack\(\): void \{\s*if \(replyEditing\) \{\s*replyOwner = null;\s*replyEditing = false;\s*focusKeyboard\(\)/,
+    /function navigateBack\(\): void \{[\s\S]*?else if \(replyEditing\) \{\s*replyOwner = null;\s*replyEditing = false;\s*focusKeyboard\(\)/,
   );
   assert.match(activity, /center\.navigateBack\(\)/);
 });

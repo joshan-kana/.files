@@ -749,7 +749,7 @@ test("Quick Actions retain handlers and keep Restore Defaults last", () => {
   }
   assert.match(
     actions,
-    /onActivated: \{\s*root.resetConfirmPending = true;\s*root.shellActions.resetStatus = ""/,
+    /onActivated: \{[\s\S]*?root.resetConfirmation.request\("desktop"\);[\s\S]*?root.shellActions.resetStatus = ""/,
   );
   assert.match(actions, /onDetailsRequested: root.openResources\(\)/);
   assert.match(actions, /onDetailsRequested: root.openRecordings\(\)/);

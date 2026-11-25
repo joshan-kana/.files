@@ -274,7 +274,7 @@ test("Escape cancels an armed Session action before backing out", () => {
   );
   assert.match(
     session,
-    /function cancelConfirmation\(\): void \{\s*armTimer\.stop\(\);\s*armedAction = "";\s*statusText = "";\s*statusError = false;/,
+    /function cancelConfirmation\(\): void \{\s*confirmation.cancel\(\);\s*armedAction = "";\s*statusText = "";\s*statusError = false;/,
   );
   assert.match(
     content,

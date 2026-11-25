@@ -99,7 +99,7 @@ test("clipboard search combines persistent pins, type filtering and list focus",
     clipboard,
     /if\s*\(panel\.actionMode\)\s*panel\.toggleActions\(\)/,
   );
-  assert.match(clipboard, /deleteArmed = true;/);
+  assert.match(clipboard, /deleteConfirmation.request\(String\(entry.id\)\)/);
   assert.match(clipboard, /panel\.kindFilter === modelData\.id/);
   assert.match(clipboard, /clipboardOperations/);
   assert.match(clipboard, /text: item\.modelData \? \(panel\.actionMode \?/);

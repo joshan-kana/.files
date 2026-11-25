@@ -59,7 +59,14 @@ Item {
 
     property int selectedIndex: 0
     property bool startedDiscovery: false
-    property string forgetAddress: ""
+    property alias forgetAddress: forgetConfirmation.pending
+    property ConfirmationState forgetConfirmation: ConfirmationState {
+        id: forgetConfirmation
+        onExpired: {
+            panel.statusText = "";
+            panel.statusError = false;
+        }
+    }
     property string statusText: ""
     property bool statusError: false
 
@@ -71,18 +78,6 @@ Item {
     readonly property real bodyHeight: deviceDetail ? 310 : adapterAvailable && adapter.enabled ? Math.min(440, Math.max(196, devices.length * 100)) : emptyState.implicitHeight + panel.theme.spacing3 + panel.theme.spacing4
     implicitHeight: header.height + statusBanner.implicitHeight + panel.theme.spacing4 * 2 + bodyHeight + panel.theme.spacing3 + footer.implicitHeight
     visible: open
-
-    Timer {
-        id: forgetTimer
-        interval: 5000
-        repeat: false
-
-        onTriggered: {
-            panel.forgetAddress = "";
-            panel.statusText = "";
-            panel.statusError = false;
-        }
-    }
 
     function selectedDevice(): var {
         if (devices.length === 0)
@@ -113,8 +108,7 @@ Item {
     }
 
     function clearTransientState(): void {
-        forgetTimer.stop();
-        forgetAddress = "";
+        forgetConfirmation.cancel();
         statusText = "";
         statusError = false;
     }
@@ -250,18 +244,16 @@ Item {
             return;
 
         if (forgetAddress === device.address) {
-            forgetTimer.stop();
-            forgetAddress = "";
+            forgetConfirmation.cancel();
             statusText = "FORGETTING // " + displayName(device);
             statusError = false;
             device.forget();
             return;
         }
 
-        forgetAddress = device.address;
+        forgetConfirmation.request(device.address);
         statusText = "CONFIRM FORGET // PRESS " + runtime.shellHint("BluetoothPanel.forget") + " AGAIN";
         statusError = false;
-        forgetTimer.restart();
     }
 
     onDevicesChanged: {

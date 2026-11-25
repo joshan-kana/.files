@@ -19,7 +19,14 @@ Item {
     property int preferredColumn: 0
     readonly property int gridColumns: width < 340 ? 1 : width < 510 ? 2 : 3
     onGridColumnsChanged: preferredColumn = selectedIndex % gridColumns
-    property string armedAction: ""
+    property alias armedAction: confirmation.pending
+    property ConfirmationState confirmation: ConfirmationState {
+        id: confirmation
+        onExpired: {
+            panel.statusText = "";
+            panel.statusError = false;
+        }
+    }
     property string statusText: ""
     property bool statusError: false
 
@@ -98,18 +105,6 @@ Item {
 
     visible: open
 
-    Timer {
-        id: armTimer
-        interval: 5000
-        repeat: false
-
-        onTriggered: {
-            panel.armedAction = "";
-            panel.statusText = "";
-            panel.statusError = false;
-        }
-    }
-
     function selectedEntry(): var {
         if (entries.length === 0)
             return null;
@@ -118,7 +113,7 @@ Item {
     }
 
     function openView(): void {
-        armTimer.stop();
+        confirmation.cancel();
         open = true;
         selectedIndex = 0;
         preferredColumn = 0;
@@ -129,7 +124,7 @@ Item {
     }
 
     function closeView(): void {
-        armTimer.stop();
+        confirmation.cancel();
         open = false;
         armedAction = "";
         statusText = "";
@@ -159,7 +154,7 @@ Item {
     function moveSelection(delta: int): void {
         selectedIndex = Math.max(0, Math.min(entries.length - 1, selectedIndex + delta));
         preferredColumn = selectedIndex % gridColumns;
-        armTimer.stop();
+        confirmation.cancel();
         armedAction = "";
         statusText = "";
         statusError = false;
@@ -171,7 +166,7 @@ Item {
     }
 
     function cancelConfirmation(): void {
-        armTimer.stop();
+        confirmation.cancel();
         armedAction = "";
         statusText = "";
         statusError = false;
@@ -246,17 +241,12 @@ Item {
             return;
         }
 
-        if (armedAction === entry.id) {
-            armTimer.stop();
-            armedAction = "";
+        if (confirmation.request(entry.id)) {
             execute(entry);
             return;
         }
-
-        armedAction = entry.id;
-        statusText = "CONFIRM // " + entry.label.toUpperCase();
+        statusText = "Confirm " + entry.label;
         statusError = false;
-        armTimer.restart();
     }
 
     implicitWidth: 3 * 154 + 2 * theme.spacing3 + theme.spacing5 * 2

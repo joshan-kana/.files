@@ -29,7 +29,15 @@ Item {
     property int wordSelectionStart: -1
     property int wordSelectionEnd: -1
     readonly property bool wordSelectionAvailable: wordSelectionStart >= 0 && wordSelectionEnd >= 0
-    property string deletePending: ""
+    property alias deletePending: deleteConfirmation.pending
+    property string deletingName: ""
+    property ConfirmationState deleteConfirmation: ConfirmationState {
+        id: deleteConfirmation
+        onExpired: {
+            library.statusText = "";
+            library.statusError = false;
+        }
+    }
     property string statusText: ""
     property bool statusError: false
     property string locationCommand: ""
@@ -61,7 +69,7 @@ Item {
                     library.destinations = next;
                     if (changed && library.open) {
                         library.closeText();
-                        library.deletePending = "";
+                        library.deleteConfirmation.cancel();
                         library.entries = [];
                         library.listingSignature = "";
                         library.clearPreview();
@@ -120,7 +128,7 @@ Item {
         selectedIndex = 0;
         entries = [];
         listingSignature = "";
-        deletePending = "";
+        deleteConfirmation.cancel();
         statusText = "";
         closeText();
         refresh();
@@ -167,7 +175,7 @@ Item {
         if (!open)
             return;
         open = false;
-        deletePending = "";
+        deleteConfirmation.cancel();
         previewName = "";
         previewPath = "";
         closeText();
@@ -205,7 +213,7 @@ Item {
         if (entries.length === 0)
             return;
         selectedIndex = Math.max(0, Math.min(entries.length - 1, index));
-        deletePending = "";
+        deleteConfirmation.cancel();
         statusText = "";
         closeText();
     }
@@ -378,17 +386,19 @@ Item {
             confirmDelete();
             return;
         }
-        deletePending = selectedEntry.name;
-        statusText = "MOVE TO TRASH? · ENTER / CONFIRM DELETE";
+        deleteConfirmation.request(selectedEntry.name);
+        statusText = "Move to trash? Press D or Enter again within 5 seconds.";
         statusError = true;
     }
     function confirmDelete(): void {
         if (!selectedEntry || deletePending !== selectedEntry.name || actionProcess.running)
             return;
-        actionProcess.exec([runtime.recordingLibrary, "trash", deletePending]);
+        deletingName = deletePending;
+        deleteConfirmation.cancel();
+        actionProcess.exec([runtime.recordingLibrary, "trash", deletingName]);
     }
     function cancelDelete(): void {
-        deletePending = "";
+        deleteConfirmation.cancel();
         statusText = "";
         statusError = false;
     }
@@ -482,8 +492,9 @@ Item {
     }
     property Process actionProcess: Process {
         onExited: (exitCode, exitStatus) => {
-            const deleted = library.deletePending;
-            library.deletePending = "";
+            const deleted = library.deletingName;
+            library.deletingName = "";
+            library.deleteConfirmation.cancel();
             library.statusError = exitCode !== 0;
             library.statusText = exitCode === 0 ? "MOVED TO TRASH · " + deleted : "COULD NOT MOVE CAPTURE TO TRASH";
             if (exitCode === 0)

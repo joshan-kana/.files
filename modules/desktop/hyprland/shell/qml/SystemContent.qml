@@ -51,7 +51,10 @@ FocusScope {
     property string settingKind: ""
     readonly property string presentedDetail: settingsPanel.open ? settingKind : vhsPanel.open ? "vhs" : themePanel.open ? "theme" : wallpaperPanel.open ? "wallpaper" : networkPanel.open ? "network" : bluetoothPanel.open ? "bluetooth" : sessionPanel.open ? "session" : resourcesPanel.open ? "resources" : statusOpen ? "status" : mixerOpen ? "mixer" : recordingsPanel.open ? "recordings" : ""
     readonly property bool detailsVisible: settingsPanel.open || vhsPanel.open || trayMenu.open || networkPanel.open || bluetoothPanel.open || themePanel.open || wallpaperPanel.open || sessionPanel.open || resourcesPanel.open || statusOpen || mixerOpen || recordingsPanel.open
-    property bool resetConfirmPending: false
+    property ConfirmationState resetConfirmation: ConfirmationState {
+        id: resetConfirmation
+    }
+    readonly property bool resetConfirmPending: resetConfirmation.pending === "desktop"
     readonly property bool resetRunning: shellActions.resetRunning
     readonly property string resetStatus: shellActions.resetStatus
 
@@ -81,7 +84,7 @@ FocusScope {
     function startDefaultReset(): void {
         if (!resetConfirmPending || resetRunning)
             return;
-        resetConfirmPending = false;
+        resetConfirmation.cancel();
         shellActions.restoreDesktopDefaults();
     }
 
@@ -595,6 +598,7 @@ FocusScope {
     focus: engaged
 
     function closeDetails(): void {
+        resetConfirmation.cancel();
         settingsPanel.closeView();
         vhsPanel.closeView();
         trayMenu.closeMenu();
@@ -618,7 +622,7 @@ FocusScope {
         // One action for the header and Escape. Resolve nested interactions
         // before changing pages or closing the hub.
         if (resetConfirmPending) {
-            resetConfirmPending = false;
+            resetConfirmation.cancel();
         } else if (helpOpen) {
             if (sessionPanel.open && sessionPanel.armedAction.length > 0)
                 sessionPanel.invoke("cancelConfirmation");
@@ -782,6 +786,7 @@ FocusScope {
             nightLight.refresh();
             requestedViewTimer.restart();
         } else {
+            resetConfirmation.cancel();
             root.motion.endKeyboardAdjustment();
             helpOpen = false;
             selectedSlider = "";
@@ -1330,8 +1335,12 @@ FocusScope {
                             enabled: !root.resetRunning
                             activeColor: root.theme.roleColor("warning")
                             onActivated: {
-                                root.resetConfirmPending = true;
-                                root.shellActions.resetStatus = "";
+                                if (root.resetConfirmPending)
+                                    root.startDefaultReset();
+                                else {
+                                    root.resetConfirmation.request("desktop");
+                                    root.shellActions.resetStatus = "";
+                                }
                             }
                         }
                     }
@@ -2051,10 +2060,10 @@ FocusScope {
                     return;
                 }
                 if (root.resetConfirmPending) {
-                    if (event.key === root.runtime.shellKeyCode("controls", "Return") || event.key === root.runtime.shellKeyCode("controls", "Enter"))
+                    if (!event.isAutoRepeat && (root.runtime.shellMatchesHint("SystemContent.resetConfirm", event.key, event.modifiers) || root.runtime.shellMatchesHint("SystemContent.reset", event.key, event.modifiers)))
                         root.startDefaultReset();
-                    else if (event.key === root.runtime.shellKeyCode("controls", "Backspace") || (event.key === root.runtime.shellKeyCode("controls", "C") && (root.runtime.shellModifier("controls", "Shift", event.modifiers))))
-                        root.resetConfirmPending = false;
+                    else if (root.runtime.shellMatchesHint("SystemContent.resetCancel", event.key, event.modifiers) || event.key === root.runtime.shellKeyCode("controls", "Backspace"))
+                        root.resetConfirmation.cancel();
                     event.accepted = true;
                     return;
                 }
