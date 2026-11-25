@@ -3,6 +3,9 @@ _: {
     (
       _final: prev:
       let
+        pname = "chatgpt";
+        homepage = "https://chatgpt.com/";
+        license = lib.licenses.unfree;
         inherit (prev) lib;
         system = prev.stdenv.hostPlatform.system;
         release = {
@@ -20,35 +23,34 @@ _: {
           "x86_64-linux"
         ];
         linuxArch = if system == "aarch64-linux" then "aarch64" else "x86_64";
+        passthru = rec {
+          autoUpdate = true;
+          updateGroup = pname;
+          updateFilename = "overlays/chatgpt/default.nix";
+          updateUrl = "https://persistent.oaistatic.com/codex-app-prod/linux/install-arch.sh";
+          updateRegex = ''versions=\(([0-9.]+)'';
+          updateScript = [
+            "${prev.python3}/bin/python3"
+            "${../../scripts/update-version.py}"
+            updateFilename
+            system
+          ];
+        };
       in
       lib.optionalAttrs isDarwin {
         chatgpt = import ../../lib/mac-app.nix { inherit prev; } {
           inherit release;
-          pname = "chatgpt";
+          inherit pname;
           appName = "ChatGPT.app";
-          homepage = "https://chatgpt.com/";
-          license = lib.licenses.unfree;
-          passthru = rec {
-            autoUpdate = true;
-            updateGroup = "chatgpt";
-            updateFilename = "overlays/chatgpt/default.nix";
-            updateUrl = "https://persistent.oaistatic.com/codex-app-prod/linux/install-arch.sh";
-            updateRegex = ''versions=\(([0-9.]+)'';
-            updateScript = [
-              "${prev.python3}/bin/python3"
-              "${../../scripts/update-version.py}"
-              updateFilename
-              system
-            ];
-          };
+          inherit homepage license;
+          inherit passthru;
           url = r: "https://persistent.oaistatic.com/codex-app-prod/ChatGPT-darwin-arm64-${r.version}.zip";
           unpacker = prev.unzip;
         };
       }
       // lib.optionalAttrs isLinux {
         chatgpt = prev.stdenv.mkDerivation {
-          pname = "chatgpt";
-          inherit version;
+          inherit pname version;
           src = prev.fetchurl {
             url = "https://persistent.oaistatic.com/codex-app-prod/linux/arch/${version}/${linuxArch}/chatgpt-bin-${version}-1-${linuxArch}.pkg.tar.zst";
             hash = linuxHashes.${linuxArch};
@@ -117,22 +119,9 @@ _: {
             cp usr/share/pixmaps/chatgpt.png "$out/share/pixmaps/"
             runHook postInstall
           '';
-          passthru = rec {
-            autoUpdate = true;
-            updateGroup = "chatgpt";
-            updateFilename = "overlays/chatgpt/default.nix";
-            updateUrl = "https://persistent.oaistatic.com/codex-app-prod/linux/install-arch.sh";
-            updateRegex = ''versions=\(([0-9.]+)'';
-            updateScript = [
-              "${prev.python3}/bin/python3"
-              "${../../scripts/update-version.py}"
-              updateFilename
-              system
-            ];
-          };
+          inherit passthru;
           meta = {
-            homepage = "https://chatgpt.com/";
-            license = lib.licenses.unfree;
+            inherit homepage license;
             platforms = [
               "aarch64-linux"
               "x86_64-linux"

@@ -3,9 +3,16 @@ _: {
     (
       _final: prev:
       let
+        pname = "squirreldisk";
         version = "2.6.1";
         homepage = "https://www.squirreldisk.com";
         license = prev.lib.licenses.agpl3Only;
+        passthru = {
+          autoUpdate = true;
+          updateGroup = pname;
+          updateFilename = "overlays/squirreldisk/default.nix";
+          updateUrl = "https://github.com/adileo/squirreldisk";
+        };
       in
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
         squirreldisk = import ../../lib/mac-app.nix { inherit prev; } {
@@ -13,23 +20,17 @@ _: {
             inherit version;
             hash = "sha256-E84YnLYNGzx8KYPFqWGNbJoOoJeIyKTQUCkO9Z+Jfgo=";
           };
-          pname = "squirreldisk";
+          inherit pname;
           appName = "SquirrelDisk.app";
           inherit homepage license;
-          passthru = {
-            autoUpdate = true;
-            updateGroup = "squirreldisk";
-            updateFilename = "overlays/squirreldisk/default.nix";
-            updateUrl = "https://github.com/adileo/squirreldisk";
-          };
+          inherit passthru;
           url =
             _: "https://github.com/adileo/squirreldisk/releases/download/v${version}/SquirrelDisk-macOS.dmg";
         };
       }
       // prev.lib.optionalAttrs (prev.stdenv.hostPlatform.system == "aarch64-linux") {
         squirreldisk = prev.rustPlatform.buildRustPackage {
-          pname = "squirreldisk";
-          inherit version;
+          inherit pname version;
           src = prev.fetchFromGitHub {
             owner = "adileo";
             repo = "squirreldisk";
@@ -63,21 +64,17 @@ _: {
               ]
             }
           '';
-          passthru = {
-            autoUpdate = true;
-            updateGroup = "squirreldisk";
-          };
+          inherit passthru;
           meta = {
             inherit homepage license;
             platforms = [ "aarch64-linux" ];
-            mainProgram = "squirreldisk";
+            mainProgram = pname;
           };
         };
       }
       // prev.lib.optionalAttrs (prev.stdenv.hostPlatform.system == "x86_64-linux") {
         squirreldisk = prev.stdenv.mkDerivation {
-          pname = "squirreldisk";
-          inherit version;
+          inherit pname version;
           src = prev.fetchurl {
             url = "https://github.com/adileo/squirreldisk/releases/download/v${version}/SquirrelDisk-Linux-x86_64.tar.gz";
             hash = "sha256-RcDrnc1m9QXVuqRsmUhyd7zlG2J766oOeHfOqqahvH0=";
@@ -109,15 +106,12 @@ _: {
             }
             runHook postInstall
           '';
-          passthru = {
-            autoUpdate = true;
-            updateGroup = "squirreldisk";
-          };
+          inherit passthru;
           meta = {
             inherit homepage license;
             platforms = [ "x86_64-linux" ];
             sourceProvenance = [ prev.lib.sourceTypes.binaryNativeCode ];
-            mainProgram = "squirreldisk";
+            mainProgram = pname;
           };
         };
       }

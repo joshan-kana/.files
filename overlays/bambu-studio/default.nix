@@ -11,19 +11,23 @@ in
     (
       _final: prev:
       let
+        pname = "bambu-studio";
+        homepage = "https://github.com/bambulab/BambuStudio";
+        license = prev.lib.licenses.agpl3Only;
         system = prev.stdenv.hostPlatform.system;
+        passthru = {
+          autoUpdate = false;
+          updateGroup = pname;
+        };
       in
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
         bambu-studio = import ../../lib/mac-app.nix { inherit prev; } {
           inherit release;
-          pname = "bambu-studio";
+          inherit pname;
           appName = "BambuStudio.app";
-          homepage = "https://github.com/bambulab/BambuStudio";
-          license = prev.lib.licenses.agpl3Only;
+          inherit homepage license;
           unpacker = prev._7zz;
-          passthru = {
-            autoUpdate = false;
-          };
+          inherit passthru;
           url =
             r:
             "https://github.com/bambulab/BambuStudio/releases/download/v${r.version}/Bambu_Studio_mac-v${r.version}-${r.build}.dmg";
@@ -31,18 +35,15 @@ in
       }
       // prev.lib.optionalAttrs (system == "x86_64-linux") {
         bambu-studio = prev.appimageTools.wrapType2 {
-          pname = "bambu-studio";
+          inherit pname;
           inherit (release) version;
           src = prev.fetchurl {
             url = "https://github.com/bambulab/BambuStudio/releases/download/v${release.version}/BambuStudio_ubu22_v${release.version}-${release.build}.AppImage";
             hash = "sha256-4N+22v4Bgba/hjW7uaexBvAvI0P45BlJ8dFWs/NiQeU=";
           };
-          passthru = {
-            autoUpdate = false;
-          };
+          inherit passthru;
           meta = {
-            homepage = "https://github.com/bambulab/BambuStudio";
-            license = prev.lib.licenses.agpl3Only;
+            inherit homepage license;
             platforms = [ "x86_64-linux" ];
             sourceProvenance = [ prev.lib.sourceTypes.binaryNativeCode ];
           };

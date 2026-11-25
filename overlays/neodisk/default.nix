@@ -3,9 +3,16 @@ _: {
     (
       _final: prev:
       let
+        pname = "neodisk";
         version = "2.91.0";
         homepage = "https://neodisk.app";
         license = prev.lib.licenses.gpl3Only;
+        passthru = {
+          autoUpdate = true;
+          updateGroup = pname;
+          updateFilename = "overlays/neodisk/default.nix";
+          updateUrl = "https://github.com/tkslucas/Neodisk";
+        };
       in
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
         neodisk = import ../../lib/mac-app.nix { inherit prev; } {
@@ -13,16 +20,11 @@ _: {
             inherit version;
             hash = "sha256-Qha/UmyKOH3KtQToHlsZ9a45j523a9eJ9qutc7q86uU=";
           };
-          pname = "neodisk";
+          inherit pname;
           appName = "Neodisk.app";
           inherit homepage license;
           unpacker = prev.unzip;
-          passthru = {
-            autoUpdate = true;
-            updateGroup = "neodisk";
-            updateFilename = "overlays/neodisk/default.nix";
-            updateUrl = "https://github.com/tkslucas/Neodisk";
-          };
+          inherit passthru;
           url =
             r: "https://github.com/tkslucas/Neodisk/releases/download/v${r.version}/Neodisk-${r.version}.zip";
         };
@@ -38,8 +40,7 @@ _: {
           )
           {
             neodisk = prev.stdenv.mkDerivation {
-              pname = "neodisk";
-              inherit version;
+              inherit pname version;
               src = prev.fetchurl (
                 prev.lib.optionalAttrs (prev.stdenv.hostPlatform.system == "aarch64-linux") {
                   url = "https://github.com/tkslucas/Neodisk/releases/download/v${version}/neodisk-${version}-linux-aarch64.tar.gz";
@@ -76,10 +77,7 @@ _: {
                   --replace-fail /usr/local/bin/neodisk neodisk
                 runHook postInstall
               '';
-              passthru = {
-                autoUpdate = true;
-                updateGroup = "neodisk";
-              };
+              inherit passthru;
               meta = {
                 inherit homepage license;
                 platforms = [

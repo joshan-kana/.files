@@ -14,10 +14,13 @@ in
     (
       _final: prev:
       let
+        pname = "open-webui-desktop";
+        homepage = "https://openwebui.com/";
+        license = prev.lib.licenses.mit;
         system = prev.stdenv.hostPlatform.system;
         passthru = {
           autoUpdate = true;
-          updateGroup = "open-webui-desktop";
+          updateGroup = pname;
           updateUrl = "https://github.com/open-webui/desktop";
           updateGithubReleases = true;
           updateFilename = "overlays/open-webui-desktop/default.nix";
@@ -28,16 +31,15 @@ in
           if prev.stdenv.hostPlatform.isDarwin then
             import ../../lib/mac-app.nix { inherit prev; } {
               inherit release passthru;
-              pname = "open-webui-desktop";
+              inherit pname;
               appName = "Open WebUI.app";
-              homepage = "https://openwebui.com/";
-              license = prev.lib.licenses.mit;
+              inherit homepage license;
               url =
                 r: "https://github.com/open-webui/desktop/releases/download/v${r.version}/open-webui-arm64.dmg";
             }
           else
             prev.appimageTools.wrapType2 {
-              pname = "open-webui-desktop";
+              inherit pname;
               inherit (release) version;
               src = prev.fetchurl {
                 url = "https://github.com/open-webui/desktop/releases/download/v${release.version}/open-webui_${
@@ -47,8 +49,7 @@ in
               };
               inherit passthru;
               meta = {
-                homepage = "https://openwebui.com/";
-                license = prev.lib.licenses.mit;
+                inherit homepage license;
                 platforms = [
                   "x86_64-linux"
                   "aarch64-linux"

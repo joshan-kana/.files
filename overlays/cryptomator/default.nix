@@ -14,10 +14,13 @@ in
     (
       _final: prev:
       let
+        pname = "cryptomator";
+        homepage = "https://cryptomator.org";
+        license = prev.lib.licenses.gpl3Only;
         system = prev.stdenv.hostPlatform.system;
         update = {
           autoUpdate = true;
-          updateGroup = "cryptomator";
+          updateGroup = pname;
           updateUrl = "https://github.com/cryptomator/cryptomator";
           updateGithubReleases = true;
           updateFilename = "overlays/cryptomator/default.nix";
@@ -28,10 +31,9 @@ in
           if prev.stdenv.hostPlatform.isDarwin then
             import ../../lib/mac-app.nix { inherit prev; } {
               inherit release;
-              pname = "cryptomator";
+              inherit pname;
               appName = "Cryptomator.app";
-              homepage = "https://cryptomator.org";
-              license = prev.lib.licenses.gpl3Only;
+              inherit homepage license;
               passthru = update;
               url =
                 r:
@@ -39,7 +41,7 @@ in
             }
           else
             prev.appimageTools.wrapType2 {
-              pname = "cryptomator";
+              inherit pname;
               inherit (release) version;
               src = prev.fetchurl {
                 url = "https://github.com/cryptomator/cryptomator/releases/download/${release.version}/cryptomator-${release.version}-${
@@ -49,8 +51,7 @@ in
               };
               passthru = update;
               meta = {
-                homepage = "https://cryptomator.org";
-                license = prev.lib.licenses.gpl3Only;
+                inherit homepage license;
                 platforms = [
                   "x86_64-linux"
                   "aarch64-linux"

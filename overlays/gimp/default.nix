@@ -13,23 +13,29 @@ in
   nixpkgs.overlays = [
     (
       _final: prev:
+      let
+        pname = "gimp";
+        homepage = "https://www.gimp.org";
+        license = prev.lib.licenses.gpl3Plus;
+        passthru = {
+          autoUpdate = false;
+          updateGroup = pname;
+          updateFilename = "overlays/gimp/default.nix";
+        };
+      in
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
         gimp = import ../../lib/mac-app.nix { inherit prev; } {
           release = release // {
             hash = release.hashes.aarch64-darwin;
           };
-          pname = "gimp";
+          inherit pname;
           appName = "GIMP.app";
-          homepage = "https://www.gimp.org";
-          license = prev.lib.licenses.gpl3Plus;
+          inherit homepage license;
           unpacker = prev._7zz;
           unpackCmd = ''
             7zz x -sns- -snld20 -y "$curSrc"
           '';
-          passthru = {
-            autoUpdate = false;
-            updateFilename = "overlays/gimp/default.nix";
-          };
+          inherit passthru;
           url =
             r:
             "https://download.gimp.org/gimp/v${prev.lib.versions.majorMinor r.version}/macos/gimp-${r.version}-${
@@ -45,7 +51,7 @@ in
           ])
           {
             gimp = prev.appimageTools.wrapType2 {
-              pname = "gimp";
+              inherit pname;
               inherit (release) version;
               src = prev.fetchurl {
                 url = "https://download.gimp.org/gimp/v${prev.lib.versions.majorMinor release.version}/linux/GIMP-${release.version}-${
@@ -53,9 +59,9 @@ in
                 }.AppImage";
                 hash = release.hashes.${prev.stdenv.hostPlatform.system};
               };
+              inherit passthru;
               meta = {
-                homepage = "https://www.gimp.org";
-                license = prev.lib.licenses.gpl3Plus;
+                inherit homepage license;
                 platforms = [
                   "x86_64-linux"
                   "aarch64-linux"

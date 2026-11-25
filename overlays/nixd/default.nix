@@ -20,22 +20,22 @@ _: {
         nixt = prev.nixt.overrideAttrs pinSource;
       in
       {
-        nixd = (prev.nixd.override { inherit nixf nixt; }).overrideAttrs (old: {
-          inherit version src;
-          # nixf's Op.h includes Tokens.h without its installed subdirectory.
-          env.NIX_CFLAGS_COMPILE =
-            (old.env.NIX_CFLAGS_COMPILE or "") + " -I${prev.lib.getDev nixf}/include/nixf/Parse";
-          patches = (old.patches or [ ]) ++ [
-            ../../patches/nixd/join-evaluation-workers-before-callback-teardown.patch
-            ../../patches/nixd/complete-options-in-merged-attrsets.patch
-          ];
-          passthru = (old.passthru or { }) // {
-            autoUpdate = false;
-          };
-          meta = old.meta // {
-            changelog = "https://github.com/nix-community/nixd/releases/tag/${version}";
-          };
-        });
+        nixd = (prev.nixd.override { inherit nixf nixt; }).overrideAttrs (
+          old:
+          (pinSource old)
+          // {
+            # nixf's Op.h includes Tokens.h without its installed subdirectory.
+            env.NIX_CFLAGS_COMPILE =
+              (old.env.NIX_CFLAGS_COMPILE or "") + " -I${prev.lib.getDev nixf}/include/nixf/Parse";
+            patches = (old.patches or [ ]) ++ [
+              ../../patches/nixd/join-evaluation-workers-before-callback-teardown.patch
+              ../../patches/nixd/complete-options-in-merged-attrsets.patch
+            ];
+            passthru = (old.passthru or { }) // {
+              autoUpdate = false;
+            };
+          }
+        );
       }
     )
   ];
