@@ -3,6 +3,7 @@ _: {
     (
       _final: prev:
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isLinux {
+        # Required until nixpkgs fakeroot includes the nftw() ownership fix.
         fakerootBtrfs = prev.fakeroot.overrideAttrs (old: {
           version = "2.1.4";
           src = prev.fetchurl {

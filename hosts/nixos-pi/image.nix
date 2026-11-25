@@ -28,11 +28,17 @@
     compressImage = false;
     firmwareSize = 512;
     rootVolumeLabel = "ROOT";
-    rootFilesystemCreator = ./make-btrfs-fs.nix;
+    # The pinned fakeroot lacks nftw() ownership emulation used by mkfs.btrfs.
+    rootFilesystemImage = pkgs.callPackage (modulesPath + "/../lib/make-btrfs-fs.nix") {
+      inherit (config.sdImage) storePaths compressImage;
+      populateImageCommands = config.sdImage.populateRootCommands;
+      volumeLabel = config.sdImage.rootVolumeLabel;
+      fakeroot = pkgs.fakerootBtrfs;
+    };
 
-    # Ensure early-boot services resolve /var/run to the writable /run tmpfs.
-    populateRootCommands = lib.mkAfter ''
-      mkdir -p files/var
+    # Boot files live on the firmware partition, not the underlying root filesystem.
+    populateRootCommands = lib.mkForce ''
+      mkdir -p files/boot files/var
       ln -s ../run files/var/run
     '';
 
