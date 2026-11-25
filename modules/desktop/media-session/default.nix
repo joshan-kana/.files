@@ -37,6 +37,15 @@ in
     let
       launcher = pkgs.flex-launcher;
       icons = "${launcher}/share/flex-launcher/assets/icons";
+      browser = osConfig.dotfiles.defaults.browser;
+      hasProgram =
+        name: lib.any (package: (package.meta.mainProgram or null) == name) config.home.packages;
+      entries =
+        lib.optional (hasProgram "kodi") "Kodi;${icons}/kodi.png;kodi"
+        ++ lib.optional (hasProgram browser) "Browser;${pkgs.adwaita-icon-theme}/share/icons/Adwaita/symbolic/legacy/web-browser-symbolic.svg;${browser}"
+        ++ lib.optional (hasProgram "moonlight") "Moonlight;${config.home.profileDirectory}/share/icons/hicolor/scalable/apps/moonlight.svg;moonlight"
+        ++ lib.optional config.services.kdeconnect.enable "Phone pairing;${icons}/system.png;kdeconnect-app"
+        ++ [ "Power;${icons}/restart.png;:submenu Power" ];
       launcherConfig = ''
         [General]
         DefaultMenu=Home
@@ -61,11 +70,7 @@ in
         ButtonDPadRight=:right
 
         [Home]
-        Entry1=Kodi;${icons}/kodi.png;kodi
-        Entry2=Browser;${config.home.profileDirectory}/share/icons/hicolor/128x128/apps/chromium.png;${osConfig.dotfiles.defaults.browser} --start-maximized
-        Entry3=Moonlight;${config.home.profileDirectory}/share/icons/hicolor/scalable/apps/moonlight.svg;moonlight
-        Entry4=Phone pairing;${icons}/system.png;kdeconnect-app
-        Entry5=Power;${icons}/restart.png;:submenu Power
+        ${lib.concatStringsSep "\n" (lib.imap1 (index: entry: "Entry${toString index}=${entry}") entries)}
 
         [Power]
         Entry1=Shutdown;${icons}/system.png;:shutdown
