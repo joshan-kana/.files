@@ -28,6 +28,11 @@ lib.recursiveUpdate profile {
     };
 
   desktopApps = editScope profile.desktopApps {
+    moonlight = _: {
+      nixpkgs.overlays = lib.mkAfter [
+        (_final: prev: { moonlight-qt = prev.moonlight-qt-rpi; })
+      ];
+    };
     jellyfin = _: {
       home = { pkgs, ... }: {
         services.jellyfin-mpv-shim.settings = {
