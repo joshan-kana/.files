@@ -417,11 +417,15 @@ server_stylix_origin="$(run_nf s --scope "$hm_scope" --definitions stylix.enable
 assert_contains "$server_stylix_origin" "home-manager/nixos/common.nix [Home Manager integration bridge]" "server Home Manager integration origin"
 run_nf o --scopes >/dev/null
 
+nixos_hosts="$(nix eval --json "path:$repo#nixosConfigurations" --apply builtins.attrNames)"
+darwin_hosts="$(nix eval --json "path:$repo#darwinConfigurations" --apply builtins.attrNames)"
+expected_hosts="$(jq -nr --argjson nixos "$nixos_hosts" --argjson darwin "$darwin_hosts" '$nixos + $darwin | unique[]')"
+
 refresh_all_stderr="$test_cache/refresh-all.stderr"
 run_nf --refresh-all >/dev/null 2>"$refresh_all_stderr"
-assert_eq "$(grep -c '^Building scoped option docs cache' "$refresh_all_stderr")" 5 "all-host refresh"
-for refreshed_host in mac nixos nixos-arm-parallels nixos-orbstack nixos-server; do
+assert_eq "$(grep -c '^Building scoped option docs cache' "$refresh_all_stderr")" "$(wc -l <<<"$expected_hosts" | tr -d ' ')" "all-host refresh"
+while IFS= read -r refreshed_host; do
   [ -s "$cache_root/option-scopes-v3-$refreshed_host.json" ] || fail "missing refreshed cache for $refreshed_host"
-done
+done <<<"$expected_hosts"
 
 echo "PASS: complete scoped NixOS and Home Manager option browsing ($host)"
