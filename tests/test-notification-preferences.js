@@ -62,3 +62,60 @@ test("notification migration preserves explicit false and application rules, ign
   current.legacyMigrated = true;
   assert.equal(ctx.legacyOverrides(store, previous).silent, true);
 });
+
+test("quiet overrides obey current field constraints and preserve explicit false", () => {
+  const get = (name) =>
+    source.match(
+      new RegExp(
+        "    function " +
+          name +
+          "\\([^\\n]*\\): \\w+ \\{([\\s\\S]*?)\\n    \\}",
+      ),
+    )[1];
+  const fixture = vm.createContext({
+    runtime: {
+      constraints: {
+        notificationQuietHours: {
+          startMinute: { min: 0, max: 1439 },
+          endMinute: { min: 0, max: 1439 },
+          days: { min: 0, max: 127 },
+        },
+      },
+    },
+    quietDefaults: {
+      enabled: true,
+      startMinute: 1200,
+      endMinute: 420,
+      days: 127,
+    },
+    quietOverrides: {
+      enabled: false,
+      startMinute: 1500,
+      endMinute: 360,
+      days: "127",
+    },
+  });
+  vm.runInContext(
+    "function validQuietPreference(key, value) {" +
+      get("validQuietPreference") +
+      "} function quietValue(key) {" +
+      get("quietValue") +
+      "}",
+    fixture,
+  );
+  assert.equal(fixture.quietValue("enabled"), false);
+  assert.equal(fixture.quietValue("startMinute"), 1200);
+  assert.equal(fixture.quietValue("endMinute"), 360);
+  assert.equal(fixture.quietValue("days"), 127);
+  fixture.runtime.constraints.notificationQuietHours.endMinute.min = 400;
+  assert.equal(fixture.quietValue("endMinute"), 420);
+});
+
+test("inheriting notification history policy does not delete archived records", () => {
+  assert.doesNotMatch(source, /onHistoryEnabledChanged\s*:/);
+  assert.match(source, /journal = Journal\.restore\(archiveFile\.text\(\)\)/);
+  const history = source
+    .split("function toggleHistory")[1]
+    .split("function applicationPreferences")[0];
+  assert.match(history, /if \(!enabled\)\s*clearAll\(\)/);
+});

@@ -24,10 +24,10 @@ QtObject {
     readonly property bool manualSilent: sceneDelivery === null ? settings.value("silent") : sceneDelivery.silent
     readonly property var quietDefaults: runtime.notificationQuietHours
     readonly property var quietOverrides: settings.value("quiet")
-    readonly property bool quietEnabled: quietOverrides.enabled ?? quietDefaults.enabled
-    readonly property int quietStart: quietOverrides.startMinute ?? quietDefaults.startMinute
-    readonly property int quietEnd: quietOverrides.endMinute ?? quietDefaults.endMinute
-    readonly property int quietDays: quietOverrides.days ?? quietDefaults.days
+    readonly property bool quietEnabled: quietValue("enabled")
+    readonly property int quietStart: quietValue("startMinute")
+    readonly property int quietEnd: quietValue("endMinute")
+    readonly property int quietDays: quietValue("days")
     property double clockMs: Date.now()
     property double temporarySilentUntil: 0
     property double quietPauseUntil: 0
@@ -132,11 +132,6 @@ QtObject {
         if (presentation)
             hidePopup();
     }
-    onHistoryEnabledChanged: {
-        if (!historyEnabled)
-            clearAll();
-    }
-
     function toggleSilent(): void {
         if (sceneDelivery !== null) {
             sceneDelivery = Object.assign({}, sceneDelivery, {
@@ -164,17 +159,23 @@ QtObject {
         temporarySilentUntil = clockMs + minutes * 60000;
     }
 
+    function validQuietPreference(key: string, value: var): bool {
+        if (key === "enabled")
+            return typeof value === "boolean";
+        if (!["startMinute", "endMinute", "days"].includes(key))
+            return false;
+        const rule = runtime.constraints.notificationQuietHours[key];
+        return Number.isInteger(value) && value >= rule.min && value <= rule.max;
+    }
+
+    function quietValue(key: string): var {
+        const value = quietOverrides[key];
+        return validQuietPreference(key, value) ? value : quietDefaults[key];
+    }
+
     function setQuietPreference(key: string, value: var): void {
-        if (key === "enabled") {
-            if (typeof value !== "boolean")
-                return;
-        } else if (["startMinute", "endMinute", "days"].includes(key)) {
-            const rule = runtime.constraints.notificationQuietHours[key];
-            if (!Number.isInteger(value) || value < rule.min || value > rule.max)
-                return;
-        } else {
+        if (!validQuietPreference(key, value))
             return;
-        }
         clockMs = Date.now();
         quietPauseUntil = 0;
         settings.set("quiet", Object.assign({}, quietOverrides, {
@@ -206,7 +207,12 @@ QtObject {
     }
 
     function toggleHistory(): void {
-        settings.set("historyEnabled", !historyEnabled);
+        const enabled = !historyEnabled;
+        settings.set("historyEnabled", enabled);
+        // Explicitly disabling history retains its existing clearing behavior.
+        // Inheriting a changed default or resetting preferences is not deletion.
+        if (!enabled)
+            clearAll();
     }
 
     function applicationPreferences(notification): var {
@@ -243,10 +249,8 @@ QtObject {
 
     Component.onCompleted: {
         settings.initialize(PreferenceMigration.legacyOverrides(settings, previousSettings));
-        journal = historyEnabled ? Journal.restore(archiveFile.text()) : [];
+        journal = Journal.restore(archiveFile.text());
         nextRecord = journal.length;
-        if (!historyEnabled)
-            scheduleSave();
     }
 
     // A normal systemd/Quickshell restart should not lose the final 300 ms
