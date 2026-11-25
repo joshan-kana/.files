@@ -5,30 +5,24 @@
   ...
 }:
 
-lib.recursiveUpdate (import ../../profiles/media.nix { inherit lib moduleRegistry; }) {
+lib.recursiveUpdate (import ../../profiles/media.nix { inherit editScope lib moduleRegistry; }) {
   hardware = import ./hardware.nix;
 
   dotfiles.scopes.system.boot.loader.enable = false;
-
-  desktopApps = editScope moduleRegistry.desktopApps {
-    jellyfin = _: {
-      home = _: {
-        systemd.user.services.jellyfin-mpv-shim.Install.WantedBy = lib.mkForce [
-          "graphical-session.target"
-        ];
-      };
-    };
-  };
 
   system = editScope moduleRegistry.system {
     identity = { config, ... }: {
       users.users.${config.dotfiles.users.primary.name}.uid = 1000;
     };
     privilegeSshAgent = _: {
-      environment.etc."elevation-authorized-key".text = ''
-        ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEBfBg52XAZkpWk2cKNqvITRhsrnmEdz8yon5bpZZP/w joshan@nixos-pi-sudo
-        ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMgQFxMmgs5HwY+l9twQBUEt672VOFrmgAnOKuoMuzz/ nixos-pi-sudo
-      '';
+      systemd.tmpfiles.rules = [
+        "f+ /etc/elevation-authorized-key 0444 root root - ${
+          lib.concatStringsSep "\\n" [
+            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEBfBg52XAZkpWk2cKNqvITRhsrnmEdz8yon5bpZZP/w joshan@nixos-pi-sudo"
+            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMgQFxMmgs5HwY+l9twQBUEt672VOFrmgAnOKuoMuzz/ nixos-pi-sudo"
+          ]
+        }\\n"
+      ];
     };
   };
 

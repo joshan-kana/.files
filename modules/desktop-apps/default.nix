@@ -32,7 +32,7 @@ in
           defaultApplications = lib.genAttrs browserMimeTypes (_: "default-browser.desktop");
         };
       };
-      home.sessionVariables.BROWSER = config.dotfiles.defaults.browser;
+      home.sessionVariables.BROWSER = config.dotfiles.defaults.browser.command;
     };
 
   brave = _: {
@@ -264,10 +264,7 @@ in
 
   kodi =
     _:
-    {
-      enable = false;
-    }
-    // lib.optionalAttrs isLinux {
+    lib.optionalAttrs isLinux {
       home = _: {
         home.packages = [
           (pkgs.kodi-wayland.withPackages (addons: [ addons.jellyfin ]))
@@ -277,10 +274,7 @@ in
 
   kdeConnect =
     _:
-    {
-      enable = false;
-    }
-    // lib.optionalAttrs isLinux {
+    lib.optionalAttrs isLinux {
       programs.kdeconnect.enable = true;
       home = _: {
         services.kdeconnect.enable = true;
@@ -288,16 +282,13 @@ in
     };
 
   librespot =
-    { configurationName, ... }:
-    {
-      enable = false;
-    }
-    // lib.optionalAttrs isLinux {
+    _:
+    lib.optionalAttrs isLinux {
       home = _: {
         services.librespot = {
           enable = true;
           settings = {
-            name = configurationName;
+            name = config.networking.hostName;
             backend = "pulseaudio";
             device-type = "speaker";
             zeroconf-port = 24879;

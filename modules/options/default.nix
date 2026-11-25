@@ -187,10 +187,17 @@ in
       description = "Default editor executable used by command-line tools.";
     };
 
-    defaults.browser = mkOption {
-      type = types.str;
-      default = "zen-beta";
-      description = "Default browser executable used by desktop integrations.";
+    defaults.browser = {
+      command = mkOption {
+        type = types.str;
+        default = "zen-beta";
+        description = "Default browser executable.";
+      };
+      desktopId = mkOption {
+        type = types.str;
+        default = "zen-beta.desktop";
+        description = "Desktop entry ID of the default browser.";
+      };
     };
 
     services.ollama.url = mkOption {

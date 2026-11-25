@@ -53,11 +53,8 @@ let
   '';
 in
 {
-  enable = false;
-
   hardware.graphics.enable = true;
   environment.systemPackages = [
-    pkgs.labwc
     pkgs.wlr-randr
   ];
   services.greetd = {
