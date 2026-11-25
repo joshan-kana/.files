@@ -42,6 +42,7 @@ in
         name: lib.any (package: (package.meta.mainProgram or null) == name) config.home.packages;
       entries =
         lib.optional (hasProgram "kodi") "Kodi;${icons}/kodi.png;kodi"
+        ++ lib.optional config.services.jellyfin-mpv-shim.enable "Jellyfin;${config.services.jellyfin-mpv-shim.package}/share/icons/hicolor/256x256/apps/com.github.iwalton3.jellyfin-mpv-shim.png;jellyfin-mpv-shim"
         ++ lib.optional (hasProgram browser) "Browser;${pkgs.adwaita-icon-theme}/share/icons/Adwaita/symbolic/legacy/web-browser-symbolic.svg;${browser}"
         ++ lib.optional (hasProgram "moonlight") "Moonlight;${config.home.profileDirectory}/share/icons/hicolor/scalable/apps/moonlight.svg;moonlight"
         ++ lib.optional config.services.kdeconnect.enable "Phone pairing;${icons}/system.png;kdeconnect-app"
@@ -53,7 +54,7 @@ in
         MouseSelect=true
 
         [Layout]
-        MaxButtons=5
+        MaxButtons=6
         IconSize=180
 
         [Titles]
@@ -81,6 +82,14 @@ in
     {
       xdg.configFile."flex-launcher/config.ini".text = launcherConfig;
       wayland.windowManager.labwc.enable = true;
+
+      # Keep the cast receiver available without covering the home launcher.
+      services.jellyfin-mpv-shim.settings = lib.mkIf config.services.jellyfin-mpv-shim.enable {
+        start_minimized = true;
+        allow_background = true;
+        fullscreen = true;
+        browser_fullscreen = true;
+      };
 
       systemd.user.services.media-launcher = {
         Unit = {
