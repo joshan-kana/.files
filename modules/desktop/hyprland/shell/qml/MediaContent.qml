@@ -85,7 +85,11 @@ FocusScope {
 
     onEngagedChanged: {
         if (engaged) {
-            keyboardFocus.forceActiveFocus();
+            forceActiveFocus();
+            Qt.callLater(() => {
+                if (content.engaged)
+                    content.forceActiveFocus();
+            });
         } else {
             content.motion.endKeyboardAdjustment();
             helpOpen = false;
@@ -681,115 +685,111 @@ FocusScope {
                 }
             }
         }
+    }
 
-        FocusScope {
-            id: keyboardFocus
-            anchors.fill: parent
-            focus: content.engaged
+    onActiveFocusChanged: if (!activeFocus)
+        content.motion.endKeyboardAdjustment()
 
-            onActiveFocusChanged: if (!activeFocus)
-                content.motion.endKeyboardAdjustment()
+    Keys.onReleased: event => {
+        if (!event.isAutoRepeat && content.motion.releaseAdjustmentKey(event.key))
+            event.accepted = true;
+    }
 
-            Keys.onReleased: event => {
-                if (!event.isAutoRepeat && content.motion.releaseAdjustmentKey(event.key))
-                    event.accepted = true;
+    Keys.onPressed: event => {
+        if (!content.engaged)
+            return;
+        content.motion.noteKeyDown(event.key);
+        const helpKey = event.key === content.runtime.shellKeyCode("media", "Question") || (event.key === content.runtime.shellKeyCode("media", "Slash") && (content.runtime.shellModifier("media", "Shift", event.modifiers)));
+
+        if (content.helpOpen) {
+            if (helpKey || event.key === content.runtime.shellKeyCode("media", "Escape") || event.key === content.runtime.shellKeyCode("media", "Backspace")) {
+                content.helpOpen = false;
+                event.accepted = true;
+            } else if (content.runtime.shellNavigates("media", "down", event.key)) {
+                content.helpScrollRequested(1);
+                event.accepted = true;
+            } else if (content.runtime.shellNavigates("media", "up", event.key)) {
+                content.helpScrollRequested(-1);
+                event.accepted = true;
+            } else if (event.key === content.runtime.shellKeyCode("media", "D") || event.key === content.runtime.shellKeyCode("media", "PageDown")) {
+                content.helpScrollRequested(4);
+                event.accepted = true;
+            } else if (event.key === content.runtime.shellKeyCode("media", "U") || event.key === content.runtime.shellKeyCode("media", "PageUp")) {
+                content.helpScrollRequested(-4);
+                event.accepted = true;
             }
+            return;
+        }
 
-            Keys.onPressed: event => {
-                content.motion.noteKeyDown(event.key);
-                const helpKey = event.key === content.runtime.shellKeyCode("media", "Question") || (event.key === content.runtime.shellKeyCode("media", "Slash") && (content.runtime.shellModifier("media", "Shift", event.modifiers)));
-
-                if (content.helpOpen) {
-                    if (helpKey || event.key === content.runtime.shellKeyCode("media", "Escape") || event.key === content.runtime.shellKeyCode("media", "Backspace")) {
-                        content.helpOpen = false;
-                        event.accepted = true;
-                    } else if (content.runtime.shellNavigates("media", "down", event.key)) {
-                        content.helpScrollRequested(1);
-                        event.accepted = true;
-                    } else if (content.runtime.shellNavigates("media", "up", event.key)) {
-                        content.helpScrollRequested(-1);
-                        event.accepted = true;
-                    } else if (event.key === content.runtime.shellKeyCode("media", "D") || event.key === content.runtime.shellKeyCode("media", "PageDown")) {
-                        content.helpScrollRequested(4);
-                        event.accepted = true;
-                    } else if (event.key === content.runtime.shellKeyCode("media", "U") || event.key === content.runtime.shellKeyCode("media", "PageUp")) {
-                        content.helpScrollRequested(-4);
-                        event.accepted = true;
-                    }
-                    return;
-                }
-
-                if (helpKey) {
-                    content.helpOpen = true;
-                    event.accepted = true;
-                } else if (content.runtime.shellMatchesHint("MediaContent.close", event.key, event.modifiers)) {
-                    content.closeRequested();
-                    event.accepted = true;
-                } else if (content.runtime.shellMatchesHint("MediaTransport.play", event.key, event.modifiers)) {
-                    fullTransport.triggerAction("play", event.isAutoRepeat);
-                    event.accepted = true;
-                } else if (content.runtime.shellMatchesHint("MediaContent.visualizer", event.key, event.modifiers)) {
-                    if (!event.isAutoRepeat)
-                        visualizerAction.trigger();
-                    event.accepted = true;
-                } else if (content.runtime.shellMatchesHint("MediaContent.lyrics", event.key, event.modifiers)) {
-                    if (!event.isAutoRepeat)
-                        lyricsAction.trigger();
-                    event.accepted = true;
-                } else if (content.runtime.shellMatchesHint("MediaContent.shuffle", event.key, event.modifiers)) {
-                    if (!event.isAutoRepeat)
-                        shuffleAction.trigger();
-                    event.accepted = true;
-                } else if (content.runtime.shellMatchesHint("MediaContent.repeat", event.key, event.modifiers)) {
-                    if (!event.isAutoRepeat)
-                        repeatAction.trigger();
-                    event.accepted = true;
-                } else if (content.runtime.shellMatchesHint("MediaContent.prefer", event.key, event.modifiers)) {
-                    if (!event.isAutoRepeat)
-                        preferredAction.trigger();
-                    event.accepted = true;
-                } else if (content.runtime.shellMatchesHint("MediaContent.preferReset", event.key, event.modifiers)) {
-                    if (!event.isAutoRepeat)
-                        resetPreferredAction.trigger();
-                    event.accepted = true;
-                } else if (content.runtime.shellMatchesHint("MediaContent.rateDown", event.key, event.modifiers)) {
-                    if (!event.isAutoRepeat && content.media.rateAvailable)
-                        speedStepper.decrease();
-                    event.accepted = true;
-                } else if (content.runtime.shellMatchesHint("MediaContent.rateUp", event.key, event.modifiers)) {
-                    if (!event.isAutoRepeat && content.media.rateAvailable)
-                        speedStepper.increase();
-                    event.accepted = true;
-                } else if (content.media.canRaise && content.runtime.shellMatchesHint("MediaContent.raise", event.key, event.modifiers)) {
-                    if (!event.isAutoRepeat)
-                        raiseAction.trigger();
-                    event.accepted = true;
-                } else if (content.runtime.shellMatchesHint("MediaContent.player", event.key, event.modifiers)) {
-                    if (!event.isAutoRepeat)
-                        playerAction.trigger();
-                    event.accepted = true;
-                } else if (content.runtime.shellMatchesHint("MediaContent.shorter", event.key, event.modifiers)) {
-                    seekStepper.decrease();
-                    event.accepted = true;
-                } else if (content.runtime.shellMatchesHint("MediaContent.longer", event.key, event.modifiers)) {
-                    seekStepper.increase();
-                    event.accepted = true;
-                } else if (content.runtime.shellMatchesHint("MediaTransport.back", event.key, event.modifiers) || content.runtime.shellMatchesHint("MediaTransport.backArrow", event.key, event.modifiers)) {
-                    progressTrack.beginKeyboardAdjustment();
-                    fullTransport.triggerAction("back", event.isAutoRepeat);
-                    event.accepted = true;
-                } else if (content.runtime.shellMatchesHint("MediaTransport.forward", event.key, event.modifiers) || content.runtime.shellMatchesHint("MediaTransport.forwardArrow", event.key, event.modifiers)) {
-                    progressTrack.beginKeyboardAdjustment();
-                    fullTransport.triggerAction("forward", event.isAutoRepeat);
-                    event.accepted = true;
-                } else if (content.runtime.shellMatchesHint("MediaTransport.previous", event.key, event.modifiers)) {
-                    fullTransport.triggerAction("previous", event.isAutoRepeat);
-                    event.accepted = true;
-                } else if (content.runtime.shellMatchesHint("MediaTransport.next", event.key, event.modifiers)) {
-                    fullTransport.triggerAction("next", event.isAutoRepeat);
-                    event.accepted = true;
-                }
-            }
+        if (helpKey) {
+            content.helpOpen = true;
+            event.accepted = true;
+        } else if (content.runtime.shellMatchesHint("MediaContent.close", event.key, event.modifiers)) {
+            content.closeRequested();
+            event.accepted = true;
+        } else if (content.runtime.shellMatchesHint("MediaTransport.play", event.key, event.modifiers)) {
+            fullTransport.triggerAction("play", event.isAutoRepeat);
+            event.accepted = true;
+        } else if (content.runtime.shellMatchesHint("MediaContent.visualizer", event.key, event.modifiers)) {
+            if (!event.isAutoRepeat)
+                visualizerAction.trigger();
+            event.accepted = true;
+        } else if (content.runtime.shellMatchesHint("MediaContent.lyrics", event.key, event.modifiers)) {
+            if (!event.isAutoRepeat)
+                lyricsAction.trigger();
+            event.accepted = true;
+        } else if (content.runtime.shellMatchesHint("MediaContent.shuffle", event.key, event.modifiers)) {
+            if (!event.isAutoRepeat)
+                shuffleAction.trigger();
+            event.accepted = true;
+        } else if (content.runtime.shellMatchesHint("MediaContent.repeat", event.key, event.modifiers)) {
+            if (!event.isAutoRepeat)
+                repeatAction.trigger();
+            event.accepted = true;
+        } else if (content.runtime.shellMatchesHint("MediaContent.prefer", event.key, event.modifiers)) {
+            if (!event.isAutoRepeat)
+                preferredAction.trigger();
+            event.accepted = true;
+        } else if (content.runtime.shellMatchesHint("MediaContent.preferReset", event.key, event.modifiers)) {
+            if (!event.isAutoRepeat)
+                resetPreferredAction.trigger();
+            event.accepted = true;
+        } else if (content.runtime.shellMatchesHint("MediaContent.rateDown", event.key, event.modifiers)) {
+            if (!event.isAutoRepeat && content.media.rateAvailable)
+                speedStepper.decrease();
+            event.accepted = true;
+        } else if (content.runtime.shellMatchesHint("MediaContent.rateUp", event.key, event.modifiers)) {
+            if (!event.isAutoRepeat && content.media.rateAvailable)
+                speedStepper.increase();
+            event.accepted = true;
+        } else if (content.media.canRaise && content.runtime.shellMatchesHint("MediaContent.raise", event.key, event.modifiers)) {
+            if (!event.isAutoRepeat)
+                raiseAction.trigger();
+            event.accepted = true;
+        } else if (content.runtime.shellMatchesHint("MediaContent.player", event.key, event.modifiers)) {
+            if (!event.isAutoRepeat)
+                playerAction.trigger();
+            event.accepted = true;
+        } else if (content.runtime.shellMatchesHint("MediaContent.shorter", event.key, event.modifiers)) {
+            seekStepper.decrease();
+            event.accepted = true;
+        } else if (content.runtime.shellMatchesHint("MediaContent.longer", event.key, event.modifiers)) {
+            seekStepper.increase();
+            event.accepted = true;
+        } else if (content.runtime.shellMatchesHint("MediaTransport.back", event.key, event.modifiers) || content.runtime.shellMatchesHint("MediaTransport.backArrow", event.key, event.modifiers)) {
+            progressTrack.beginKeyboardAdjustment();
+            fullTransport.triggerAction("back", event.isAutoRepeat);
+            event.accepted = true;
+        } else if (content.runtime.shellMatchesHint("MediaTransport.forward", event.key, event.modifiers) || content.runtime.shellMatchesHint("MediaTransport.forwardArrow", event.key, event.modifiers)) {
+            progressTrack.beginKeyboardAdjustment();
+            fullTransport.triggerAction("forward", event.isAutoRepeat);
+            event.accepted = true;
+        } else if (content.runtime.shellMatchesHint("MediaTransport.previous", event.key, event.modifiers)) {
+            fullTransport.triggerAction("previous", event.isAutoRepeat);
+            event.accepted = true;
+        } else if (content.runtime.shellMatchesHint("MediaTransport.next", event.key, event.modifiers)) {
+            fullTransport.triggerAction("next", event.isAutoRepeat);
+            event.accepted = true;
         }
     }
 }
