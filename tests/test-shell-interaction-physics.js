@@ -37,7 +37,10 @@ test("pointer and keyboard share a bounded press effect and reset safely", () =>
     /visualPressed: pressed \|\| manualPress \|\| heldPress \|\| keyboardHeld/,
   );
   assert.match(state, /function playPressFeedback\(x: real, y: real\): void/);
-  assert.match(state, /pressFeedback\.restart\(\);\s*startRipple\(x, y\)/);
+  assert.match(
+    state,
+    /pressFeedback\.restart\(\);\s*const location = feedbackParent \? mapToItem\(feedbackParent, x, y\) : Qt.point\(x, y\);\s*startRipple\(location.x, location.y\)/,
+  );
   assert.match(
     state,
     /onPressed: event => playPressFeedback\(event\.x, event\.y\)/,
@@ -163,13 +166,13 @@ test("secondary tile hit feedback stays local and follows the owning tile withou
   const action = qml("TileQuickAction.qml");
   assert.match(
     action,
-    /id: localFeedback\s*parent: action\.hint\.parent\s*x: action\.x\s*y: action\.y\s*width: action\.width\s*height: action\.height/,
+    /id: localFeedback\s*parent: action\.hint\.parent\s*x: action\.hint\.x - action\.theme\.spacing1\s*y: action\.hint\.y - action\.theme\.spacing1\s*width: action\.hint\.width \+ action\.theme\.spacing1 \* 2\s*height: action\.hint\.height \+ action\.theme\.spacing1 \* 2/,
   );
   assert.match(action, /visible: action\.visible && action\.available/);
   assert.match(action, /id: interaction\s*feedbackParent: localFeedback/);
   assert.doesNotMatch(action, /showHover: false|Behavior on scale|KeyHint \{/);
-  assert.match(action, /hoverOpacity: 0\.22/);
-  assert.match(action, /pressOpacity: 0\.32/);
+  assert.match(action, /hoverOpacity: 0\.09/);
+  assert.match(action, /pressOpacity: 0\.17/);
 });
 
 test("direct shortcuts and accessibility use the shared feedback dispatch", () => {

@@ -40,10 +40,10 @@ Item {
     Item {
         id: localFeedback
         parent: action.hint.parent
-        x: action.x
-        y: action.y
-        width: action.width
-        height: action.height
+        x: action.hint.x - action.theme.spacing1
+        y: action.hint.y - action.theme.spacing1
+        width: action.hint.width + action.theme.spacing1 * 2
+        height: action.hint.height + action.theme.spacing1 * 2
         z: 2
         visible: action.visible && action.available
     }
@@ -52,8 +52,8 @@ Item {
         id: interaction
         feedbackParent: localFeedback
         stateColor: action.theme.textStrong
-        hoverOpacity: 0.22
-        pressOpacity: 0.32
+        hoverOpacity: 0.09
+        pressOpacity: 0.17
         theme: action.theme
         motion: action.motion
         cornerRadius: action.theme.radiusSmall

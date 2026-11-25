@@ -75,12 +75,14 @@ MouseArea {
     property real cornerRadius: theme.radiusMedium
     property real exponent: theme.squircleExponent
 
-    property real rippleX: width / 2
-    property real rippleY: height / 2
+    readonly property real feedbackWidth: feedbackParent ? feedbackParent.width : width
+    readonly property real feedbackHeight: feedbackParent ? feedbackParent.height : height
+    property real rippleX: feedbackWidth / 2
+    property real rippleY: feedbackHeight / 2
     property real rippleRadius: 0
     property real rippleOpacity: 0
     readonly property bool animationsEnabled: motion.enabled
-    readonly property real rippleExtent: Math.hypot(Math.max(rippleX, width - rippleX), Math.max(rippleY, height - rippleY)) * 1.08
+    readonly property real rippleExtent: Math.hypot(Math.max(rippleX, feedbackWidth - rippleX), Math.max(rippleY, feedbackHeight - rippleY)) * 1.08
 
     onAnimationsEnabledChanged: {
         if (!animationsEnabled) {
@@ -104,7 +106,8 @@ MouseArea {
             return;
         heldPress = true;
         pressFeedback.restart();
-        startRipple(x, y);
+        const location = feedbackParent ? mapToItem(feedbackParent, x, y) : Qt.point(x, y);
+        startRipple(location.x, location.y);
     }
 
     function startRipple(x: real, y: real): void {
