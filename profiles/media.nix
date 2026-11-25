@@ -1,25 +1,15 @@
 {
-  editScope,
   lib,
   moduleRegistry,
 }:
 
 lib.recursiveUpdate (import ./minimal.nix { inherit lib moduleRegistry; }) {
-  inherit (moduleRegistry) audio desktop;
-
-  desktopApps = editScope moduleRegistry.desktopApps {
-    jellyfin = _: {
-      home = _: {
-        systemd.user.services.jellyfin-mpv-shim.Install.WantedBy = lib.mkForce [
-          "graphical-session.target"
-        ];
-      };
-    };
-  };
+  inherit (moduleRegistry) audio desktop desktopApps;
 
   dotfiles = {
     defaults.browser = "chromium";
     scopes = {
+      cli.mpv.enable = true;
       virtualisation.enable = false;
       desktop = {
         children.enable = false;
