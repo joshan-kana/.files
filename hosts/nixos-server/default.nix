@@ -590,7 +590,7 @@ lib.recursiveUpdate (import ../../profiles/minimal.nix { inherit lib moduleRegis
 
       services.userborn.enable = true;
 
-      config.fileSystems."${storage.dataRoot.path}/media/downloads/incomplete" = {
+      fileSystems."${storage.dataRoot.path}/media/downloads/incomplete" = {
         device = "${storage.dataRoot.poolName}/downloads-incomplete";
         fsType = "zfs";
       };
