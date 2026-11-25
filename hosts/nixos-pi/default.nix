@@ -109,6 +109,21 @@ lib.recursiveUpdate (import ../../profiles/media.nix { inherit lib moduleRegistr
             systemd.user.services.jellyfin-mpv-shim.Install.WantedBy = lib.mkForce [
               "graphical-session.target"
             ];
+            # The running shim can write stale settings back during the upstream merge.
+            home.activation.stopJellyfinMpvShim =
+              lib.hm.dag.entryBetween [ "jellyfinMpvShimSettingsActivation" ] [ "writeBoundary" ]
+                ''
+                  jellyfinWasActive=false
+                  if env XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" ${config.systemd.user.systemctlPath} --user is-active --quiet jellyfin-mpv-shim.service; then
+                    jellyfinWasActive=true
+                    run env XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" ${config.systemd.user.systemctlPath} --user stop jellyfin-mpv-shim.service
+                  fi
+                '';
+            home.activation.restartJellyfinMpvShim = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
+              if [ "$jellyfinWasActive" = true ] && env XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" ${config.systemd.user.systemctlPath} --user is-active --quiet graphical-session.target; then
+                run env XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" ${config.systemd.user.systemctlPath} --user start jellyfin-mpv-shim.service
+              fi
+            '';
           };
         };
       })
