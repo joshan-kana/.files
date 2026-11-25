@@ -604,8 +604,8 @@ FocusScope {
                             title: modelData
                             width: content.theme.fontSize(124)
                             Accessible.description: index === 0 ? "Select media player automatically" : "Prefer " + (content.media.identity || "the selected player")
-                            shortcut: (index === 0 ? content.media.preferredCurrent || !content.media.available : !content.media.preferredCurrent && content.media.available) ? content.runtime.shellHint("MediaContent.prefer") : ""
-                            active: index === 0 ? content.media.persistentPreference === "" : content.media.preferredCurrent
+                            shortcut: index === (content.media.persistentPreference === "" && content.media.available ? 1 : 0) ? content.runtime.shellHint("MediaContent.prefer") : ""
+                            active: index === 0 ? content.media.persistentPreference === "" : content.media.persistentPreference !== ""
                             enabled: index === 0 || content.media.available
                             onActivated: {
                                 if (index === 0)
@@ -726,7 +726,7 @@ FocusScope {
             event.accepted = true;
         } else if (content.runtime.shellMatchesHint("MediaContent.prefer", event.key, event.modifiers)) {
             if (!event.isAutoRepeat) {
-                const next = content.media.preferredCurrent || !content.media.available ? 0 : 1;
+                const next = content.media.persistentPreference !== "" || !content.media.available ? 0 : 1;
                 const choice = preferenceChoices.itemAt(next) as ShellChoice;
                 if (choice)
                     choice.trigger();

@@ -142,3 +142,15 @@ test("Now Playing measures only actual controls when both visualisations and lyr
     /transport\.implicitHeight \+ mediaActions\.anchors\.topMargin \+ mediaActions\.implicitHeight/,
   );
 });
+
+test("preferred player selection reflects the saved preference even when another player is temporarily active", () => {
+  const source = qml("MediaContent.qml");
+  assert.match(
+    source,
+    /active: index === 0 \? content\.media\.persistentPreference === "" : content\.media\.persistentPreference !== ""/,
+  );
+  assert.match(
+    source,
+    /const next = content\.media\.persistentPreference !== "" \|\| !content\.media\.available \? 0 : 1/,
+  );
+});
