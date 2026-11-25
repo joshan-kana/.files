@@ -47,6 +47,7 @@ _: {
     ./prusaslicer
     ./qmk-toolbox
     ./reaper
+    ./waifuland
     ./squirreldisk
     ./spicetify
     ./seerr
