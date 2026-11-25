@@ -6,8 +6,10 @@ import DesktopShell.Visuals 1.0
 
 Item {
     id: root
+    property bool geometryReady: false
     SquircleGeometry {
         id: geometry
+        Component.onCompleted: root.geometryReady = true
     }
 
     default property alias contentData: content.data
@@ -72,10 +74,10 @@ Item {
     function buildPath(inset: real): string {
         // Reactive geometry can briefly be unmeasured while a popup is
         // constructed. Never serialize NaN/Infinity into an SVG path.
-        // Initial path bindings can run before the helper QtObject has
-        // published its QML methods. Keep the fallback SVG until layout
-        // changes instead of emitting transient method-not-found warnings.
-        if (typeof geometry.cornerPoint !== "function" || ![width, height, inset, cornerRadius, exponent].every(Number.isFinite))
+        // Observe the dimensions even before the geometry helper completes.
+        // Its completion explicitly invalidates a provisional empty contour.
+        const dimensionsValid = [width, height, inset, cornerRadius, exponent].every(Number.isFinite);
+        if (!dimensionsValid || !geometryReady)
             return "";
         const innerWidth = width - inset * 2;
         const innerHeight = height - inset * 2;

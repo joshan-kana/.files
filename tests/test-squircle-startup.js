@@ -15,7 +15,13 @@ test("startup path bindings retain valid fallback while geometry QtObject initia
     surface,
     /readonly property string emptyPathData: "M 0 0 L 0\.01 0 L 0 0\.01 Z"/,
   );
-  assert.match(surface, /typeof geometry\.cornerPoint !== "function"/);
+  assert.match(surface, /property bool geometryReady: false/);
+  assert.match(surface, /Component.onCompleted: root.geometryReady = true/);
+  assert.match(
+    surface,
+    /const dimensionsValid = \[width, height, inset, cornerRadius, exponent\]\.every\(Number.isFinite\);\s*if \(!dimensionsValid \|\| !geometryReady\)/,
+  );
+  assert.doesNotMatch(surface, /typeof geometry\.cornerPoint/);
   assert.match(surface, /return "";/);
   assert.match(surface, /const first = geometry\.cornerPoint/);
 });
