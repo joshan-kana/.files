@@ -262,6 +262,55 @@ in
     };
   };
 
+  kodi =
+    _:
+    {
+      enable = false;
+    }
+    // lib.optionalAttrs isLinux {
+      home = _: {
+        home.packages = [
+          (pkgs.kodi-wayland.withPackages (addons: [ addons.jellyfin ]))
+        ];
+      };
+    };
+
+  kdeConnect =
+    _:
+    {
+      enable = false;
+    }
+    // lib.optionalAttrs isLinux {
+      programs.kdeconnect.enable = true;
+      home = _: {
+        services.kdeconnect.enable = true;
+      };
+    };
+
+  librespot =
+    { configurationName, ... }:
+    {
+      enable = false;
+    }
+    // lib.optionalAttrs isLinux {
+      home = _: {
+        services.librespot = {
+          enable = true;
+          settings = {
+            name = configurationName;
+            backend = "pulseaudio";
+            device-type = "speaker";
+            zeroconf-port = 24879;
+          };
+        };
+        systemd.user.services.librespot = {
+          Unit.PartOf = [ "graphical-session.target" ];
+          Install.WantedBy = lib.mkForce [ "graphical-session.target" ];
+        };
+      };
+      networking.firewall.allowedTCPPorts = [ 24879 ];
+    };
+
   jellyfin =
     _:
     let

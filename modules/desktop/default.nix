@@ -48,7 +48,13 @@ in
     lib.optionalAttrs isLinux ((import ./plasma) { inherit config inputs lib; });
 
   /**
-    GNOME desktop session and settings.
+    Full-screen television session with a lightweight compositor and media launcher.
+  */
+  mediaSession = linuxScope (import ./media-session);
+
+  # Keep GNOME available as an opt-in desktop without changing current hosts.
+  /**
+    Optional GNOME desktop session.
   */
   gnome = _: lib.optionalAttrs isLinux ((import ./gnome) { });
 

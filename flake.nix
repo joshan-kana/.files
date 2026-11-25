@@ -784,6 +784,12 @@
           server-app-standards = builtins.seq serverAppStandardsTest pkgs.emptyFile;
           semantic-system-portability = builtins.seq semanticPortabilityTest pkgs.emptyFile;
           semantic-options = builtins.seq semanticOptionsTest pkgs.emptyFile;
+          nixos-pi-media =
+            assert import ./tests/nixos-pi-media.nix {
+              configuration = self.nixosConfigurations.nixos-pi;
+              imageConfiguration = nixosPiImage;
+            };
+            pkgs.emptyFile;
           option-host-discovery =
             pkgs.runCommand "option-host-discovery-tests"
               {

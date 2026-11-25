@@ -153,7 +153,7 @@ Safely unmount and eject the drive. On macOS, leave the OrbStack root shell and 
 
 Connect a keyboard, monitor, network and power. The root partition expands on first boot. The regular user and secret-directory ownership are initialized by NixOS.
 
-Change the initial workstation password at the local console before connecting to untrusted networks:
+Switch to a text console with Ctrl+Alt+F2, log in, and change the initial user password before connecting to untrusted networks:
 
 ```sh
 passwd
@@ -168,6 +168,24 @@ lsblk -f
 systemctl --failed --no-pager
 systemctl status display-manager --no-pager
 ```
+
+## Media session
+
+The Pi starts Labwc and Flex Launcher automatically under the primary user. Physical access to the television and attached input devices grants access to that user's session; keep the device physically secure. If the compositor exits, greetd returns to a console login. Close the active application with Alt+F4 to return to the launcher.
+
+- Open Kodi and configure the packaged Jellyfin add-on with the media server. Jellyfin MPV Shim also runs in the graphical session for phone-initiated playback; its server authentication remains application-managed.
+- Open Chromium for normal browsing, tabs and saved sessions.
+- Open Moonlight to pair with a game-streaming host.
+- Pair KDE Connect from the Phone pairing tile. The phone can share links with Chromium. Remote input support depends on the compositor and is not assumed.
+- Select the Pi in Spotify Connect once librespot is discoverable; authentication is managed at runtime.
+
+For remote pointer and keyboard control, WayVNC listens only on loopback. Use an authenticated SSH tunnel from a VNC client that supports SSH forwarding, or from a trusted computer:
+
+```sh
+ssh -N -L 5900:127.0.0.1:5900 nixos-pi
+```
+
+Connect the VNC client to `127.0.0.1:5900`. Do not expose the VNC listener directly to the network.
 
 ## Remote administration
 
@@ -235,6 +253,6 @@ Reload the generated host exports before verifying or initializing its secrets b
 
 {{#include ../_shared/secrets-backup-first-boot.inc}}
 
-The Pi 4 supports a single 4K/60 Hz display on HDMI0, the micro-HDMI port next to USB-C power. The installation image enables the necessary firmware clock setting, but the connected display, HDMI input mode, and cable must also support 4K/60 Hz. An already-flashed installation retains its existing firmware settings: add `hdmi_enable_4kp60=1` under `[pi4]` in the FAT partition's `/boot/config.txt` and reboot. A regular system upgrade does not rewrite this file. Select 3840×2160 at 60 Hz in Plasma Display Configuration, then verify the active mode. HDR10 requires a capable display and a playback pipeline that passes HDR metadata; enabling a high-refresh-rate output does not automatically enable HDR.
+The Pi 4 supports a single 4K/60 Hz display on HDMI0, the micro-HDMI port next to USB-C power. The installation image enables the necessary firmware clock setting, but the connected display, HDMI input mode, and cable must also support 4K/60 Hz. An already-flashed installation retains its existing firmware settings: add `hdmi_enable_4kp60=1` under `[pi4]` in the FAT partition's `/boot/config.txt` and reboot. A regular system upgrade does not rewrite this file. Verify the active HDMI mode; use `wlr-randr` from the Labwc session to inspect or change the output mode. HDR10 requires a capable display and a playback pipeline that passes HDR metadata; enabling a high-refresh-rate output does not automatically enable HDR.
 
-Test HDMI output and audio, MPV playback, and Jellyfin MPV Shim on the Pi. Verify the selected display mode and HDR signalling with representative media on the physical display. Video decoding and codec compatibility depend on the actual hardware and media. Reinstall by writing a current image to the drive and copying the host credentials onto its root partition. Restore additional mutable data from its normal backups where applicable.
+Test HDMI output and audio, Kodi, Chromium, Moonlight and Jellyfin MPV Shim on the Pi. Verify the selected display mode and HDR signalling with representative media on the physical display. Video decoding and codec compatibility depend on the actual hardware and media. Reinstall by writing a current image to the drive and copying the host credentials onto its root partition. Restore additional mutable data from its normal backups where applicable.

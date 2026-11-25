@@ -5,35 +5,18 @@
   ...
 }:
 
-lib.recursiveUpdate (import ../../profiles/workstation.nix { inherit moduleRegistry; }) {
+lib.recursiveUpdate (import ../../profiles/media.nix { inherit lib moduleRegistry; }) {
   hardware = import ./hardware.nix;
 
-  dotfiles.scopes = {
-    system.boot.loader.enable = false;
-    virtualisation.enable = false;
+  dotfiles.scopes.system.boot.loader.enable = false;
 
-    desktopApps = {
-      children.enable = false;
-      bitwarden.enable = true;
-      filelight.enable = true;
-      gparted.enable = true;
-      jellyfin.enable = true;
-      kitty.enable = true;
-      moonlight.enable = true;
-      mopidy.enable = true;
-      mullvad.enable = true;
-      nautilus.enable = true;
-      qbittorrent.enable = true;
-      spotify.enable = true;
-      vlc.enable = true;
-      vscode.enable = true;
-      zen.enable = true;
-    };
-  };
-
-  theme = editScope moduleRegistry.theme {
-    home = _: {
-      stylix.targets.qt.enable = lib.mkForce false;
+  desktopApps = editScope moduleRegistry.desktopApps {
+    jellyfin = _: {
+      home = _: {
+        systemd.user.services.jellyfin-mpv-shim.Install.WantedBy = lib.mkForce [
+          "graphical-session.target"
+        ];
+      };
     };
   };
 
