@@ -24,10 +24,12 @@ lib.recursiveUpdate (import ../../profiles/media.nix { inherit lib moduleRegistr
     privilegeSshAgent = _: {
       systemd.tmpfiles.rules = [
         "f+ /etc/elevation-authorized-key 0444 root root - ${
-          lib.concatStringsSep "\\n" [
-            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEBfBg52XAZkpWk2cKNqvITRhsrnmEdz8yon5bpZZP/w joshan@nixos-pi-sudo"
-            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMgQFxMmgs5HwY+l9twQBUEt672VOFrmgAnOKuoMuzz/ nixos-pi-sudo"
-          ]
+          lib.concatStringsSep "\\n" (
+            map (lib.replaceStrings [ " " ] [ "\\x20" ]) [
+              "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEBfBg52XAZkpWk2cKNqvITRhsrnmEdz8yon5bpZZP/w joshan@nixos-pi-sudo"
+              "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMgQFxMmgs5HwY+l9twQBUEt672VOFrmgAnOKuoMuzz/ nixos-pi-sudo"
+            ]
+          )
         }\\n"
       ];
     };
@@ -39,14 +41,18 @@ lib.recursiveUpdate (import ../../profiles/media.nix { inherit lib moduleRegistr
         programs.mpv = {
           enable = true;
           package = pkgs.mpv-rpi;
+          # Keep the validated hardware player free of extra scripts.
           scripts = lib.mkForce [ ];
-          config = lib.mkForce {
+          config = {
+            target-colorspace-hint = lib.mkForce "no";
+            input-commands-append = lib.mkForce [ ];
             vo = "dmabuf-wayland,gpu";
             hwdec = "drm,v4l2m2m";
             hwdec-threads = 2;
             hwdec-extra-frames = 0;
             vd-queue-enable = false;
           };
+          # The SDR DMA-BUF output does not support the shared HDR profiles.
           profiles = lib.mkForce { };
         };
       };
@@ -107,6 +113,7 @@ lib.recursiveUpdate (import ../../profiles/media.nix { inherit lib moduleRegistr
         };
       })
       {
+        # Home Manager merges package lists, so replace only the Moonlight scope.
         moonlightRpi = _: {
           home = { pkgs, ... }: {
             home.packages = [ pkgs.moonlight-qt-rpi ];
