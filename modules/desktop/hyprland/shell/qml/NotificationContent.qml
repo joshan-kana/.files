@@ -21,8 +21,8 @@ FocusScope {
     property string expandedGroupKey: ""
     property bool policyOpen: false
     property bool appSettingsOpen: false
-    ConfirmationState {
-        id: clearConfirmation
+    property ConfirmationState clearConfirmation: ConfirmationState {
+        id: internalClearConfirmation
     }
 
     readonly property var items: [...(notificationState.history || [])].reverse()

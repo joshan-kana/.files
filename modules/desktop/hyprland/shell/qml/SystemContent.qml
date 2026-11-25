@@ -51,8 +51,8 @@ FocusScope {
     property string settingKind: ""
     readonly property string presentedDetail: settingsPanel.open ? settingKind : vhsPanel.open ? "vhs" : themePanel.open ? "theme" : wallpaperPanel.open ? "wallpaper" : networkPanel.open ? "network" : bluetoothPanel.open ? "bluetooth" : sessionPanel.open ? "session" : resourcesPanel.open ? "resources" : statusOpen ? "status" : mixerOpen ? "mixer" : recordingsPanel.open ? "recordings" : ""
     readonly property bool detailsVisible: settingsPanel.open || vhsPanel.open || trayMenu.open || networkPanel.open || bluetoothPanel.open || themePanel.open || wallpaperPanel.open || sessionPanel.open || resourcesPanel.open || statusOpen || mixerOpen || recordingsPanel.open
-    ConfirmationState {
-        id: resetConfirmation
+    property ConfirmationState resetConfirmation: ConfirmationState {
+        id: internalResetConfirmation
     }
     readonly property bool resetConfirmPending: resetConfirmation.pending === "desktop"
     readonly property bool resetRunning: shellActions.resetRunning

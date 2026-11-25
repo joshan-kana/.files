@@ -59,9 +59,9 @@ Item {
 
     property int selectedIndex: 0
     property bool startedDiscovery: false
-    property alias forgetAddress: forgetConfirmation.pending
-    ConfirmationState {
-        id: forgetConfirmation
+    property alias forgetAddress: internalForgetConfirmation.pending
+    property ConfirmationState forgetConfirmation: ConfirmationState {
+        id: internalForgetConfirmation
         onExpired: {
             panel.statusText = "";
             panel.statusError = false;

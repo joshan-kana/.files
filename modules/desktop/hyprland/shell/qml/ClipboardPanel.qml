@@ -25,8 +25,8 @@ Item {
     property var actionTarget: null
     property string priorQuery: ""
     readonly property bool deleteArmed: deleteConfirmation.pending.length > 0
-    ConfirmationState {
-        id: deleteConfirmation
+    property ConfirmationState deleteConfirmation: ConfirmationState {
+        id: internalDeleteConfirmation
         onExpired: panel.copyFeedback = ""
     }
     property bool hideAfterCopy: false

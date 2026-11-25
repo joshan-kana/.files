@@ -29,10 +29,10 @@ Item {
     property int wordSelectionStart: -1
     property int wordSelectionEnd: -1
     readonly property bool wordSelectionAvailable: wordSelectionStart >= 0 && wordSelectionEnd >= 0
-    property alias deletePending: deleteConfirmation.pending
+    property alias deletePending: internalDeleteConfirmation.pending
     property string deletingName: ""
-    ConfirmationState {
-        id: deleteConfirmation
+    property ConfirmationState deleteConfirmation: ConfirmationState {
+        id: internalDeleteConfirmation
         onExpired: {
             library.statusText = "";
             library.statusError = false;

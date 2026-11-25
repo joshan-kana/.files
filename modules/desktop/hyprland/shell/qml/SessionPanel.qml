@@ -19,9 +19,9 @@ Item {
     property int preferredColumn: 0
     readonly property int gridColumns: width < 340 ? 1 : width < 510 ? 2 : 3
     onGridColumnsChanged: preferredColumn = selectedIndex % gridColumns
-    property alias armedAction: confirmation.pending
-    ConfirmationState {
-        id: confirmation
+    property alias armedAction: internalConfirmation.pending
+    property ConfirmationState confirmation: ConfirmationState {
+        id: internalConfirmation
         onExpired: {
             panel.statusText = "";
             panel.statusError = false;
