@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import QtQuick.Layouts
 
 // Shared, data-driven feature header for detailed shell surfaces.
 // Text always uses the configured mono face; tonal colours come from Theme.
@@ -16,8 +17,9 @@ ShellSurface {
     property string glyph: "◇"
     property string glyphFont: runtime.fontMono
     property color glyphColor: theme.accent
+    property alias actions: headerActions.data
 
-    implicitHeight: Math.max(quiet ? 66 : 126, heroCopy.implicitHeight + theme.spacing3 * 2)
+    implicitHeight: Math.max(quiet ? 66 : 126, heroCopy.implicitHeight + theme.spacing3 * 2, headerActions.implicitHeight + theme.spacing2 * 2)
     surfaceLayer: ShellSurface.Group
     luminous: !quiet
     luminousColor: hero.glyphColor
@@ -83,14 +85,21 @@ ShellSurface {
         font.pixelSize: hero.theme.fontSize(25)
     }
 
+    RowLayout {
+        id: headerActions
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: hero.theme.spacing1
+    }
+
     Column {
         id: heroCopy
         anchors {
             left: hero.quiet ? quietGlyph.right : iconTile.right
-            right: parent.right
+            right: headerActions.implicitWidth > 0 ? headerActions.left : parent.right
             verticalCenter: parent.verticalCenter
             leftMargin: hero.quiet ? hero.theme.spacing2 : hero.theme.spacing4
-            rightMargin: hero.quiet ? 0 : hero.theme.spacing4
+            rightMargin: headerActions.implicitWidth > 0 ? hero.theme.spacing3 : hero.quiet ? 0 : hero.theme.spacing4
         }
         spacing: hero.quiet ? hero.theme.spacing1 : hero.theme.spacing2
 

@@ -140,17 +140,17 @@ Item {
         const presetIndex = runtime.shellChoiceIndex(key, modifiers, 4);
         if (presetIndex >= 0) {
             if (!autoRepeat)
-                appearance.applyVhsPreset(["Subtle", "Analog", "Degraded", "Default"][presetIndex]);
+                (vhsPresets.itemAt(presetIndex) as ShellAction)?.trigger();
             return true;
         }
         if (runtime.shellMatchesHint("VhsPanel.defaults", key, modifiers)) {
             if (!autoRepeat)
-                appearance.resetVhs();
+                defaultsButton.trigger();
             return true;
         }
         if (runtime.shellMatchesHint("VhsPanel.reset", key, modifiers)) {
             if (!autoRepeat)
-                appearance.resetVhsParameter(parameters[selectedIndex].key);
+                (parameterRepeater.itemAt(selectedIndex) as ParameterCard)?.triggerReset();
             return true;
         }
         if (key === runtime.shellKeyCode("controls", "Tab") || key === runtime.shellKeyCode("controls", "Backtab")) {
@@ -176,7 +176,7 @@ Item {
         }
         if (runtime.shellMatchesHint("VhsPanel.toggle", key, modifiers)) {
             if (!autoRepeat)
-                appearance.toggleVhs();
+                toggleButton.trigger();
             return true;
         }
         return false;
@@ -197,72 +197,45 @@ Item {
         width: parent.width
         spacing: panel.theme.spacing3
 
-        Row {
+        DetailHero {
             width: parent.width
-            height: Math.max(46, toggleButton.implicitHeight)
-            spacing: panel.theme.spacing3
-
-            Text {
-                id: capabilityGlyph
-                anchors.verticalCenter: parent.verticalCenter
-                width: panel.theme.fontSize(26)
-                text: DesktopIcons.glyphFor("vhs")
-                color: panel.theme.accent
-                font.family: "Symbols Nerd Font"
-                font.pixelSize: panel.theme.fontSize(23)
-                horizontalAlignment: Text.AlignHCenter
-            }
-
-            Column {
-                width: Math.max(1, parent.width - capabilityGlyph.width - toggleButton.width - defaultsButton.width - 3 * parent.spacing)
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: panel.theme.spacing1
-
-                Text {
-                    text: "VHS tape"
-                    color: panel.theme.textStrong
-                    font.family: panel.runtime.fontSans
-                    font.pixelSize: panel.theme.fontDetailTitle
-                    font.weight: Font.DemiBold
+            runtime: panel.runtime
+            theme: panel.theme
+            motion: panel.motion
+            glyph: DesktopIcons.glyphFor("vhs")
+            glyphFont: "Symbols Nerd Font"
+            glyphColor: panel.theme.roleColor("reactive")
+            title: "VHS tape"
+            detail: "Signal tuning · " + panel.appearance.vhsPreset
+            actions: [
+                ShellAction {
+                    id: toggleButton
+                    width: implicitWidth
+                    height: implicitHeight
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    motion: panel.motion
+                    compact: true
+                    iconOnly: true
+                    switchControl: true
+                    active: panel.appearance.vhsEnabled
+                    title: active ? "Disable VHS effect" : "Enable VHS effect"
+                    shortcut: panel.runtime.shellHint("VhsPanel.toggle")
+                    onActivated: panel.appearance.toggleVhs()
+                },
+                ShellUtilityAction {
+                    id: defaultsButton
+                    width: implicitWidth
+                    height: implicitHeight
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    motion: panel.motion
+                    icon: DesktopIcons.actionGlyph("reset")
+                    title: "Restore defaults"
+                    shortcut: panel.runtime.shellHint("VhsPanel.defaults")
+                    onActivated: panel.appearance.resetVhs()
                 }
-
-                Text {
-                    text: "Signal tuning · " + panel.appearance.vhsPreset
-                    color: panel.theme.textMuted
-                    font.family: panel.runtime.fontSans
-                    font.pixelSize: panel.theme.fontSupporting
-                }
-            }
-
-            ShellAction {
-                id: toggleButton
-                width: implicitWidth
-                height: implicitHeight
-                anchors.verticalCenter: parent.verticalCenter
-                runtime: panel.runtime
-                theme: panel.theme
-                motion: panel.motion
-                compact: true
-                iconOnly: true
-                switchControl: true
-                active: panel.appearance.vhsEnabled
-                title: active ? "Disable VHS effect" : "Enable VHS effect"
-                shortcut: panel.runtime.shellHint("VhsPanel.toggle")
-                onActivated: panel.appearance.toggleVhs()
-            }
-            ShellUtilityAction {
-                id: defaultsButton
-                width: implicitWidth
-                height: implicitHeight
-                anchors.verticalCenter: parent.verticalCenter
-                runtime: panel.runtime
-                theme: panel.theme
-                motion: panel.motion
-                icon: DesktopIcons.actionGlyph("reset")
-                title: "Restore defaults"
-                shortcut: panel.runtime.shellHint("VhsPanel.defaults")
-                onActivated: panel.appearance.resetVhs()
-            }
+            ]
         }
 
         Row {

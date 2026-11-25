@@ -94,7 +94,7 @@ test("stream selection stays with the node across reordering and services share 
   assert.match(controls, /audioDeck\.moveAudioSelection\(direction\)/);
   assert.match(controls, /audioDeck\.adjustSelected\(delta\)/);
   assert.match(controls, /audioDeck\.toggleSelectedMute\(\)/);
-  assert.match(controls, /audioDeck\.toggleSelectedDeviceChooser\(\)/);
+  assert.match(controls, /audioDeck\.triggerSelectedDeviceChooser\(\)/);
   assert.match(
     controls,
     /mixerView\.panel\.handleKey\(event\.key, event\.modifiers, event\.isAutoRepeat\)/,
@@ -106,7 +106,7 @@ test("compact and expanded audio handling retain the complete keyboard contract"
   const controls = qml("SystemContent.qml");
   assert.match(mixer, /if \(picker\) \{/);
   assert.match(mixer, /picker\.moveDeviceSelection\(1\)/);
-  assert.match(mixer, /picker\.selectDevice\(picker\.chooserIndex\)/);
+  assert.match(mixer, /picker\.commitChooser\(\)/);
   assert.match(mixer, /key === mixer\.runtime\.shellKeyCode\("mixer", "M"\)/);
   assert.match(mixer, /key === mixer\.runtime\.shellKeyCode\("mixer", "P"\)/);
   assert.match(

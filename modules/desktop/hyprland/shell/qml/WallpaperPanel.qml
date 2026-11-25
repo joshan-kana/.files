@@ -313,12 +313,50 @@ Item {
             break;
         }
     }
+    function triggerPolicyAction(action: string): void {
+        if (!policyView) {
+            if (action === "WallpaperPanel.default")
+                wallpaperReset.trigger();
+            else
+                galleryButtons.triggerAction(action);
+            return;
+        }
+        switch (action) {
+        case "WallpaperPolicy.defaults":
+            scheduleReset.trigger();
+            break;
+        case "WallpaperPolicy.mode":
+            {
+                const modes = ["off", "interval", "dayNight"];
+                (wallpaperModeChoices.itemAt((modes.indexOf(policy.mode) + 1) % modes.length) as ShellChoice)?.trigger();
+                break;
+            }
+        case "WallpaperPolicy.period":
+            intervalButton.trigger();
+            break;
+        case "WallpaperPolicy.favorites":
+            favoriteSwitch.trigger();
+            break;
+        case "WallpaperPolicy.collection":
+        case "WallpaperPolicy.next":
+            intervalActions.triggerAction(action);
+            break;
+        case "WallpaperPolicy.target":
+        case "WallpaperPanel.rotation":
+            scheduleButtons.triggerAction(action);
+            break;
+        default:
+            (phaseRepeater.itemAt(action.startsWith("WallpaperPolicy.night") ? 1 : 0) as SchedulePhase)?.triggerAction(action);
+            break;
+        }
+    }
+
     function handlePolicyKey(key: int, modifiers: int, autoRepeat: bool): bool {
         const actions = policyView ? scheduleActions : galleryPolicyActions;
         for (const entry of actions) {
             if (runtime.shellMatchesHint(entry.action, key, modifiers)) {
                 if (!autoRepeat && entry.enabled !== false && (!policyView || policyActionEnabled(entry.action)))
-                    invokePolicyAction(entry.action);
+                    triggerPolicyAction(entry.action);
                 return true;
             }
         }
@@ -585,6 +623,19 @@ Item {
             eyebrow: "Appearance / wallpapers"
             title: "Wallpaper library"
             detail: panel.outputLabel + " · " + (panel.busy ? "Applying wallpaper…" : panel.resizeMode.toUpperCase() + " · Image / video")
+            actions: [
+                ShellUtilityAction {
+                    id: wallpaperReset
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    motion: panel.motion
+                    icon: DesktopIcons.actionGlyph("reset")
+                    title: "Default wallpaper"
+                    shortcut: panel.runtime.shellHint("WallpaperPanel.default")
+                    enabled: !panel.busy
+                    onActivated: panel.invokePolicyAction("WallpaperPanel.default")
+                }
+            ]
         }
 
         SearchFieldSurface {
@@ -643,7 +694,7 @@ Item {
             runtime: panel.runtime
             theme: panel.theme
             motion: panel.motion
-            entries: panel.galleryPolicyActions
+            entries: panel.galleryPolicyActions.filter(entry => entry.action !== "WallpaperPanel.default")
             accentRole: "wallpaper"
             onActionRequested: action => panel.invokePolicyAction(action)
         }
@@ -989,6 +1040,19 @@ Item {
             eyebrow: "Wallpaper library"
             title: "Wallpaper schedule"
             detail: "One session schedule · selected target " + panel.outputLabel
+            actions: [
+                ShellUtilityAction {
+                    id: scheduleReset
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    motion: panel.motion
+                    icon: DesktopIcons.actionGlyph("reset")
+                    title: "Restore schedule defaults"
+                    shortcut: panel.runtime.shellHint("WallpaperPolicy.defaults")
+                    enabled: panel.policyActionEnabled("WallpaperPolicy.defaults")
+                    onActivated: panel.invokePolicyAction("WallpaperPolicy.defaults")
+                }
+            ]
         }
         ShellSurface {
             width: parent.width
@@ -1186,6 +1250,7 @@ Item {
                     }
                 }
                 GalleryActionBar {
+                    id: intervalActions
                     width: parent.width
                     runtime: panel.runtime
                     theme: panel.theme
@@ -1237,116 +1302,9 @@ Item {
                     spacing: panel.theme.spacing2
                     readonly property int columns: width >= panel.theme.fontSize(480) ? 2 : 1
                     Repeater {
+                        id: phaseRepeater
                         model: panel.open && panel.policyView && panel.policy.mode === "dayNight" ? 2 : 0
-                        delegate: ShellSurface {
-                            id: phase
-                            required property int index
-                            readonly property bool night: index === 1
-                            readonly property string path: night ? panel.policy.nightWallpaper : panel.policy.dayWallpaper
-                            readonly property string role: night ? "night" : "daylight"
-                            readonly property string actionPrefix: night ? "WallpaperPolicy.night" : "WallpaperPolicy.day"
-                            property string posterPath: ""
-                            property string requestedPath: ""
-                            width: (phaseFlow.width - (phaseFlow.columns - 1) * phaseFlow.spacing) / phaseFlow.columns
-                            height: phaseInfo.implicitHeight + panel.theme.spacing3 * 2
-                            theme: panel.theme
-                            motion: panel.motion
-                            surfaceLayer: ShellSurface.Control
-                            cornerRadius: panel.theme.radiusMedium
-                            function refreshPoster(): void {
-                                if (posterProbe.running)
-                                    return;
-                                posterPath = "";
-                                requestedPath = path;
-                                if (path && panel.runtime.wallpaperLibrary)
-                                    posterProbe.exec([panel.runtime.wallpaperLibrary, "thumbnail", path]);
-                            }
-                            onPathChanged: refreshPoster()
-                            Component.onCompleted: refreshPoster()
-                            Process {
-                                id: posterProbe
-                                stdout: StdioCollector {
-                                    id: phasePosterOutput
-                                }
-                                onExited: (code, status) => {
-                                    if (phase.requestedPath !== phase.path)
-                                        phase.refreshPoster();
-                                    else if (code === 0)
-                                        phase.posterPath = phasePosterOutput.text.trim();
-                                }
-                            }
-                            Column {
-                                id: phaseInfo
-                                width: parent.width - panel.theme.spacing3 * 2
-                                anchors.centerIn: parent
-                                spacing: panel.theme.spacing2
-                                ShellText {
-                                    runtime: panel.runtime
-                                    theme: panel.theme
-                                    text: phase.night ? "Night" : "Day"
-                                    textRole: ShellText.Section
-                                    color: panel.theme.readableRoleColor(phase.role)
-                                }
-                                ShellSurface {
-                                    width: parent.width
-                                    height: Math.min(panel.theme.fontSize(150), width * 0.56)
-                                    theme: panel.theme
-                                    motion: panel.motion
-                                    cornerRadius: panel.theme.radiusSmall
-                                    clipContentToShape: true
-                                    Image {
-                                        anchors.fill: parent
-                                        source: phase.posterPath ? "file://" + phase.posterPath : ""
-                                        fillMode: Image.PreserveAspectCrop
-                                        asynchronous: true
-                                        sourceSize: Qt.size(480, 300)
-                                    }
-                                    ShellText {
-                                        anchors.centerIn: parent
-                                        visible: !phase.posterPath
-                                        runtime: panel.runtime
-                                        theme: panel.theme
-                                        text: phase.path ? "Preview unavailable" : "Not selected"
-                                        textRole: ShellText.Supporting
-                                    }
-                                }
-                                MarqueeText {
-                                    width: parent.width
-                                    text: phase.path ? phase.path.split("/").pop() : "No wallpaper selected"
-                                    font.family: panel.runtime.fontSans
-                                    font.pixelSize: panel.theme.fontSupporting
-                                    color: panel.theme.textMuted
-                                }
-                                ShellStepper {
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    runtime: panel.runtime
-                                    theme: panel.theme
-                                    motion: panel.motion
-                                    title: "Start time"
-                                    readback: panel.timeLabel(phase.night ? panel.policy.nightStart : panel.policy.dayStart)
-                                    decreaseShortcut: panel.runtime.shellHint(phase.actionPrefix + "Earlier")
-                                    increaseShortcut: panel.runtime.shellHint(phase.actionPrefix + "Later")
-                                    canDecrease: panel.policyActionEnabled(phase.actionPrefix + "Earlier")
-                                    canIncrease: panel.policyActionEnabled(phase.actionPrefix + "Later")
-                                    onDecreased: panel.invokePolicyAction(phase.actionPrefix + "Earlier")
-                                    onIncreased: panel.invokePolicyAction(phase.actionPrefix + "Later")
-                                }
-                                ShellAction {
-                                    width: parent.width
-                                    height: implicitHeight
-                                    runtime: panel.runtime
-                                    theme: panel.theme
-                                    motion: panel.motion
-                                    compact: true
-                                    horizontalCompact: true
-                                    icon: "󰋩"
-                                    title: "Use selection"
-                                    shortcut: panel.runtime.shellHint(phase.actionPrefix)
-                                    enabled: panel.policyActionEnabled(phase.actionPrefix)
-                                    onActivated: panel.invokePolicyAction(phase.actionPrefix)
-                                }
-                            }
-                        }
+                        delegate: SchedulePhase {}
                     }
                 }
                 MarqueeText {
@@ -1359,12 +1317,13 @@ Item {
             }
         }
         GalleryActionBar {
+            id: scheduleButtons
             width: parent.width
             runtime: panel.runtime
             theme: panel.theme
             motion: panel.motion
             accentRole: "wallpaper"
-            entries: panel.scheduleActions.filter(entry => ["WallpaperPolicy.target", "WallpaperPolicy.defaults", "WallpaperPanel.rotation"].includes(entry.action)).map(entry => Object.assign({}, entry, {
+            entries: panel.scheduleActions.filter(entry => ["WallpaperPolicy.target", "WallpaperPanel.rotation"].includes(entry.action)).map(entry => Object.assign({}, entry, {
                     enabled: panel.policyActionEnabled(entry.action)
                 }))
             onActionRequested: action => panel.invokePolicyAction(action)
@@ -1377,6 +1336,125 @@ Item {
             text: "Manual selections last until the next scheduled change."
             wrapMode: Text.WordWrap
             color: panel.theme.textMuted
+        }
+    }
+    component SchedulePhase: ShellSurface {
+        id: phase
+        required property int index
+        readonly property bool night: index === 1
+        readonly property string path: night ? panel.policy.nightWallpaper : panel.policy.dayWallpaper
+        readonly property string role: night ? "night" : "daylight"
+        readonly property string actionPrefix: night ? "WallpaperPolicy.night" : "WallpaperPolicy.day"
+        property string posterPath: ""
+        property string requestedPath: ""
+        width: (phaseFlow.width - (phaseFlow.columns - 1) * phaseFlow.spacing) / phaseFlow.columns
+        height: phaseInfo.implicitHeight + panel.theme.spacing3 * 2
+        theme: panel.theme
+        motion: panel.motion
+        surfaceLayer: ShellSurface.Control
+        cornerRadius: panel.theme.radiusMedium
+        function triggerAction(action: string): void {
+            if (action.endsWith("Earlier"))
+                phaseStepper.decrease();
+            else if (action.endsWith("Later"))
+                phaseStepper.increase();
+            else
+                phaseChoose.trigger();
+        }
+        function refreshPoster(): void {
+            if (posterProbe.running)
+                return;
+            posterPath = "";
+            requestedPath = path;
+            if (path && panel.runtime.wallpaperLibrary)
+                posterProbe.exec([panel.runtime.wallpaperLibrary, "thumbnail", path]);
+        }
+        onPathChanged: refreshPoster()
+        Component.onCompleted: refreshPoster()
+        Process {
+            id: posterProbe
+            stdout: StdioCollector {
+                id: phasePosterOutput
+            }
+            onExited: (code, status) => {
+                if (phase.requestedPath !== phase.path)
+                    phase.refreshPoster();
+                else if (code === 0)
+                    phase.posterPath = phasePosterOutput.text.trim();
+            }
+        }
+        Column {
+            id: phaseInfo
+            width: parent.width - panel.theme.spacing3 * 2
+            anchors.centerIn: parent
+            spacing: panel.theme.spacing2
+            ShellText {
+                runtime: panel.runtime
+                theme: panel.theme
+                text: phase.night ? "Night" : "Day"
+                textRole: ShellText.Section
+                color: panel.theme.readableRoleColor(phase.role)
+            }
+            ShellSurface {
+                width: parent.width
+                height: Math.min(panel.theme.fontSize(150), width * 0.56)
+                theme: panel.theme
+                motion: panel.motion
+                cornerRadius: panel.theme.radiusSmall
+                clipContentToShape: true
+                Image {
+                    anchors.fill: parent
+                    source: phase.posterPath ? "file://" + phase.posterPath : ""
+                    fillMode: Image.PreserveAspectCrop
+                    asynchronous: true
+                    sourceSize: Qt.size(480, 300)
+                }
+                ShellText {
+                    anchors.centerIn: parent
+                    visible: !phase.posterPath
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    text: phase.path ? "Preview unavailable" : "Not selected"
+                    textRole: ShellText.Supporting
+                }
+            }
+            MarqueeText {
+                width: parent.width
+                text: phase.path ? phase.path.split("/").pop() : "No wallpaper selected"
+                font.family: panel.runtime.fontSans
+                font.pixelSize: panel.theme.fontSupporting
+                color: panel.theme.textMuted
+            }
+            ShellStepper {
+                id: phaseStepper
+                anchors.horizontalCenter: parent.horizontalCenter
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                title: "Start time"
+                readback: panel.timeLabel(phase.night ? panel.policy.nightStart : panel.policy.dayStart)
+                decreaseShortcut: panel.runtime.shellHint(phase.actionPrefix + "Earlier")
+                increaseShortcut: panel.runtime.shellHint(phase.actionPrefix + "Later")
+                canDecrease: panel.policyActionEnabled(phase.actionPrefix + "Earlier")
+                canIncrease: panel.policyActionEnabled(phase.actionPrefix + "Later")
+                onDecreased: panel.invokePolicyAction(phase.actionPrefix + "Earlier")
+                onIncreased: panel.invokePolicyAction(phase.actionPrefix + "Later")
+            }
+            ShellAction {
+                id: phaseChoose
+                width: parent.width
+                height: implicitHeight
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                compact: true
+                horizontalCompact: true
+                icon: "󰋩"
+                title: "Use selection"
+                shortcut: panel.runtime.shellHint(phase.actionPrefix)
+                enabled: panel.policyActionEnabled(phase.actionPrefix)
+                onActivated: panel.invokePolicyAction(phase.actionPrefix)
+            }
         }
     }
 }

@@ -118,7 +118,7 @@ Item {
             borderWidth: root.highlighted ? root.theme.borderFocus : 0
             borderColor: root.highlighted ? root.activeColor : "transparent"
             fillColor: root.actionFill
-            cornerRadius: root.motion.enabled && interaction.visualPressed ? Math.min(root.height / 2, root.theme.radiusSmall) : root.restingRadius
+            cornerRadius: root.motion.enabled && interaction.visualPressed ? Math.max(root.theme.radiusSmall, root.restingRadius * 0.8) : root.restingRadius
             Behavior on cornerRadius {
                 Anim {
                     motion: root.motion

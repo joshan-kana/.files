@@ -224,20 +224,22 @@ Item {
         closeView();
     }
 
-    function activateShortcut(key: int, modifiers: int): bool {
+    function activateShortcut(key: int, modifiers: int, autoRepeat: bool): bool {
         const index = entries.findIndex(entry => runtime.shellMatchesHint(entry.binding, key, modifiers));
         if (runtime.shellMatchesHint("SessionPanel.scenes", key, modifiers)) {
-            scenesAction.trigger();
+            if (!autoRepeat)
+                scenesAction.trigger();
             return true;
         }
         if (runtime.shellMatchesHint("SessionPanel.defaults", key, modifiers)) {
-            if (armedAction.length === 0)
-                resetToDeclared();
+            if (!autoRepeat)
+                resetSessionAction.trigger();
             return true;
         }
         if (index < 0)
             return false;
-        activateIndex(index);
+        if (!autoRepeat)
+            activateIndex(index);
         return true;
     }
 
@@ -246,7 +248,13 @@ Item {
             return;
         if (selectedIndex !== index)
             moveSelection(index - selectedIndex);
-        activateSelected();
+        triggerSelected();
+    }
+
+    function triggerSelected(): void {
+        const row = sessionRows.itemAt(Math.floor(selectedIndex / gridColumns)) as SessionRow;
+        if (row)
+            row.triggerAt(selectedIndex % gridColumns);
     }
 
     function activateSelected(): void {
@@ -288,6 +296,67 @@ Item {
         eyebrow: "Device / secure session"
         title: "Power & session"
         detail: panel.armedAction.length > 0 ? "Confirm within 5 seconds" : panel.selectedEntry().id === "restore" ? (panel.restoreWindowsOnExit ? "Reopen windows after leaving the session" : "Start fresh after leaving the session") : panel.selectedEntry().description
+        actions: [
+            ShellUtilityAction {
+                id: resetSessionAction
+                width: implicitWidth
+                height: implicitHeight
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                icon: DesktopIcons.actionGlyph("reset")
+                title: "Restore session defaults"
+                shortcut: panel.runtime.shellHint("SessionPanel.defaults")
+                enabled: panel.armedAction.length === 0
+                onActivated: panel.resetToDeclared()
+            }
+        ]
+    }
+
+    component SessionRow: Row {
+        id: actionRow
+        required property int index
+        readonly property int rowCount: Math.min(panel.gridColumns, panel.entries.length - index * panel.gridColumns)
+        width: Math.min(buttonGrid.width, rowCount * 154 + (rowCount - 1) * panel.theme.spacing3)
+        anchors.horizontalCenter: parent.horizontalCenter
+        spacing: panel.theme.spacing3
+
+        function triggerAt(index: int): void {
+            (sessionButtons.itemAt(index) as SessionActionButton)?.trigger();
+        }
+        Repeater {
+            id: sessionButtons
+            model: panel.entries.slice(actionRow.index * panel.gridColumns, (actionRow.index + 1) * panel.gridColumns)
+
+            delegate: SessionActionButton {
+                required property var modelData
+                readonly property int actionIndex: panel.entries.findIndex(entry => entry.id === modelData.id)
+                width: Math.max(1, (actionRow.width - actionRow.spacing * (actionRow.rowCount - 1)) / actionRow.rowCount)
+
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                icon: modelData.icon
+                lockGlyph: modelData.id === "lock"
+                shortcut: modelData.shortcut
+                label: modelData.label
+                accentColor: panel.theme.roleColor(modelData.accentRole)
+                active: modelData.id === "restore" && panel.restoreWindowsOnExit
+                selected: panel.selectedIndex === actionIndex
+                armed: panel.armedAction === modelData.id
+
+                onHovered: {
+                    if (panel.selectedIndex !== actionIndex)
+                        panel.moveSelection(actionIndex - panel.selectedIndex);
+                }
+                onActivated: {
+                    if (panel.selectedIndex !== actionIndex)
+                        panel.moveSelection(actionIndex - panel.selectedIndex);
+                    panel.activateSelected();
+                    panel.keyboardRequested();
+                }
+            }
+        }
     }
 
     Column {
@@ -301,49 +370,10 @@ Item {
         spacing: panel.theme.spacing3
 
         Repeater {
+            id: sessionRows
             model: Math.ceil(panel.entries.length / panel.gridColumns)
 
-            delegate: Row {
-                id: actionRow
-                required property int index
-                readonly property int rowCount: Math.min(panel.gridColumns, panel.entries.length - index * panel.gridColumns)
-                width: Math.min(buttonGrid.width, rowCount * 154 + (rowCount - 1) * panel.theme.spacing3)
-                anchors.horizontalCenter: parent.horizontalCenter
-                spacing: panel.theme.spacing3
-
-                Repeater {
-                    model: panel.entries.slice(actionRow.index * panel.gridColumns, (actionRow.index + 1) * panel.gridColumns)
-
-                    delegate: SessionActionButton {
-                        required property var modelData
-                        readonly property int actionIndex: panel.entries.findIndex(entry => entry.id === modelData.id)
-                        width: Math.max(1, (actionRow.width - actionRow.spacing * (actionRow.rowCount - 1)) / actionRow.rowCount)
-
-                        runtime: panel.runtime
-                        theme: panel.theme
-                        motion: panel.motion
-                        icon: modelData.icon
-                        lockGlyph: modelData.id === "lock"
-                        shortcut: modelData.shortcut
-                        label: modelData.label
-                        accentColor: panel.theme.roleColor(modelData.accentRole)
-                        active: modelData.id === "restore" && panel.restoreWindowsOnExit
-                        selected: panel.selectedIndex === actionIndex
-                        armed: panel.armedAction === modelData.id
-
-                        onHovered: {
-                            if (panel.selectedIndex !== actionIndex)
-                                panel.moveSelection(actionIndex - panel.selectedIndex);
-                        }
-                        onActivated: {
-                            if (panel.selectedIndex !== actionIndex)
-                                panel.moveSelection(actionIndex - panel.selectedIndex);
-                            panel.activateSelected();
-                            panel.keyboardRequested();
-                        }
-                    }
-                }
-            }
+            delegate: SessionRow {}
         }
     }
 
@@ -366,22 +396,6 @@ Item {
             font.family: panel.runtime.fontSans
             font.pixelSize: panel.theme.fontSize(11)
             font.weight: Font.DemiBold
-        }
-
-        ShellAction {
-            width: implicitWidth
-            height: implicitHeight
-            anchors.horizontalCenter: parent.horizontalCenter
-            runtime: panel.runtime
-            theme: panel.theme
-            motion: panel.motion
-            compact: true
-            horizontalCompact: true
-            icon: DesktopIcons.actionGlyph("reset")
-            title: "Restore session defaults"
-            shortcut: panel.runtime.shellHint("SessionPanel.defaults")
-            enabled: panel.armedAction.length === 0
-            onActivated: panel.resetToDeclared()
         }
 
         ShellAction {

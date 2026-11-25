@@ -59,6 +59,12 @@ Item {
         }
     ]
     property bool copied: false
+    function triggerCopy(): void {
+        copyAction.trigger();
+    }
+    function triggerRefresh(): void {
+        refreshAction.trigger();
+    }
     function copyStatus(): void {
         if (!runtime.copyText)
             return;
@@ -88,60 +94,40 @@ Item {
         }
         spacing: content.theme.spacing4
 
-        Row {
+        DetailHero {
             id: heading
             width: parent.width
-            spacing: content.theme.spacing3
-            Text {
-                text: DesktopIcons.glyphFor("status")
-                color: content.theme.roleColor("connectivity")
-                font.family: "Symbols Nerd Font"
-                font.pixelSize: content.theme.fontSize(23)
-            }
-            Column {
-                width: Math.max(1, heading.width - content.theme.fontSize(23) - copyAction.width - refreshAction.width - heading.spacing * 3)
-                spacing: content.theme.spacing1
-                Text {
-                    width: parent.width
-                    elide: Text.ElideRight
-                    text: "System status"
-                    color: content.theme.textStrong
-                    font.family: content.runtime.fontSans
-                    font.pixelSize: content.theme.fontSize(18)
-                    font.weight: Font.Bold
+            runtime: content.runtime
+            theme: content.theme
+            motion: content.motion
+            glyph: DesktopIcons.glyphFor("status")
+            glyphFont: "Symbols Nerd Font"
+            glyphColor: content.theme.roleColor("connectivity")
+            title: "System status"
+            detail: content.keyboard.pending ? "Reading keyboard state…" : content.keyboard.stale ? "Keyboard state unavailable or stale" : content.keyboard.deviceName + " · Current device and interaction state"
+            actions: [
+                ShellUtilityAction {
+                    id: copyAction
+                    runtime: content.runtime
+                    theme: content.theme
+                    motion: content.motion
+                    shortcut: content.runtime.shellHint("StatusContent.copy")
+                    icon: content.copied ? "󰄬" : "󰆏"
+                    title: content.copied ? "Copied" : "Copy status"
+                    enabled: !!content.runtime.copyText
+                    onActivated: content.copyStatus()
+                },
+                ShellUtilityAction {
+                    id: refreshAction
+                    runtime: content.runtime
+                    theme: content.theme
+                    motion: content.motion
+                    shortcut: content.runtime.shellHint("StatusContent.refresh")
+                    icon: DesktopIcons.actionGlyph("refresh")
+                    title: "Refresh current status"
+                    onActivated: content.refreshRequested()
                 }
-                Text {
-                    width: parent.width
-                    elide: Text.ElideRight
-                    text: content.keyboard.pending ? "Reading keyboard state…" : content.keyboard.stale ? "Keyboard state unavailable or stale" : content.keyboard.deviceName + " · Current device and interaction state"
-                    color: content.theme.textMuted
-                    font.family: content.runtime.fontSans
-                    font.pixelSize: content.theme.fontSize(10)
-                }
-            }
-            ShellUtilityAction {
-                id: copyAction
-                anchors.verticalCenter: parent.verticalCenter
-                runtime: content.runtime
-                theme: content.theme
-                motion: content.motion
-                shortcut: content.runtime.shellHint("StatusContent.copy")
-                icon: content.copied ? "󰄬" : "󰆏"
-                title: content.copied ? "Copied" : "Copy status"
-                enabled: !!content.runtime.copyText
-                onActivated: content.copyStatus()
-            }
-            ShellUtilityAction {
-                id: refreshAction
-                anchors.verticalCenter: parent.verticalCenter
-                runtime: content.runtime
-                theme: content.theme
-                motion: content.motion
-                shortcut: content.runtime.shellHint("StatusContent.refresh")
-                icon: DesktopIcons.actionGlyph("refresh")
-                title: "Refresh current status"
-                onActivated: content.refreshRequested()
-            }
+            ]
         }
 
         ShellSurface {

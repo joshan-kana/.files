@@ -87,43 +87,42 @@ FocusScope {
         width: parent.width
         spacing: panel.theme.spacing3
 
-        Row {
+        DetailHero {
             width: parent.width
-            spacing: panel.theme.spacing3
-
-            Column {
-                width: parent.width - refreshButton.width - panel.theme.spacing3
-                spacing: panel.theme.spacing1
-
-                Text {
-                    text: "Weather · " + (panel.weather.city || "Your location")
-                    color: panel.theme.readableRoleColor("weather")
-                    font.family: panel.runtime.fontSans
-                    font.pixelSize: panel.theme.fontPanelEyebrow
-                    font.weight: Font.DemiBold
+            runtime: panel.runtime
+            theme: panel.theme
+            motion: panel.motion
+            glyph: DesktopIcons.glyphFor("weather")
+            glyphFont: "Symbols Nerd Font"
+            glyphColor: panel.theme.roleColor("weather")
+            title: "Weather · " + (panel.weather.city || "Your location")
+            detail: Qt.formatDateTime(clock.date, "dddd, d MMMM")
+            actions: [
+                ShellUtilityAction {
+                    id: defaultsButton
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    motion: panel.motion
+                    icon: DesktopIcons.actionGlyph("reset")
+                    title: "Restore weather defaults"
+                    shortcut: panel.runtime.shellHint("WeatherContent.reset")
+                    onActivated: {
+                        panel.weather.resetLocation();
+                        panel.weather.resetUnits();
+                    }
+                },
+                ShellUtilityAction {
+                    id: refreshButton
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    motion: panel.motion
+                    icon: DesktopIcons.actionGlyph("refresh")
+                    shortcut: panel.runtime.shellHint("WeatherContent.refresh")
+                    title: "Refresh forecast"
+                    enabled: !panel.weather.loading
+                    onActivated: panel.weather.refresh(true)
                 }
-
-                Text {
-                    text: Qt.formatDateTime(clock.date, "dddd, d MMMM")
-                    color: panel.theme.textStrong
-                    font.family: panel.runtime.fontSans
-                    font.pixelSize: panel.theme.fontPanelTitle
-                    font.weight: Font.DemiBold
-                }
-            }
-
-            ShellUtilityAction {
-                id: refreshButton
-                anchors.verticalCenter: parent.verticalCenter
-                runtime: panel.runtime
-                theme: panel.theme
-                motion: panel.motion
-                icon: DesktopIcons.actionGlyph("refresh")
-                shortcut: panel.runtime.shellHint("WeatherContent.refresh")
-                title: "Refresh forecast"
-                enabled: !panel.weather.loading
-                onActivated: panel.weather.refresh(true)
-            }
+            ]
         }
 
         Row {
@@ -132,7 +131,7 @@ FocusScope {
             spacing: panel.theme.spacing2
             ShellAction {
                 id: locationButton
-                width: Math.max(1, parent.width - unitsButton.width - defaultsButton.width - 2 * parent.spacing)
+                width: Math.max(1, parent.width - unitsButton.width - parent.spacing)
                 height: parent.height
                 runtime: panel.runtime
                 theme: panel.theme
@@ -157,21 +156,6 @@ FocusScope {
                 title: panel.weather.units === "metric" ? "°C / km/h" : "°F / mph"
                 shortcut: panel.runtime.shellHint("WeatherContent.units")
                 onActivated: panel.weather.toggleUnits()
-            }
-            ShellUtilityAction {
-                id: defaultsButton
-                width: implicitWidth
-                height: parent.height
-                runtime: panel.runtime
-                theme: panel.theme
-                motion: panel.motion
-                icon: DesktopIcons.actionGlyph("reset")
-                title: "Restore weather defaults"
-                shortcut: panel.runtime.shellHint("WeatherContent.reset")
-                onActivated: {
-                    panel.weather.resetLocation();
-                    panel.weather.resetUnits();
-                }
             }
         }
 

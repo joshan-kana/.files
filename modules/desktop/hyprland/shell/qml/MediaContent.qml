@@ -215,7 +215,7 @@ FocusScope {
                     spacing: content.theme.spacing2
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
-                        width: Math.max(1, parent.width - (raiseAction.visible ? raiseAction.width + parent.spacing : 0))
+                        width: Math.max(1, parent.width - resetPreferredAction.width - parent.spacing - (raiseAction.visible ? raiseAction.width + parent.spacing : 0))
                         text: content.media.available ? "Now playing" : "Media"
                         color: content.theme.readableRoleColor("media")
                         font.family: content.runtime.fontSans
@@ -240,6 +240,17 @@ FocusScope {
                             content.media.raisePlayer();
                             content.closeRequested();
                         }
+                    }
+                    ShellUtilityAction {
+                        id: resetPreferredAction
+                        width: implicitWidth
+                        runtime: content.runtime
+                        theme: content.theme
+                        motion: content.motion
+                        title: "Restore default player"
+                        icon: DesktopIcons.actionGlyph("reset")
+                        shortcut: content.runtime.shellHint("MediaContent.preferReset")
+                        onActivated: content.media.resetPreferredPlayer()
                     }
                 }
 
@@ -640,23 +651,7 @@ FocusScope {
                     enabled: content.media.available || content.media.persistentPreference !== ""
                     onActivated: content.media.togglePreferredPlayer()
                 }
-                ShellAction {
-                    id: resetPreferredAction
-                    width: implicitWidth
-                    height: Math.max(40, implicitHeight)
-                    runtime: content.runtime
-                    theme: content.theme
-                    motion: content.motion
-                    compact: true
-                    horizontalCompact: true
-                    title: "Restore default player"
-                    icon: DesktopIcons.actionGlyph("reset")
-                    iconOnly: true
-                    inlineIconHint: true
-                    quietAction: true
-                    shortcut: content.runtime.shellHint("MediaContent.preferReset")
-                    onActivated: content.media.resetPreferredPlayer()
-                }
+
                 ShellText {
                     runtime: content.runtime
                     theme: content.theme

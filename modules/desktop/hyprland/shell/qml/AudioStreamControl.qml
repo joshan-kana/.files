@@ -29,6 +29,10 @@ Item {
     }
 
     signal selectedRequested
+    function triggerRoute(): void {
+        routeButton.trigger();
+    }
+
     signal routeRequested
     property string routeLabel: ""
     property bool routeAvailable: false
@@ -165,6 +169,7 @@ Item {
             }
         }
         ShellAction {
+            id: routeButton
             visible: !channel.compact
             width: parent.width
             height: visible ? implicitHeight : 0

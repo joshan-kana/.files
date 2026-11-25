@@ -995,7 +995,7 @@ FocusScope {
     }
 
     function toggleSelectedAudioDeviceChooser(): void {
-        audioDeck.toggleSelectedDeviceChooser();
+        audioDeck.triggerSelectedDeviceChooser();
     }
 
     function muteSelectedAudio(): void {
@@ -2198,10 +2198,11 @@ FocusScope {
                         event.accepted = true;
                     } else if (root.runtime.shellMatchesHint("StatusContent.copy", event.key, event.modifiers)) {
                         if (!event.isAutoRepeat)
-                            statusContent.copyStatus();
+                            statusContent.triggerCopy();
                         event.accepted = true;
                     } else if (root.runtime.shellMatchesHint("StatusContent.refresh", event.key, event.modifiers)) {
-                        root.refreshStatus();
+                        if (!event.isAutoRepeat)
+                            statusContent.triggerRefresh();
                         event.accepted = true;
                     }
                     return;
@@ -2302,8 +2303,9 @@ FocusScope {
                         recordingsPanel.invoke("showText");
                     } else if (event.key === root.runtime.shellKeyCode("controls", "Return") || event.key === root.runtime.shellKeyCode("controls", "Enter")) {
                         recordingsPanel.invoke("openSelected");
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "R")) {
-                        recordingsPanel.invoke("refresh");
+                    } else if (root.runtime.shellMatchesHint("RecordingLibrary.refresh", event.key, event.modifiers)) {
+                        if (!event.isAutoRepeat)
+                            recordingsPanel.invoke("triggerRefresh");
                     } else {
                         return;
                     }
@@ -2383,7 +2385,7 @@ FocusScope {
                 if (sessionPanel.open) {
                     if (root.runtime.shellMatchesHint("SessionPanel.scenes", event.key, event.modifiers) && event.isAutoRepeat) {
                         event.accepted = true;
-                    } else if (sessionPanel.invoke("activateShortcut", event.key, event.modifiers) === true) {
+                    } else if (sessionPanel.invoke("activateShortcut", event.key, event.modifiers, event.isAutoRepeat) === true) {
                         event.accepted = true;
                     } else if (event.key === root.runtime.shellKeyCode("controls", "Backspace")) {
                         if (sessionPanel.armedAction.length > 0)
@@ -2404,7 +2406,8 @@ FocusScope {
                         sessionPanel.invoke("moveGrid", 1, 0);
                         event.accepted = true;
                     } else if (event.key === root.runtime.shellKeyCode("controls", "Return") || event.key === root.runtime.shellKeyCode("controls", "Enter")) {
-                        sessionPanel.invoke("activateSelected");
+                        if (!event.isAutoRepeat)
+                            sessionPanel.invoke("triggerSelected");
                         event.accepted = true;
                     }
 
@@ -2505,14 +2508,16 @@ FocusScope {
                     } else if (event.key === root.runtime.shellKeyCode("controls", "V")) {
                         networkPanel.invoke("toggleDetailView");
                         event.accepted = true;
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "R") && networkPanel.detailView) {
-                        networkPanel.invoke("refreshDetails");
+                    } else if (root.runtime.shellMatchesHint("NetworkPanel.refresh", event.key, event.modifiers) && networkPanel.detailView) {
+                        if (!event.isAutoRepeat)
+                            networkPanel.invoke("triggerRefresh");
                         event.accepted = true;
                     } else if (event.key === root.runtime.shellKeyCode("controls", "P") && !networkPanel.detailView) {
                         networkPanel.invoke("toggleSavedView");
                         event.accepted = true;
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "R") && networkPanel.savedView && !networkPanel.detailView) {
-                        networkPanel.invoke("refreshSaved");
+                    } else if (root.runtime.shellMatchesHint("NetworkPanel.refresh", event.key, event.modifiers) && networkPanel.savedView && !networkPanel.detailView) {
+                        if (!event.isAutoRepeat)
+                            networkPanel.invoke("triggerRefresh");
                         event.accepted = true;
                     } else if (event.key === root.runtime.shellKeyCode("controls", "W") && !networkPanel.savedView) {
                         networkPanel.invoke("toggleWifi");

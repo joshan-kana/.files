@@ -220,32 +220,28 @@ Column {
         return true;
     }
 
-    Row {
+    DetailHero {
         width: parent.width
-        spacing: panel.theme.spacing2
-        DetailHero {
-            width: Math.max(1, parent.width - refreshAction.width - parent.spacing)
-            runtime: panel.runtime
-            theme: panel.theme
-            motion: panel.motion
-            glyph: DesktopIcons.glyphFor("audioMixer")
-            glyphColor: panel.theme.roleColor("audio")
-            height: implicitHeight
-            title: "Audio hardware"
-            detail: panel.device?.profile || "Profiles and physical ports"
-        }
-        ShellUtilityAction {
-            id: refreshAction
-            anchors.verticalCenter: parent.verticalCenter
-            runtime: panel.runtime
-            theme: panel.theme
-            motion: panel.motion
-            icon: DesktopIcons.actionGlyph("refresh")
-            title: "Refresh audio hardware"
-            shortcut: panel.runtime.shellHint("AudioHardwareSettings.refresh")
-            enabled: !panel.busy
-            onActivated: panel.refresh()
-        }
+        runtime: panel.runtime
+        theme: panel.theme
+        motion: panel.motion
+        glyph: DesktopIcons.glyphFor("audioMixer")
+        glyphColor: panel.theme.roleColor("audio")
+        title: "Audio hardware"
+        detail: panel.device?.profile || "Profiles and physical ports"
+        actions: [
+            ShellUtilityAction {
+                id: refreshAction
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                icon: DesktopIcons.actionGlyph("refresh")
+                title: "Refresh audio hardware"
+                shortcut: panel.runtime.shellHint("AudioHardwareSettings.refresh")
+                enabled: !panel.busy
+                onActivated: panel.refresh()
+            }
+        ]
     }
     ShellValueSelector {
         id: deviceSelector

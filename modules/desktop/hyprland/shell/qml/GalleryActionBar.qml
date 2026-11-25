@@ -10,13 +10,21 @@ CenteredActionFlow {
     required property string accentRole
     signal actionRequested(string action)
 
+    function triggerAction(action: string): void {
+        const index = entries.findIndex(entry => entry.action === action);
+        if (index >= 0)
+            (buttons.itemAt(index) as ShellAction)?.trigger();
+    }
+
     spacing: theme.spacing2
     fillWidth: true
     Repeater {
-        model: bar.entries
+        id: buttons
+        model: bar.entries.length
         delegate: ShellAction {
             id: button
-            required property var modelData
+            required property int index
+            readonly property var modelData: bar.entries[index]
             width: bar.actionWidth(button)
             height: Math.max(bar.theme.minActionTarget, implicitHeight)
             runtime: bar.runtime

@@ -174,7 +174,7 @@ test("System Status consumes its refresh shortcut before Controls actions", () =
     statusKeys,
     /shellMatchesHint\("StatusContent\.refresh", event\.key, event\.modifiers\)/,
   );
-  assert.match(statusKeys, /root\.refreshStatus\(\)/);
+  assert.match(statusKeys, /statusContent\.triggerRefresh\(\)/);
   assert.match(statusKeys, /root\.backFromDetail\(\)/);
   assert.match(statusKeys, /return;/);
   assert.match(

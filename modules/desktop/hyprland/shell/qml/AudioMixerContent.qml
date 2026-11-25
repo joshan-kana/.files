@@ -327,6 +327,17 @@ FocusScope {
             outputDevice.toggleDeviceChooser();
     }
 
+    function triggerSelectedDeviceChooser(): void {
+        const target = selectedTarget;
+        if (target?.kind === "stream" && !compact) {
+            list.forceLayout();
+            (list.itemAtIndex(selectedStreamIndex) as StreamRow)?.control.triggerRoute();
+        } else if (target?.kind === "input")
+            inputDevice.triggerChooser();
+        else
+            outputDevice.triggerChooser();
+    }
+
     function handleKey(key: int, modifiers: int, autoRepeat: bool): bool {
         if (!active)
             return false;
@@ -353,7 +364,7 @@ FocusScope {
                 presetIndex = (presetIndex + effectsState.presets.length - 1) % effectsState.presets.length;
             } else if (key === runtime.shellKeyCode("mixer", "Return") || key === runtime.shellKeyCode("mixer", "Enter")) {
                 if (!autoRepeat)
-                    chooseEffectPreset(presetIndex);
+                    (presetList.currentItem as ShellChoice)?.trigger();
             } else {
                 return false;
             }
@@ -361,7 +372,7 @@ FocusScope {
         }
         if (!compact && runtime.shellMatchesHint("AudioMixerContent.effectsPresets", key, modifiers)) {
             if (!autoRepeat)
-                togglePresetPicker();
+                effectsPresetAction.trigger();
             return true;
         }
         if (routeOpen) {
@@ -373,7 +384,7 @@ FocusScope {
                 routeIndex = (routeIndex + routeDevices.length - 1) % routeDevices.length;
             } else if (key === runtime.shellKeyCode("mixer", "Return") || key === runtime.shellKeyCode("mixer", "Enter")) {
                 if (!autoRepeat)
-                    selectRoute(routeIndex);
+                    (routeList.currentItem as ShellChoice)?.trigger();
             } else {
                 return false;
             }
@@ -389,7 +400,7 @@ FocusScope {
         }
         if (!compact && runtime.shellMatchesHint("AudioMixerContent.balanceReset", key, modifiers)) {
             if (!autoRepeat && balanceAvailable)
-                system.setBalance(balanceNode, 0);
+                centreBalance.trigger();
             return true;
         }
         const picker = outputDevice.chooserOpen ? outputDevice : inputDevice.chooserOpen ? inputDevice : null;
@@ -401,7 +412,8 @@ FocusScope {
             } else if (mixer.runtime.shellNavigates("mixer", "up", key)) {
                 picker.moveDeviceSelection(-1);
             } else if (key === mixer.runtime.shellKeyCode("mixer", "Return") || key === mixer.runtime.shellKeyCode("mixer", "Enter")) {
-                picker.selectDevice(picker.chooserIndex);
+                if (!autoRepeat)
+                    picker.commitChooser();
             } else {
                 return false;
             }
@@ -409,17 +421,17 @@ FocusScope {
         }
         if (!compact && mixer.runtime.shellMatchesHint("AudioMixerContent.effectsToggle", key, modifiers)) {
             if (!autoRepeat)
-                effectsState.toggleBypass();
+                effectsToggleAction.trigger();
             return true;
         }
         if (!compact && mixer.runtime.shellMatchesHint("AudioMixerContent.effectsOpen", key, modifiers)) {
             if (!autoRepeat)
-                effectsState.openEditor();
+                effectsOpenAction.trigger();
             return true;
         }
         if (!compact && mixer.runtime.shellMatchesHint("AudioMixerContent.effectsRefresh", key, modifiers)) {
             if (!autoRepeat)
-                effectsState.refresh();
+                effectsRefreshAction.trigger();
             return true;
         }
         if (key === mixer.runtime.shellKeyCode("mixer", "Escape") && !compact)
@@ -439,7 +451,7 @@ FocusScope {
                 toggleSelectedMute();
         } else if (key === mixer.runtime.shellKeyCode("mixer", "P")) {
             if (!autoRepeat)
-                toggleSelectedDeviceChooser();
+                triggerSelectedDeviceChooser();
         } else if (key === mixer.runtime.shellKeyCode("mixer", "X")) {
             if (!autoRepeat)
                 inputDevice.triggerMute();
@@ -594,7 +606,7 @@ FocusScope {
 
                 Row {
                     width: parent.width
-                    height: Math.max(processingTitle.implicitHeight, processingStatus.implicitHeight)
+                    height: Math.max(processingTitle.implicitHeight, processingStatus.implicitHeight, effectsRefreshAction.implicitHeight)
                     spacing: mixer.theme.spacing2
 
                     ShellText {
@@ -611,7 +623,7 @@ FocusScope {
                     ShellText {
                         id: processingStatus
                         anchors.verticalCenter: parent.verticalCenter
-                        width: Math.max(1, parent.width - processingTitle.implicitWidth - parent.spacing)
+                        width: Math.max(1, parent.width - processingTitle.implicitWidth - effectsRefreshAction.implicitWidth - 2 * parent.spacing)
                         runtime: mixer.runtime
                         theme: mixer.theme
                         text: effectsState.statusLabel
@@ -619,16 +631,28 @@ FocusScope {
                         elide: Text.ElideRight
                         font.pixelSize: mixer.theme.fontSize(10)
                     }
+                    ShellUtilityAction {
+                        id: effectsRefreshAction
+                        runtime: mixer.runtime
+                        theme: mixer.theme
+                        motion: mixer.motion
+                        icon: DesktopIcons.actionGlyph("refresh")
+                        title: "Refresh effects"
+                        shortcut: mixer.runtime.shellHint("AudioMixerContent.effectsRefresh")
+                        enabled: !effectsState.busy
+                        onActivated: effectsState.refresh()
+                    }
                 }
 
                 Grid {
                     width: parent.width
-                    columns: width >= 510 && mixer.theme.textScale < 1.5 ? 3 : 1
+                    columns: width >= 510 && mixer.theme.textScale < 1.5 ? 2 : 1
                     rowSpacing: mixer.theme.spacing2
                     columnSpacing: mixer.theme.spacing2
                     readonly property real cellWidth: Math.max(1, (width - (columns - 1) * columnSpacing) / columns)
 
                     ShellAction {
+                        id: effectsToggleAction
                         width: parent.cellWidth
                         height: implicitHeight
                         runtime: mixer.runtime
@@ -645,6 +669,7 @@ FocusScope {
                     }
 
                     ShellAction {
+                        id: effectsOpenAction
                         width: parent.cellWidth
                         height: implicitHeight
                         runtime: mixer.runtime
@@ -657,21 +682,6 @@ FocusScope {
                         shortcut: mixer.runtime.shellHint("AudioMixerContent.effectsOpen")
                         onActivated: effectsState.openEditor()
                     }
-
-                    ShellAction {
-                        width: parent.cellWidth
-                        height: implicitHeight
-                        runtime: mixer.runtime
-                        theme: mixer.theme
-                        motion: mixer.motion
-                        compact: true
-                        horizontalCompact: true
-                        icon: DesktopIcons.actionGlyph("refresh")
-                        title: "Refresh effects"
-                        shortcut: mixer.runtime.shellHint("AudioMixerContent.effectsRefresh")
-                        enabled: !effectsState.busy
-                        onActivated: effectsState.refresh()
-                    }
                 }
                 ShellText {
                     width: parent.width
@@ -683,6 +693,7 @@ FocusScope {
                     font.pixelSize: mixer.theme.fontSize(10)
                 }
                 ShellAction {
+                    id: effectsPresetAction
                     width: parent.width
                     height: implicitHeight
                     runtime: mixer.runtime
@@ -697,6 +708,7 @@ FocusScope {
                     onActivated: mixer.togglePresetPicker()
                 }
                 ListView {
+                    id: presetList
                     width: parent.width
                     height: mixer.presetOpen ? Math.min(contentHeight, mixer.theme.fontSize(48) * 4) : 0
                     visible: mixer.presetOpen
@@ -800,6 +812,7 @@ FocusScope {
                 width: parent.width
                 spacing: mixer.theme.spacing1
                 ListView {
+                    id: routeList
                     width: parent.width
                     height: mixer.routeOpen ? Math.min(contentHeight, mixer.theme.fontSize(48) * 4) : 0
                     visible: mixer.routeOpen

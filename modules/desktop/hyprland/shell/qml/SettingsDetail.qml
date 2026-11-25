@@ -661,90 +661,52 @@ Item {
         width: parent.width
         spacing: panel.theme.spacing3
 
-        Row {
+        DetailHero {
             width: parent.width
-            height: Math.max(44, heading.implicitHeight, masterAction.implicitHeight, appearanceReset.height, displayUtilities.height)
-            spacing: panel.theme.spacing3
-
-            Text {
-                id: capabilityGlyph
-                anchors.verticalCenter: parent.verticalCenter
-                width: panel.theme.fontSize(26)
-                text: panel.capabilityIcon
-                font.family: "Symbols Nerd Font"
-                font.pixelSize: panel.theme.fontSize(23)
-                color: panel.theme.readableRoleColor(panel.foregroundRole)
-                horizontalAlignment: Text.AlignHCenter
-            }
-
-            Column {
-                id: heading
-                anchors.verticalCenter: parent.verticalCenter
-                width: Math.max(1, parent.width - capabilityGlyph.width - masterAction.width - appearanceReset.width - displayUtilities.width - (1 + (panel.hasMaster ? 1 : 0) + (appearanceReset.visible ? 1 : 0) + (displayUtilities.visible ? 1 : 0)) * parent.spacing)
-                spacing: panel.theme.spacing1
-
-                ShellText {
+            runtime: panel.runtime
+            theme: panel.theme
+            motion: panel.motion
+            glyph: panel.capabilityIcon
+            glyphFont: "Symbols Nerd Font"
+            glyphColor: panel.theme.readableRoleColor(panel.foregroundRole)
+            title: panel.titleText
+            detail: panel.subtitleText
+            actions: [
+                ShellAction {
+                    id: masterAction
+                    visible: panel.hasMaster
+                    width: visible ? implicitWidth : 0
+                    height: visible ? implicitHeight : 0
                     runtime: panel.runtime
                     theme: panel.theme
-                    width: parent.width
-                    wrapMode: Text.WordWrap
-                    text: panel.titleText
-                    font.pixelSize: panel.theme.fontDetailTitle
-                    font.weight: Font.DemiBold
-                }
-                ShellText {
+                    motion: panel.motion
+                    compact: true
+                    iconOnly: true
+                    switchControl: true
+                    title: (panel.masterState ? "Disable " : "Enable ") + panel.titleText
+                    shortcut: panel.runtime.shellHint("SettingsDetail.toggle")
+                    active: panel.masterState
+                    activeColor: panel.theme.roleColor(panel.foregroundRole)
+                    enabled: panel.masterAvailable
+                    onActivated: panel.toggleMaster()
+                },
+                ShellUtilityAction {
+                    id: appearanceReset
+                    visible: panel.hasReset
+                    width: visible ? implicitWidth : 0
+                    height: visible ? implicitHeight : 0
                     runtime: panel.runtime
                     theme: panel.theme
-                    width: parent.width
-                    wrapMode: Text.WordWrap
-                    text: panel.subtitleText
-                    color: panel.theme.textMuted
-                    font.pixelSize: panel.theme.fontSupporting
-                }
-            }
-
-            ShellAction {
-                id: masterAction
-                visible: panel.hasMaster
-                width: visible ? implicitWidth : 0
-                height: implicitHeight
-                anchors.verticalCenter: parent.verticalCenter
-                runtime: panel.runtime
-                theme: panel.theme
-                motion: panel.motion
-                compact: true
-                iconOnly: true
-                switchControl: true
-                title: (panel.masterState ? "Disable " : "Enable ") + panel.titleText
-                shortcut: panel.runtime.shellHint("SettingsDetail.toggle")
-                active: panel.masterState
-                activeColor: panel.theme.roleColor(panel.foregroundRole)
-                enabled: panel.masterAvailable
-                onActivated: panel.toggleMaster()
-            }
-            ShellUtilityAction {
-                id: appearanceReset
-                visible: panel.hasReset
-                width: visible ? implicitWidth : 0
-                height: visible ? implicitHeight : 0
-                anchors.verticalCenter: parent.verticalCenter
-                runtime: panel.runtime
-                theme: panel.theme
-                motion: panel.motion
-                icon: DesktopIcons.actionGlyph("reset")
-                title: "Restore defaults"
-                shortcut: panel.runtime.shellHint("SettingsDetail.reset")
-                onActivated: panel.resetAppearance()
-            }
-            Row {
-                id: displayUtilities
-                visible: panel.kind === "displays"
-                width: visible ? implicitWidth : 0
-                height: visible ? implicitHeight : 0
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: panel.theme.spacing1
+                    motion: panel.motion
+                    icon: DesktopIcons.actionGlyph("reset")
+                    title: "Restore defaults"
+                    shortcut: panel.runtime.shellHint("SettingsDetail.reset")
+                    onActivated: panel.resetAppearance()
+                },
                 ShellUtilityAction {
                     id: nativeDisplayAction
+                    visible: panel.kind === "displays"
+                    width: visible ? implicitWidth : 0
                     runtime: panel.runtime
                     theme: panel.theme
                     motion: panel.motion
@@ -753,9 +715,11 @@ Item {
                     shortcut: panel.runtime.shellHint("DisplaySettings.native")
                     enabled: displayDetails.canOpenNative
                     onActivated: panel.nativeDisplayEditorRequested()
-                }
+                },
                 ShellUtilityAction {
                     id: refreshDisplayAction
+                    visible: panel.kind === "displays"
+                    width: visible ? implicitWidth : 0
                     runtime: panel.runtime
                     theme: panel.theme
                     motion: panel.motion
@@ -764,8 +728,21 @@ Item {
                     shortcut: panel.runtime.shellHint("DisplaySettings.refresh")
                     enabled: displayDetails.canRefresh
                     onActivated: displayDetails.refresh()
+                },
+                ShellUtilityAction {
+                    id: refreshInhibitorsAction
+                    visible: panel.kind === "stay"
+                    width: visible ? implicitWidth : 0
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    motion: panel.motion
+                    icon: DesktopIcons.actionGlyph("refresh")
+                    title: "Refresh system inhibitor locks"
+                    shortcut: panel.runtime.shellHint("SettingsDetail.inhibitorsRefresh")
+                    enabled: panel.inspectingInhibitors && !inhibitorQuery.running
+                    onActivated: panel.refreshInhibitors()
                 }
-            }
+            ]
         }
 
         ScenePanel {
@@ -1451,20 +1428,12 @@ Item {
                     textRole: ShellText.Supporting
                     wrapMode: Text.WordWrap
                 }
-                ShellAction {
-                    id: refreshInhibitorsAction
+                ShellText {
                     width: parent.width
-                    height: Math.max(panel.theme.fontSize(44), implicitHeight)
                     runtime: panel.runtime
                     theme: panel.theme
-                    motion: panel.motion
-                    compact: true
-                    horizontalCompact: true
-                    icon: DesktopIcons.actionGlyph("refresh")
-                    title: panel.inhibitorStatus
-                    shortcut: panel.runtime.shellHint("SettingsDetail.inhibitorsRefresh")
-                    enabled: panel.inspectingInhibitors && !inhibitorQuery.running
-                    onActivated: panel.refreshInhibitors()
+                    text: panel.inhibitorStatus
+                    textRole: ShellText.Supporting
                 }
                 Repeater {
                     model: panel.inhibitorEntries

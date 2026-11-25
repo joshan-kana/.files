@@ -52,7 +52,7 @@ Row {
         theme: stepper.theme
         motion: stepper.motion
         surfaceLayer: ShellSurface.Control
-        fillColor: stepper.theme.layer1
+        fillColor: stepper.theme.expressiveSurfaceStrong
         cornerRadius: stepper.theme.spacing2
         Accessible.role: Accessible.StaticText
         Accessible.name: stepper.title + ", " + stepper.readback

@@ -191,7 +191,7 @@ test("Session uses animated shared tile hints and physical QWE/ASD action positi
   assert.match(session, /shortcut: modelData\.shortcut/);
   assert.match(
     session,
-    /function activateShortcut\(key: int, modifiers: int\): bool \{/,
+    /function activateShortcut\(key: int, modifiers: int, autoRepeat: bool\): bool \{/,
   );
   assert.match(
     session,
@@ -199,7 +199,7 @@ test("Session uses animated shared tile hints and physical QWE/ASD action positi
   );
   assert.match(
     content,
-    /sessionPanel\.invoke\("activateShortcut", event\.key, event\.modifiers\) === true/,
+    /sessionPanel\.invoke\("activateShortcut", event\.key, event\.modifiers, event\.isAutoRepeat\) === true/,
   );
   assert.match(content, /key: sessionPanel\.actionShortcutLegend/);
   assert.match(session, /actionShortcutLegend: entries\.slice\(0, 3\)/);

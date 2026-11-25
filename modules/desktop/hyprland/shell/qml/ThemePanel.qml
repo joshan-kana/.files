@@ -76,7 +76,10 @@ Item {
             if (!runtime.shellMatchesHint(entry.action, key, modifiers))
                 continue;
             if (!repeat && entry.enabled)
-                galleryAction(entry.action);
+                if (entry.action === "ThemePanel.defaults")
+                    themeReset.trigger();
+                else
+                    galleryButtons.triggerAction(entry.action);
             return true;
         }
         return false;
@@ -409,6 +412,19 @@ Item {
         eyebrow: "Appearance / system themes"
         title: "Theme gallery"
         detail: panel.currentTheme.length > 0 ? "Active · " + panel.themeLabel(panel.currentTheme) : "Resolving active theme…"
+        actions: [
+            ShellUtilityAction {
+                id: themeReset
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                icon: DesktopIcons.actionGlyph("reset")
+                title: "Default theme"
+                shortcut: panel.runtime.shellHint("ThemePanel.defaults")
+                enabled: !!panel.defaultTheme && !panel.operationRunning && panel.defaultTheme !== panel.currentTheme
+                onActivated: panel.galleryAction("ThemePanel.defaults")
+            }
+        ]
     }
 
     SearchFieldSurface {
@@ -476,7 +492,7 @@ Item {
         runtime: panel.runtime
         theme: panel.theme
         motion: panel.motion
-        entries: panel.galleryActions
+        entries: panel.galleryActions.filter(entry => entry.action !== "ThemePanel.defaults")
         accentRole: "display"
         onActionRequested: action => panel.galleryAction(action)
     }

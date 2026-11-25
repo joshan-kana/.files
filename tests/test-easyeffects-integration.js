@@ -73,7 +73,7 @@ test("full Audio Mixer exposes status, bypass, refresh and standalone editor wit
     mixer,
     /handleKey\(key: int, modifiers: int, autoRepeat: bool\)/,
   );
-  assert.match(mixer, /if \(!autoRepeat\)\s*effectsState\.toggleBypass\(\)/);
+  assert.match(mixer, /if \(!autoRepeat\)\s*effectsToggleAction\.trigger\(\)/);
   assert.match(
     controls,
     /mixerView\.panel\.handleKey\(event\.key, event\.modifiers, event\.isAutoRepeat\)/,

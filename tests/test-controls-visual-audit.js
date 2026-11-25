@@ -53,8 +53,8 @@ const tileLayout = (width, textScale, count, spacing = 8) => {
 
 test("hover and press motion on shared Controls tiles stays inside the clipped viewport", () => {
   const motion = read("Motion.qml");
-  assert.match(motion, /pressScaleSmall: 0\.94/);
-  assert.match(motion, /pressScaleNormal: 0\.965/);
+  assert.match(motion, /pressScaleSmall: 0\.98/);
+  assert.match(motion, /pressScaleNormal: 0\.98/);
   for (const name of ["QuickSettingChip.qml", "ConnectivityTile.qml"]) {
     const source = read(name);
     assert.match(source, /scale: (?:interaction|press)\.defaultEffectScale/);
@@ -1051,7 +1051,7 @@ test("capability headers describe their controls instead of repeating master sta
     subtitles,
     /Enabled|Disabled|masterState|Current settings/,
   );
-  assert.match(detail, /text: panel.subtitleText/);
+  assert.match(detail, /detail: panel.subtitleText/);
   assert.match(
     detail,
     /title: \(panel.masterState \? "Disable " : "Enable "\) \+ panel.titleText/,

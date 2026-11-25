@@ -52,6 +52,14 @@ ShellSurface {
             chooserOpen = false;
     }
 
+    function triggerChooser(): void {
+        chooserHit.trigger();
+    }
+
+    function commitChooser(): void {
+        (deviceList.currentItem as ShellChoice)?.trigger();
+    }
+
     function toggleDeviceChooser(): void {
         if (chooserOpen) {
             chooserOpen = false;
@@ -197,6 +205,7 @@ ShellSurface {
             width: parent.width
             height: Math.max(deviceControl.theme.fontSize(deviceControl.compact ? 30 : 26), pickerHint.implicitHeight, chooserChevron.implicitHeight)
             StateLayer {
+                id: chooserHit
                 anchors.fill: parent
                 theme: deviceControl.theme
                 motion: deviceControl.motion

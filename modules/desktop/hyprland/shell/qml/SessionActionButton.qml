@@ -19,6 +19,9 @@ Item {
 
     signal activated
     signal hovered
+    function trigger(): void {
+        pointer.trigger();
+    }
 
     implicitWidth: 154
     implicitHeight: 155

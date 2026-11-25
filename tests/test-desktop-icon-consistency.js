@@ -116,7 +116,7 @@ test("capability headers and tiles share dynamic state and canonical static icon
   const tile = qml("SystemContent.qml");
   const detail = qml("SettingsDetail.qml");
   assert.match(detail, /DesktopIcons\.capabilityGlyph\(kind,/);
-  assert.match(detail, /text: panel\.capabilityIcon/);
+  assert.match(detail, /glyph: panel\.capabilityIcon/);
   for (const kind of [
     "windows",
     "glass",
@@ -160,10 +160,10 @@ test("capability headers and tiles share dynamic state and canonical static icon
     qml("BluetoothPanel.qml"),
     /glyph: DesktopIcons\.capabilityGlyph\("bluetooth"/,
   );
-  assert.match(qml("VhsPanel.qml"), /text: DesktopIcons\.glyphFor\("vhs"\)/);
+  assert.match(qml("VhsPanel.qml"), /glyph: DesktopIcons\.glyphFor\("vhs"\)/);
   assert.match(
     qml("StatusContent.qml"),
-    /text: DesktopIcons\.glyphFor\("status"\)/,
+    /glyph: DesktopIcons\.glyphFor\("status"\)/,
   );
 });
 
