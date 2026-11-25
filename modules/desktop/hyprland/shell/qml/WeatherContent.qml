@@ -12,6 +12,7 @@ FocusScope {
     required property WeatherState weather
     readonly property bool foregroundBusy: weather.loading && weather.foregroundLoading
     readonly property var todayForecast: weather.forecast.length > 0 ? weather.forecast[0] : null
+    readonly property bool stackedOutlook: width < 560 || theme.textScale >= 1.4
     property bool engaged: false
     property bool locationEditing: false
     function editLocation(): void {
@@ -223,7 +224,7 @@ FocusScope {
 
         ShellSurface {
             width: parent.width
-            height: panel.theme.fontSize(166)
+            height: panel.theme.fontSize(panel.stackedOutlook && panel.todayForecast ? 235 : 166)
             theme: panel.theme
             motion: panel.motion
             surfaceLayer: ShellSurface.Control
@@ -232,15 +233,17 @@ FocusScope {
             Accessible.role: Accessible.StaticText
             Accessible.name: panel.weather.description + ", " + panel.weather.temperatureText(panel.weather.temperature) + (panel.todayForecast ? ", low " + panel.weather.temperatureText(panel.todayForecast.low) + ", high " + panel.weather.temperatureText(panel.todayForecast.high) + ", " + Math.round(panel.todayForecast.rain ?? 0) + "% chance of rain" : "")
 
-            Row {
+            Grid {
                 anchors.fill: parent
                 anchors.margins: panel.theme.spacing4
-                spacing: panel.theme.spacing4
+                columns: panel.stackedOutlook ? 1 : 3
+                rowSpacing: panel.theme.spacing3
+                columnSpacing: panel.theme.spacing3
 
                 Row {
                     id: currentConditions
-                    width: panel.todayForecast ? parent.width * 0.43 : parent.width
-                    height: parent.height
+                    width: panel.stackedOutlook ? parent.width : parent.width * 0.38
+                    height: panel.stackedOutlook && panel.todayForecast ? (parent.height - parent.rowSpacing) * 0.53 : parent.height
                     spacing: panel.theme.spacing3
 
                     Text {
@@ -274,88 +277,74 @@ FocusScope {
 
                 Rectangle {
                     id: outlookDivider
-                    visible: panel.todayForecast !== null
-                    width: 1
+                    visible: panel.todayForecast !== null && !panel.stackedOutlook
+                    width: visible ? 1 : 0
                     height: parent.height * 0.63
-                    anchors.verticalCenter: parent.verticalCenter
                     color: panel.theme.subtleBorder
                 }
 
-                Column {
+                Row {
+                    id: todayMetrics
                     visible: panel.todayForecast !== null
-                    width: Math.max(1, parent.width - currentConditions.width - outlookDivider.width - parent.spacing * 2)
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: panel.theme.spacing3
+                    width: panel.stackedOutlook ? parent.width : Math.max(1, parent.width - currentConditions.width - outlookDivider.width - parent.columnSpacing * 2)
+                    height: panel.stackedOutlook ? parent.height - currentConditions.height - parent.rowSpacing : parent.height
+                    spacing: panel.theme.spacing2
 
-                    Text {
-                        text: "TODAY"
-                        color: panel.theme.textMuted
-                        font.family: panel.runtime.fontSans
-                        font.pixelSize: panel.theme.fontSize(11)
-                        font.weight: Font.DemiBold
-                        font.letterSpacing: 0.8
-                    }
+                    Repeater {
+                        model: panel.todayForecast ? [
+                            {
+                                title: "Low",
+                                value: panel.weather.temperatureText(panel.todayForecast.low),
+                                role: "cold",
+                                icon: "↓",
+                                iconFont: panel.runtime.fontSans
+                            },
+                            {
+                                title: "High",
+                                value: panel.weather.temperatureText(panel.todayForecast.high),
+                                role: "temperature",
+                                icon: "↑",
+                                iconFont: panel.runtime.fontSans
+                            },
+                            {
+                                title: "Rain chance",
+                                value: Math.round(panel.todayForecast.rain ?? 0) + "%",
+                                role: "precipitation",
+                                icon: "󰖗",
+                                iconFont: "Symbols Nerd Font"
+                            }
+                        ] : []
 
-                    Row {
-                        id: todayMetrics
-                        width: parent.width
-                        spacing: panel.theme.spacing2
+                        delegate: Column {
+                            id: todayMetric
+                            required property var modelData
+                            width: (todayMetrics.width - todayMetrics.spacing * 2) / 3
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: panel.theme.spacing2
 
-                        Repeater {
-                            model: panel.todayForecast ? [
-                                {
-                                    title: "Low",
-                                    value: panel.weather.temperatureText(panel.todayForecast.low),
-                                    role: "cold",
-                                    icon: "↓",
-                                    iconFont: panel.runtime.fontSans
-                                },
-                                {
-                                    title: "High",
-                                    value: panel.weather.temperatureText(panel.todayForecast.high),
-                                    role: "temperature",
-                                    icon: "↑",
-                                    iconFont: panel.runtime.fontSans
-                                },
-                                {
-                                    title: "Rain",
-                                    value: Math.round(panel.todayForecast.rain ?? 0) + "%",
-                                    role: "precipitation",
-                                    icon: "󰖗",
-                                    iconFont: "Symbols Nerd Font"
-                                }
-                            ] : []
-
-                            delegate: Column {
-                                id: todayMetric
-                                required property var modelData
-                                width: (todayMetrics.width - todayMetrics.spacing * 2) / 3
-                                spacing: panel.theme.spacing2
-
-                                Row {
-                                    spacing: panel.theme.spacing1
-                                    Text {
-                                        text: todayMetric.modelData.icon
-                                        color: panel.theme.readableRoleColor(todayMetric.modelData.role)
-                                        font.family: todayMetric.modelData.iconFont
-                                        font.pixelSize: panel.theme.fontSize(16)
-                                    }
-                                    Text {
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        text: todayMetric.modelData.title
-                                        color: panel.theme.textMuted
-                                        font.family: panel.runtime.fontSans
-                                        font.pixelSize: panel.theme.fontSize(11)
-                                    }
-                                }
-
+                            Row {
+                                spacing: panel.theme.spacing1
                                 Text {
-                                    text: todayMetric.modelData.value
+                                    text: todayMetric.modelData.icon
                                     color: panel.theme.readableRoleColor(todayMetric.modelData.role)
-                                    font.family: panel.runtime.fontMono
-                                    font.pixelSize: panel.theme.fontSize(21)
-                                    font.weight: Font.DemiBold
+                                    font.family: todayMetric.modelData.iconFont
+                                    font.pixelSize: panel.theme.fontSize(16)
                                 }
+                                Text {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: todayMetric.modelData.title
+                                    color: panel.theme.textMuted
+                                    font.family: panel.runtime.fontSans
+                                    font.pixelSize: panel.theme.fontSize(12)
+                                }
+                            }
+
+                            Text {
+                                text: todayMetric.modelData.value
+                                color: panel.theme.readableRoleColor(todayMetric.modelData.role)
+                                font.family: panel.runtime.fontMono
+                                font.pixelSize: panel.theme.fontPanelTitle
+                                font.weight: Font.DemiBold
                             }
                         }
                     }

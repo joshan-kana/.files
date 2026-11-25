@@ -222,9 +222,14 @@ test("today's weather summary uses prominent existing forecast values", () => {
   for (const key of ["low", "high", "rain"])
     assert.match(weather, new RegExp("panel\\.todayForecast\\." + key));
   assert.match(state, /precipitation_probability_max/);
-  assert.match(weather, /text: "TODAY"/);
+  assert.doesNotMatch(weather, /text: "TODAY"/);
   assert.match(weather, /id: todayMetrics/);
-  assert.match(weather, /font.pixelSize: panel.theme.fontSize\(21\)/);
+  assert.match(weather, /font.pixelSize: panel.theme.fontPanelTitle/);
+  assert.match(weather, /title: "Rain chance"/);
+  assert.match(
+    weather,
+    /stackedOutlook: width < 560 \|\| theme.textScale >= 1.4/,
+  );
   assert.match(weather, /Accessible.name: panel.weather.description/);
   assert.doesNotMatch(
     weather,
