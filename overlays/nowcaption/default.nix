@@ -1,6 +1,6 @@
 _:
 let
-  version = "1.2.4";
+  version = "models-v4";
   hashes = {
     aarch64-linux = "sha256-2VBRfJhp9PxsGT62n+LnLeRGXO09zWEc5alsvf7lwsc=";
     x86_64-linux = "sha256-qJhCkU6HR4e86M/B6PTTF+ri1IBGJPjwf/YMUBXAV8M=";
