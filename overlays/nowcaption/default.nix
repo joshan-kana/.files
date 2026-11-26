@@ -10,14 +10,17 @@ in
   nixpkgs.overlays = [
     (
       _final: prev:
-      prev.lib.optionalAttrs (builtins.hasAttr prev.stdenv.hostPlatform.system hashes) {
+      let
+        system = prev.stdenv.hostPlatform.system;
+      in
+      prev.lib.optionalAttrs (builtins.hasAttr system hashes) {
         nowcaption =
           let
             src = prev.fetchurl {
               url = "https://github.com/Techlm77/NowCaption/releases/download/v${version}/NowCaption-${version}-${
-                if prev.stdenv.hostPlatform.isAarch64 then "aarch64" else "x86_64"
+                if system == "aarch64-linux" then "aarch64" else "x86_64"
               }.AppImage";
-              hash = hashes.${prev.stdenv.hostPlatform.system};
+              hash = hashes.${system};
             };
             contents = prev.appimageTools.extract {
               pname = "nowcaption";
