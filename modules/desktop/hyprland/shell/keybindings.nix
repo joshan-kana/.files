@@ -313,7 +313,7 @@
           "SystemContent.audioSelect" = "NAV_VERTICAL";
           "SystemContent.bluetooth" = "G";
           "SystemContent.captures" = "C";
-          "SystemContent.displays" = "D";
+          "SystemContent.displays" = "SHIFT+Y";
           "SystemContent.legend.activate_confirm" = "ENTER";
           "SystemContent.legend.activate_open_submenu" = "ENTER / →";
           "SystemContent.legend.activate_selected_setting_exit_parameter_focus" = "ENTER / ESC";
