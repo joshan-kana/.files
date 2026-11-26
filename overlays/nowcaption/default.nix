@@ -33,7 +33,13 @@ in
               install -Dm644 ${contents}/io.github.Techlm77.NowCaption.svg \
                 "$out/share/icons/hicolor/scalable/apps/io.github.Techlm77.NowCaption.svg"
             '';
-            passthru.autoUpdate = true;
+            passthru = {
+              autoUpdate = true;
+              updateGroup = "nowcaption";
+              updateUrl = "https://github.com/Techlm77/NowCaption";
+              updateGithubReleases = true;
+              updateFilename = "overlays/nowcaption/default.nix";
+            };
             meta = {
               description = "Offline live captions for desktop audio and microphone";
               homepage = "https://github.com/Techlm77/NowCaption";
