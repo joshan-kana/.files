@@ -58,8 +58,8 @@ in
     (
       _final: prev:
       let
-        version = "16.3.0";
-        hash = "sha256-GcznvtPUinIiQspoO9G65Aa2qH/tUgco0ckd7hdbdeQ=";
+        version = "17.0.0";
+        hash = "sha256-l3MMfU3IMc8vtbXuU07Rn4hbIFv4Rwv2sgH5MgRqU6o=";
       in
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
         karabiner-elements = prev.stdenvNoCC.mkDerivation {
