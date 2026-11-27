@@ -24,7 +24,8 @@ _: {
             };
 
             # Keep the PyPI wheel pin separate from Open WebUI itself.
-            passthru.updateUrl = "https://pypi.org/project/cptr/";
+            # nix-update recognizes the synthetic pypi host for PyPI discovery.
+            passthru.updateUrl = "https://pypi/project/cptr/";
 
             passthru.autoUpdate = true;
             dontUnpack = true;
