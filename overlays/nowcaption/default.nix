@@ -41,6 +41,7 @@ in
               updateGroup = "nowcaption";
               updateUrl = "https://github.com/Techlm77/NowCaption";
               updateGithubReleases = true;
+              updateRegex = "^v([0-9]+\\.[0-9]+\\.[0-9]+)$";
               updateFilename = "overlays/nowcaption/default.nix";
             };
             meta = {
