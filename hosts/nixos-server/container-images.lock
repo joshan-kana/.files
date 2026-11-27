@@ -4,11 +4,11 @@
     "source": "ghcr.io/dicklesworthstone/mcp_agent_mail_rust:latest"
   },
   "n8n": {
-    "digest": "sha256:c349b24d6e242b4ea14d75e6f1a90c50e348cf4b1c4512b4a0a50219ead6533d",
+    "digest": "sha256:17a3e5a8c5e2a7440cc757f5392d57b50eefdfd46eac4532a7dea9bf2735d9ae",
     "source": "docker.io/n8nio/n8n:latest"
   },
   "onedev": {
-    "digest": "sha256:e151711e9825d2fa68d43ed360d3f869fa52a305bb8acf6547fa6cc2bcc30ab1",
+    "digest": "sha256:da5add944fc39270ea8f3cf05a98b9a589429e2e45e5ba3b99bc162bbd092fdd",
     "source": "1dev/server:latest"
   },
   "streamystats": {

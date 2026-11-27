@@ -5,8 +5,8 @@ _: {
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
         krita = import ../../lib/mac-app.nix { inherit prev; } {
           release = {
-            version = "5.3.4.1";
-            hash = "sha256-Ux4mHaH9jVxGjPzU7r0W6e32qzIOiUBtKHXy5DwRSN4=";
+            version = "5.3.5";
+            hash = "sha256-Jz9h1ragv6yyEIQzbMZSK2bB10ufkqWeZBtpzWaYgXU=";
           };
           pname = "krita";
           appName = "krita.app";
