@@ -61,7 +61,10 @@ FocusScope {
             slideProgress = 1;
             monthShift = 0;
             selectedDay = 0;
-            Qt.callLater(() => keySink.forceActiveFocus());
+            Qt.callLater(() => {
+                if (calendar.engaged && !keySink.activeFocus)
+                    keySink.forceActiveFocus();
+            });
         }
     }
 

@@ -48,7 +48,10 @@ FocusScope {
 
     onEngagedChanged: {
         if (engaged) {
-            Qt.callLater(() => keys.forceActiveFocus());
+            Qt.callLater(() => {
+                if (panel.engaged && !keys.activeFocus)
+                    keys.forceActiveFocus();
+            });
         } else {
             locationEditing = false;
         }

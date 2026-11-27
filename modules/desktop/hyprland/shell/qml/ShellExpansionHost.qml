@@ -264,7 +264,6 @@ PanelWindow {
 
         const incoming = next === calendarComponent ? contentLoaderA : next === systemComponent ? contentLoaderB : next === activityComponent ? contentLoaderC : next === mediaComponent ? contentLoaderD : contentLoaderE;
         const previous = activeLoader;
-        const outgoing = contentExpanded && !closing && expansionState.hasCurrent ? previous : null;
         // Enable the destination before constructing its FocusScope. Its
         // onEngagedChanged requests keyboard focus during instantiation.
         activeSlot = incoming === contentLoaderA ? 0 : incoming === contentLoaderB ? 1 : incoming === contentLoaderC ? 2 : incoming === contentLoaderD ? 3 : 4;
@@ -279,15 +278,15 @@ PanelWindow {
         // Retarget the current opacity on reversal; do not reset to zero.
         incoming.opacity = 1;
         geometryUpdate.restart();
-        // A tab switch may displace the destination's nested keyboard sink.
-        // Do not defer this work on a closed-to-open transition: the view's
-        // FocusScope already requests focus when it becomes engaged.
-        if (outgoing) {
-            Qt.callLater(() => {
-                if (host.expansionState.hasCurrent && host.currentComponent === next && host.loadedContent)
-                    host.loadedContent.forceActiveFocus();
-            });
-        }
+        // An engaged page can request focus while its prewarmed Loader is still
+        // disabled. Restore its local key sink as soon as the slot is enabled,
+        // including when the previous page has not finished opening.
+        if (expansionState.hasCurrent && incoming.item && !themeTerminalActive && !incoming.item.activeFocus)
+            (incoming.item as Item).forceActiveFocus();
+        Qt.callLater(() => {
+            if (host.expansionState.hasCurrent && !host.themeTerminalActive && host.activeLoader === incoming && host.currentComponent === next && incoming.item && !incoming.item.activeFocus)
+                (incoming.item as Item).forceActiveFocus();
+        });
     }
 
     function onLoaderReady(loader: Loader): void {
