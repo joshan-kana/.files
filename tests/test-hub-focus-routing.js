@@ -25,14 +25,11 @@ test("tab changes restore local keyboard focus even before the hub finishes open
   assert.doesNotMatch(present, /if \(outgoing\)|const outgoing =/);
 });
 
-test("deferred keyboard recovery is guarded against stale tabs and focused editors", () => {
-  assert.match(
-    present,
-    /Qt\.callLater\(\(\) => \{[\s\S]*?host\.expansionState\.hasCurrent && !host\.themeTerminalActive && host\.activeLoader === incoming && host\.currentComponent === next && incoming\.item && !incoming\.item\.activeFocus[\s\S]*?forceActiveFocus\(\)/,
-  );
+test("tab handoff remains immediate and async loader readiness restores focus", () => {
+  assert.doesNotMatch(present, /Qt\.callLater/);
   assert.match(
     host,
-    /function onLoaderReady\(loader: Loader\)[\s\S]*?host\.activeLoader === loader && loader\.item[\s\S]*?forceActiveFocus\(\)/,
+    /function onLoaderReady\(loader: Loader\)[\s\S]*?Qt\.callLater\(\(\) => \{[\s\S]*?host\.activeLoader === loader && loader\.item[\s\S]*?forceActiveFocus\(\)/,
   );
   assert.match(host, /onActivated: host\.cycleTab\(-1\)/);
   assert.match(host, /onActivated: host\.cycleTab\(1\)/);
@@ -60,4 +57,21 @@ test("inactive Home and Weather pages cannot reclaim focus after a tab change", 
       /Qt\.callLater\(\(\) => (?:keySink|keys)\.forceActiveFocus\(\)\);/,
     );
   }
+});
+
+test("an active hub recovers focus from the window root without stealing fields", () => {
+  const focusWindow = host.slice(
+    host.indexOf(
+      "target: host.contentItem ? host.contentItem.Window.window : null",
+    ),
+    host.indexOf("HyprlandFocusGrab {"),
+  );
+  assert.match(focusWindow, /function onActiveFocusItemChanged\(\): void/);
+  assert.match(focusWindow, /window\.activeFocusItem !== window\.contentItem/);
+  assert.match(focusWindow, /window\.activeFocusItem === window\.contentItem/);
+  assert.match(
+    focusWindow,
+    /window\.active && window\.activeFocusItem === window\.contentItem && host\.expansionState\.hasCurrent && !host\.themeTerminalActive && host\.loadedContent/,
+  );
+  assert.match(focusWindow, /host\.loadedContent\.forceActiveFocus\(\)/);
 });

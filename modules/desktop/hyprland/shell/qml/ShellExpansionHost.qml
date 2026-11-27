@@ -283,10 +283,6 @@ PanelWindow {
         // including when the previous page has not finished opening.
         if (expansionState.hasCurrent && incoming.item && !themeTerminalActive && !incoming.item.activeFocus)
             (incoming.item as Item).forceActiveFocus();
-        Qt.callLater(() => {
-            if (host.expansionState.hasCurrent && !host.themeTerminalActive && host.activeLoader === incoming && host.currentComponent === next && incoming.item && !incoming.item.activeFocus)
-                (incoming.item as Item).forceActiveFocus();
-        });
     }
 
     function onLoaderReady(loader: Loader): void {
@@ -694,6 +690,19 @@ PanelWindow {
                 focusGrabLost.stop();
                 host.keyboardFocusReady = true;
             }
+        }
+
+        // Qt can return focus to the window root after changing an enabled
+        // prewarmed Loader. Reclaim only that unowned focus, never a field or
+        // another control which deliberately owns the active item.
+        function onActiveFocusItemChanged(): void {
+            const window = host.contentItem.Window.window;
+            if (!window.active || window.activeFocusItem !== window.contentItem || !host.expansionState.hasCurrent || host.themeTerminalActive)
+                return;
+            Qt.callLater(() => {
+                if (window.active && window.activeFocusItem === window.contentItem && host.expansionState.hasCurrent && !host.themeTerminalActive && host.loadedContent)
+                    host.loadedContent.forceActiveFocus();
+            });
         }
     }
 
