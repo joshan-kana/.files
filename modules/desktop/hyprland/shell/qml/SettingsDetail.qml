@@ -4,6 +4,7 @@ import Quickshell.Io
 import "LogindInhibitors.js" as LogindInhibitors
 import "ClockFormatting.js" as ClockFormatting
 import "DesktopIcons.js" as DesktopIcons
+import "ScreenEffects.js" as ScreenEffects
 
 // One capability at a time. Parameters and quick actions share their existing
 // authoritative service owners, including Nix-default/user-override semantics.
@@ -76,15 +77,17 @@ Item {
     }
     readonly property string idleStatus: !system.idleInhibited ? "Idle allowed" : system.idleInhibitDeadline <= 0 ? "Inhibited until disabled" : Math.max(0, Math.ceil((system.idleInhibitDeadline - clockMs) / 60000)) + " min remaining"
     visible: open
-    implicitWidth: kind === "displays" ? theme.controlsDetailWidth : reactiveTuning || spectrumTuning || kind === "alerts" || kind === "nightLight" || kind === "power" ? theme.richDetailWidth : theme.compactDetailWidth
+    implicitWidth: kind === "displays" ? theme.controlsDetailWidth : reactiveTuning || spectrumTuning || screenTuning || kind === "alerts" || kind === "nightLight" || kind === "power" ? theme.richDetailWidth : theme.compactDetailWidth
     implicitHeight: content.implicitHeight
 
-    readonly property bool hasMaster: ["windows", "glass", "nightLight", "alerts", "stay", "reactive", "bar", "frame", "motion"].includes(kind)
+    readonly property bool hasMaster: screenTuning || ["windows", "glass", "nightLight", "alerts", "stay", "reactive", "bar", "frame", "motion"].includes(kind)
     readonly property bool hasBlur: ["windows", "glass"].includes(kind)
     readonly property bool reactiveTuning: kind === "reactive"
     readonly property bool spectrumTuning: kind === "spectrum"
-    readonly property bool hasReset: hasBlur || spectrumTuning || reactiveTuning || kind === "alerts" || kind === "nightLight" || ["bar", "frame", "motion"].includes(kind)
-    readonly property string titleText: ({
+    readonly property bool screenTuning: kind.startsWith("screen.")
+    readonly property string screenKind: screenTuning ? kind.slice("screen.".length) : ""
+    readonly property bool hasReset: hasBlur || spectrumTuning || reactiveTuning || screenTuning || kind === "alerts" || kind === "nightLight" || ["bar", "frame", "motion"].includes(kind)
+    readonly property string titleText: screenTuning ? (ScreenEffects.descriptor(screenKind)?.title || "Screen effect") : ({
             windows: "Window transparency",
             glass: "Frosted glass",
             nightLight: "Night Light",
@@ -99,7 +102,7 @@ Item {
             displays: "Displays",
             scenes: "Desktop scenes"
         })[kind] || "Settings"
-    readonly property string subtitleText: ({
+    readonly property string subtitleText: screenTuning ? (ScreenEffects.descriptor(screenKind)?.description || "") : ({
             windows: "Window opacity and compositor blur",
             glass: "Shell translucency and backdrop blur",
             nightLight: "Colour temperature and warm-light schedule",
@@ -115,6 +118,8 @@ Item {
             scenes: "Save and switch desktop appearance presets"
         })[kind] || "Settings"
     readonly property bool masterState: {
+        if (screenTuning)
+            return appearance.activeScreenEffect === screenKind;
         switch (kind) {
         case "windows":
             return appearance.windowTransparencyEnabled;
@@ -138,12 +143,12 @@ Item {
             return false;
         }
     }
-    readonly property string capabilityIcon: DesktopIcons.capabilityGlyph(kind, {
+    readonly property string capabilityIcon: screenTuning ? ScreenEffects.descriptor(screenKind)?.glyph || "" : DesktopIcons.capabilityGlyph(kind, {
         active: masterState,
         batteryAvailable: system.batteryAvailable,
         batteryLevelIcon: system.batteryLevelIcon
     })
-    readonly property string foregroundRole: theme.capabilityRole(kind)
+    readonly property string foregroundRole: screenTuning ? "reactive" : theme.capabilityRole(kind)
     readonly property bool displayOperationBusy: displayDetails.foregroundBusy
     readonly property bool foregroundBusy: kind === "displays" ? displayOperationBusy : kind === "nightLight" && nightLight.foregroundBusy
     readonly property bool masterAvailable: kind !== "nightLight" || nightLight.supported && !nightLight.busy
@@ -228,6 +233,8 @@ Item {
             ];
         if (reactiveTuning)
             return appearance.reactiveParameters;
+        if (screenTuning)
+            return ScreenEffects.parameters(screenKind, runtime.constraints.appearance.screenEffectTuning);
         if (spectrumTuning)
             return appearance.spectrumParameters;
         if (kind === "alerts")
@@ -303,6 +310,8 @@ Item {
             return Math.round(motion.durationMultiplier * 100);
         if (key === "spectrumDensity")
             return appearance.spectrumDensity * 100;
+        if (key.startsWith("screen."))
+            return Math.round(appearance.screenEffectValues(screenKind)[key.split(".")[2]] * 100);
         if (key.startsWith("musicReactive") || key.startsWith("spectrum"))
             return Math.round(appearance[key] * 100);
         if (key === "windowOpacity")
@@ -331,6 +340,8 @@ Item {
             appearance.setGeometryPreference(key, value);
         else if (key === "motionDuration")
             motion.setDurationMultiplier(value / 100);
+        else if (key.startsWith("screen."))
+            appearance.setScreenEffectValue(screenKind, key.split(".")[2], value / 100);
         else if (key.startsWith("musicReactive") || key.startsWith("spectrum"))
             appearance.setVisualParameter(key, value / 100);
         else if (key === "windowOpacity")
@@ -369,6 +380,10 @@ Item {
     }
 
     function toggleMaster(): void {
+        if (screenTuning) {
+            appearance.setScreenEffect(screenKind);
+            return;
+        }
         switch (kind) {
         case "windows":
             appearance.toggleWindowTransparency();
@@ -414,6 +429,8 @@ Item {
                 })[key]);
         } else if (kind === "alerts") {
             notifications.resetQuietField(key === "quietStart" ? "startMinute" : "endMinute");
+        } else if (screenTuning) {
+            appearance.resetScreenEffectParameter(screenKind, key.split(".")[2]);
         } else if (key === "motionDuration") {
             motion.resetDurationMultiplier();
         } else {
@@ -428,6 +445,10 @@ Item {
     }
 
     function resetAppearance(): void {
+        if (screenTuning) {
+            appearance.resetScreenEffect(screenKind);
+            return;
+        }
         if (kind === "bar" || kind === "frame") {
             appearance.clearOverride(kind === "bar" ? "barIslandHeight" : "frameThickness");
             appearance.clearOverride(kind === "bar" ? "barVisible" : "frameVisible");
@@ -471,11 +492,18 @@ Item {
     }
 
     readonly property var spectrumModeActions: spectrumDetails.modeActions
-    readonly property int choiceCount: spectrumTuning ? spectrumDetails.choiceCount : kind === "nightLight" ? nightModes.count + nightDays.count + nightPauses.count : reactiveTuning ? reactivePresets.count + reactiveEmphases.count : kind === "alerts" ? alertPauses.count + quietDays.count : kind === "power" ? powerProfiles.count : kind === "stay" ? stayDurations.count : 0
+    readonly property int choiceCount: screenTuning ? 3 : spectrumTuning ? spectrumDetails.choiceCount : kind === "nightLight" ? nightModes.count + nightDays.count + nightPauses.count : reactiveTuning ? reactivePresets.count + reactiveEmphases.count : kind === "alerts" ? alertPauses.count + quietDays.count : kind === "power" ? powerProfiles.count : kind === "stay" ? stayDurations.count : 0
 
     function activateNumber(number: int): bool {
         let repeater = null;
         let index = number - 1;
+        if (screenTuning) {
+            const choice = screenPresets.itemAt(index) as ShellChoice;
+            if (!choice)
+                return false;
+            choice.trigger();
+            return true;
+        }
         if (kind === "nightLight") {
             if (number <= nightModes.count)
                 repeater = nightModes;
@@ -589,7 +617,7 @@ Item {
                 return true;
             }
         }
-        if (kind === "power" || kind === "stay" || kind === "alerts" || kind === "nightLight" || reactiveTuning || spectrumTuning) {
+        if (kind === "power" || kind === "stay" || kind === "alerts" || kind === "nightLight" || reactiveTuning || spectrumTuning || screenTuning) {
             const numberIndex = runtime.shellChoiceIndex(key, modifiers, choiceCount);
             if (numberIndex >= 0)
                 return activateNumber(numberIndex + 1);
@@ -772,6 +800,36 @@ Item {
                 active: panel.appearance.blurEnabled
                 shortcut: panel.runtime.shellHint("SettingsDetail.blur")
                 onActivated: panel.appearance.toggleBlur()
+            }
+        }
+
+        Column {
+            visible: panel.screenTuning
+            width: parent.width
+            spacing: panel.theme.spacing2
+            Row {
+                width: parent.width
+                spacing: panel.theme.spacing2
+                Repeater {
+                    id: screenPresets
+                    model: ["Subtle", "Default", "Intense"]
+                    delegate: ShellChoice {
+                        required property int index
+                        required property string modelData
+                        width: (parent.width - panel.theme.spacing2 * 2) / 3
+                        height: implicitHeight
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        motion: panel.motion
+                        compact: true
+                        choices: screenPresets
+                        choiceIndex: index
+                        title: modelData
+                        shortcut: panel.runtime.shellChoiceHint(index)
+                        active: panel.appearance.screenEffectPreset(panel.screenKind) === modelData
+                        onActivated: panel.appearance.applyScreenEffectPreset(panel.screenKind, modelData)
+                    }
+                }
             }
         }
 
@@ -970,7 +1028,7 @@ Item {
         Flow {
             id: parameterFlow
             width: parent.width
-            readonly property int columns: (panel.reactiveTuning || panel.spectrumTuning || panel.kind === "alerts" || panel.kind === "nightLight") && width >= panel.theme.fontSize(750) ? 2 : 1
+            readonly property int columns: (panel.reactiveTuning || panel.spectrumTuning || panel.screenTuning || panel.kind === "alerts" || panel.kind === "nightLight") && width >= panel.theme.fontSize(750) ? 2 : 1
             spacing: panel.theme.spacing3
             Repeater {
                 id: parameterRepeater
