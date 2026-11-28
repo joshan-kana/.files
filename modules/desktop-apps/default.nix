@@ -262,51 +262,6 @@ in
     };
   };
 
-  kodi =
-    { scopeConfig, ... }:
-    lib.optionalAttrs isLinux {
-      scopeOptions.package = lib.mkOption {
-        type = lib.types.package;
-        default = pkgs.kodi-wayland.withPackages (addons: [ addons.jellyfin ]);
-        description = "Kodi package with media-library integration.";
-      };
-      home = _: {
-        home.packages = [ scopeConfig.package ];
-      };
-    };
-
-  kdeconnect =
-    _:
-    lib.optionalAttrs isLinux {
-      programs.kdeconnect.package = null;
-      home = _: {
-        services.kdeconnect = { };
-      };
-    };
-
-  librespot =
-    _:
-    let
-      discoveryPort = 24879;
-    in
-    lib.optionalAttrs isLinux {
-      home = _: {
-        services.librespot = {
-          settings = {
-            name = config.networking.hostName;
-            backend = "pulseaudio";
-            device-type = "speaker";
-            zeroconf-port = discoveryPort;
-          };
-        };
-        systemd.user.services.librespot = {
-          Unit.PartOf = [ "graphical-session.target" ];
-          Install.WantedBy = lib.mkForce [ "graphical-session.target" ];
-        };
-      };
-      networking.firewall.allowedTCPPorts = [ discoveryPort ];
-    };
-
   jellyfin =
     _:
     let

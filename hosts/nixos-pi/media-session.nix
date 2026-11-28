@@ -2,7 +2,6 @@
   config,
   lib,
   pkgs,
-  nativeKodi,
   ...
 }:
 
@@ -25,28 +24,28 @@ let
       ${lib.getExe' pkgs.systemd "systemd-cat"} --identifier=labwc ${lib.getExe pkgs.labwc}
       status=$?
       systemctl --user stop labwc-session.target
-      ${lib.optionalString (nativeKodi != null) ''
-        if [ -f "$request" ]; then
-          rm -f "$request"
-          unset DISPLAY WAYLAND_DISPLAY
-          export XDG_SESSION_TYPE=tty
-          export XDG_CURRENT_DESKTOP=Kodi
-          ${lib.getExe nativeKodi} --windowing=gbm --standalone
-          continue
-        fi
-      ''}
+      if [ -f "$request" ]; then
+        rm -f "$request"
+        unset DISPLAY WAYLAND_DISPLAY
+        export XDG_SESSION_TYPE=tty
+        export XDG_CURRENT_DESKTOP=Kodi
+        ${lib.getExe pkgs.kodi-gbm-rpi} --windowing=gbm --standalone
+        continue
+      fi
       exit "$status"
     done
   '';
 in
 {
   hardware.graphics.enable = true;
+  # Keep the shared MPV scripts/profiles and select the Pi video build locally.
+  nixpkgs.overlays = [ (_: prev: { mpv = prev.mpv-rpi; }) ];
   # Native Kodi opens evdev directly, so grant access only to the active local seat.
-  services.udev.packages = lib.optional (nativeKodi != null) (
-    pkgs.writeTextDir "lib/udev/rules.d/70-media-input.rules" ''
+  services.udev.packages = [
+    (pkgs.writeTextDir "lib/udev/rules.d/70-media-input.rules" ''
       SUBSYSTEM=="input", KERNEL=="event[0-9]*", ENV{ID_INPUT}=="1", TAG+="uaccess"
-    ''
-  );
+    '')
+  ];
   environment.systemPackages = [
     pkgs.wlr-randr
   ];
@@ -71,9 +70,7 @@ in
       hasProgram =
         name: lib.any (package: (package.meta.mainProgram or null) == name) config.home.packages;
       entries =
-        lib.optional (hasProgram "kodi") "Kodi;${icons}/kodi.png;${
-          if nativeKodi == null then "kodi" else openNativeKodi
-        }"
+        lib.optional (hasProgram "kodi") "Kodi;${icons}/kodi.png;${openNativeKodi}"
         ++ lib.optional config.services.jellyfin-mpv-shim.enable "Jellyfin;${config.services.jellyfin-mpv-shim.package}/share/icons/hicolor/256x256/apps/com.github.iwalton3.jellyfin-mpv-shim.png;jellyfin-mpv-shim"
         ++ lib.optional (hasProgram browser) "Browser;${config.home.profileDirectory}/share/icons/hicolor/256x256/apps/${browser}.png;${browser}"
         ++ lib.optional (hasProgram "moonlight") "Moonlight;${config.home.profileDirectory}/share/icons/hicolor/scalable/apps/moonlight.svg;moonlight"
@@ -112,6 +109,16 @@ in
       '';
     in
     {
+      # Keep the standard MPV profiles and MPRIS integration; only tune Pi decoding.
+      programs.mpv.config = {
+        target-colorspace-hint = lib.mkForce "no";
+        vo = "dmabuf-wayland,gpu";
+        hwdec = "drm,v4l2m2m";
+        hwdec-threads = 2;
+        hwdec-extra-frames = 0;
+        vd-queue-enable = false;
+      };
+
       xdg.configFile."flex-launcher/config.ini".text = launcherConfig;
       wayland.windowManager.labwc.enable = true;
 

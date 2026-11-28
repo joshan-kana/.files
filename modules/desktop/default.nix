@@ -48,33 +48,7 @@ in
     lib.optionalAttrs isLinux ((import ./plasma) { inherit config inputs lib; });
 
   /**
-    Full-screen television session with a lightweight compositor and media launcher.
-  */
-  mediaSession =
-    {
-      config,
-      lib,
-      pkgs,
-      scopeConfig,
-      ...
-    }:
-    lib.optionalAttrs isLinux (
-      {
-        scopeOptions.nativeKodi = lib.mkOption {
-          type = lib.types.nullOr lib.types.package;
-          default = null;
-          description = "Kodi package requiring exclusive DRM display ownership.";
-        };
-      }
-      // (import ./media-session) {
-        inherit config lib pkgs;
-        inherit (scopeConfig) nativeKodi;
-      }
-    );
-
-  # Keep GNOME available as an opt-in desktop without changing current hosts.
-  /**
-    Optional GNOME desktop session.
+    GNOME desktop session and settings.
   */
   gnome = _: lib.optionalAttrs isLinux ((import ./gnome) { });
 
