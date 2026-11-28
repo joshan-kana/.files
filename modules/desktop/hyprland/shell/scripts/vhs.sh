@@ -2,15 +2,31 @@
 set -euo pipefail
 
 mode="${1:-}"
-if [[ "$mode" != on && "$mode" != off ]]; then
-  printf 'Usage: desktop-shell-vhs on <intensity percent> [tracking chroma noise scanlines speed dropouts] | off\n' >&2
+effect="vhs"
+# All compositor-wide effects share the same saved original state. Switching
+# kinds must never mistake the previous effect for the original user shader.
+case "$mode" in
+on | off) ;;
+crt | hologram | glitch | film | monochrome)
+  effect="$mode"
+  mode=on
+  ;;
+*)
+  printf 'Usage: desktop-shell-vhs on <intensity> [tracking chroma noise scanlines speed dropouts] | crt|hologram|glitch|film|monochrome <seven percentages> | off\n' >&2
   exit 2
-fi
+  ;;
+esac
 
 session="${HYPRLAND_INSTANCE_SIGNATURE:?VHS requires an active Hyprland session}"
 runtimeDir="${XDG_RUNTIME_DIR:?}/desktop-shell"
 stateFile="$runtimeDir/vhs-state-$session"
 umask 077
+# One authoritative compositor state transaction across rapid effect switches.
+# Locking is outside the shader cache so concurrent invocations cannot save
+# another active effect as the original user-provided screen shader.
+mkdir -p "$runtimeDir"
+exec 9>"$runtimeDir/screen-effects.lock"
+flock -x 9
 
 optionValue() {
   local option="$1" type="$2" line
@@ -42,16 +58,25 @@ verifyConfig() {
   "$(optionValue decoration:screen_shader str)" == "$3" ]]
 }
 
-if [[ "$mode" == off ]]; then
+# Do not clear another application's shader when the original state is lost.
+isManagedShader() {
+  local source
+  for source in "$VHS_SHADER_SOURCE" "$SCREEN_CRT_SOURCE" "$SCREEN_HOLOGRAM_SOURCE" "$SCREEN_GLITCH_SOURCE" "$SCREEN_FILM_SOURCE" "$SCREEN_MONOCHROME_SOURCE"; do
+    [[ "$currentShader" == "$runtimeDir/$(basename "$source")/"* ]] && return 0
+  done
+  return 1
+}
+
+restoreOriginal() {
   if [[ ! -e "$stateFile" ]]; then
     # Preserve an unrelated user-configured screen shader. Also clean up
     # the original static VHS shader when upgrading in a running session.
     currentShader="$(optionValue decoration:screen_shader str)" || exit 1
-    if [[ "$currentShader" == "$runtimeDir/"* ]]; then
+    if isManagedShader; then
       applyConfig 'hl.config({ decoration = { screen_shader = "" } })'
       [[ "$(optionValue decoration:screen_shader str)" == "" ]] || exit 1
     fi
-    exit 0
+    return 0
   fi
 
   mapfile -t saved <"$stateFile"
@@ -60,13 +85,18 @@ if [[ "$mode" == off ]]; then
   shader="${saved[2]:-}"
   if ! [[ "$damage" =~ ^[012]$ && "$vfr" =~ ^(true|false)$ ]]; then
     printf 'Cannot restore compositor: invalid VHS state\n' >&2
-    exit 1
+    return 1
   fi
 
   escapedShader="$(printf '%s' "$shader" | luaEscape)"
   applyConfig "hl.config({ debug = { damage_tracking = $damage, vfr = $vfr }, decoration = { screen_shader = \"$escapedShader\" } })"
   verifyConfig "$damage" "$vfr" "$shader"
   rm -f "$stateFile"
+  return 0
+}
+
+if [[ "$mode" == off ]]; then
+  restoreOriginal
   exit 0
 fi
 
@@ -75,13 +105,27 @@ if [[ -z "${2:-}" ]] || (($# > 8)); then
   exit 2
 fi
 
-# The compositor accepts whole percentages. Defaults and allowed ranges come
-# from the same evaluated appearance options as the shell controls.
+# The compositor accepts whole percentages. Both effect families inherit their
+# own evaluated Nix baselines and validation bounds.
+if [[ "$effect" == vhs ]]; then
+  defaults="${DESKTOP_VHS_DEFAULTS:?}"
+  bounds="${DESKTOP_VHS_CONSTRAINTS:?}"
+  keys='["vhsIntensity","vhsTracking","vhsChroma","vhsNoise","vhsScanlines","vhsSpeed","vhsDropouts"]'
+  names=(INTENSITY TRACKING CHROMA NOISE SCANLINES SPEED DROPOUTS)
+  prefix=VHS
+else
+  defaults="$(jq -cn --arg mode "$effect" --argjson defaults "${SCREEN_EFFECT_DEFAULTS:?}" '$defaults[$mode]')"
+  bounds="${SCREEN_EFFECT_CONSTRAINTS:?}"
+  keys='["intensity","shape","color","texture","lines","speed","artifacts"]'
+  names=(INTENSITY SHAPE COLOR TEXTURE LINES SPEED ARTIFACTS)
+  prefix=FX
+fi
 if ! resolved="$(jq -ern \
-  --argjson defaults "${DESKTOP_VHS_DEFAULTS:?}" \
-  --argjson constraints "${DESKTOP_VHS_CONSTRAINTS:?}" '
+  --argjson defaults "$defaults" \
+  --argjson constraints "$bounds" \
+  --argjson keys "$keys" '
     $ARGS.positional as $arguments
-    | ["vhsIntensity", "vhsTracking", "vhsChroma", "vhsNoise", "vhsScanlines", "vhsSpeed", "vhsDropouts"]
+    | $keys
     | to_entries[]
     | .value as $name
     | ($arguments[.key] // "") as $argument
@@ -107,10 +151,18 @@ dropouts="${values[6]}"
 # An enabled zero-intensity effect should not waste cycles on a full-screen
 # animated compositor pass.
 if [[ "$level" == 0 ]]; then
-  exec bash "$0" off
+  restoreOriginal
+  exit 0
 fi
 
-shaderSource="${VHS_SHADER_SOURCE:?VHS shader source not configured}"
+case "$effect" in
+vhs) shaderSource="${VHS_SHADER_SOURCE:?VHS shader source not configured}" ;;
+crt) shaderSource="${SCREEN_CRT_SOURCE:?CRT shader source not configured}" ;;
+hologram) shaderSource="${SCREEN_HOLOGRAM_SOURCE:?Hologram shader source not configured}" ;;
+glitch) shaderSource="${SCREEN_GLITCH_SOURCE:?Glitch shader source not configured}" ;;
+film) shaderSource="${SCREEN_FILM_SOURCE:?Film shader source not configured}" ;;
+monochrome) shaderSource="${SCREEN_MONOCHROME_SOURCE:?Monochrome shader source not configured}" ;;
+esac
 mkdir -p "$runtimeDir"
 shaderDir="$runtimeDir/$(basename "$shaderSource")"
 mkdir -p "$shaderDir"
@@ -118,11 +170,10 @@ printf -v shaderName '%03d-%03d-%03d-%03d-%03d-%03d-%03d.frag' "$level" "$tracki
 shader="$shaderDir/$shaderName"
 if [[ ! -f "$shader" ]]; then
   filters=()
-  names=(INTENSITY TRACKING CHROMA NOISE SCANLINES SPEED DROPOUTS)
   for index in "${!names[@]}"; do
     amount="${values[index]}"
     printf -v strength '%d.%02d' "$((amount / 100))" "$((amount % 100))"
-    filters+=(-e "s/^const float VHS_${names[index]} = .*;/const float VHS_${names[index]} = $strength;/")
+    filters+=(-e "s/^const float ${prefix}_${names[index]} = .*;/const float ${prefix}_${names[index]} = $strength;/")
   done
   temporary="$(mktemp "$shader.XXXXXX")"
   trap 'rm -f "$temporary"' EXIT
@@ -145,7 +196,14 @@ if [[ ! -e "$stateFile" ]]; then
 fi
 
 escapedShader="$(printf '%s' "$shader" | luaEscape)"
-# Time-based animation needs continuous redraws even while the desktop is idle.
-# Restore the exact previous settings when turning the effect off.
-applyConfig "hl.config({ debug = { damage_tracking = 0, vfr = false }, decoration = { screen_shader = \"$escapedShader\" } })"
-verifyConfig 0 false "$shader"
+# Monochrome contains no time-based components. Keep the original compositor
+# scheduling policy instead of forcing continuous redraws for a static shader.
+if [[ "$effect" == monochrome ]]; then
+  savedDamage="$(sed -n '1p' "$stateFile")"
+  savedVfr="$(sed -n '2p' "$stateFile")"
+  applyConfig "hl.config({ debug = { damage_tracking = $savedDamage, vfr = $savedVfr }, decoration = { screen_shader = \"$escapedShader\" } })"
+  verifyConfig "$savedDamage" "$savedVfr" "$shader"
+else
+  applyConfig "hl.config({ debug = { damage_tracking = 0, vfr = false }, decoration = { screen_shader = \"$escapedShader\" } })"
+  verifyConfig 0 false "$shader"
+fi
