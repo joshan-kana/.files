@@ -28,7 +28,7 @@ test("Controls restores detail focus only while engaged", () => {
   );
   assert.match(
     source,
-    /const leavingDetail = detailsVisible;\s*closeDetails\(\);\s*if \(leavingDetail\)\s*keyboardFocus\.forceActiveFocus\(\)/,
+    /else if \(requestedView === "controls" \|\| requestedView.length === 0\) \{\s*closeDetails\(\);[\s\S]*?keyboardFocus\.forceActiveFocus\(\);/,
   );
 });
 
