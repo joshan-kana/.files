@@ -64,11 +64,24 @@ vec4 aurora(vec2 uv, vec2 p) {
     return vec4(light / max(density, 0.001), min(density, 0.88));
 }
 
+vec4 liquid(vec2 p) {
+    vec2 q = p * 3.8;
+    q += vec2(sin(q.y * 1.5 + u.phase), cos(q.x * 1.4 - u.phase)) * 0.56;
+    q += vec2(sin(q.y * 2.0 - u.phase * 2.0), cos(q.x * 1.7 + u.phase)) * 0.28;
+    float v = 0.5 + 0.5 * sin(q.x + q.y * 0.85 + u.phase
+        + u.audio.y * 0.35 * sin(length(p) * 9.0));
+    float sheen = pow(1.0 - abs(2.0 * v - 1.0), 14.0);
+    float broad = 0.16 + 0.45 * v;
+    vec3 col = palette(v) * (0.70 + sheen * (0.38 + u.audio.z * 0.18));
+    return vec4(col, broad + sheen * 0.18 + u.audio.x * 0.08);
+}
+
 void main() {
     vec2 uv = qt_TexCoord0;
     vec2 p = (uv - 0.5) * vec2(u.aspect, 1.0);
     vec4 effect;
     if (u.style == 0) effect = aurora(uv, p);
+    else if (u.style == 1) effect = liquid(p);
     else effect = vec4(0);
     float vignette = 1.0 - smoothstep(0.45, 1.0, length((uv - 0.5) * 1.6)) * 0.32;
     float alpha = clamp(effect.a * u.intensity * vignette, 0.0, 1.0);
