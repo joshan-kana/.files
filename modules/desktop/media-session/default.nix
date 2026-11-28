@@ -75,7 +75,7 @@ in
           if nativeKodi == null then "kodi" else openNativeKodi
         }"
         ++ lib.optional config.services.jellyfin-mpv-shim.enable "Jellyfin;${config.services.jellyfin-mpv-shim.package}/share/icons/hicolor/256x256/apps/com.github.iwalton3.jellyfin-mpv-shim.png;jellyfin-mpv-shim"
-        ++ lib.optional (hasProgram browser) "Browser;${pkgs.adwaita-icon-theme}/share/icons/Adwaita/symbolic/legacy/web-browser-symbolic.svg;${browser}"
+        ++ lib.optional (hasProgram browser) "Browser;${config.home.profileDirectory}/share/icons/hicolor/256x256/apps/${browser}.png;${browser}"
         ++ lib.optional (hasProgram "moonlight") "Moonlight;${config.home.profileDirectory}/share/icons/hicolor/scalable/apps/moonlight.svg;moonlight"
         ++ lib.optional config.services.kdeconnect.enable "Phone pairing;${icons}/system.png;kdeconnect-app"
         ++ [ "Power;${icons}/restart.png;:submenu Power" ];
