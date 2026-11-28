@@ -15,6 +15,7 @@ Item {
     property string detailActionId: ""
     property string detailShortcut: detailActionId.length > 0 ? runtime.shellHint(detailActionId) : ""
     property string detailName: "Open details"
+    readonly property bool hasDetails: detailActionId.length > 0
     signal detailsRequested
     property bool primaryAvailable: true
     property bool active: false
@@ -28,7 +29,7 @@ Item {
     function trigger(): void {
         if (!enabled || !primaryAvailable)
             return;
-        if (detailShortcut.length > 0)
+        if (hasDetails && shortcut.length > 0)
             quickAction.trigger();
         else
             press.trigger();
@@ -143,23 +144,25 @@ Item {
 
     StateLayer {
         id: press
+        // Unassigned subordinate details remain reachable by Tab and Enter.
+        keyboardFocusable: chip.hasDetails && chip.detailShortcut.length === 0
         growOnHover: true
         effectScaleX: chipSurface.scale
         effectScaleY: chipSurface.scale
         theme: chip.theme
         motion: chip.motion
         selected: chip.active
-        disabled: chip.detailShortcut.length === 0 && !chip.primaryAvailable
+        disabled: !chip.hasDetails && !chip.primaryAvailable
         manualPress: quickAction.visible && quickAction.visualPressed
         manualHover: quickAction.visible && quickAction.pointerHovered
         Accessible.role: Accessible.Button
-        Accessible.name: chip.detailShortcut.length > 0 ? chip.detailName + " · " + chip.title : chip.title
+        Accessible.name: chip.hasDetails ? chip.detailName + " · " + chip.title : chip.title
         Accessible.onPressAction: press.trigger()
         stateColor: chip.theme.textStrong
         hoverOpacity: 0.05
         pressOpacity: 0.11
         cornerRadius: chipSurface.cornerRadius
-        onActivated: chip.detailShortcut.length > 0 ? chip.detailsRequested() : chip.activated()
+        onActivated: chip.hasDetails ? chip.detailsRequested() : chip.activated()
     }
 
     TileQuickAction {
@@ -168,7 +171,7 @@ Item {
         runtime: chip.runtime
         theme: chip.theme
         motion: chip.motion
-        shortcut: chip.detailShortcut.length > 0 ? chip.shortcut : ""
+        shortcut: chip.hasDetails ? chip.shortcut : ""
         actionName: "Activate " + chip.title
         selected: chip.active
         available: chip.primaryAvailable

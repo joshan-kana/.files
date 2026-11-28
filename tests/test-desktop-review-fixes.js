@@ -209,7 +209,7 @@ test("desktop scenes are owned by Visual Modes, not Power & Session", () => {
     /scenesAction|scenesRequested|SessionPanel.scenes/,
   );
   assert.doesNotMatch(controls, /settingKind === "scenes"\)\s*openSession/);
-  assert.match(keybindings, /"SystemContent.scenes" = "SHIFT\+L"/);
+  assert.doesNotMatch(keybindings, /"SystemContent.scenes" = "SHIFT\+L"/);
 });
 
 test("today's weather summary uses prominent existing forecast values", () => {

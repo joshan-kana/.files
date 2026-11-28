@@ -11,9 +11,7 @@ QuickSettingChip {
     icon: descriptor?.glyph || ""
     title: descriptor?.title || ""
     detailName: title + " effect settings"
-    actionId: "SystemContent." + mode + "Toggle"
     detailActionId: "SystemContent." + mode + "Details"
     active: appearance.screenEffectEnabled(mode)
     activeColor: theme.roleColor("reactive")
-    onActivated: appearance.setScreenEffect(mode)
 }

@@ -99,16 +99,6 @@
     "SystemContent.shellGlass" = "SHIFT+R";
     "SystemContent.vhsTune" = "SHIFT+P";
     "SystemContent.vhsToggle" = "SHIFT+Z";
-    "SystemContent.crtToggle" = "1";
-    "SystemContent.crtDetails" = "2";
-    "SystemContent.hologramToggle" = "3";
-    "SystemContent.hologramDetails" = "4";
-    "SystemContent.glitchToggle" = "5";
-    "SystemContent.glitchDetails" = "6";
-    "SystemContent.filmToggle" = "7";
-    "SystemContent.filmDetails" = "8";
-    "SystemContent.monochromeToggle" = "9";
-    "SystemContent.monochromeDetails" = "0";
 
     "SystemContent.networkDetails" = "SHIFT+F";
     "SystemContent.bluetoothDetails" = "SHIFT+G";
@@ -120,7 +110,6 @@
     "SystemContent.glassDetails" = "SHIFT+O";
     "SystemContent.nightLightDetails" = "SHIFT+T";
     "SystemContent.spectrumDetails" = "Y";
-    "SystemContent.musicReactiveDetails" = "SHIFT+;";
     "SystemContent.barDetails" = "SHIFT+J";
     "SystemContent.frameDetails" = "SHIFT+K";
     "SystemContent.motionDetails" = "SHIFT+X";
@@ -294,7 +283,6 @@
           "ResourceDashboard.toggleCores" = "C";
           "SessionPanel.confirm" = "ENTER";
           "SessionPanel.defaults" = "R";
-          "SystemContent.scenes" = "SHIFT+L";
           "ScenePanel.save" = "S";
           "ScenePanel.stop" = "X";
           "ScenePanel.remove" = "SHIFT+X";
@@ -508,7 +496,7 @@
             ];
           };
           "SystemContent.motion" = "SHIFT+E";
-          "SystemContent.musicReactive" = ";";
+          "SystemContent.musicReactive" = "SHIFT+U";
           "SystemContent.network" = "F";
           "SystemContent.powerProfile" = "V";
           "SystemContent.reset" = "SHIFT+C";

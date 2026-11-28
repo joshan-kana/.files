@@ -79,7 +79,7 @@ test("split tile hit targets keep quick and detail actions independently keyboar
   );
   assert.match(
     chip,
-    /onActivated: chip\.detailShortcut\.length > 0 \? chip\.detailsRequested\(\) : chip\.activated\(\)/,
+    /onActivated: chip\.hasDetails \? chip\.detailsRequested\(\) : chip\.activated\(\)/,
   );
   assert.match(
     chip,

@@ -163,8 +163,8 @@ test("wallpaper owns all seven atmospheres while fullscreen effects stay in Visu
   for (const mode of screenModes)
     assert.ok(visual.includes('mode: "' + mode + '"'), mode);
   assert.match(
-    read("qml/ScreenEffectTile.qml"),
-    /appearance\.setScreenEffect\(mode\)/,
+    read("qml/SettingsDetail.qml"),
+    /appearance\.setScreenEffect\(screenKind\)/,
   );
   assert.match(nix, /qsb --glsl/);
   assert.match(shader, /effect.rgb, 0.0, 1.0\) \* alpha, alpha/);
@@ -182,62 +182,46 @@ test("wallpaper owns all seven atmospheres while fullscreen effects stay in Visu
   assert.match(read("keybindings.nix"), /"WallpaperAtmosphere.backdrop" = "G"/);
 });
 
-test("all five fullscreen tiles expose real unique numeric toggle and detail shortcuts", () => {
+test("fullscreen effects stay accessible without consuming dashboard letter slots", () => {
   const controls = read("qml/SystemContent.qml");
+  const tile = read("qml/ScreenEffectTile.qml");
   const chip = read("qml/QuickSettingChip.qml");
-  const keymap = read("keybindings.nix");
+  const detail = read("qml/SettingsDetail.qml");
   const visual = controls
     .split("id: visualTiles")[1]
     .split("id: mediaMatrix")[0];
-  const bindings = [
-    ["crt", "1", "2"],
-    ["hologram", "3", "4"],
-    ["glitch", "5", "6"],
-    ["film", "7", "8"],
-    ["monochrome", "9", "0"],
-  ];
-  for (const [mode, toggle, details] of bindings) {
-    assert.ok(
-      keymap.includes('"SystemContent.' + mode + 'Toggle" = "' + toggle + '"'),
-    );
-    assert.ok(
-      keymap.includes(
-        '"SystemContent.' + mode + 'Details" = "' + details + '"',
-      ),
-    );
+  for (const mode of ["crt", "hologram", "glitch", "film", "monochrome"]) {
     assert.ok(visual.includes('mode: "' + mode + '"'), mode);
-    assert.match(
-      read("qml/ScreenEffectTile.qml"),
-      /actionId: "SystemContent\." \+ mode \+ "Toggle"/,
+    assert.ok(
+      !read("keybindings.nix").includes('"SystemContent.' + mode + 'Toggle"'),
     );
-    assert.match(
-      read("qml/ScreenEffectTile.qml"),
-      /detailActionId: "SystemContent\." \+ mode \+ "Details"/,
-    );
-    assert.match(
-      visual,
-      /onDetailsRequested: root\.openSetting\("screen\." \+ mode\)/,
+    assert.ok(
+      !read("keybindings.nix").includes('"SystemContent.' + mode + 'Details"'),
     );
   }
-  assert.doesNotMatch(visual, /focusActions: true/);
-  assert.doesNotMatch(
-    chip,
-    /focusActions|SystemContent.legend.activate_confirm/,
+  assert.match(tile, /detailActionId: "SystemContent\." \+ mode \+ "Details"/);
+  assert.doesNotMatch(tile, /actionId:/);
+  assert.match(
+    visual,
+    /onDetailsRequested: root\.openSetting\("screen\." \+ mode\)/,
   );
-  assert.match(chip, /visible: chip.shortcut.length > 0/);
-  assert.match(chip, /visible: chip.detailShortcut.length > 0/);
   assert.match(
     chip,
-    /onActivated: chip.detailShortcut.length > 0 \? chip.detailsRequested\(\) : chip.activated\(\)/,
+    /onActivated: chip\.hasDetails \? chip\.detailsRequested\(\) : chip\.activated\(\)/,
   );
-  assert.doesNotMatch(read("qml/TileQuickAction.qml"), /focusable:/);
-  assert.match(read("qml/TileQuickAction.qml"), /feedbackParent: action.hint/);
   assert.match(
-    controls,
-    /sliderNavigationEnabled && root.selectedSlider.length > 0 &&/,
+    chip,
+    /keyboardFocusable: chip\.hasDetails && chip\.detailShortcut\.length === 0/,
   );
-  for (const src of [controls, chip, keymap])
-    assert.doesNotMatch(src, /effectsBrowse|ALT\+V/);
+  assert.match(
+    read("qml/StateLayer.qml"),
+    /activeFocusOnTab: keyboardFocusable && !disabled/,
+  );
+  assert.match(
+    detail,
+    /if \(screenTuning\) \{\s*appearance\.setScreenEffect\(screenKind\)/,
+  );
+  assert.match(read("keybindings.nix"), /"SettingsDetail.toggle" = "T"/);
 });
 
 test("screen detail routing is guarded and wallpaper atmosphere uses its own view", () => {
