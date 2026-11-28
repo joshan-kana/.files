@@ -91,3 +91,18 @@ function powerProfileGlyph(profile) {
 function spectrumGlyph(mode) {
   return mode === "off" ? "󰝟" : mode === "curve" ? "\u{F012A}" : "\u{F0128}";
 }
+
+// Atmosphere glyphs are shared between the dashboard tile and its detail.
+function effectGlyph(mode) {
+  return (
+    {
+      aurora: "󰖜",
+      liquid: "󰖌",
+      nebula: "󰫢",
+      ripples: "󰉺",
+      geometry: "󰛡",
+      flow: "󰖝",
+      prism: "󰕯",
+    }[mode] || glyphFor("wallpaper")
+  );
+}
