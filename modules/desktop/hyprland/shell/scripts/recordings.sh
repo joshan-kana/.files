@@ -1,0 +1,120 @@
+#!/usr/bin/env bash
+screenshot_dir="$(desktop-shell-capture-locations get screenshots)" || exit 1
+recording_dir="$(desktop-shell-capture-locations get recordings)" || exit 1
+action="${1:-}"
+recordings="$recording_dir"
+preview_dir="${XDG_RUNTIME_DIR:?}/desktop-shell-recordings-preview"
+case "$action" in
+list)
+  umask 077
+  metadata_dir="${XDG_RUNTIME_DIR:?}/desktop-shell-recordings-metadata"
+  [ ! -L "$metadata_dir" ] || exit 2
+  mkdir -p -- "$metadata_dir"
+  chmod 700 -- "$metadata_dir"
+  {
+    if [ -d "$recordings" ]; then
+      while IFS=$'\t' read -r modified name size; do
+        [[ $name =~ ^Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.(mp4|mkv)$ ]] || continue
+        path="$recordings/$name"
+        [ -f "$path" ] && [ ! -L "$path" ] || continue
+        key="$(printf '%s|%s|%s' "$name" "$modified" "$size" | sha256sum | cut -d' ' -f1)"
+        metadata="$metadata_dir/$key"
+        if [ ! -s "$metadata" ]; then
+          duration="$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$path" || true)"
+          [[ $duration =~ ^[0-9]+(\.[0-9]+)?$ ]] || duration=0
+          tmp="$(mktemp "$metadata_dir/.duration-XXXXXXXX")"
+          printf '%s\n' "$duration" >"$tmp"
+          mv -- "$tmp" "$metadata"
+        fi
+        read -r duration <"$metadata"
+        printf '%s\t%s\t%s\t%s\n' "$modified" "$name" "$size" "$duration"
+      done < <(find "$recordings" -maxdepth 1 -type f -regextype posix-extended \
+        -regex '.*/Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.(mp4|mkv)' -printf '%T@\t%f\t%s\n')
+    fi
+    screenshots="$screenshot_dir"
+    if [ -d "$screenshots" ]; then
+      while IFS=$'\t' read -r modified name size; do
+        [[ $name =~ ^Screenshot-[0-9]{8}-[0-9]{6}-[0-9]+\.(png|jpg)$ ]] || continue
+        printf '%s\t%s\t%s\t0\n' "$modified" "$name" "$size"
+      done < <(find "$screenshots" -maxdepth 1 -type f -regextype posix-extended \
+        -regex '.*/Screenshot-[0-9]{8}-[0-9]{6}-[0-9]+\.(png|jpg)' -printf '%T@\t%f\t%s\n')
+    fi
+  } | sort -rn | sed -n '1,100p'
+  ;;
+clear-preview)
+  [ ! -L "$preview_dir" ] || exit 2
+  rm -rf -- "$preview_dir"
+  ;;
+preview | open | edit | copy | trash | ocr)
+  [ "$#" -eq 2 ] || exit 2
+  name="$2"
+  if [[ $name =~ ^Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.(mp4|mkv)$ ]]; then
+    path="$recordings/$name"
+    kind=recording
+  elif [[ $name =~ ^Screenshot-[0-9]{8}-[0-9]{6}-[0-9]+\.(png|jpg)$ ]]; then
+    path="$screenshot_dir/$name"
+    kind=image
+  else
+    exit 2
+  fi
+  [ -f "$path" ] && [ ! -L "$path" ] || exit 2
+  if [ "$action" = open ]; then
+    exec xdg-open "$path"
+  elif [ "$action" = edit ]; then
+    if [ "$kind" = image ]; then exec desktop-shell-markup "$path"; fi
+    exec losslesscut --disable-networking "$path"
+  elif [ "$action" = copy ]; then
+    [ "$kind" = image ] || exit 2
+    mime=image/png
+    if [[ $name == *.jpg ]]; then mime=image/jpeg; fi
+    exec wl-copy --type "$mime" <"$path"
+  elif [ "$action" = trash ]; then
+    exec gio trash "$path"
+  elif [ "$action" = ocr ]; then
+    # Recognise text only when requested from a saved image or the video
+    # preview frame. Any other video frame can be captured normally.
+    if [ "$kind" = recording ]; then
+      umask 077
+      frame="$(mktemp "$XDG_RUNTIME_DIR/desktop-ocr-XXXXXXXX.png")"
+      trap 'rm -f -- "$frame"' EXIT
+      ffmpeg -hide_banner -loglevel error -ss 0.2 -i "$path" -frames:v 1 -y "$frame"
+      path="$frame"
+    fi
+    text="$(tesseract "$path" stdout -l eng 2>/dev/null)" || {
+      printf '%s\n' "Text recognition failed" >&2
+      exit 1
+    }
+    [ -n "$(printf '%s' "$text" | tr -d '[:space:]')" ] || {
+      printf '%s\n' "No readable text in this capture" >&2
+      exit 1
+    }
+    dimensions="$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=x "$path")"
+    [[ $dimensions =~ ^([0-9]+)x([0-9]+)$ ]] || exit 1
+    width="${BASH_REMATCH[1]}"
+    height="${BASH_REMATCH[2]}"
+    # Keep word locations in the original image coordinates. The viewer
+    # scales their highlight rectangles alongside the existing preview.
+    tesseract "$path" stdout -l eng tsv 2>/dev/null |
+      jq -Rs --arg text "$text" --argjson width "$width" --argjson height "$height" \
+        '{text: $text, width: $width, height: $height, tsv: .}'
+    exit 0
+  fi
+  if [ "$kind" = image ]; then
+    printf '%s\n' "$path"
+    exit 0
+  fi
+  [ ! -L "$preview_dir" ] || exit 2
+  umask 077
+  mkdir -p -- "$preview_dir"
+  chmod 700 -- "$preview_dir"
+  find "$preview_dir" -maxdepth 1 -type f -name 'recording-*.png' -delete
+  output="$(mktemp "$preview_dir/recording-XXXXXXXX.png")"
+  trap 'rm -f -- "$output"' EXIT
+  ffmpeg -hide_banner -loglevel error -ss 0.2 -i "$path" \
+    -vf 'scale=510:300:force_original_aspect_ratio=decrease' \
+    -frames:v 1 -y "$output" >/dev/null
+  printf '%s\n' "$output"
+  trap - EXIT
+  ;;
+*) exit 2 ;;
+esac

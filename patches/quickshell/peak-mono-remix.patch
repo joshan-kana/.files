@@ -1,0 +1,21 @@
+diff --git a/src/services/pipewire/peak.cpp b/src/services/pipewire/peak.cpp
+--- a/src/services/pipewire/peak.cpp
++++ b/src/services/pipewire/peak.cpp
+@@ -292,6 +292,17 @@
+ 				}
+ 			}
+ 
++			// PipeWire can remix a mono application stream to stereo before
++			// the monitor captures it. Both captured channels share the
++			// application's single volume; retain their actual signal peaks.
++			if (nchannels.length() == 1 && nvolumes.length() == 1 && channelCount == 2
++			    && (nchannels[0] == PwAudioChannel::Mono || nchannels[0] == PwAudioChannel::FrontCenter)
++			    && this->monitor->mChannels.contains(PwAudioChannel::FrontLeft)
++			    && this->monitor->mChannels.contains(PwAudioChannel::FrontRight))
++			{
++				volumes.fill(nvolumes[0], channelCount);
++			}
++
+ 			if (volumes.length() != channelCount) {
+ 				qCCritical(logPeak) << this->node
+ 				                    << "is missing channels present in capture stream. Node channels:"

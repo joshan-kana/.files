@@ -1,0 +1,857 @@
+const assert = require("node:assert/strict");
+const { test } = require("node:test");
+const fs = require("node:fs");
+const path = require("node:path");
+const vm = require("node:vm");
+const dir = path.join(__dirname, "../modules/desktop/hyprland/shell");
+const qmlDir = path.join(dir, "qml");
+const source = fs.readFileSync(path.join(dir, "keybindings.nix"), "utf8");
+const globalSource = fs.readFileSync(
+  path.join(dir, "../keybindings.nix"),
+  "utf8",
+);
+const { execFileSync } = require("node:child_process");
+const registry = JSON.parse(
+  execFileSync(
+    "nix",
+    [
+      "eval",
+      "--impure",
+      "--json",
+      "--expr",
+      "import ./modules/desktop/hyprland/shell/keybindings.nix",
+    ],
+    { cwd: path.join(__dirname, ".."), encoding: "utf8" },
+  ),
+);
+const { base, navigation, hints, actions: actionAssignments } = registry;
+const Qt = {};
+for (const [
+  i,
+  name,
+] of "Escape Return Enter Tab Backtab Backspace Space Delete Up Down Left Right PageUp PageDown Shift Alt Control Meta AltGr Slash Question Minus Underscore Plus Equal BracketLeft BracketRight Comma Period"
+  .split(" ")
+  .entries())
+  Qt[`Key_${name}`] = 0x110000 + i;
+Object.assign(Qt, {
+  ShiftModifier: 1,
+  AltModifier: 2,
+  ControlModifier: 4,
+  MetaModifier: 8,
+});
+const f = vm.runInNewContext(
+  fs.readFileSync(path.join(qmlDir, "ShellKeybindings.js"), "utf8") +
+    "\n({assigned,keyCode,navigates,navigationHint,modifier,hint,sequence,matchesHint,matchesChord,numberIndex,numberHint,widgetChoiceIndex,widgetChoiceHint})",
+);
+const files = fs.readdirSync(qmlDir).filter((name) => name.endsWith(".qml"));
+
+test("one declarative registry owns every local shortcut and its visible hint", () => {
+  assert.ok(Object.keys(base).length > 40);
+  assert.ok(Object.keys(hints).length > 200);
+  for (const name of files) {
+    const s = fs.readFileSync(path.join(qmlDir, name), "utf8");
+    assert.doesNotMatch(
+      s,
+      /\b(?:shortcut|toggleShortcut|cancelShortcut|keyHint): "[^"\n]+"/,
+      `${name}: literal keycap`,
+    );
+    assert.doesNotMatch(
+      s,
+      /\bsequence: "[^"\n]+"/,
+      `${name}: literal sequence`,
+    );
+    for (const m of s.matchAll(
+      /\.shell(?:Hint|Sequence|MatchesHint)\("([^"\n]+)"/g,
+    ))
+      assert.ok(
+        hints[m[1]] ||
+          actionAssignments[m[1]] ||
+          (name === "SessionPanel.qml" && m[1] === "SessionPanel."),
+        `${name}: missing action ${m[1]}`,
+      );
+    for (const m of s.matchAll(/\.shellKeyCode\("([^"\n]+)", "([^"\n]+)"\)/g))
+      assert.ok(base[m[2]], `${name}: missing slot ${m[1]}.${m[2]}`);
+    for (const m of s.matchAll(/\.shellModifier\("([^"\n]+)", "([^"\n]+)"/g))
+      assert.ok(base[m[2]], `${name}: missing modifier ${m[1]}.${m[2]}`);
+  }
+});
+
+test("remapping an assigned key changes dispatch and every related hint together", () => {
+  assert.equal(f.keyCode(registry, "controls", "Q", Qt), 81);
+  assert.equal(f.keyCode(registry, "controls", "Escape", Qt), Qt.Key_Escape);
+  assert.equal(
+    f.keyCode(registry, "controls", "PageDown", Qt),
+    Qt.Key_PageDown,
+  );
+  assert.equal(f.keyCode(registry, "controls", "Tab", Qt), Qt.Key_Tab);
+  assert.equal(f.keyCode(registry, "controls", "Return", Qt), Qt.Key_Return);
+  assert.equal(f.hint(registry, "SystemContent.themes"), "Q");
+  assert.equal(f.hint(registry, "SessionPanel.lock"), "Q");
+  const changed = { ...registry, overrides: { controls: { Q: "Z", H: "M" } } };
+  assert.equal(f.keyCode(changed, "controls", "Q", Qt), 90);
+  assert.equal(f.hint(changed, "SystemContent.themes"), "Z");
+  assert.equal(f.hint(changed, "SessionPanel.lock"), "Z");
+  assert.equal(
+    f.hint(changed, "ThemePanel.columns"),
+    f.hint(registry, "ThemePanel.columns").replace("H/", "M/"),
+  );
+  assert.equal(f.keyCode(changed, "calendar", "H", Qt), 72);
+  assert.equal(
+    f.hint(changed, "CalendarContent.days"),
+    f.hint(registry, "CalendarContent.days"),
+  );
+  assert.equal(f.matchesHint(changed, "SessionPanel.lock", 90, 0, Qt), true);
+  assert.equal(f.matchesHint(changed, "SessionPanel.lock", 81, 0, Qt), false);
+});
+
+test("palette Enter closes and Shift+Enter preserves the open palette", () => {
+  assert.equal(f.modifier(registry, "palette", "Shift", 0, Qt), false);
+  assert.equal(
+    f.modifier(registry, "palette", "Shift", Qt.ShiftModifier, Qt),
+    true,
+  );
+  const palette = fs.readFileSync(
+    path.join(qmlDir, "CommandPalette.qml"),
+    "utf8",
+  );
+  const dispatches = palette.match(
+    /palette\.launchCurrent\(palette\.runtime\.shellModifier\("palette", "Shift", event\.modifiers\)\)/g,
+  );
+  assert.equal(
+    dispatches?.length,
+    2,
+    "search and results must both forward a boolean keepOpen",
+  );
+});
+
+test("modifier changes, alternatives and special keys remain consistent", () => {
+  const changed = {
+    ...registry,
+    overrides: {
+      controls: { Shift: "ALT", D: "M", X: "Z", T: "B" },
+      palette: { Alt: "CTRL" },
+      capture: { Slash: "Y" },
+    },
+  };
+  assert.equal(
+    f.modifier(changed, "controls", "Shift", Qt.AltModifier, Qt),
+    true,
+  );
+  assert.equal(
+    f.modifier(changed, "controls", "Shift", Qt.ShiftModifier, Qt),
+    false,
+  );
+  assert.equal(f.hint(changed, "BluetoothPanel.scan"), "ALT+M");
+  assert.equal(
+    f.matchesHint(changed, "BluetoothPanel.scan", 77, Qt.AltModifier, Qt),
+    true,
+  );
+  assert.equal(
+    f.matchesHint(changed, "BluetoothPanel.scan", 77, Qt.ShiftModifier, Qt),
+    false,
+  );
+  assert.equal(
+    f.matchesHint(changed, "BluetoothPanel.scan", 68, Qt.AltModifier, Qt),
+    false,
+  );
+  assert.equal(f.hint(changed, "ThemePanel.cancel"), "Z");
+  assert.equal(f.hint(changed, "SystemContent.nightLight"), "T");
+  assert.equal(f.hint(changed, "ThemePanel.search"), "/");
+  assert.equal(f.hint(changed, "ScreenshotPicker.cancel"), "ESC");
+  assert.equal(f.sequence(changed, "CommandPalette.apps"), "Ctrl+2");
+  assert.equal(f.hint(registry, "OverviewPanel.workspace"), "1–0");
+});
+
+test("direction bindings drive both navigation and action-owned hints", () => {
+  const directions = Object.keys(navigation);
+  assert.equal(directions.length, 4);
+  const changed = {
+    ...registry,
+    navigation: Object.fromEntries(
+      directions.map((direction, index) => [
+        direction,
+        ["VWXY"[index], "1234"[index]],
+      ]),
+    ),
+  };
+
+  for (const direction of directions) {
+    const [primary, alternative] = changed.navigation[direction];
+    const primaryKey = f.keyCode(changed, "controls", primary, Qt);
+    const alternateKey = f.keyCode(changed, "controls", alternative, Qt);
+    assert.equal(
+      f.navigates(changed, "controls", direction, primaryKey, Qt),
+      true,
+    );
+    assert.equal(
+      f.navigates(changed, "controls", direction, alternateKey, Qt),
+      true,
+    );
+    assert.equal(
+      f.navigates(changed, "controls", direction, primaryKey, Qt, "arrows"),
+      false,
+    );
+    assert.equal(
+      f.navigates(changed, "controls", direction, alternateKey, Qt, "primary"),
+      false,
+    );
+  }
+
+  const directionalHints = Object.entries(hints).filter(([, entry]) =>
+    /NAV_(?:HORIZONTAL|VERTICAL|ALL)/.test(entry.template),
+  );
+  assert.ok(directionalHints.length > 0);
+  for (const [action, { scope, template }] of directionalHints) {
+    const original = f.hint(registry, action);
+    const changedHint = f.hint(changed, action);
+    assert.notEqual(changedHint, original, action);
+    for (const [, token] of [
+      ...template.matchAll(
+        /(NAV_(?:HORIZONTAL|VERTICAL|ALL)(?:_PRIMARY)?(?:_ARROWS)?(?:_SHIFT)?)/g,
+      ),
+    ])
+      assert.ok(
+        changedHint.includes(f.navigationHint(changed, scope, token)),
+        action,
+      );
+  }
+});
+
+test("shell-local and compositor-global shortcuts have distinct owners", () => {
+  const nix = fs.readFileSync(path.join(dir, "default.nix"), "utf8");
+  const runtime = fs.readFileSync(
+    path.join(qmlDir, "RuntimeConfig.qml"),
+    "utf8",
+  );
+  const global = fs.readFileSync(path.join(dir, "../keybindings.nix"), "utf8");
+  assert.match(nix, /shellBindings = import \.\/keybindings\.nix/);
+  assert.match(
+    nix,
+    /keybindings = \(import \.\.\/keybindings\.nix\)\.bindings/,
+  );
+  assert.match(
+    runtime,
+    /ShellKeybindings\.keyCode\(shellBindings, scope, slot, Qt\)/,
+  );
+  assert.match(runtime, /ShellKeybindings\.hint\(shellBindings, action\)/);
+  assert.match(global, /id = "status\.inspect"/);
+  assert.match(global, /navigation = \{/);
+  assert.match(source, /import \.\.\/keybindings\.nix/);
+  assert.match(global, /navigationKey = direction:/);
+  for (const direction of Object.keys(navigation))
+    assert.ok(global.includes('navigationKey "' + direction + '"'));
+});
+
+test("numbered actions use the assigned key for each index, not a contiguous keycode range", () => {
+  assert.equal(f.numberIndex(registry, "activity", 49, 9, Qt), 0);
+  assert.equal(f.numberIndex(registry, "activity", 57, 9, Qt), 8);
+  const remapped = { ...registry, overrides: { activity: { 1: "9", 9: "1" } } };
+  assert.equal(f.numberIndex(remapped, "activity", 49, 9, Qt), 8);
+  assert.equal(f.numberIndex(remapped, "activity", 57, 9, Qt), 0);
+  assert.equal(f.numberHint(remapped, "activity", 0), "9");
+  assert.equal(f.numberHint(remapped, "activity", 8), "1");
+  for (const name of ["OverviewPanel.qml"])
+    assert.match(
+      fs.readFileSync(path.join(qmlDir, name), "utf8"),
+      /shellNumberIndex/,
+    );
+  assert.match(
+    fs.readFileSync(path.join(qmlDir, "NotificationCard.qml"), "utf8"),
+    /shellChoiceHint/,
+  );
+});
+
+test("semantic action bindings change their handler and hint without changing a shared slot", () => {
+  assert.ok(Object.keys(actionAssignments).length >= 4);
+  const custom = {
+    ...registry,
+    actions: { ...registry.actions, "SystemContent.frame": "ALT+Z" },
+  };
+  assert.equal(f.hint(custom, "SystemContent.frame"), "ALT+Z");
+  assert.equal(
+    f.hint(custom, "SystemContent.idleInhibited"),
+    f.hint(registry, "SystemContent.idleInhibited"),
+  );
+  assert.equal(f.keyCode(custom, "controls", "S", Qt), 83);
+  assert.equal(
+    f.matchesHint(custom, "SystemContent.frame", 90, Qt.AltModifier, Qt),
+    true,
+  );
+  assert.equal(
+    f.matchesHint(custom, "SystemContent.frame", 83, Qt.ShiftModifier, Qt),
+    false,
+  );
+  assert.equal(
+    f.matchesHint(custom, "SystemContent.frame", 90, Qt.ShiftModifier, Qt),
+    false,
+  );
+  const controls = fs.readFileSync(
+    path.join(qmlDir, "SystemContent.qml"),
+    "utf8",
+  );
+  const body = controls
+    .split("function findDashboardAction(key: int, modifiers: int): var {")[1]
+    .split("\n    }")[0];
+  const sections = Object.fromEntries(
+    ["controlsHeading", "connectionTiles", "actionTiles", "visualTiles"].map(
+      (name) => [name, { children: [] }],
+    ),
+  );
+  for (const match of controls.matchAll(
+    /(?:detailActionId|actionId): "([^"]+)"/g,
+  )) {
+    if (match[1] === "SystemContent.") continue;
+    assert.ok(
+      hints[match[1]] ||
+        actionAssignments[match[1]] ||
+        ["SystemContent.musicReactiveDetails", "SystemContent.scenes"].includes(
+          match[1],
+        ),
+      match[1],
+    );
+  }
+  const frame = {
+    actionId: "SystemContent.frame",
+    detailActionId: "SystemContent.frameDetails",
+  };
+  const scenes = { actionId: "SystemContent.scenes" };
+  sections.visualTiles.children.push(frame, scenes);
+  const lookup = new Function(
+    "key",
+    "modifiers",
+    "runtime",
+    ...Object.keys(sections),
+    body,
+  );
+  const runtime = {
+    shellMatchesHint: (action, key, modifiers) =>
+      f.matchesHint(custom, action, key, modifiers, Qt),
+  };
+  assert.equal(
+    lookup(90, Qt.AltModifier, runtime, ...Object.values(sections)).item,
+    frame,
+  );
+  assert.equal(
+    lookup(76, Qt.ShiftModifier, runtime, ...Object.values(sections)),
+    null,
+  );
+  assert.equal(
+    lookup(90, Qt.ShiftModifier, runtime, ...Object.values(sections)),
+    null,
+  );
+});
+
+test("power, notifications and preset choices use positional shifted letters", () => {
+  const detail = fs.readFileSync(
+    path.join(qmlDir, "SettingsDetail.qml"),
+    "utf8",
+  );
+  assert.match(detail, /shellChoiceIndex\(key, modifiers, choiceCount\)/);
+  assert.match(detail, /shellChoiceHint\(index\)/);
+  assert.doesNotMatch(detail, /shellNumber(?:Index|Hint)/);
+  assert.equal(f.widgetChoiceHint(registry, 0), "SHIFT+Q");
+  assert.equal(f.widgetChoiceIndex(registry, 81, Qt.ShiftModifier, 9, Qt), 0);
+  assert.equal(f.widgetChoiceIndex(registry, 81, 0, 9, Qt), -1);
+  assert.equal(
+    f.widgetChoiceIndex(registry, 81, Qt.ShiftModifier | Qt.AltModifier, 9, Qt),
+    -1,
+  );
+  assert.equal(new Set(registry.widgetChoices).size, 9);
+  assert.match(
+    fs.readFileSync(path.join(qmlDir, "NotificationContent.qml"), "utf8"),
+    /shellChoiceIndex/,
+  );
+});
+
+test("compact detail open actions follow remapped keys in labels and dispatch", () => {
+  for (const action of ["AudioMixerContent.open", "ControlsMediaCard.open"]) {
+    assert.ok(f.hint(registry, action), `${action} must be assigned`);
+    const rebound = {
+      ...registry,
+      actions: { ...actionAssignments, [action]: "ALT+Y" },
+    };
+    assert.equal(f.hint(rebound, action), "ALT+Y");
+    assert.equal(f.matchesHint(rebound, action, 89, Qt.AltModifier, Qt), true);
+    assert.equal(f.matchesHint(rebound, action, 89, 0, Qt), false);
+  }
+});
+
+test("reactive action uses a positional letter while unassigned details remain accessible", () => {
+  assert.equal(f.hint(registry, "SystemContent.musicReactive"), "SHIFT+U");
+  assert.equal(
+    f.matchesHint(
+      registry,
+      "SystemContent.musicReactive",
+      85,
+      Qt.ShiftModifier,
+      Qt,
+    ),
+    true,
+  );
+  assert.equal(
+    f.matchesHint(registry, "SystemContent.musicReactive", 85, 0, Qt),
+    false,
+  );
+  assert.equal(f.hint(registry, "SystemContent.musicReactiveDetails"), "");
+  assert.equal(f.hint(registry, "SystemContent.scenes"), "");
+  assert.equal(f.hint(registry, "SystemContent.spectrumDetails"), "Y");
+});
+
+test("dashboard direct actions use collision-free letters and Shift-letters", () => {
+  const actions = [
+    "bar",
+    "frame",
+    "nightLight",
+    "shellGlass",
+    "vhsTune",
+    "vhsToggle",
+    "networkDetails",
+    "bluetoothDetails",
+    "brightnessFocus",
+    "alertsDetails",
+    "stayDetails",
+    "powerDetails",
+    "windowsDetails",
+    "glassDetails",
+    "nightLightDetails",
+    "spectrumDetails",
+    "barDetails",
+    "frameDetails",
+    "motionDetails",
+    "alerts",
+    "bluetooth",
+    "captures",
+    "displays",
+    "motion",
+    "musicReactive",
+    "session",
+    "scenes",
+    "network",
+    "powerProfile",
+    "reset",
+    "resources",
+    "statusInspection",
+    "stayAwake",
+    "themes",
+    "wallpaper",
+    "windowTransparency",
+  ]
+    .map((name) => "SystemContent." + name)
+    .concat([
+      "AudioMixerContent.open",
+      "AudioDeviceControl.chooser",
+      "AudioDeviceControl.mute",
+      "AudioDeviceControl.muteMicrophone",
+      "ControlsMediaCard.open",
+      "ControlsMediaCard.repeat",
+      "ControlsMediaCard.shuffle",
+    ]);
+  const seen = new Map(
+    ["H", "J", "K", "L", "I", "O", "SHIFT+H", "SHIFT+L"].map((key) => [
+      key,
+      "reserved navigation",
+    ]),
+  );
+  for (const action of actions) {
+    const key = f.hint(registry, action);
+    if (!key) {
+      assert.equal(action, "SystemContent.scenes");
+      continue;
+    }
+    assert.match(key, /^(?:SHIFT\+)?[A-Z]$/, action);
+    assert.ok(!seen.has(key), action + " collides with " + seen.get(key));
+    seen.set(key, action);
+  }
+  for (const mode of ["crt", "hologram", "glitch", "film", "monochrome"]) {
+    assert.equal(f.hint(registry, "SystemContent." + mode + "Toggle"), "");
+    assert.equal(f.hint(registry, "SystemContent." + mode + "Details"), "");
+  }
+});
+
+test("named-key and directional action hints dispatch the same assigned key", () => {
+  assert.equal(
+    f.matchesHint(registry, "DisplaySettings.apply", Qt.Key_Return, 0, Qt),
+    true,
+  );
+  assert.equal(
+    f.matchesHint(
+      registry,
+      "DisplaySettings.apply",
+      Qt.Key_Return,
+      Qt.ShiftModifier,
+      Qt,
+    ),
+    false,
+  );
+  assert.equal(
+    f.matchesHint(
+      registry,
+      "AudioMixerContent.balanceLeft",
+      72,
+      Qt.ShiftModifier,
+      Qt,
+    ),
+    true,
+  );
+  assert.equal(
+    f.matchesHint(registry, "AudioMixerContent.balanceLeft", 72, 0, Qt),
+    false,
+  );
+  const changed = { ...registry, overrides: { controls: { Return: "Z" } } };
+  assert.equal(f.hint(changed, "DisplaySettings.apply"), "Z");
+  assert.equal(
+    f.matchesHint(changed, "DisplaySettings.apply", 90, 0, Qt),
+    true,
+  );
+});
+
+test("hybrid media transport keeps space and punctuation in both scopes", () => {
+  for (const [action, key, code] of [
+    ["play", "SPACE", Qt.Key_Space],
+    ["previous", ",", Qt.Key_Comma],
+    ["next", ".", Qt.Key_Period],
+  ]) {
+    for (const suffix of ["", "Compact"]) {
+      const name = "MediaTransport." + action + suffix;
+      assert.equal(f.hint(registry, name), key);
+      assert.equal(f.matchesHint(registry, name, code, 0, Qt), true);
+      assert.equal(
+        f.matchesHint(registry, name, code, Qt.ShiftModifier, Qt),
+        false,
+      );
+    }
+  }
+  const changed = {
+    ...registry,
+    overrides: { controls: { Comma: "G" }, media: { Period: "T" } },
+  };
+  assert.equal(f.hint(changed, "MediaTransport.previousCompact"), "G");
+  assert.equal(
+    f.matchesHint(changed, "MediaTransport.previousCompact", 71, 0, Qt),
+    true,
+  );
+  assert.equal(f.hint(changed, "MediaTransport.next"), "T");
+  assert.equal(f.matchesHint(changed, "MediaTransport.next", 84, 0, Qt), true);
+  // A legal reassignment must change both the keyhint and dispatch.
+  for (const [template, code, modifiers] of [
+    ["=", Qt.Key_Equal, 0],
+    ["+", Qt.Key_Plus, Qt.ShiftModifier],
+    ["/", Qt.Key_Slash, 0],
+    ["[", Qt.Key_BracketLeft, 0],
+    ["SHIFT+G", 71, Qt.ShiftModifier],
+  ]) {
+    const action = "MediaContent.longer";
+    const reassigned = {
+      ...registry,
+      hints: { ...hints, [action]: { ...hints[action], template } },
+    };
+    assert.equal(f.hint(reassigned, action), template);
+    assert.equal(f.matchesHint(reassigned, action, code, modifiers, Qt), true);
+    assert.equal(
+      f.matchesHint(reassigned, action, code, modifiers | Qt.AltModifier, Qt),
+      false,
+    );
+    if (template === "+")
+      assert.equal(
+        f.matchesHint(reassigned, action, Qt.Key_Equal, Qt.ShiftModifier, Qt),
+        true,
+      );
+    const explicit = {
+      ...registry,
+      actions: { ...actionAssignments, [action]: template },
+    };
+    assert.equal(f.matchesHint(explicit, action, code, modifiers, Qt), true);
+  }
+
+  assert.equal(
+    f.matchesHint(registry, "MediaContent.shorter", Qt.Key_Minus, 0, Qt),
+    true,
+  );
+});
+
+test("compact and full seeking use their own scoped action assignments", () => {
+  const changed = {
+    ...registry,
+    overrides: { controls: { H: "A" }, media: { H: "C" } },
+  };
+  assert.equal(
+    f.matchesHint(
+      changed,
+      "MediaTransport.backCompact",
+      65,
+      Qt.ShiftModifier,
+      Qt,
+    ),
+    true,
+  );
+  assert.equal(f.matchesHint(changed, "MediaTransport.back", 67, 0, Qt), true);
+  assert.equal(
+    f.matchesHint(changed, "MediaTransport.backArrow", Qt.Key_Left, 0, Qt),
+    true,
+  );
+  const controls = fs.readFileSync(
+    path.join(qmlDir, "SystemContent.qml"),
+    "utf8",
+  );
+  const media = fs.readFileSync(path.join(qmlDir, "MediaContent.qml"), "utf8");
+  for (const action of ["back", "forward"]) {
+    assert.ok(
+      controls.includes(
+        `shellMatchesHint("MediaTransport.${action}Compact", event.key, event.modifiers)`,
+      ),
+    );
+    for (const suffix of ["", "Arrow"])
+      assert.ok(
+        media.includes(
+          `shellMatchesHint("MediaTransport.${action}${suffix}", event.key, event.modifiers)`,
+        ),
+      );
+  }
+});
+
+test("single chord resolution handles shifted symbols and Qt Backtab without interpreting display legends", () => {
+  const action = "MediaContent.longer";
+  const binding = (template, overrides = {}) => ({
+    ...registry,
+    overrides: { media: overrides },
+    hints: { ...hints, [action]: { scope: "media", template } },
+  });
+  const shift = Qt.ShiftModifier;
+  for (const [template, key, modifiers, expected] of [
+    ["SHIFT+TAB", Qt.Key_Backtab, shift, true],
+    ["SHIFT+TAB", Qt.Key_Backtab, 0, true],
+    ["SHIFT+TAB", Qt.Key_Tab, 0, false],
+    ["?", Qt.Key_Question, shift, true],
+    ["?", Qt.Key_Slash, shift, true],
+    ["?", Qt.Key_Slash, 0, false],
+    ["SHIFT++", Qt.Key_Plus, 0, false],
+    ["SHIFT++", Qt.Key_Plus, shift, true],
+    ["SHIFT++", Qt.Key_Equal, shift, true],
+    ["_", Qt.Key_Minus, shift, true],
+    ["=", Qt.Key_Equal, shift, false],
+    ["A / B", 65, 0, false],
+  ]) {
+    assert.equal(
+      f.matchesHint(binding(template), action, key, modifiers, Qt),
+      expected,
+      template,
+    );
+  }
+  const remapped = binding("SHIFT+/", { Slash: "G", Shift: "ALT" });
+  assert.equal(f.hint(remapped, action), "ALT+G");
+  assert.equal(f.matchesHint(remapped, action, 71, Qt.AltModifier, Qt), true);
+  assert.equal(f.matchesHint(remapped, action, Qt.Key_Slash, shift, Qt), false);
+});
+
+test("US printable keys and shifted glyph events use exact physical modifiers", () => {
+  for (const [binding, base, shifted] of [
+    ["SHIFT+1", 49, 33],
+    ["SHIFT+;", 59, 58],
+    ["SHIFT+'", 39, 34],
+    ["SHIFT+[", Qt.Key_BracketLeft, 123],
+    ["SHIFT+/", Qt.Key_Slash, Qt.Key_Question],
+  ]) {
+    assert.equal(
+      f.matchesChord(binding, base, Qt.ShiftModifier, Qt),
+      true,
+      binding + " base",
+    );
+    assert.equal(
+      f.matchesChord(binding, shifted, Qt.ShiftModifier, Qt),
+      true,
+      binding + " glyph",
+    );
+    assert.equal(
+      f.matchesChord(binding, base, 0, Qt),
+      false,
+      binding + " unshifted",
+    );
+    assert.equal(
+      f.matchesChord(binding, base, Qt.ShiftModifier | Qt.AltModifier, Qt),
+      false,
+      binding + " extra modifier",
+    );
+  }
+  assert.equal(f.numberIndex(registry, "overview", 49, 9, Qt, 0), 0);
+  assert.equal(
+    f.numberIndex(registry, "overview", 49, 9, Qt, Qt.ShiftModifier),
+    -1,
+  );
+  assert.equal(
+    f.navigates(registry, "controls", "left", 72, Qt, "all", Qt.ShiftModifier),
+    false,
+  );
+  assert.equal(
+    f.navigates(
+      registry,
+      "controls",
+      "left",
+      72,
+      Qt,
+      "all",
+      Qt.ControlModifier,
+    ),
+    false,
+  );
+  assert.equal(
+    f.navigates(
+      registry,
+      "resize",
+      "left",
+      72,
+      Qt,
+      "all",
+      Qt.ShiftModifier,
+      true,
+    ),
+    true,
+  );
+  assert.equal(
+    f.matchesHint(
+      registry,
+      "SystemContent.musicReactiveDetails",
+      58,
+      Qt.ShiftModifier,
+      Qt,
+    ),
+    false,
+  );
+});
+
+test("action-based help follows remaps without becoming an executable shortcut", () => {
+  const legend =
+    "SystemContent.legend.spectrum_reactive_windows_glass_bar_frame_motion";
+  const action = "SystemContent.spectrumDetails";
+  const changed = {
+    ...registry,
+    actions: { ...actionAssignments, [action]: "SHIFT+X" },
+  };
+  assert.equal(f.hint(changed, action), "SHIFT+X");
+  assert.match(f.hint(changed, legend), /^SHIFT\+X \/ /);
+  assert.equal(f.matchesHint(changed, legend, 88, Qt.ShiftModifier, Qt), false);
+  for (const [name, entry] of Object.entries(hints)) {
+    if (!entry.actions) continue;
+    for (const reference of entry.actions) {
+      assert.ok(
+        hints[reference] || actionAssignments[reference],
+        name + ": " + reference,
+      );
+      assert.ok(!hints[reference]?.actions, "avoid recursive legends");
+    }
+  }
+  assert.equal(
+    f.matchesHint(
+      registry,
+      "ResizeOverlay.reverse",
+      Qt.Key_Shift,
+      Qt.ShiftModifier,
+      Qt,
+    ),
+    true,
+  );
+});
+
+test("configured discrete widget shortcuts and explicit action assignments are executable", () => {
+  const parser = vm.runInNewContext(
+    fs.readFileSync(path.join(qmlDir, "ShellKeybindings.js"), "utf8") +
+      "\n({chord})",
+  );
+  for (const [action, binding] of Object.entries(actionAssignments))
+    assert.ok(parser.chord(binding, Qt), action + " = " + binding);
+  const choices = registry.widgetChoices.map((binding) =>
+    parser.chord(binding, Qt),
+  );
+  assert.ok(choices.every(Boolean));
+  assert.equal(
+    new Set(choices.map((choice) => choice.key + ":" + choice.modifiers)).size,
+    choices.length,
+  );
+});
+
+test("discrete actions follow their Nix binding across overview, capture, resize and nested controls", () => {
+  const cases = [
+    ["OverviewPanel.move", "OverviewPanel.qml"],
+    ["OverviewPanel.toggleFloating", "OverviewPanel.qml"],
+    ["OverviewPanel.togglePin", "OverviewPanel.qml"],
+    ["OverviewPanel.all", "OverviewPanel.qml"],
+    ["ScreenshotPicker.freeze", "ScreenshotPicker.qml"],
+    ["ScreenshotPicker.edit", "ScreenshotPicker.qml"],
+    ["ScreenshotPicker.full", "ScreenshotPicker.qml"],
+    ["ResizeOverlay.balance", "ResizeOverlay.qml"],
+    ["ResizeOverlay.inspect", "ResizeOverlay.qml"],
+    ["ResizeOverlay.doneAlternate", "ResizeOverlay.qml"],
+    ["StatusContent.refresh", "StatusPeek.qml"],
+    ["CalendarContent.scrollUp", "CalendarContent.qml"],
+    ["CalendarContent.scrollDown", "CalendarContent.qml"],
+    ["RecordingLibrary.delete", "SystemContent.qml"],
+    ["RecordingLibrary.edit", "SystemContent.qml"],
+    ["RecordingLibrary.copy", "SystemContent.qml"],
+    ["RecordingLibrary.ocrCopy", "SystemContent.qml"],
+    ["RecordingLibrary.ocrSelectAll", "SystemContent.qml"],
+    ["RecordingLibrary.pageUp", "SystemContent.qml"],
+    ["RecordingLibrary.pageDown", "SystemContent.qml"],
+    ["BluetoothPanel.scan", "SystemContent.qml"],
+    ["BluetoothPanel.radio", "SystemContent.qml"],
+    ["BluetoothPanel.pair", "SystemContent.qml"],
+    ["BluetoothPanel.trust", "SystemContent.qml"],
+    ["BluetoothPanel.forget", "SystemContent.qml"],
+    ["NetworkPanel.detail", "SystemContent.qml"],
+    ["NetworkPanel.saved", "SystemContent.qml"],
+    ["NetworkPanel.toggleWifi", "SystemContent.qml"],
+    ["NetworkPanel.advanced", "SystemContent.qml"],
+  ];
+  for (const [action, file] of cases) {
+    const body = fs.readFileSync(path.join(qmlDir, file), "utf8");
+    assert.ok(
+      body.includes(`shellMatchesHint("${action}",`),
+      `${file} must execute ${action} through the registry`,
+    );
+    assert.ok(f.hint(registry, action).length > 0, `${action} missing a hint`);
+    const rebound = {
+      ...registry,
+      actions: { ...actionAssignments, [action]: "ALT+Y" },
+    };
+    assert.equal(f.hint(rebound, action), "ALT+Y", `${action} did not remap`);
+    assert.equal(f.matchesHint(rebound, action, 89, Qt.AltModifier, Qt), true);
+    assert.equal(f.matchesHint(rebound, action, 89, 0, Qt), false);
+  }
+});
+
+test("OCR text actions and paging cannot collide with capture/delete shortcuts", () => {
+  const cases = [
+    ["RecordingLibrary.copy", 67, 0],
+    ["RecordingLibrary.ocrCopy", 67, Qt.ControlModifier],
+    ["RecordingLibrary.ocrSelectAll", 65, Qt.ControlModifier],
+    ["RecordingLibrary.delete", 68, 0],
+    ["RecordingLibrary.pageDown", 68, Qt.ShiftModifier],
+    ["BluetoothPanel.scan", 68, Qt.ShiftModifier],
+  ];
+  for (const [action, key, modifiers] of cases)
+    assert.equal(f.matchesHint(registry, action, key, modifiers, Qt), true);
+  assert.equal(
+    f.matchesHint(
+      registry,
+      "RecordingLibrary.delete",
+      68,
+      Qt.ShiftModifier,
+      Qt,
+    ),
+    false,
+  );
+  assert.equal(
+    f.matchesHint(
+      registry,
+      "RecordingLibrary.copy",
+      67,
+      Qt.ControlModifier,
+      Qt,
+    ),
+    false,
+  );
+  assert.equal(
+    f.matchesHint(registry, "RecordingLibrary.ocrCopy", 67, 0, Qt),
+    false,
+  );
+  assert.equal(f.hint(registry, "RecordingLibrary.page"), "U / SHIFT+D");
+  assert.equal(f.hint(registry, "CalendarContent.events"), "U / D");
+});

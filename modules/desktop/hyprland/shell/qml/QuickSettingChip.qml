@@ -1,0 +1,181 @@
+pragma ComponentBehavior: Bound
+import QtQuick
+
+// Compact, live-state action for the Controls strip. The caller owns the action.
+Item {
+    id: chip
+
+    required property RuntimeConfig runtime
+    required property Theme theme
+    required property Motion motion
+    property string title: ""
+    property string icon: ""
+    property string actionId: ""
+    property string shortcut: actionId.length > 0 ? runtime.shellHint(actionId) : ""
+    property string detailActionId: ""
+    property string detailShortcut: detailActionId.length > 0 ? runtime.shellHint(detailActionId) : ""
+    property string detailName: "Open details"
+    readonly property bool hasDetails: detailActionId.length > 0
+    signal detailsRequested
+    property bool primaryAvailable: true
+    property bool active: false
+    property color activeColor: theme.commandColor
+
+    property bool foregroundBusy: false
+    property color foregroundColor: theme.progressColor
+
+    signal activated
+
+    function trigger(): void {
+        if (!enabled || !primaryAvailable)
+            return;
+        if (hasDetails && shortcut.length > 0)
+            quickAction.trigger();
+        else
+            press.trigger();
+    }
+
+    function triggerDetails(): void {
+        if (!enabled)
+            return;
+        press.trigger();
+    }
+
+    implicitWidth: Math.max(140 * theme.textScale, labelMetrics.advanceWidth + theme.spacing2 * 2, primaryHint.implicitWidth + detailHint.implicitWidth + theme.spacing4 * 2 + theme.iconLarge)
+    implicitHeight: Math.max(72, tileContent.implicitHeight + theme.spacing3 + 3 + theme.spacing2)
+    TextMetrics {
+        id: labelMetrics
+        text: chip.title
+        font: tileLabel.font
+    }
+    Accessible.role: Accessible.Grouping
+    Accessible.name: title
+
+    ShellSurface {
+        id: chipSurface
+        foregroundBusy: chip.foregroundBusy
+        foregroundColor: chip.foregroundColor
+        scale: press.defaultEffectScale
+        anchors.fill: parent
+        theme: chip.theme
+        motion: chip.motion
+        surfaceLayer: ShellSurface.Control
+        cornerRadius: chip.active ? chip.theme.radiusLarge : chip.theme.radiusMedium
+        luminous: chip.active
+        luminousColor: chip.activeColor
+        outlined: chip.active || press.activeFocus
+        borderColor: press.activeFocus ? chip.theme.focusColor : chip.active ? chip.activeColor : "transparent"
+        hovered: press.pointerHovered || press.manualHover
+        fillColor: chip.active ? chip.theme.blend(chip.theme.controlBase, chip.activeColor, chip.theme.dark ? 0.12 : 0.08) : chip.theme.expressiveSurfaceStrong
+
+        Behavior on cornerRadius {
+            Anim {
+                motion: chip.motion
+                type: Anim.FastSpatial
+            }
+        }
+
+        // Icon and title retain their own layout while shortcuts are anchored
+        // independently to the tile surface.
+        Column {
+            id: tileContent
+            anchors {
+                fill: parent
+                leftMargin: chip.theme.spacing2
+                rightMargin: chip.theme.spacing2
+                topMargin: chip.theme.spacing3 + 3
+                bottomMargin: chip.theme.spacing2
+            }
+            spacing: chip.theme.spacing2
+
+            Item {
+                width: parent.width
+                height: Math.max(chip.theme.keycapHeight - 3, chip.theme.fontSize(21))
+                Text {
+                    anchors {
+                        horizontalCenter: parent.horizontalCenter
+                        verticalCenter: parent.verticalCenter
+                    }
+                    text: chip.icon
+                    color: chip.theme.readableColor(chip.activeColor, chipSurface.fillColor)
+                    font.family: "Symbols Nerd Font"
+                    font.pixelSize: chip.theme.fontSize(20)
+                }
+            }
+
+            ShellText {
+                id: tileLabel
+                width: parent.width
+                runtime: chip.runtime
+                theme: chip.theme
+                text: chip.title
+                color: chip.theme.textStrong
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.WordWrap
+                font.pixelSize: chip.theme.fontCompactAction
+                font.weight: chip.active ? Font.DemiBold : Font.Medium
+            }
+        }
+        // Primary action: always in the top-left, even when focused or active.
+        TileKeyHint {
+            id: primaryHint
+            primary: true
+            visible: chip.shortcut.length > 0
+            shortcut: chip.shortcut
+            compact: true
+            runtime: chip.runtime
+            motion: chip.motion
+            theme: chip.theme
+            available: chip.primaryAvailable
+            emphasized: chip.active || quickAction.pointerHovered || quickAction.visualPressed
+            emphasisColor: chip.activeColor
+        }
+        TileKeyHint {
+            id: detailHint
+            visible: chip.detailShortcut.length > 0
+            shortcut: chip.detailShortcut
+            compact: true
+            runtime: chip.runtime
+            motion: chip.motion
+            theme: chip.theme
+            emphasisColor: chip.activeColor
+        }
+    }
+
+    StateLayer {
+        id: press
+        // Unassigned subordinate details remain reachable by Tab and Enter.
+        keyboardFocusable: chip.hasDetails && chip.detailShortcut.length === 0
+        growOnHover: true
+        effectScaleX: chipSurface.scale
+        effectScaleY: chipSurface.scale
+        theme: chip.theme
+        motion: chip.motion
+        selected: chip.active
+        disabled: !chip.hasDetails && !chip.primaryAvailable
+        manualPress: quickAction.visible && quickAction.visualPressed
+        manualHover: quickAction.visible && quickAction.pointerHovered
+        Accessible.role: Accessible.Button
+        Accessible.name: chip.hasDetails ? chip.detailName + " · " + chip.title : chip.title
+        Accessible.onPressAction: press.trigger()
+        stateColor: chip.theme.textStrong
+        hoverOpacity: 0.05
+        pressOpacity: 0.11
+        cornerRadius: chipSurface.cornerRadius
+        onActivated: chip.hasDetails ? chip.detailsRequested() : chip.activated()
+    }
+
+    TileQuickAction {
+        id: quickAction
+        hint: primaryHint
+        runtime: chip.runtime
+        theme: chip.theme
+        motion: chip.motion
+        shortcut: chip.hasDetails ? chip.shortcut : ""
+        actionName: "Activate " + chip.title
+        selected: chip.active
+        available: chip.primaryAvailable
+        emphasisColor: chip.activeColor
+        onActivated: chip.activated()
+    }
+}

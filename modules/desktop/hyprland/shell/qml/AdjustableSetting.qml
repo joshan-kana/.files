@@ -1,0 +1,165 @@
+pragma ComponentBehavior: Bound
+import QtQuick
+
+// Shared Controls tile: toggle on the header, adjust by dragging the native
+// slider or via the same selected-slider keyboard workflow as transparency.
+ShellSurface {
+    id: setting
+    required property RuntimeConfig runtime
+    required property string label
+    required property string valueText
+    property string icon: ""
+    property string toggleShortcut: ""
+    property string detailShortcut: ""
+    signal detailRequested
+    property bool active: false
+    property bool canToggle: true
+    property bool canAdjust: true
+    property bool keyboardSelected: false
+    property real from: 2500
+    property real to: 6500
+    property real value: from
+    property color roleAccent: theme.accent
+    signal toggleRequested
+    signal valueRequested(real value)
+    signal sliderActivated
+
+    height: 78
+    Accessible.role: Accessible.Button
+    Accessible.name: label + ", " + valueText + (active ? ", on" : ", off")
+    // Scale inward at rest and fill the allocated bounds on hover.
+    // The hub viewport clips content outside its edge during panel morphs.
+    scale: toggleArea.pressed ? 0.94 : tileHover.hovered ? 1 : 0.982
+    Behavior on scale {
+        Anim {
+            motion: setting.motion
+            type: Anim.FastSpatial
+        }
+    }
+
+    surfaceLayer: ShellSurface.Control
+    cornerRadius: active ? theme.radiusLarge : theme.radiusMedium
+    // An enabled setting keeps the same accent outline as other Controls
+    // tiles. Keyboard selection adds a stronger focus border independently.
+    outlined: active || keyboardSelected
+    luminous: active || keyboardSelected
+    luminousColor: theme.toggleColor
+    borderWidth: keyboardSelected ? theme.borderFocus : active ? theme.borderThin : 0
+    borderColor: keyboardSelected ? theme.focusColor : active ? theme.toggleColor : "transparent"
+    hovered: tileHover.hovered
+    fillColor: active ? theme.blend(theme.controlBase, theme.toggleColor, theme.dark ? 0.12 : 0.08) : theme.expressiveSurfaceStrong
+    Behavior on cornerRadius {
+        Anim {
+            motion: setting.motion
+            type: Anim.FastSpatial
+        }
+    }
+
+    // The whole compound surface has one hover boundary, including its slider.
+    // The pointer handler observes hover without intercepting child controls.
+    HoverHandler {
+        id: tileHover
+    }
+
+    StateLayer {
+        id: toggleArea
+        anchors {
+            top: parent.top
+            left: parent.left
+            right: parent.right
+        }
+        height: setting.height - 25
+        theme: setting.theme
+        motion: setting.motion
+        disabled: !setting.canToggle
+        selected: setting.active
+        stateColor: setting.theme.toggleColor
+        cornerRadius: setting.cornerRadius
+        onActivated: setting.toggleRequested()
+    }
+
+    Column {
+        anchors {
+            fill: parent
+            leftMargin: setting.theme.spacing2
+            rightMargin: setting.theme.spacing2
+            topMargin: setting.theme.spacing2
+            bottomMargin: setting.theme.spacing1
+        }
+        spacing: setting.theme.spacing1
+
+        Item {
+            width: parent.width
+            height: Math.max(setting.theme.keycapHeight - 3, setting.theme.fontSize(21))
+            Text {
+                anchors.centerIn: parent
+                text: setting.icon
+                color: setting.roleAccent
+                font.family: "Symbols Nerd Font"
+                font.pixelSize: setting.theme.fontSize(19)
+            }
+        }
+
+        Row {
+            width: parent.width
+            height: 15
+            spacing: setting.theme.spacing1
+            Text {
+                width: Math.max(1, parent.width - temperatureValue.implicitWidth - parent.spacing)
+                text: setting.label
+                horizontalAlignment: Text.AlignHCenter
+                elide: Text.ElideRight
+                color: setting.theme.textStrong
+                font.family: setting.runtime.fontSans
+                font.pixelSize: setting.theme.fontSize(9)
+                font.weight: setting.active ? Font.DemiBold : Font.Medium
+            }
+            Text {
+                id: temperatureValue
+                text: setting.valueText
+                color: setting.active ? setting.theme.readableColor(setting.theme.valueColor, setting.theme.controlBase) : setting.theme.textMuted
+                font.family: setting.runtime.fontSans
+                font.pixelSize: setting.theme.fontSize(9)
+                font.weight: Font.DemiBold
+            }
+        }
+
+        ShellSlider {
+            width: parent.width
+            height: 19
+            theme: setting.theme
+            motion: setting.motion
+            from: setting.from
+            to: setting.to
+            value: setting.value
+            enabled: setting.canAdjust
+            density: ShellSlider.Compact
+            Accessible.role: Accessible.Slider
+            Accessible.name: setting.label + " " + setting.valueText
+            onInteractionStarted: setting.sliderActivated()
+            onValueRequested: next => setting.valueRequested(next)
+        }
+    }
+
+    // Primary stays top-left during parameter editing.
+    TileKeyHint {
+        primary: true
+        shortcut: setting.toggleShortcut
+        compact: true
+        runtime: setting.runtime
+        motion: setting.motion
+        theme: setting.theme
+        emphasized: setting.active || setting.keyboardSelected
+        emphasisColor: setting.theme.focusColor
+    }
+
+    TileCornerAction {
+        runtime: setting.runtime
+        theme: setting.theme
+        motion: setting.motion
+        shortcut: setting.detailShortcut
+        actionName: "Open " + setting.label + " details"
+        emphasisColor: setting.theme.focusColor
+        onActivated: setting.detailRequested()
+    }
+}

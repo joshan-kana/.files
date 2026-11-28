@@ -1,0 +1,115 @@
+pragma ComponentBehavior: Bound
+import QtQuick
+
+Item {
+    id: summary
+    required property Theme theme
+    required property Motion motion
+
+    required property WeatherState weather
+    property bool presentationActive: false
+    signal forecastRequested
+
+    implicitHeight: theme.textScale >= 1.5 ? 238 : 202
+    StateLayer {
+        id: forecastHit
+        growOnHover: true
+        feedbackParent: visualBody
+        theme: summary.theme
+        motion: summary.motion
+        keyboardFocusable: true
+        cornerRadius: summary.theme.radiusLarge
+        stateColor: summary.theme.weatherColor(summary.weather.weatherCode, summary.weather.isDay)
+        Accessible.role: Accessible.Button
+        Accessible.name: "Open detailed weather forecast"
+        Accessible.onPressAction: summary.forecastRequested()
+        onActivated: summary.forecastRequested()
+    }
+    Item {
+        id: visualBody
+        anchors.fill: parent
+        scale: forecastHit.defaultEffectScale
+        clip: true
+        ShellSurface {
+            z: -1
+            anchors.fill: parent
+            foregroundBusy: summary.presentationActive && summary.weather.loading && summary.weather.foregroundLoading
+            theme: summary.theme
+            motion: summary.motion
+            surfaceLayer: ShellSurface.Group
+            luminous: true
+            hovered: forecastHit.pointerHovered || forecastHit.activeFocus
+            luminousColor: theme.textStrong
+            lightIntensity: 1.35
+            fillColor: theme.blend(theme.groupBase, theme.weatherColor(summary.weather.weatherCode, summary.weather.isDay), theme.dark ? 0.15 : 0.08)
+            cornerRadius: theme.radiusLarge
+        }
+        Text {
+            z: 1
+            anchors {
+                right: parent.right
+                bottom: parent.bottom
+                rightMargin: summary.theme.spacing1
+                bottomMargin: -summary.theme.spacing4
+            }
+            text: summary.weather.icon
+            font.family: "Symbols Nerd Font"
+            font.pixelSize: summary.theme.fontSize(124)
+            color: summary.theme.weatherColor(summary.weather.weatherCode, summary.weather.isDay)
+            opacity: 0.19
+        }
+
+        Column {
+            z: 1
+            anchors {
+                fill: parent
+                margins: summary.theme.spacing4
+            }
+            spacing: summary.theme.spacing3
+
+            Row {
+                width: parent.width
+                spacing: summary.theme.spacing2
+
+                Text {
+                    width: Math.max(1, parent.width - forecastHint.width - parent.spacing)
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: (summary.weather.city || "Your location") + " · Weather"
+                    color: summary.theme.readableRoleColor("weather")
+                    opacity: 0.89
+                    font.family: summary.theme.runtime.fontSans
+                    font.pixelSize: summary.theme.fontPanelEyebrow
+                    font.weight: Font.DemiBold
+                    elide: Text.ElideRight
+                }
+
+                KeyHint {
+                    id: forecastHint
+                    anchors.verticalCenter: parent.verticalCenter
+                    runtime: summary.theme.runtime
+                    theme: summary.theme
+                    compact: true
+                    shortcut: summary.theme.runtime.shellHint("WeatherSummary.forecast")
+                    label: "Forecast"
+                }
+            }
+
+            Text {
+                text: summary.weather.available ? summary.weather.temperatureText(summary.weather.temperature) : "--°"
+                color: summary.theme.textStrong
+                font.family: summary.theme.runtime.fontMono
+                font.pixelSize: summary.theme.fontSize(68)
+                font.weight: Font.DemiBold
+            }
+
+            Text {
+                width: parent.width
+                text: summary.weather.available ? summary.weather.description : summary.weather.status
+                color: summary.theme.textStrong
+                font.family: summary.theme.runtime.fontSans
+                font.pixelSize: summary.theme.fontSize(11)
+                elide: Text.ElideRight
+            }
+        }
+    }
+}

@@ -1,0 +1,406 @@
+pragma ComponentBehavior: Bound
+import QtQuick
+import "DesktopIcons.js" as DesktopIcons
+import Quickshell
+
+Item {
+    id: panel
+
+    required property RuntimeConfig runtime
+    required property SystemState system
+    required property Theme theme
+    required property Motion motion
+
+    signal keyboardRequested
+    signal revealSelection(real top, real bottom)
+
+    property bool open: false
+    property int selectedIndex: 0
+    property int preferredColumn: 0
+    readonly property int gridColumns: width < 340 ? 1 : width < 510 ? 2 : 3
+    onGridColumnsChanged: preferredColumn = selectedIndex % gridColumns
+    property alias armedAction: internalConfirmation.pending
+    property ConfirmationState confirmation: ConfirmationState {
+        id: internalConfirmation
+        onExpired: {
+            panel.statusText = "";
+            panel.statusError = false;
+        }
+    }
+    property string statusText: ""
+    property bool statusError: false
+
+    readonly property bool restoreWindowsOnExit: system.restoreWindowsOnExit
+
+    function toggleRestore(): void {
+        system.toggleRestoreWindows();
+        statusText = restoreWindowsOnExit ? "WINDOW RESTORATION ENABLED" : "FRESH SESSION ENABLED";
+        statusError = false;
+    }
+
+    readonly property var entries: [
+        {
+            id: "lock",
+            binding: "SessionPanel.lock",
+            shortcut: panel.runtime.shellHint("SessionPanel.lock"),
+            accentRole: "connectivity",
+            label: "Lock",
+            icon: "",
+            description: "Secure the current Wayland session",
+            destructive: false
+        },
+        {
+            id: "suspend",
+            binding: "SessionPanel.suspend",
+            shortcut: panel.runtime.shellHint("SessionPanel.suspend"),
+            accentRole: "media",
+            label: "Suspend",
+            icon: "󰤄",
+            description: "Suspend the machine until resumed",
+            destructive: true
+        },
+        {
+            id: "logout",
+            binding: "SessionPanel.logout",
+            shortcut: panel.runtime.shellHint("SessionPanel.logout"),
+            accentRole: "capture",
+            label: "Log out",
+            icon: "󰍃",
+            description: "Exit the current Hyprland session",
+            destructive: true
+        },
+        {
+            id: "reboot",
+            binding: "SessionPanel.reboot",
+            shortcut: panel.runtime.shellHint("SessionPanel.reboot"),
+            accentRole: "resources",
+            label: "Reboot",
+            icon: "󰜉",
+            description: "Restart the machine",
+            destructive: true
+        },
+        {
+            id: "poweroff",
+            binding: "SessionPanel.shutdown",
+            shortcut: panel.runtime.shellHint("SessionPanel.shutdown"),
+            accentRole: "attention",
+            label: "Power off",
+            icon: "󰐥",
+            description: "Shut the machine down",
+            destructive: true
+        },
+        {
+            id: "restore",
+            binding: "SessionPanel.restoreWindows",
+            shortcut: panel.runtime.shellHint("SessionPanel.restoreWindows"),
+            accentRole: "resources",
+            label: "Restore windows",
+            icon: "󰑓",
+            description: "Restore open windows after logout, reboot or shutdown",
+            destructive: false
+        }
+    ]
+
+    readonly property string actionShortcutLegend: entries.slice(0, 3).map(entry => entry.shortcut).join("/") + " · " + entries.slice(3).map(entry => entry.shortcut).join("/")
+
+    visible: open
+
+    function selectedEntry(): var {
+        if (entries.length === 0)
+            return null;
+
+        return entries[Math.max(0, Math.min(selectedIndex, entries.length - 1))];
+    }
+
+    function openView(): void {
+        confirmation.cancel();
+        open = true;
+        selectedIndex = 0;
+        preferredColumn = 0;
+        armedAction = "";
+        statusText = "";
+        statusError = false;
+        keyboardRequested();
+    }
+
+    function closeView(): void {
+        confirmation.cancel();
+        open = false;
+        armedAction = "";
+        statusText = "";
+        statusError = false;
+        keyboardRequested();
+    }
+
+    function moveGrid(horizontal: int, vertical: int): void {
+        if (horizontal !== 0) {
+            const rowStart = Math.floor(selectedIndex / gridColumns) * gridColumns;
+            const rowEnd = Math.min(entries.length - 1, rowStart + gridColumns - 1);
+            moveSelection(Math.max(rowStart, Math.min(rowEnd, selectedIndex + horizontal)) - selectedIndex);
+        } else if (vertical !== 0) {
+            const targetRow = Math.floor(selectedIndex / gridColumns) + vertical;
+            const lastRow = Math.floor((entries.length - 1) / gridColumns);
+            if (targetRow >= 0 && targetRow <= lastRow) {
+                const target = Math.min(entries.length - 1, targetRow * gridColumns + preferredColumn);
+                const column = preferredColumn;
+                moveSelection(target - selectedIndex);
+                // Keep the intended column for the return trip across a
+                // shorter row when navigating back upwards.
+                preferredColumn = column;
+            }
+        }
+    }
+
+    function moveSelection(delta: int): void {
+        selectedIndex = Math.max(0, Math.min(entries.length - 1, selectedIndex + delta));
+        preferredColumn = selectedIndex % gridColumns;
+        confirmation.cancel();
+        armedAction = "";
+        statusText = "";
+        statusError = false;
+        if (open) {
+            const row = Math.floor(selectedIndex / gridColumns);
+            const top = buttonGrid.y + row * (155 + buttonGrid.spacing);
+            revealSelection(top, top + 155);
+        }
+    }
+
+    function cancelConfirmation(): void {
+        confirmation.cancel();
+        armedAction = "";
+        statusText = "";
+        statusError = false;
+    }
+
+    function execute(entry): void {
+        if (!entry)
+            return;
+
+        if (entry.id === "restore") {
+            toggleRestore();
+            return;
+        }
+
+        if (entry.id === "lock") {
+            if (runtime.lockSession.length === 0) {
+                statusText = "LOCK SERVICE UNAVAILABLE";
+                statusError = true;
+                return;
+            }
+
+            Quickshell.execDetached([runtime.lockSession]);
+            closeView();
+            return;
+        }
+
+        if (runtime.sessionCommand.length === 0) {
+            statusText = "SESSION ACTIONS UNAVAILABLE";
+            statusError = true;
+            return;
+        }
+
+        Quickshell.execDetached([runtime.sessionCommand, entry.id, restoreWindowsOnExit ? "restore" : "fresh"]);
+        closeView();
+    }
+
+    function activateShortcut(key: int, modifiers: int, autoRepeat: bool): bool {
+        const index = entries.findIndex(entry => runtime.shellMatchesHint(entry.binding, key, modifiers));
+        if (runtime.shellMatchesHint("SessionPanel.defaults", key, modifiers)) {
+            if (!autoRepeat)
+                resetSessionAction.trigger();
+            return true;
+        }
+        if (index < 0)
+            return false;
+        if (!autoRepeat)
+            activateIndex(index);
+        return true;
+    }
+
+    function activateIndex(index: int): void {
+        if (index < 0 || index >= entries.length)
+            return;
+        if (selectedIndex !== index)
+            moveSelection(index - selectedIndex);
+        triggerSelected();
+    }
+
+    function triggerSelected(): void {
+        const row = sessionRows.itemAt(Math.floor(selectedIndex / gridColumns)) as SessionRow;
+        if (row)
+            row.triggerAt(selectedIndex % gridColumns);
+    }
+
+    function activateSelected(): void {
+        const entry = selectedEntry();
+        if (!entry)
+            return;
+
+        if (!entry.destructive) {
+            execute(entry);
+            return;
+        }
+
+        if (confirmation.request(entry.id)) {
+            execute(entry);
+            return;
+        }
+        statusText = "Confirm " + entry.label;
+        statusError = false;
+    }
+
+    implicitWidth: 3 * 154 + 2 * theme.spacing3 + theme.spacing5 * 2
+    implicitHeight: header.implicitHeight + buttonGrid.implicitHeight + footer.implicitHeight + theme.spacing5 + theme.spacing4
+
+    DetailHero {
+        id: header
+        quiet: true
+        width: parent.width
+        runtime: panel.runtime
+        theme: panel.theme
+        motion: panel.motion
+        glyph: panel.armedAction.length > 0 ? "!" : DesktopIcons.glyphFor("session")
+        glyphFont: "Symbols Nerd Font"
+        glyphColor: panel.armedAction.length > 0 ? panel.theme.warning : panel.theme.roleColor("resources")
+        eyebrow: "Device / secure session"
+        title: "Power & session"
+        detail: panel.armedAction.length > 0 ? "Confirm within 5 seconds" : panel.selectedEntry().id === "restore" ? (panel.restoreWindowsOnExit ? "Reopen windows after leaving the session" : "Start fresh after leaving the session") : panel.selectedEntry().description
+        actions: [
+            ShellUtilityAction {
+                id: resetSessionAction
+                width: implicitWidth
+                height: implicitHeight
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                icon: DesktopIcons.actionGlyph("reset")
+                title: "Restore session defaults"
+                shortcut: panel.runtime.shellHint("SessionPanel.defaults")
+                enabled: panel.armedAction.length === 0
+                onActivated: panel.system.resetSessionPreferences()
+            }
+        ]
+    }
+
+    component SessionRow: Row {
+        id: actionRow
+        required property int index
+        readonly property int rowCount: Math.min(panel.gridColumns, panel.entries.length - index * panel.gridColumns)
+        width: Math.min(buttonGrid.width, rowCount * 154 + (rowCount - 1) * panel.theme.spacing3)
+        anchors.horizontalCenter: parent.horizontalCenter
+        spacing: panel.theme.spacing3
+
+        function triggerAt(index: int): void {
+            (sessionButtons.itemAt(index) as SessionActionButton)?.trigger();
+        }
+        Repeater {
+            id: sessionButtons
+            model: panel.entries.slice(actionRow.index * panel.gridColumns, (actionRow.index + 1) * panel.gridColumns)
+
+            delegate: SessionActionButton {
+                required property var modelData
+                readonly property int actionIndex: panel.entries.findIndex(entry => entry.id === modelData.id)
+                width: Math.max(1, (actionRow.width - actionRow.spacing * (actionRow.rowCount - 1)) / actionRow.rowCount)
+
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                icon: modelData.icon
+                lockGlyph: modelData.id === "lock"
+                shortcut: modelData.shortcut
+                label: modelData.label
+                accentColor: panel.theme.roleColor(modelData.accentRole)
+                active: modelData.id === "restore" && panel.restoreWindowsOnExit
+                selected: panel.selectedIndex === actionIndex
+                armed: panel.armedAction === modelData.id
+
+                onHovered: {
+                    if (panel.selectedIndex !== actionIndex)
+                        panel.moveSelection(actionIndex - panel.selectedIndex);
+                }
+                onActivated: {
+                    if (panel.selectedIndex !== actionIndex)
+                        panel.moveSelection(actionIndex - panel.selectedIndex);
+                    panel.activateSelected();
+                    panel.keyboardRequested();
+                }
+            }
+        }
+    }
+
+    Column {
+        id: buttonGrid
+        width: Math.min(parent.width, panel.gridColumns * 154 + (panel.gridColumns - 1) * panel.theme.spacing3)
+        anchors {
+            top: header.bottom
+            topMargin: panel.theme.spacing5
+            horizontalCenter: parent.horizontalCenter
+        }
+        spacing: panel.theme.spacing3
+
+        Repeater {
+            id: sessionRows
+            model: Math.ceil(panel.entries.length / panel.gridColumns)
+
+            delegate: SessionRow {}
+        }
+    }
+
+    Column {
+        id: footer
+        anchors {
+            left: parent.left
+            right: parent.right
+            top: buttonGrid.bottom
+            topMargin: panel.theme.spacing4
+        }
+        spacing: panel.theme.spacing2
+
+        Text {
+            width: parent.width
+            visible: panel.statusText.length > 0
+            text: panel.statusText
+            color: panel.theme.readableRoleColor(panel.statusError ? "critical" : "warning")
+            horizontalAlignment: Text.AlignHCenter
+            font.family: panel.runtime.fontSans
+            font.pixelSize: panel.theme.fontSize(11)
+            font.weight: Font.DemiBold
+        }
+
+        // Direct action keycaps already live on their tiles. Centre only the
+        // navigation and selected-action hints; wrap at narrow panel widths.
+        Item {
+            id: hintRegion
+            width: buttonGrid.width
+            height: hintFlow.height
+            anchors.horizontalCenter: parent.horizontalCenter
+            readonly property real naturalWidth: moveHint.implicitWidth + actionHint.implicitWidth + panel.theme.spacing3
+
+            Flow {
+                id: hintFlow
+                width: Math.min(parent.width, hintRegion.naturalWidth)
+                height: childrenRect.height
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: panel.theme.spacing3
+
+                KeyHint {
+                    id: moveHint
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    shortcut: panel.runtime.shellHint("SessionPanel.move")
+                    label: "Move"
+                    compact: true
+                }
+
+                KeyHint {
+                    id: actionHint
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    shortcut: panel.runtime.shellHint("SessionPanel.confirm")
+                    label: panel.armedAction.length > 0 ? "Confirm" : "Activate"
+                    compact: true
+                }
+            }
+        }
+    }
+}

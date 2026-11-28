@@ -1,0 +1,4 @@
+module DesktopShell.Visuals
+import QtQuick 6.0
+plugin desktop-shell-visuals
+typeinfo plugins.qmltypes

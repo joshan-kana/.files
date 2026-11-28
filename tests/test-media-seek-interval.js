@@ -1,0 +1,175 @@
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const { test } = require("node:test");
+
+const read = (file) =>
+  fs.readFileSync(
+    path.join(__dirname, "../modules/desktop/hyprland/shell/qml", file),
+    "utf8",
+  );
+
+test("seek interval has one validated persistent preference and a declarative default", () => {
+  const appearance = read("AppearancePreferences.qml");
+  assert.match(appearance, /defaults: appearance\.runtime\.appearanceDefaults/);
+  assert.match(
+    appearance,
+    /readonly property var seekIntervals: runtime\.constraints\.appearance\.mediaSeekSeconds\.values/,
+  );
+  assert.match(
+    appearance,
+    /readonly property int mediaSeekSeconds: effective\("mediaSeekSeconds"\)/,
+  );
+  assert.match(
+    appearance,
+    /storeOverride\("mediaSeekSeconds", seekIntervals\[index\]\)/,
+  );
+  assert.match(appearance, /saved\.set\(key, value\)/);
+  assert.match(
+    appearance,
+    /constraints: appearance\.runtime\.constraints\.appearance/,
+  );
+  const media = read("MediaState.qml");
+  const indexExpression = media.match(
+    /readonly property int seekIntervalIndex: (.+)/,
+  )[1];
+  const decreaseExpression = media.match(
+    /readonly property bool canDecreaseSeekInterval: (.+)/,
+  )[1];
+  const increaseExpression = media.match(
+    /readonly property bool canIncreaseSeekInterval: (.+)/,
+  )[1];
+  const indexFor = new Function(
+    "appearance",
+    "seekSeconds",
+    "return " + indexExpression,
+  );
+  const canDecrease = new Function(
+    "seekIntervalIndex",
+    "return " + decreaseExpression,
+  );
+  const canIncrease = new Function(
+    "appearance",
+    "seekIntervalIndex",
+    "return " + increaseExpression,
+  );
+  for (const seekIntervals of [[5, 10, 15, 30, 60], [2, 20, 120], [30]]) {
+    const appearance = { seekIntervals };
+    for (const [i, seconds] of seekIntervals.entries()) {
+      const index = indexFor(appearance, seconds);
+      assert.equal(canDecrease(index), i > 0);
+      assert.equal(
+        canIncrease(appearance, index),
+        i < seekIntervals.length - 1,
+      );
+    }
+  }
+  const page = read("MediaContent.qml");
+  assert.match(page, /canDecrease: content\.media\.canDecreaseSeekInterval/);
+  assert.match(page, /canIncrease: content\.media\.canIncreaseSeekInterval/);
+});
+test("all media transport buttons and global shortcuts use the same step", () => {
+  const media = read("MediaState.qml");
+  assert.match(media, /required property AppearancePreferences appearance/);
+  assert.match(
+    media,
+    /readonly property int seekSeconds: appearance\.mediaSeekSeconds/,
+  );
+  assert.match(
+    media,
+    /function seekStep\(direction: int\): void \{\s*seek\(direction \* seekSeconds\)/,
+  );
+  const actions = read("Actions.qml");
+  assert.match(
+    actions,
+    /function mediaSeekForward\(\): void \{\s*mediaState\.seekStep\(1\)/,
+  );
+  assert.match(
+    actions,
+    /function mediaSeekBackward\(\): void \{\s*mediaState\.seekStep\(-1\)/,
+  );
+  const transport = read("MediaTransport.qml");
+  assert.match(transport, /root\.media\.seekStep\(1\)/);
+  assert.match(transport, /root\.media\.seekStep\(-1\)/);
+  const page = read("MediaContent.qml");
+  assert.match(
+    page,
+    /fullTransport\.triggerAction\("forward", event\.isAutoRepeat\)/,
+  );
+  assert.match(
+    page,
+    /fullTransport\.triggerAction\("back", event\.isAutoRepeat\)/,
+  );
+  const controls = read("SystemContent.qml");
+  assert.match(
+    controls,
+    /mediaCard\.triggerTransport\("forward", event\.isAutoRepeat\)/,
+  );
+  assert.match(
+    controls,
+    /mediaCard\.triggerTransport\("back", event\.isAutoRepeat\)/,
+  );
+  for (const [file, contents] of [
+    ["Actions.qml", actions],
+    ["MediaTransport.qml", transport],
+    ["MediaContent.qml", page],
+    ["SystemContent.qml", controls],
+  ]) {
+    assert.doesNotMatch(
+      contents,
+      /\.seek\([+-]?(?:5|10)\)/,
+      file + " must not bypass the configured interval",
+    );
+  }
+});
+test("seek interval controls use shared action keycaps and include keyboard navigation", () => {
+  const page = read("MediaContent.qml");
+  assert.match(
+    page,
+    /decreaseShortcut: content\.runtime\.shellHint\("MediaContent.shorter"\)/,
+  );
+  assert.match(
+    page,
+    /increaseShortcut: content\.runtime\.shellHint\("MediaContent.longer"\)/,
+  );
+  assert.match(page, /onIncreased: content\.media\.adjustSeekStep\(1\)/);
+  assert.match(page, /onDecreased: content\.media\.adjustSeekStep\(-1\)/);
+  assert.match(
+    page,
+    /content\.runtime\.shellMatchesHint\("MediaContent\.shorter", event\.key, event\.modifiers\)/,
+  );
+  assert.match(
+    page,
+    /content\.runtime\.shellMatchesHint\("MediaContent\.longer", event\.key, event\.modifiers\)/,
+  );
+  assert.match(page, /Seek interval · " \+ media\.seekSeconds/);
+});
+
+test("global keybinding descriptions match the configurable seek interval", () => {
+  const bindings = fs.readFileSync(
+    path.join(__dirname, "../modules/desktop/hyprland/keybindings.nix"),
+    "utf8",
+  );
+  assert.match(
+    bindings,
+    /description = "Seek backward by configured interval"/,
+  );
+  assert.match(bindings, /description = "Seek forward by configured interval"/);
+  assert.doesNotMatch(
+    bindings,
+    /description = "Seek (backward|forward) 10 seconds"/,
+  );
+});
+
+test("Now Playing seek and speed controls share measured, action-owned steppers", () => {
+  const page = read("MediaContent.qml");
+  const stepper = read("ShellStepper.qml");
+  assert.match(page, /id: seekStepper[\s\S]*?title: "Seek interval"/);
+  assert.match(page, /readback: content.media.seekSeconds \+ "s"/);
+  assert.match(page, /id: speedStepper[\s\S]*?title: "Playback speed"/);
+  assert.match(stepper, /shortcut: stepper.decreaseShortcut/);
+  assert.match(stepper, /shortcut: stepper.increaseShortcut/);
+  assert.match(stepper, /function decrease\(\): void/);
+  assert.match(page, /seekStepper.decrease\(\)/);
+  assert.match(page, /speedStepper.increase\(\)/);
+});

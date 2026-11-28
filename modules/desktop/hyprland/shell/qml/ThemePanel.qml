@@ -1,0 +1,886 @@
+pragma ComponentBehavior: Bound
+import QtQuick
+import QtCore
+import "DesktopIcons.js" as DesktopIcons
+import Quickshell
+import Quickshell.Io
+
+Item {
+    id: panel
+
+    required property RuntimeConfig runtime
+    required property Theme theme
+    required property Motion motion
+
+    signal keyboardRequested
+    signal switchLaunched
+    signal switchFinished
+
+    property bool open: false
+    property bool returnToControls: false
+    property var themes: []
+    property string previousTheme: ""
+    property int polarityFilter: 0
+    property bool favoritesOnly: false
+    property Settings preferences: Settings {
+        id: savedGallery
+        location: "file://" + (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/desktop-shell/preferences.ini"
+        category: "ThemeGallery"
+        property var favorites: []
+    }
+    readonly property var favoriteNames: savedGallery.favorites
+    readonly property var galleryActions: [
+        {
+            action: "ThemePanel.favorite",
+            glyph: panel.selectedTheme() && panel.favoriteNames.includes(panel.selectedTheme().name) ? "󰋑" : "󰋕",
+            iconOnly: true,
+            title: panel.selectedTheme() && panel.favoriteNames.includes(panel.selectedTheme().name) ? "Remove favourite" : "Favourite",
+            enabled: !!panel.selectedTheme()
+        },
+        {
+            action: "ThemePanel.favorites",
+            glyph: "󰓎",
+            active: panel.favoritesOnly,
+            title: panel.favoritesOnly ? "Favourites only" : "All themes",
+            enabled: true
+        },
+        {
+            action: "ThemePanel.polarity",
+            glyph: panel.polarityFilter === 1 ? "󰖔" : panel.polarityFilter === 2 ? "󰖙" : "󰔎",
+            title: ["Any polarity", "Dark", "Light"][panel.polarityFilter],
+            enabled: true
+        },
+        {
+            action: "ThemePanel.previous",
+            glyph: DesktopIcons.actionGlyph("revert"),
+            title: "Previous theme",
+            enabled: !!panel.previousTheme && !panel.operationRunning && panel.previousTheme !== panel.currentTheme
+        },
+        {
+            action: "ThemePanel.defaults",
+            glyph: DesktopIcons.actionGlyph("reset"),
+            title: "Default theme",
+            enabled: !!panel.defaultTheme && !panel.operationRunning && panel.defaultTheme !== panel.currentTheme
+        }
+    ]
+    function toggleFavorite(): void {
+        const selected = selectedTheme();
+        if (!selected)
+            return;
+        const name = selected.name;
+        savedGallery.favorites = savedGallery.favorites.includes(name) ? savedGallery.favorites.filter(value => value !== name) : [...savedGallery.favorites, name];
+        savedGallery.sync();
+    }
+    function handleGalleryKey(key: int, modifiers: int, repeat: bool): bool {
+        for (const entry of galleryActions) {
+            if (!runtime.shellMatchesHint(entry.action, key, modifiers))
+                continue;
+            if (!repeat && entry.enabled)
+                if (entry.action === "ThemePanel.defaults")
+                    themeReset.trigger();
+                else
+                    galleryButtons.triggerAction(entry.action);
+            return true;
+        }
+        return false;
+    }
+    function galleryAction(action: string): void {
+        switch (action) {
+        case "ThemePanel.favorite":
+            toggleFavorite();
+            break;
+        case "ThemePanel.favorites":
+            favoritesOnly = !favoritesOnly;
+            break;
+        case "ThemePanel.polarity":
+            polarityFilter = (polarityFilter + 1) % 3;
+            break;
+        case "ThemePanel.previous":
+            activateTheme(previousTheme);
+            break;
+        case "ThemePanel.defaults":
+            activateTheme(defaultTheme);
+            break;
+        }
+    }
+    property string searchText: ""
+    readonly property var filteredThemes: themes.filter(entry => ((entry.label || entry.name).toLowerCase().includes(searchText.toLowerCase()) || entry.name.toLowerCase().includes(searchText.toLowerCase())) && (!favoritesOnly || savedGallery.favorites.includes(entry.name)) && (polarityFilter === 0 || entry.polarity === (polarityFilter === 1 ? "dark" : "light")))
+    readonly property bool searching: searchField.activeFocus
+    onSearchTextChanged: {
+        selectionTouched = true;
+        selectedIndex = 0;
+        if (searchText.length === 0)
+            selectCurrentTheme();
+    }
+    property string defaultTheme: ""
+    property string currentTheme: ""
+    property int selectedIndex: 0
+    property bool selectionTouched: false
+    property string statusText: ""
+    property bool statusError: false
+    property bool operationRunning: false
+    property string operationPhase: "idle"
+    property string operationTarget: ""
+    property string operationLog: ""
+
+    Connections {
+        target: panel.runtime
+
+        function onThemeChanged(): void {
+            panel.refreshCurrentTheme();
+        }
+    }
+
+    implicitHeight: operationBanner.y + operationBanner.height + panel.theme.spacing3 * 2 + Math.min(505, Math.max(280, Math.ceil(filteredThemes.length / Math.max(1, themeList.columnCount)) * themeList.cellHeight)) + qmlFooter.height
+    visible: open
+    onFilteredThemesChanged: selectedIndex = Math.max(0, Math.min(selectedIndex, filteredThemes.length - 1))
+
+    property StdioCollector registryOutput: StdioCollector {}
+    property StdioCollector registryError: StdioCollector {}
+    property StdioCollector currentOutput: StdioCollector {}
+    property StdioCollector currentError: StdioCollector {}
+
+    property Process registryProcess: Process {
+        stdout: panel.registryOutput
+        stderr: panel.registryError
+
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode !== 0) {
+                panel.setError(panel.registryError.text, "FAILED TO LOAD THEME REGISTRY");
+                return;
+            }
+
+            try {
+                const parsed = JSON.parse(panel.registryOutput.text);
+                panel.defaultTheme = parsed.default || "";
+                panel.themes = parsed.themes || [];
+                if (!panel.selectionTouched)
+                    panel.selectCurrentTheme();
+            } catch (error) {
+                panel.setError(error.toString(), "INVALID THEME REGISTRY");
+            }
+        }
+    }
+
+    // Launch only; the detached user service is owned and tracked by systemd.
+    property StdioCollector switchErrors: StdioCollector {}
+    property Process switchProcess: Process {
+        stderr: panel.switchErrors
+        onExited: (exitCode, exitStatus) => {
+            panel.refreshOperation();
+            panel.refreshCurrentTheme();
+        }
+    }
+
+    // The job is a systemd user service with persistent state/logs; the view only
+    // observes it, so shell restarts do not erase build progress or cancel it.
+    property StdioCollector statusOutput: StdioCollector {}
+    property StdioCollector logOutput: StdioCollector {}
+    property Process statusProcess: Process {
+        stdout: panel.statusOutput
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode !== 0)
+                return;
+            try {
+                const status = JSON.parse(panel.statusOutput.text);
+                panel.operationRunning = status.running;
+                panel.operationPhase = status.phase;
+                panel.operationTarget = status.target;
+                panel.previousTheme = status.previous || "";
+                if (status.running && (status.phase === "authorizing" || status.phase === "activating"))
+                    panel.switchLaunched();
+                else
+                    panel.switchFinished();
+                if (status.running) {
+                    const target = panel.themeLabel(status.target).toUpperCase();
+                    const phaseLabels = {
+                        preparing: "PREPARING",
+                        building: "BUILDING",
+                        authorizing: "AWAITING AUTHORIZATION FOR",
+                        activating: "APPLYING"
+                    };
+                    panel.statusText = (phaseLabels[status.phase] || "APPLYING") + " " + target + "…";
+                    panel.statusError = false;
+                } else if (status.phase === "completed" || status.phase === "failed" || status.phase === "cancelled") {
+                    panel.statusText = status.phase === "completed" ? "THEME ACTIVATED" : status.phase === "cancelled" ? "THEME BUILD CANCELLED" : "LAST THEME ACTIVATION FAILED";
+                    panel.statusError = status.phase === "failed";
+                }
+            } catch (error) {
+                panel.setError("", "THEME OPERATION STATE UNAVAILABLE");
+            }
+        }
+    }
+    property Process logProcess: Process {
+        stdout: panel.logOutput
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode === 0)
+                panel.operationLog = panel.logOutput.text.replace(/\x1b\[[0-9;]*K/g, "\n").replace(/\x1b\[[0-9;]*[A-Za-z]/g, "").replace(/\r/g, "\n").trim();
+        }
+    }
+    property Timer operationPoll: Timer {
+        interval: 900
+        repeat: true
+        // Opening the gallery requests one snapshot. Only an ongoing theme
+        // operation needs subsequent status checks while systemd owns it.
+        running: panel.operationRunning
+        onTriggered: panel.refreshOperation()
+    }
+    function refreshOperation(): void {
+        if (runtime.themeSet.length === 0)
+            return;
+        if (!statusProcess.running)
+            statusProcess.exec([runtime.themeSet, "status"]);
+        if (!logProcess.running && (operationRunning || operationPhase === "failed"))
+            logProcess.exec([runtime.themeSet, "logs"]);
+    }
+    function cancelOperation(): void {
+        if (!operationRunning || (operationPhase !== "preparing" && operationPhase !== "building"))
+            return;
+        statusText = "STOPPING THEME BUILD…";
+        Quickshell.execDetached([runtime.themeSet, "cancel"]);
+        Qt.callLater(refreshOperation);
+    }
+
+    property Process currentProcess: Process {
+        stdout: panel.currentOutput
+        stderr: panel.currentError
+
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode !== 0) {
+                panel.setError(panel.currentError.text, "FAILED TO READ ACTIVE THEME");
+                return;
+            }
+
+            panel.currentTheme = panel.currentOutput.text.trim();
+            if (!panel.selectionTouched)
+                panel.selectCurrentTheme();
+        }
+    }
+
+    function setError(detail: string, fallback: string): void {
+        const message = (detail || "").trim();
+        statusText = message.length > 0 ? message : fallback;
+        statusError = true;
+    }
+
+    function themeLabel(name: string): string {
+        for (const entry of themes) {
+            if (entry.name === name)
+                return entry.label || entry.name;
+        }
+
+        return name;
+    }
+
+    function selectedTheme(): var {
+        if (filteredThemes.length === 0)
+            return null;
+
+        return filteredThemes[Math.max(0, Math.min(selectedIndex, filteredThemes.length - 1))];
+    }
+
+    function selectCurrentTheme(): void {
+        if (filteredThemes.length === 0) {
+            selectedIndex = 0;
+            return;
+        }
+
+        for (let index = 0; index < filteredThemes.length; index++) {
+            if (filteredThemes[index].name === currentTheme) {
+                selectedIndex = index;
+                return;
+            }
+        }
+
+        selectedIndex = 0;
+    }
+
+    function refreshCurrentTheme(): void {
+        if (runtime.themeSet.length > 0 && !currentProcess.running)
+            currentProcess.exec([runtime.themeSet, "current"]);
+    }
+
+    // Resolve the registry once while the persistent Controls view is warming.
+    // Building the theme gallery's delegates during its width morph caused
+    // the first opening to compete with SVG scene-graph construction.
+    function prewarm(): void {
+        if (runtime.themeSet.length === 0)
+            return;
+        if (themes.length === 0 && !registryProcess.running)
+            registryProcess.exec([runtime.themeSet, "list", "--json"]);
+        refreshCurrentTheme();
+    }
+
+    function refresh(): void {
+        statusText = "";
+        statusError = false;
+
+        if (runtime.themeSet.length === 0) {
+            setError("", "THEME SWITCHER UNAVAILABLE");
+            return;
+        }
+
+        prewarm();
+    }
+
+    function openView(): void {
+        selectionTouched = false;
+        selectCurrentTheme();
+        open = true;
+        refreshOperation();
+        // Keep the cached model and selected index stable across the morph.
+        refresh();
+        keyboardRequested();
+    }
+
+    function closeView(): void {
+        if (!open)
+            return;
+        open = false;
+        searchField.text = "";
+        statusText = "";
+        statusError = false;
+    }
+
+    function enterSearch(): void {
+        searchField.forceActiveFocus();
+    }
+
+    function leaveSearch(): void {
+        keyboardRequested();
+    }
+
+    function moveHalfPage(direction: int): void {
+        const rows = Math.max(1, Math.floor(themeList.height / themeList.cellHeight / 2));
+        moveSelection(direction * rows * themeList.columnCount);
+    }
+
+    function moveSelection(delta: int): void {
+        if (filteredThemes.length === 0)
+            return;
+        selectionTouched = true;
+        selectedIndex = Math.max(0, Math.min(filteredThemes.length - 1, selectedIndex + delta));
+    }
+
+    function moveGrid(x: int, y: int): void {
+        moveSelection(x + y * themeList.columnCount);
+    }
+
+    function activateSelected(): void {
+        const selected = selectedTheme();
+        if (selected)
+            activateTheme(selected.name);
+    }
+
+    function activateTheme(name: string): void {
+        if (runtime.themeSet.length === 0 || switchProcess.running || operationRunning)
+            return;
+        const selected = themes.find(entry => entry.name === name);
+        if (!selected)
+            return;
+        selectionTouched = true;
+
+        if (selected.name === currentTheme) {
+            statusText = "ALREADY ACTIVE // " + (selected.label || selected.name).toUpperCase();
+            statusError = false;
+            return;
+        }
+
+        statusText = "APPLYING " + (selected.label || selected.name).toUpperCase() + "…";
+        statusError = false;
+        operationRunning = true;
+        operationPhase = "preparing";
+        operationTarget = selected.name;
+        Qt.callLater(() => {
+            if (switchProcess && !switchProcess.running)
+                switchProcess.exec([runtime.themeSet, "switch", selected.name]);
+        });
+    }
+
+    DetailHero {
+        id: header
+        width: parent.width
+        quiet: true
+        height: implicitHeight
+        runtime: panel.runtime
+        theme: panel.theme
+        motion: panel.motion
+        glyph: DesktopIcons.glyphFor("theme")
+        glyphFont: "Symbols Nerd Font"
+        glyphColor: panel.theme.roleColor("display")
+        eyebrow: "Appearance / system themes"
+        title: "Theme gallery"
+        detail: panel.currentTheme.length > 0 ? "Active · " + panel.themeLabel(panel.currentTheme) : "Resolving active theme…"
+        actions: [
+            ShellUtilityAction {
+                id: themeReset
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                icon: DesktopIcons.actionGlyph("reset")
+                title: "Default theme"
+                shortcut: panel.runtime.shellHint("ThemePanel.defaults")
+                enabled: !!panel.defaultTheme && !panel.operationRunning && panel.defaultTheme !== panel.currentTheme
+                onActivated: panel.galleryAction("ThemePanel.defaults")
+            }
+        ]
+    }
+
+    SearchFieldSurface {
+        id: searchSurface
+        anchors {
+            top: header.bottom
+            left: parent.left
+            right: parent.right
+            topMargin: panel.theme.spacing3
+        }
+        height: 39
+        theme: panel.theme
+        motion: panel.motion
+        fieldFocused: searchField.activeFocus
+
+        TextInput {
+            id: searchField
+            anchors {
+                fill: parent
+                leftMargin: panel.theme.spacing3
+                rightMargin: panel.theme.spacing3
+            }
+            verticalAlignment: TextInput.AlignVCenter
+            text: panel.searchText
+            onTextChanged: panel.searchText = text
+            color: panel.theme.textStrong
+            selectionColor: panel.theme.selectionFill
+            font.family: panel.runtime.fontSans
+            font.pixelSize: panel.theme.fontSize(12)
+            focus: false
+            Keys.onPressed: event => {
+                if (event.key === panel.runtime.shellKeyCode("controls", "Escape")) {
+                    if (!event.isAutoRepeat)
+                        panel.leaveSearch();
+                    event.accepted = true;
+                } else if (event.key === panel.runtime.shellKeyCode("controls", "Return") || event.key === panel.runtime.shellKeyCode("controls", "Enter")) {
+                    panel.activateSelected();
+                    panel.leaveSearch();
+                    event.accepted = true;
+                }
+            }
+        }
+
+        Text {
+            anchors {
+                left: parent.left
+                leftMargin: panel.theme.spacing3
+                verticalCenter: parent.verticalCenter
+            }
+            visible: searchField.text.length === 0 && !searchField.activeFocus
+            text: "Search themes"
+            color: panel.theme.textMuted
+            font.family: panel.runtime.fontSans
+            font.pixelSize: panel.theme.fontSize(11)
+        }
+    }
+
+    GalleryActionBar {
+        id: galleryButtons
+        anchors {
+            top: searchSurface.bottom
+            left: parent.left
+            right: parent.right
+            topMargin: panel.theme.spacing2
+        }
+        runtime: panel.runtime
+        theme: panel.theme
+        motion: panel.motion
+        entries: panel.galleryActions.filter(entry => entry.action !== "ThemePanel.defaults")
+        onActionRequested: action => panel.galleryAction(action)
+    }
+
+    PanelStatus {
+        id: operationBanner
+        anchors {
+            top: galleryButtons.bottom
+            left: parent.left
+            right: parent.right
+            topMargin: panel.theme.spacing2
+        }
+        runtime: panel.runtime
+        theme: panel.theme
+        motion: panel.motion
+        message: panel.statusText
+        detail: panel.operationRunning || panel.operationPhase === "failed" ? panel.operationLog.split("\n").slice(-1)[0] : ""
+        idleMessage: "Choose a theme to preview or apply"
+        phase: panel.operationRunning ? "busy" : panel.statusText.length === 0 ? "idle" : panel.statusError || panel.operationPhase === "failed" ? "error" : panel.operationPhase === "cancelled" ? "warning" : panel.operationPhase === "completed" ? "success" : "idle"
+        cancellable: panel.operationRunning && (panel.operationPhase === "building" || panel.operationPhase === "preparing")
+        cancelShortcut: panel.runtime.shellHint("ThemePanel.cancel")
+        cancelLabel: "Cancel build"
+        onCancelRequested: panel.cancelOperation()
+    }
+
+    GridView {
+        id: themeList
+        anchors {
+            top: operationBanner.bottom
+            right: parent.right
+            bottom: qmlFooter.top
+            left: parent.left
+            topMargin: panel.theme.spacing3
+            bottomMargin: panel.theme.spacing3
+        }
+        readonly property int columnCount: panel.theme.galleryColumns(width)
+        cellWidth: width / columnCount
+        cellHeight: panel.theme.galleryCellHeight(cellWidth)
+        model: panel.filteredThemes
+        clip: true
+        currentIndex: panel.selectedIndex
+        highlightMoveDuration: 0
+        boundsBehavior: Flickable.StopAtBounds
+        onCurrentIndexChanged: {
+            if (currentIndex >= 0)
+                positionViewAtIndex(currentIndex, GridView.Contain);
+        }
+
+        Text {
+            anchors.centerIn: parent
+            visible: panel.filteredThemes.length === 0
+            text: panel.themes.length === 0 ? "Loading themes…" : "No matching themes"
+            color: panel.theme.textMuted
+            font.family: panel.runtime.fontSans
+            font.pixelSize: panel.theme.fontSize(11)
+        }
+
+        delegate: Item {
+            id: themeCard
+            required property var modelData
+            required property int index
+            readonly property var preview: modelData.preview
+
+            width: themeList.cellWidth
+            height: themeList.cellHeight
+            scale: previewPress.pressed ? 0.985 : 1
+
+            Behavior on scale {
+                Anim {
+                    motion: panel.motion
+                    type: Anim.FastSpatial
+                }
+            }
+
+            ShellSurface {
+                id: card
+                anchors {
+                    fill: parent
+                    rightMargin: panel.theme.spacing2
+                    bottomMargin: panel.theme.spacing2
+                }
+                theme: panel.theme
+                motion: panel.motion
+                surfaceLayer: ShellSurface.Control
+                fillColor: themeCard.index === panel.selectedIndex ? panel.theme.layer2 : panel.theme.groupBase
+                cornerRadius: panel.theme.radiusMedium
+                borderColor: themeCard.index === panel.selectedIndex ? panel.theme.focusColor : "transparent"
+                borderWidth: themeCard.index === panel.selectedIndex ? panel.theme.borderFocus * 2 : 0
+
+                Column {
+                    anchors {
+                        fill: parent
+                        margins: panel.theme.spacing2
+                    }
+                    spacing: panel.theme.spacing2
+
+                    // Miniature window surfaces sample the official registry
+                    // colours. They are intentionally schematic, not another
+                    // themed app implementation or a hard-coded Base16 skin.
+                    ShellSurface {
+                        id: palettePreview
+                        width: parent.width
+                        height: Math.max(1, parent.height - themeIdentity.implicitHeight - parent.spacing)
+                        theme: panel.theme
+                        motion: panel.motion
+                        surfaceLayer: ShellSurface.Group
+                        cornerRadius: panel.theme.radiusMedium
+                        fillColor: themeCard.preview ? themeCard.preview.background : panel.theme.surface
+                        borderWidth: 1
+                        borderColor: themeCard.preview ? themeCard.preview.outline : panel.theme.subtleBorder
+                        clipContentToShape: true
+                        readonly property real unit: Math.max(0.25, height / 160)
+
+                        Rectangle {
+                            width: parent.width
+                            height: 23 * palettePreview.unit
+                            radius: 8 * palettePreview.unit
+                            color: themeCard.preview ? themeCard.preview.surface : panel.theme.surface
+                        }
+                        Row {
+                            x: 10 * palettePreview.unit
+                            y: 8 * palettePreview.unit
+                            spacing: 5 * palettePreview.unit
+                            Repeater {
+                                model: 3
+                                delegate: Rectangle {
+                                    required property int index
+                                    width: 7 * palettePreview.unit
+                                    height: width
+                                    radius: width / 2
+                                    color: themeCard.preview && themeCard.preview.swatches.length > 0 ? themeCard.preview.swatches[index % themeCard.preview.swatches.length] : panel.theme.accent
+                                }
+                            }
+                        }
+                        Rectangle {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            y: 9 * palettePreview.unit
+                            width: 32 * palettePreview.unit
+                            height: 5 * palettePreview.unit
+                            radius: height / 2
+                            color: themeCard.preview ? themeCard.preview.text : panel.theme.textStrong
+                            opacity: 0.3
+                        }
+                        Rectangle {
+                            x: parent.width - 32 * palettePreview.unit
+                            y: 8 * palettePreview.unit
+                            width: 21 * palettePreview.unit
+                            height: 7 * palettePreview.unit
+                            radius: height / 2
+                            color: themeCard.preview && themeCard.preview.swatches.length > 3 ? themeCard.preview.swatches[3] : panel.theme.accent
+                            opacity: 0.85
+                        }
+
+                        Rectangle {
+                            id: samplePane
+                            x: 10 * palettePreview.unit
+                            y: 32 * palettePreview.unit
+                            width: parent.width * 0.58
+                            height: 92 * palettePreview.unit
+                            radius: 10 * palettePreview.unit
+                            color: themeCard.preview ? themeCard.preview.surface : panel.theme.surfaceRaised
+
+                            Rectangle {
+                                x: 10 * palettePreview.unit
+                                y: 10 * palettePreview.unit
+                                width: Math.max(1, parent.width - 20 * palettePreview.unit)
+                                height: 6 * palettePreview.unit
+                                radius: height / 2
+                                color: themeCard.preview && themeCard.preview.swatches.length > 0 ? themeCard.preview.swatches[0] : panel.theme.accent
+                            }
+                            Text {
+                                x: 10 * palettePreview.unit
+                                y: 22 * palettePreview.unit
+                                text: "Ag"
+                                color: themeCard.preview ? themeCard.preview.text : panel.theme.textStrong
+                                font.family: panel.runtime.fontSans
+                                font.pixelSize: Math.max(1, Math.round(22 * palettePreview.unit))
+                                font.weight: Font.DemiBold
+                            }
+                            Rectangle {
+                                x: 46 * palettePreview.unit
+                                y: 34 * palettePreview.unit
+                                width: Math.max(1, parent.width - 60 * palettePreview.unit)
+                                height: 5 * palettePreview.unit
+                                radius: height / 2
+                                color: themeCard.preview ? themeCard.preview.text : panel.theme.textStrong
+                                opacity: 0.8
+                            }
+                            Rectangle {
+                                x: 46 * palettePreview.unit
+                                y: 46 * palettePreview.unit
+                                width: Math.max(1, (parent.width - 60 * palettePreview.unit) * 0.65)
+                                height: 4 * palettePreview.unit
+                                radius: height / 2
+                                color: themeCard.preview ? themeCard.preview.text : panel.theme.textStrong
+                                opacity: 0.35
+                            }
+                            Rectangle {
+                                x: 10 * palettePreview.unit
+                                y: 70 * palettePreview.unit
+                                width: parent.width * 0.42
+                                height: 9 * palettePreview.unit
+                                radius: height / 2
+                                color: themeCard.preview && themeCard.preview.swatches.length > 1 ? themeCard.preview.swatches[1] : panel.theme.accent
+                            }
+                        }
+
+                        Column {
+                            id: metricsColumn
+                            x: samplePane.x + samplePane.width + 12 * palettePreview.unit
+                            y: samplePane.y + 5 * palettePreview.unit
+                            width: Math.max(1, parent.width - x - 10 * palettePreview.unit)
+                            spacing: 9 * palettePreview.unit
+                            Repeater {
+                                model: 3
+                                delegate: Row {
+                                    id: sampleMetric
+                                    required property int index
+                                    width: metricsColumn.width
+                                    spacing: 4 * palettePreview.unit
+                                    Rectangle {
+                                        width: 9 * palettePreview.unit
+                                        height: width
+                                        radius: width / 2
+                                        color: themeCard.preview && themeCard.preview.swatches.length > 0 ? themeCard.preview.swatches[(sampleMetric.index + 2) % themeCard.preview.swatches.length] : panel.theme.accent
+                                    }
+                                    Rectangle {
+                                        width: Math.max(1, sampleMetric.width - (18 + sampleMetric.index * 9) * palettePreview.unit)
+                                        height: 6 * palettePreview.unit
+                                        radius: height / 2
+                                        color: themeCard.preview ? themeCard.preview.text : panel.theme.textStrong
+                                        opacity: 0.6 - sampleMetric.index * 0.13
+                                    }
+                                }
+                            }
+                        }
+                        Row {
+                            id: paletteSwatches
+                            x: 10 * palettePreview.unit
+                            y: parent.height - 15 * palettePreview.unit
+                            width: Math.max(1, parent.width - 2 * x)
+                            spacing: 5 * palettePreview.unit
+                            Repeater {
+                                model: themeCard.preview ? themeCard.preview.swatches : []
+                                delegate: Rectangle {
+                                    required property var modelData
+                                    width: Math.max(1, (paletteSwatches.width - (Math.max(1, themeCard.preview?.swatches.length || 0) - 1) * paletteSwatches.spacing) / Math.max(1, themeCard.preview?.swatches.length || 0))
+                                    height: 6 * palettePreview.unit
+                                    radius: height / 2
+                                    color: modelData
+                                }
+                            }
+                        }
+
+                        // Wallpaper-derived themes have no fixed scheme until
+                        // activation. Show their source image instead of
+                        // borrowing an unrelated currently active palette.
+                        Item {
+                            anchors.fill: parent
+                            visible: themeCard.modelData.name === "wallpaper"
+                            Image {
+                                anchors.fill: parent
+                                source: panel.runtime.wallpaper.length > 0 ? "file://" + panel.runtime.wallpaper : ""
+                                sourceSize: Qt.size(400, 220)
+                                asynchronous: true
+                                cache: true
+                                fillMode: Image.PreserveAspectCrop
+                            }
+                            Rectangle {
+                                anchors.fill: parent
+                                color: Qt.rgba(0.06, 0.07, 0.09, 0.55)
+                            }
+                            Column {
+                                anchors.centerIn: parent
+                                spacing: 5
+                                Text {
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    text: "󰸉"
+                                    font.family: "Symbols Nerd Font"
+                                    font.pixelSize: panel.theme.fontSize(25)
+                                    color: "#ffffff"
+                                }
+                                Text {
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    text: "DYNAMIC PALETTE"
+                                    color: "#ffffff"
+                                    font.family: panel.runtime.fontSans
+                                    font.pixelSize: panel.theme.fontSize(11)
+                                    font.weight: Font.DemiBold
+                                    font.letterSpacing: 0.7
+                                }
+                                Text {
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    text: "DERIVED FROM WALLPAPER"
+                                    color: "#ffffff"
+                                    opacity: 0.8
+                                    font.family: panel.runtime.fontSans
+                                    font.pixelSize: panel.theme.fontSize(9)
+                                }
+                            }
+                        }
+                    }
+
+                    Row {
+                        id: themeIdentity
+                        width: parent.width
+                        spacing: panel.theme.spacing2
+                        Text {
+                            width: Math.max(1, parent.width - status.width - favoriteMark.width - parent.spacing * 2)
+                            text: themeCard.modelData.label || themeCard.modelData.name
+                            color: panel.theme.textStrong
+                            font.family: panel.runtime.fontSans
+                            font.pixelSize: panel.theme.fontAction
+                            font.weight: Font.DemiBold
+                            wrapMode: Text.WordWrap
+                        }
+                        Text {
+                            id: status
+                            text: themeCard.modelData.name === panel.currentTheme ? "󰄬" : ""
+                            color: panel.theme.positive
+                            font.pixelSize: panel.theme.iconSmall
+                            font.family: "Symbols Nerd Font"
+                        }
+                        Text {
+                            id: favoriteMark
+                            readonly property bool marked: panel.favoriteNames.includes(themeCard.modelData.name)
+                            visible: marked
+                            width: marked ? panel.theme.iconSmall + panel.theme.spacing1 : 0
+                            text: "󰋑"
+                            color: panel.theme.readableRoleColor("theme")
+                            font.family: "Symbols Nerd Font"
+                            font.pixelSize: panel.theme.iconSmall
+                        }
+                    }
+                }
+
+                StateLayer {
+                    id: previewPress
+                    theme: panel.theme
+                    motion: panel.motion
+                    selected: themeCard.index === panel.selectedIndex
+                    cornerRadius: panel.theme.radiusMedium
+                    Accessible.name: (themeCard.modelData.label || themeCard.modelData.name) + (themeCard.modelData.name === panel.currentTheme ? ", active theme" : "")
+                    onActivated: {
+                        panel.selectedIndex = themeCard.index;
+                        panel.activateSelected();
+                    }
+                }
+            }
+        }
+    }
+
+    Column {
+        id: qmlFooter
+        height: implicitHeight
+
+        anchors {
+            right: parent.right
+            bottom: parent.bottom
+            left: parent.left
+        }
+        spacing: panel.theme.spacing2
+
+        KeyHintStrip {
+            width: parent.width
+            runtime: panel.runtime
+            theme: panel.theme
+            hints: [
+                {
+                    shortcut: panel.runtime.shellHint("ThemePanel.columns"),
+                    label: "Columns"
+                },
+                {
+                    shortcut: panel.runtime.shellHint("ThemePanel.rows"),
+                    label: "Rows"
+                },
+                {
+                    shortcut: panel.runtime.shellHint("ThemePanel.page"),
+                    label: "Page"
+                },
+                {
+                    shortcut: panel.runtime.shellHint("ThemePanel.search"),
+                    label: "Search"
+                },
+                {
+                    shortcut: panel.runtime.shellHint("ThemePanel.apply"),
+                    label: "Apply"
+                }
+            ]
+        }
+    }
+}

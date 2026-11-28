@@ -1,6 +1,8 @@
 {
-  inputs,
+  configurationFlakeSubdirectory ? null,
   configurationName,
+  configurationOutputName,
+  inputs,
   lib,
   pkgs,
   scopeConfig,
@@ -381,6 +383,7 @@ in
     {
       config,
       lib,
+      pkgs,
       ...
     }:
     {
@@ -395,6 +398,7 @@ in
     // lib.optionalAttrs isLinux {
       stylix.targets.qt.platform = "qtct";
       stylix.targets.gtksourceview.enable = true;
+      home.packages = [ (lib.hiPrio pkgs.breeze-camera-photo-fixed) ];
       dconf.settings."org/gnome/desktop/interface".color-scheme = lib.mkForce (
         {
           light = "prefer-light";
@@ -411,20 +415,113 @@ in
     desktop =
       lib.optionalAttrs isLinux {
         hyprland = {
-          home = _: {
+          home = { config, ... }: {
+            # This compositor uses awww for wallpaper rendering rather than
+            # the Stylix-managed hyprpaper service.
+            stylix.targets.hyprland.hyprpaper.enable = false;
+
+            # Hyprland shadows use theme palette colours; the compositor
+            # module owns the shadow geometry and runtime behavior.
+            wayland.windowManager.hyprland.settings.config.decoration.shadow = {
+              color = lib.mkForce "rgba(${config.lib.stylix.colors.base0D}14)";
+              color_inactive = lib.mkForce "rgba(${config.lib.stylix.colors.base00}0e)";
+            };
+
             # Preserve GTK client headerbars while hiding toolkit window buttons.
             gtk.gtk3.extraConfig.gtk-decoration-layout = ":";
             gtk.gtk4.extraConfig.gtk-decoration-layout = ":";
             dconf.settings."org/gnome/desktop/wm/preferences".button-layout = ":";
           };
-          tofi.home = { config, lib, ... }: {
-            home.file.".config/tofi/config".text = lib.mkAfter ''
-              font = ${config.stylix.fonts.monospace.name}
-              background-color = #${config.lib.stylix.colors.base00}
-              text-color = #${config.lib.stylix.colors.base07}
-              selection-color = #${config.lib.stylix.colors.base0A}
-              border-color = #${config.lib.stylix.colors.base03}
-            '';
+
+          shell = {
+            home =
+              {
+                config,
+                osConfig,
+                pkgs,
+                ...
+              }:
+              let
+                colors = config.lib.stylix.colors.withHashtag;
+                themeFlakeSubdirectory = "modules/theme";
+                configuredTheme =
+                  if configurationFlakeSubdirectory == themeFlakeSubdirectory then
+                    lib.removePrefix "${configurationName}-" configurationOutputName
+                  else
+                    themeRegistry.default;
+                themeManifest = pkgs.writeText "dotfiles-theme-registry.json" (
+                  builtins.toJSON {
+                    inherit (themeRegistry) default;
+                    themes = lib.mapAttrsToList (
+                      name: value:
+                      {
+                        inherit name;
+                        inherit (value) label;
+                        polarity = value.polarity or "dark";
+                      }
+                      // lib.optionalAttrs (value ? colors) {
+                        preview =
+                          let
+                            inherit (value) colors;
+                          in
+                          {
+                            background = "#${colors.base00}";
+                            surface = "#${colors.base01}";
+                            outline = "#${colors.base03}";
+                            text = "#${colors.base05}";
+                            swatches = [
+                              "#${colors.base08}"
+                              "#${colors.base0A}"
+                              "#${colors.base0B}"
+                              "#${colors.base0D}"
+                              "#${colors.base0E}"
+                            ];
+                          };
+                      }
+                    ) themeRegistry.variants;
+                  }
+                );
+
+                # The chooser is a frontend to the canonical full-system themed output.
+                themeSet = pkgs.writeShellApplication {
+                  name = "theme-set";
+                  runtimeInputs = [
+                    pkgs.coreutils
+                    pkgs.jq
+                    pkgs.systemd
+                    pkgs.util-linux
+                    pkgs.nh
+                  ];
+                  text = ''
+                    configuredTheme=${lib.escapeShellArg configuredTheme}
+                    repoPath=${lib.escapeShellArg osConfig.dotfiles.paths.repoPath}
+                    themeFlakeRef="path:$repoPath?dir=${themeFlakeSubdirectory}"
+                    manifest=${lib.escapeShellArg (toString themeManifest)}
+                    expectedUser=${lib.escapeShellArg osConfig.dotfiles.users.primary.name}
+                    configurationName=${lib.escapeShellArg configurationName}
+                    operationDir="''${XDG_STATE_HOME:-$HOME/.local/state}/desktop-shell/theme-operation"
+                    operationUnit=desktop-shell-theme-apply.service
+                  ''
+                  + builtins.readFile ./theme-set.sh;
+                };
+              in
+              {
+                home.packages = [ themeSet ];
+                xdg.configFile."desktop-shell/theme.json".source =
+                  (pkgs.formats.json { }).generate "desktop-shell-theme.json"
+                    (
+                      import ./desktop-shell-theme.nix {
+                        inherit colors;
+                        fonts = {
+                          sans = config.stylix.fonts.sansSerif.name;
+                          serif = config.stylix.fonts.serif.name;
+                          mono = config.stylix.fonts.monospace.name;
+                        };
+                        wallpaper = toString osConfig.stylix.image;
+                        themeSet = lib.getExe themeSet;
+                      }
+                    );
+              };
           };
         };
       }

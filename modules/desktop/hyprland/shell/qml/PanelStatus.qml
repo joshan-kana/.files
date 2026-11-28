@@ -1,0 +1,150 @@
+pragma ComponentBehavior: Bound
+import QtQuick
+
+// A stable, semantic operation slot shared by detail views. Status stays by
+// the owning content header, while local key guides and global Back stay below.
+Item {
+    id: status
+
+    required property RuntimeConfig runtime
+    required property Theme theme
+    required property Motion motion
+
+    property string message: ""
+    property string detail: ""
+    property string phase: "idle" // idle, busy, success, warning, error
+    property bool cancellable: false
+    property string cancelShortcut: ""
+    property string cancelLabel: "Cancel"
+    property string idleMessage: ""
+    readonly property bool busy: phase === "busy"
+    readonly property bool hasMessage: message.length > 0 || idleMessage.length > 0
+    readonly property string symbol: phase === "busy" ? "󰔟" : phase === "success" ? "󰄬" : phase === "warning" ? "󰀨" : phase === "error" ? "󰅙" : "󰋽"
+    readonly property color semanticColor: phase === "error" ? theme.readableRoleColor("critical") : phase === "warning" ? theme.readableRoleColor("warning") : phase === "success" ? theme.readableRoleColor("positive") : theme.textMuted
+
+    signal cancelRequested
+
+    implicitHeight: Math.max(42, theme.fontSize(12) + (detail.length > 0 && message.length > 0 ? theme.fontSize(10) : 0) + theme.spacing3)
+    Accessible.role: Accessible.StatusBar
+    Accessible.name: hasMessage ? (message || idleMessage) : ""
+
+    ShellSurface {
+        anchors.fill: parent
+        theme: status.theme
+        motion: status.motion
+        surfaceLayer: ShellSurface.Group
+        cornerRadius: status.theme.radiusSmall
+        fillColor: status.theme.expressiveSurface
+        fillOpacity: status.hasMessage ? (status.theme.shellGlassEnabled ? status.theme.glassOpacity : 1) : 0
+        borderWidth: status.hasMessage ? status.theme.borderThin : 0
+        borderColor: status.theme.subtleBorder
+    }
+
+    Row {
+        anchors {
+            fill: parent
+            leftMargin: status.theme.spacing3
+            rightMargin: status.theme.spacing2
+        }
+        spacing: status.theme.spacing2
+        visible: status.hasMessage
+
+        Item {
+            id: phaseIcon
+            anchors.verticalCenter: parent.verticalCenter
+            width: status.theme.fontSize(18)
+            height: width
+            readonly property bool animatedBusy: status.busy && status.motion.enabled && status.visible && status.hasMessage
+
+            Text {
+                anchors.fill: parent
+                visible: !phaseIcon.animatedBusy
+                text: status.symbol
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                font.family: "Symbols Nerd Font"
+                font.pixelSize: status.theme.fontSize(17)
+                color: status.semanticColor
+            }
+
+            Rectangle {
+                id: busyShape
+                anchors.centerIn: parent
+                visible: phaseIcon.animatedBusy
+                width: Math.max(1, phaseIcon.width * 0.70)
+                height: width
+                color: status.theme.readableColor(status.theme.progressColor, status.theme.panelBase)
+                radius: width / 2
+                SequentialAnimation on radius {
+                    running: phaseIcon.animatedBusy
+                    loops: Animation.Infinite
+                    NumberAnimation {
+                        to: busyShape.width * 0.20
+                        duration: status.motion.spinnerCycle / 2
+                        easing.type: Easing.InOutSine
+                    }
+                    NumberAnimation {
+                        to: busyShape.width / 2
+                        duration: status.motion.spinnerCycle / 2
+                        easing.type: Easing.InOutSine
+                    }
+                }
+                NumberAnimation on rotation {
+                    running: phaseIcon.animatedBusy
+                    loops: Animation.Infinite
+                    from: 0
+                    to: 180
+                    duration: status.motion.spinnerCycle
+                    easing.type: Easing.Linear
+                }
+            }
+        }
+
+        Column {
+            anchors.verticalCenter: parent.verticalCenter
+            width: Math.max(1, parent.width - phaseIcon.width - cancelAction.width - (cancelAction.visible ? parent.spacing : 0) - parent.spacing)
+            spacing: status.theme.spacing1
+
+            Text {
+                width: parent.width
+                text: status.message.length > 0 ? status.message : status.idleMessage
+                elide: Text.ElideRight
+                textFormat: Text.PlainText
+                color: status.phase === "idle" ? status.theme.textMuted : status.semanticColor
+                font.family: status.runtime.fontSans
+                font.pixelSize: status.theme.fontSize(11)
+                font.weight: Font.DemiBold
+            }
+
+            Text {
+                width: parent.width
+                visible: status.message.length > 0 && status.detail.length > 0
+                text: status.detail
+                elide: Text.ElideLeft
+                textFormat: Text.PlainText
+                color: status.theme.textMuted
+                font.family: status.runtime.fontSans
+                font.pixelSize: status.theme.fontSize(9)
+            }
+        }
+
+        ShellAction {
+            id: cancelAction
+            anchors.verticalCenter: parent.verticalCenter
+            visible: status.cancellable
+            width: visible ? Math.max(72, implicitWidth) : 0
+            height: Math.max(34, implicitHeight)
+            compact: true
+            iconOnly: true
+            iconHint: true
+            inlineIconHint: true
+            runtime: status.runtime
+            theme: status.theme
+            motion: status.motion
+            icon: "󰜺"
+            title: status.cancelLabel
+            shortcut: status.cancelShortcut
+            onActivated: status.cancelRequested()
+        }
+    }
+}

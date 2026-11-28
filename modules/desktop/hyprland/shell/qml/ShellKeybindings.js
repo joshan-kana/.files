@@ -1,0 +1,428 @@
+// Keyboard translation only. Physical assignments and action hints live in
+// shell/keybindings.nix, and are generated into the shell runtime config.
+function assigned(registry, scope, slot) {
+  const overrides = registry?.overrides?.[scope];
+  return String(overrides?.[slot] ?? registry?.base?.[slot] ?? "");
+}
+
+function codeFor(value, qt) {
+  const spec = value.toUpperCase();
+  if (spec.length === 1 && /^[A-Z0-9]$/.test(spec)) return spec.charCodeAt(0);
+  const names = {
+    ESC: qt.Key_Escape,
+    ENTER: qt.Key_Return,
+    NUMENTER: qt.Key_Enter,
+    TAB: qt.Key_Tab,
+    "SHIFT+TAB": qt.Key_Backtab,
+    BACKSPACE: qt.Key_Backspace,
+    SPACE: qt.Key_Space,
+    DEL: qt.Key_Delete,
+    UP: qt.Key_Up,
+    DOWN: qt.Key_Down,
+    LEFT: qt.Key_Left,
+    RIGHT: qt.Key_Right,
+    PGUP: qt.Key_PageUp,
+    PGDN: qt.Key_PageDown,
+    SHIFT: qt.Key_Shift,
+    ALT: qt.Key_Alt,
+    CTRL: qt.Key_Control,
+    SUPER: qt.Key_Meta,
+    ALTGR: qt.Key_AltGr,
+    "/": qt.Key_Slash,
+    "?": qt.Key_Question,
+    "-": qt.Key_Minus,
+    _: qt.Key_Underscore,
+    "+": qt.Key_Plus,
+    "=": qt.Key_Equal,
+    "[": qt.Key_BracketLeft,
+    "]": qt.Key_BracketRight,
+    ",": qt.Key_Comma,
+    ".": qt.Key_Period,
+  };
+  return (
+    names[spec] ??
+    (spec.length === 1 && /^[\x21-\x7e]$/.test(spec) ? spec.charCodeAt(0) : -1)
+  );
+}
+
+function keyCode(registry, scope, slot, qt) {
+  return codeFor(assigned(registry, scope, slot), qt);
+}
+
+// Direction slots are declared once in Hyprland keybindings.nix. Text input can opt
+// into arrow-only handling so letters remain available for typing.
+function navigates(
+  registry,
+  scope,
+  direction,
+  key,
+  qt,
+  mode = "all",
+  modifiers = 0,
+  allowShift = false,
+) {
+  const ignored = qt.ControlModifier | qt.AltModifier | qt.MetaModifier;
+  if (modifiers & ignored || (modifiers & qt.ShiftModifier && !allowShift))
+    return false;
+  const slots = registry?.navigation?.[direction] ?? [];
+  const selected =
+    mode === "arrows"
+      ? slots.slice(1)
+      : mode === "primary"
+        ? slots.slice(0, 1)
+        : slots;
+  return selected.some((slot) => keyCode(registry, scope, slot, qt) === key);
+}
+
+const navigationDirections = {
+  HORIZONTAL: ["left", "right"],
+  VERTICAL: ["down", "up"],
+  ALL: ["left", "down", "up", "right"],
+};
+
+function navigationHint(registry, scope, token) {
+  const shifted = token.endsWith("_SHIFT");
+  const primaryOnly = token.includes("_PRIMARY");
+  const arrowsOnly = token.includes("_ARROWS");
+  const axis = token
+    .replace(/^NAV_/, "")
+    .replace(/_(?:PRIMARY|ARROWS|SHIFT)/g, "");
+  const directions = navigationDirections[axis] ?? [];
+  const groups = arrowsOnly ? [1] : primaryOnly ? [0] : [0, 1];
+  return groups
+    .map((index) => {
+      const names = directions.map(
+        (direction) => registry.navigation[direction][index],
+      );
+      const keys = names.map((name) => {
+        const value = assigned(registry, scope, name);
+        return (
+          { LEFT: "←", RIGHT: "→", UP: "↑", DOWN: "↓" }[value.toUpperCase()] ??
+          value
+        );
+      });
+      return (
+        (shifted ? assigned(registry, scope, "Shift") + "+" : "") +
+        keys.join("/")
+      );
+    })
+    .join(" · ");
+}
+
+function modifier(registry, scope, slot, mask, qt) {
+  const spec = assigned(registry, scope, slot).toUpperCase();
+  const bits = {
+    SHIFT: qt.ShiftModifier,
+    ALT: qt.AltModifier,
+    CTRL: qt.ControlModifier,
+    SUPER: qt.MetaModifier,
+  };
+  return !!(mask & (bits[spec] ?? 0));
+}
+
+function actionAssignment(registry, action) {
+  const explicit = registry?.actions?.[action];
+  return typeof explicit === "string" ? explicit.toUpperCase() : "";
+}
+
+const keySlots = {
+  "/": "Slash",
+  "?": "Question",
+  ",": "Comma",
+  ".": "Period",
+  "-": "Minus",
+  _: "Underscore",
+  "+": "Plus",
+  "=": "Equal",
+  "[": "BracketLeft",
+  "]": "BracketRight",
+  PGUP: "PageUp",
+  PGDN: "PageDown",
+  PGDOWN: "PageDown",
+  ESC: "Escape",
+  ENTER: "Return",
+  NUMENTER: "Enter",
+  SPACE: "Space",
+  TAB: "Tab",
+  SHIFT: "Shift",
+  CTRL: "Control",
+  ALT: "Alt",
+  SUPER: "Meta",
+  ALTGR: "AltGr",
+  BACKSPACE: "Backspace",
+  DEL: "Delete",
+  UP: "Up",
+  DOWN: "Down",
+  LEFT: "Left",
+  RIGHT: "Right",
+};
+
+function splitChord(value) {
+  if (!value) return [];
+  const spec = value.toUpperCase();
+  return spec.endsWith("+")
+    ? [...(spec === "+" ? [] : spec.slice(0, -2).split("+")), "+"]
+    : spec.split("+");
+}
+
+// Resolve executable bindings from the declaration, not a formatted keycap.
+function resolvedActionChord(registry, action) {
+  const explicit = actionAssignment(registry, action);
+  if (explicit) return explicit;
+  const entry = registry?.hints?.[action];
+  if (!entry || entry.literal === true || typeof entry.template !== "string")
+    return "";
+  const navigation = entry.template.match(
+    /^NAV_KEY_(UP|DOWN|LEFT|RIGHT)_(PRIMARY(?:_SHIFT)?|ARROW)$/,
+  );
+  if (navigation) {
+    const [, direction, variant] = navigation;
+    const slot =
+      registry.navigation[direction.toLowerCase()][variant === "ARROW" ? 1 : 0];
+    const key = assigned(registry, entry.scope, slot);
+    return variant.endsWith("_SHIFT")
+      ? assigned(registry, entry.scope, "Shift") + "+" + key
+      : key;
+  }
+  const parts = splitChord(entry.template);
+  const key = parts.pop();
+  if (
+    !key ||
+    !(key in keySlots || (key.length === 1 && /^[\x21-\x7e]$/.test(key))) ||
+    parts.some((part) => !["SHIFT", "ALT", "CTRL", "SUPER"].includes(part))
+  )
+    return "";
+  return [...parts, key]
+    .map(
+      (part) =>
+        assigned(registry, entry.scope, keySlots[part] ?? part) ||
+        (part.length === 1 ? part : ""),
+    )
+    .join("+");
+}
+
+function hint(registry, action) {
+  const explicit = actionAssignment(registry, action);
+  if (explicit) return explicit;
+  const entry = registry?.hints?.[action];
+  if (!entry) return "";
+  const scope = entry.scope;
+  if (entry.literal === true) return entry.template;
+  if (Array.isArray(entry.actions))
+    return entry.actions
+      .map((name) => hint(registry, name))
+      .filter(Boolean)
+      .join(entry.separator ?? " / ");
+  const resolved = resolvedActionChord(registry, action);
+  if (resolved) {
+    if (entry.template.startsWith("NAV_KEY_"))
+      return resolved.replace(
+        /\b(UP|DOWN|LEFT|RIGHT)\b/g,
+        (key) => key[0] + key.slice(1).toLowerCase(),
+      );
+    return resolved;
+  }
+  const render = (name) => assigned(registry, scope, name);
+  if (entry.template === ", / .")
+    return `${render("Comma")} / ${render("Period")}`;
+  if (entry.template === "- / +")
+    return `${render("Minus")} / ${render("Plus")}`;
+  if (entry.template === "[ / ]")
+    return `${render("BracketLeft")} / ${render("BracketRight")}`;
+  if (entry.template === "1–0") {
+    const workspaceKeys = [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "0",
+    ].map(render);
+    return workspaceKeys.join("") === "1234567890"
+      ? "1–0"
+      : workspaceKeys.join("/");
+  }
+  // Resolve every original token once. Replacing an arrow glyph before
+  // positional keys could remap its replacement a second time.
+  return entry.template.replace(
+    /NAV_KEY_(?:UP|DOWN|LEFT|RIGHT)_(?:PRIMARY(?:_SHIFT)?|ARROW)|NAV_(?:HORIZONTAL|VERTICAL|ALL)(?:_PRIMARY)?(?:_ARROWS)?(?:_SHIFT)?|BACKSPACE|NUMENTER|PGUP|PGDN|SHIFT|CTRL|ALT|SUPER|ESC|ENTER|SPACE|TAB|DEL|[↑↓←→⇧]|[A-Z0-9]/g,
+    (token) => {
+      if (token.startsWith("NAV_KEY_")) {
+        const [, , direction, variant] = token.split("_");
+        const index = variant === "PRIMARY" ? 0 : 1;
+        const slot = registry.navigation[direction.toLowerCase()][index];
+        const value = render(slot);
+        const label =
+          { UP: "Up", DOWN: "Down", LEFT: "Left", RIGHT: "Right" }[
+            value.toUpperCase()
+          ] ?? value;
+        return token.endsWith("_SHIFT") ? render("Shift") + "+" + label : label;
+      }
+      if (token.startsWith("NAV_"))
+        return navigationHint(registry, scope, token);
+      const direction = {
+        "↑": "Up",
+        "↓": "Down",
+        "←": "Left",
+        "→": "Right",
+        "⇧": "Shift",
+      }[token];
+      if (direction) {
+        const rendered = render(direction);
+        const original = {
+          Up: "UP",
+          Down: "DOWN",
+          Left: "LEFT",
+          Right: "RIGHT",
+          Shift: "SHIFT",
+        }[direction];
+        return rendered === original ? token : rendered;
+      }
+      return render(keySlots[token] ?? token) || token;
+    },
+  );
+}
+
+function sequence(registry, action) {
+  return hint(registry, action)
+    .replace(/\bESC\b/g, "Esc")
+    .replace(/\bPGUP\b/g, "PgUp")
+    .replace(/\bPGDN\b/g, "PgDown")
+    .replace(/\bCTRL\b/g, "Ctrl")
+    .replace(/\bSHIFT\b/g, "Shift")
+    .replace(/\bALT\b/g, "Alt")
+    .replace(/\bSUPER\b/g, "Meta")
+    .replace(/\bSPACE\b/g, "Space")
+    .replace(/\bNUMENTER\b/g, "Enter");
+}
+
+// Parse a single chord using the same key vocabulary as keyCode. A final
+// plus is a key, not a modifier separator.
+function chord(value, qt) {
+  if (!value) return null;
+  const parts = splitChord(value);
+  const assignedKey = parts.pop();
+  const modifiersByName = {
+    SHIFT: qt.ShiftModifier,
+    ALT: qt.AltModifier,
+    CTRL: qt.ControlModifier,
+    SUPER: qt.MetaModifier,
+  };
+  const key = codeFor(assignedKey, qt);
+  if (key === -1 || parts.some((name) => !(name in modifiersByName)))
+    return null;
+  const modifiers = parts.reduce(
+    (mask, name) => mask | modifiersByName[name],
+    0,
+  );
+  return { key, modifiers, symbol: assignedKey };
+}
+
+function matchesChord(value, key, modifiers, qt) {
+  const resolved = chord(value, qt);
+  if (!resolved) return false;
+  const bits =
+    qt.ShiftModifier | qt.AltModifier | qt.ControlModifier | qt.MetaModifier;
+  let actual = modifiers & bits;
+  // Qt reports Shift+Tab as Backtab, sometimes with an implicit Shift bit.
+  if (key === qt.Key_Backtab) {
+    key = qt.Key_Tab;
+    actual |= qt.ShiftModifier;
+  }
+  if (key === qt.Key_Shift && resolved.symbol === "SHIFT")
+    actual &= ~qt.ShiftModifier;
+  if (key === qt.Key_Control && resolved.symbol === "CTRL")
+    actual &= ~qt.ControlModifier;
+  if (key === qt.Key_Alt && resolved.symbol === "ALT")
+    actual &= ~qt.AltModifier;
+  if (key === qt.Key_Meta && resolved.symbol === "SUPER")
+    actual &= ~qt.MetaModifier;
+  // Printable shifted symbols may be reported as the symbol or its base key.
+  // An explicit Shift modifier is still required when the binding requests it.
+  const shiftedBase = {
+    "+": qt.Key_Equal,
+    "?": qt.Key_Slash,
+    _: qt.Key_Minus,
+  }[resolved.symbol];
+  if (shiftedBase !== undefined) {
+    if (key === shiftedBase)
+      return actual === (resolved.modifiers | qt.ShiftModifier);
+    if (key === resolved.key && !(resolved.modifiers & qt.ShiftModifier))
+      return (actual & ~qt.ShiftModifier) === resolved.modifiers;
+  }
+  // Qt can report a shifted key as its glyph or its physical base.
+  const shiftedGlyph = {
+    1: "!",
+    2: "@",
+    3: "#",
+    4: "$",
+    5: "%",
+    6: "^",
+    7: "&",
+    8: "*",
+    9: "(",
+    0: ")",
+    "-": "_",
+    "=": "+",
+    "[": "{",
+    "]": "}",
+    "\\": "|",
+    ";": ":",
+    "'": '"',
+    ",": "<",
+    ".": ">",
+    "/": "?",
+    "\x60": "~",
+  }[resolved.symbol];
+  if (
+    shiftedGlyph &&
+    resolved.modifiers & qt.ShiftModifier &&
+    actual === resolved.modifiers &&
+    key === codeFor(shiftedGlyph, qt)
+  )
+    return true;
+  return key === resolved.key && actual === resolved.modifiers;
+}
+
+function matchesHint(registry, action, key, modifiers, qt) {
+  return matchesChord(
+    resolvedActionChord(registry, action),
+    key,
+    modifiers,
+    qt,
+  );
+}
+
+// Numbered actions can be rearranged without requiring contiguous Qt keycodes.
+function numberIndex(registry, scope, key, count, qt, modifiers = 0) {
+  for (let index = 0; index < count; ++index)
+    if (
+      matchesChord(
+        assigned(registry, scope, String(index + 1)),
+        key,
+        modifiers,
+        qt,
+      )
+    )
+      return index;
+  return -1;
+}
+
+function numberHint(registry, scope, index) {
+  return assigned(registry, scope, String(index + 1));
+}
+
+function widgetChoiceHint(registry, index) {
+  return registry?.widgetChoices?.[index] || "";
+}
+
+function widgetChoiceIndex(registry, key, modifiers, count, qt) {
+  for (let index = 0; index < count; ++index)
+    if (matchesChord(widgetChoiceHint(registry, index), key, modifiers, qt))
+      return index;
+  return -1;
+}
