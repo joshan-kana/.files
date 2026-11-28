@@ -47,9 +47,8 @@ in
     }:
     lib.optionalAttrs isLinux ((import ./plasma) { inherit config inputs lib; });
 
-  # Keep GNOME available as an opt-in desktop without changing current hosts.
   /**
-    Optional GNOME desktop session.
+    GNOME desktop session and settings.
   */
   gnome = _: lib.optionalAttrs isLinux ((import ./gnome) { });
 
