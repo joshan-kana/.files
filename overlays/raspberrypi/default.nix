@@ -4,13 +4,11 @@
     (
       final: prev:
       prev.lib.optionalAttrs (prev.stdenv.hostPlatform.system == "aarch64-linux") {
-        inherit (inputs.nixos-raspberrypi.packages.aarch64-linux) linuxPackages_rpi4;
-        raspberrypifw-rpi4 = inputs.nixos-raspberrypi.packages.aarch64-linux.raspberrypifw;
-        ffmpeg-rpi = inputs.nixos-raspberrypi.packages.aarch64-linux.ffmpeg_8;
+        raspberrypi = inputs.nixos-raspberrypi.packages.aarch64-linux;
         kodi-gbm-rpi =
           let
             rpi = inputs.nixos-raspberrypi.legacyPackages.aarch64-linux;
-            kodi = rpi.kodi-gbm.withPackages (addons: [ addons.jellyfin ]);
+            kodi = final.raspberrypi.kodi-gbm.withPackages (addons: [ addons.jellyfin ]);
           in
           prev.symlinkJoin {
             name = "kodi-gbm-rpi";
@@ -28,9 +26,9 @@
               mainProgram = "kodi";
             };
           };
-        moonlight-qt-rpi = prev.moonlight-qt.override { ffmpeg = final.ffmpeg-rpi; };
+        moonlight-qt-rpi = prev.moonlight-qt.override { ffmpeg = final.raspberrypi.ffmpeg_8; };
         mpv-rpi = prev.mpv.override {
-          mpv-unwrapped = final.mpv-unwrapped.override { ffmpeg = final.ffmpeg-rpi; };
+          mpv-unwrapped = final.mpv-unwrapped.override { ffmpeg = final.raspberrypi.ffmpeg_8; };
         };
       }
     )

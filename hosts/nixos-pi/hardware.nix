@@ -31,7 +31,7 @@ in
   system.boot.loader.kernelFile = "Image";
 
   boot = {
-    kernelPackages = pkgs.linuxPackages_rpi4;
+    kernelPackages = pkgs.raspberrypi.linuxPackages_rpi4;
     # Preserve firmware-applied KMS overlays and board-specific fixups.
     loader.generic-extlinux-compatible.useGenerationDeviceTree = false;
     # Fit the shared display and decoder buffers below the Pi 4 DMA limit.
@@ -49,7 +49,7 @@ in
     firmware = {
       enable = true;
       path = "/boot";
-      package = pkgs.raspberrypifw-rpi4;
+      package = pkgs.raspberrypi.raspberrypifw;
       uboot.enable = true;
     };
     configtxt.settings.pi4.hdmi_enable_4kp60 = true;
