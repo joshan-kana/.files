@@ -128,6 +128,19 @@ vec4 geometry(vec2 p) {
     return vec4(palette(seed), edge * (0.24 + u.audio.z * 0.22) + inset * (0.12 + breath * 0.20));
 }
 
+vec4 flow(vec2 p) {
+    vec2 q = p * 7.0;
+    q.y += sin(q.x * 0.7 + u.phase) * (0.6 + u.audio.x * 0.35);
+    q.y += sin(q.x * 1.25 - u.phase * 2.0) * 0.22;
+    float lane = floor(q.y * 2.0);
+    float seed = hash(vec2(lane, 1.0));
+    float local = abs(fract(q.y * 2.0) - 0.5);
+    float line = 1.0 - smoothstep(0.025, 0.09, local);
+    float dash = pow(0.5 + 0.5 * sin(q.x * 3.5 - u.phase * 4.0 + seed * tau), 8.0);
+    float glow = (1.0 - smoothstep(0.04, 0.40, local)) * 0.09;
+    return vec4(palette(seed), glow + line * (0.13 + dash * (0.56 + u.audio.z * 0.22)));
+}
+
 void main() {
     vec2 uv = qt_TexCoord0;
     vec2 p = (uv - 0.5) * vec2(u.aspect, 1.0);
@@ -137,6 +150,7 @@ void main() {
     else if (u.style == 2) effect = nebula(p);
     else if (u.style == 3) effect = ripples(p);
     else if (u.style == 4) effect = geometry(p);
+    else if (u.style == 5) effect = flow(p);
     else effect = vec4(0);
     float vignette = 1.0 - smoothstep(0.45, 1.0, length((uv - 0.5) * 1.6)) * 0.32;
     float alpha = clamp(effect.a * u.intensity * vignette, 0.0, 1.0);
