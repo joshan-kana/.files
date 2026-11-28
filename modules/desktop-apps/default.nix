@@ -262,6 +262,37 @@ in
     };
   };
 
+  kodi =
+    _:
+    lib.optionalAttrs isLinux {
+      home = _: { home.packages = [ pkgs.kodi ]; };
+    };
+
+  kdeconnect =
+    _:
+    lib.optionalAttrs isLinux {
+      programs.kdeconnect.package = null;
+      home = _: { services.kdeconnect = { }; };
+    };
+
+  librespot =
+    _:
+    lib.optionalAttrs isLinux {
+      home = _: {
+        services.librespot.settings = {
+          name = config.networking.hostName;
+          backend = "pulseaudio";
+          device-type = "speaker";
+          zeroconf-port = 24879;
+        };
+        systemd.user.services.librespot = {
+          Unit.PartOf = [ "graphical-session.target" ];
+          Install.WantedBy = lib.mkForce [ "graphical-session.target" ];
+        };
+      };
+      networking.firewall.allowedTCPPorts = [ 24879 ];
+    };
+
   jellyfin =
     _:
     let

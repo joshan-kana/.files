@@ -48,6 +48,18 @@ in
     lib.optionalAttrs isLinux ((import ./plasma) { inherit config inputs lib; });
 
   /**
+    Full-screen media session with a lightweight compositor and launcher.
+  */
+  mediaSession =
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
+    lib.optionalAttrs isLinux ((import ./media-session) { inherit config lib pkgs; });
+
+  /**
     GNOME desktop session and settings.
   */
   gnome = _: lib.optionalAttrs isLinux ((import ./gnome) { });

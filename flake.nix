@@ -5,6 +5,14 @@
     # Nixpkgs: package collections and system modules.
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
+    nixos-hardware = {
+      url = "github:NixOS/nixos-hardware";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # Cached Raspberry Pi kernel and matched firmware use their upstream package lock.
+    nixos-raspberrypi.url = "github:nvmd/nixos-raspberrypi/main";
+
     # Declarative Sonarr, Radarr, and Prowlarr application configuration.
     # Use the upstream flake and its own dependency lock.
     configarr.url = "github:raydak-labs/configarr";
@@ -466,11 +474,24 @@
           hostModule = ./hosts/nixos-server;
         };
 
+        nixos-pi = {
+          system = "aarch64-linux";
+          hostModule = ./hosts/nixos-pi;
+          extraModules = [ inputs.nixos-hardware.nixosModules.raspberry-pi-4 ];
+        };
+
         mac = {
           system = "aarch64-darwin";
           hostModule = ./hosts/mac;
         };
       };
+
+      nixosPiImage = mkHost "nixos-pi" (
+        hostSpecs.nixos-pi
+        // {
+          extraModules = hostSpecs.nixos-pi.extraModules ++ [ ./hosts/nixos-pi/image.nix ];
+        }
+      );
 
       nixosHostSpecs = lib.filterAttrs (_: spec: (lib.systems.elaborate spec.system).isLinux) hostSpecs;
       darwinHostSpecs = lib.filterAttrs (_: spec: (lib.systems.elaborate spec.system).isDarwin) hostSpecs;
@@ -597,6 +618,9 @@
         {
           docs = generatedDocs.book;
           docs-source = generatedDocs.docsSource;
+        }
+        // lib.optionalAttrs (system == hostSpecs.nixos-pi.system) {
+          nixos-pi-image = nixosPiImage.config.system.build.sdImage;
         }
         // updatePackagesFor system
       );

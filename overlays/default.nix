@@ -54,6 +54,11 @@ _: {
     ./seerr
     ./vial
     ./determinate-nix
+    ./fakeroot
+    ./raspberrypi
+    ./moonlight
+    ./mpv
+    ./kodi
     ./steam
     ./vlc
     ./dropbox
