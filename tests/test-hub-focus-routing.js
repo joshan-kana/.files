@@ -20,7 +20,7 @@ test("tab changes restore local keyboard focus even before the hub finishes open
   assert.match(present, /incoming\.sourceComponent = next/);
   assert.match(
     present,
-    /if \(expansionState\.hasCurrent && incoming\.item && !themeTerminalActive && !incoming\.item\.activeFocus\)\s+\(incoming\.item as Item\)\.forceActiveFocus\(\);/,
+    /if \(expansionState\.hasCurrent && incoming\.item && !themeTerminalActive && !\(incoming\.item as Item\)\.activeFocus\)\s+\(incoming\.item as Item\)\.forceActiveFocus\(\);/,
   );
   assert.doesNotMatch(present, /if \(outgoing\)|const outgoing =/);
 });

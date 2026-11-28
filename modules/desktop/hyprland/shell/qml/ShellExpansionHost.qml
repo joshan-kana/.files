@@ -281,7 +281,7 @@ PanelWindow {
         // An engaged page can request focus while its prewarmed Loader is still
         // disabled. Restore its local key sink as soon as the slot is enabled,
         // including when the previous page has not finished opening.
-        if (expansionState.hasCurrent && incoming.item && !themeTerminalActive && !incoming.item.activeFocus)
+        if (expansionState.hasCurrent && incoming.item && !themeTerminalActive && !(incoming.item as Item).activeFocus)
             (incoming.item as Item).forceActiveFocus();
     }
 
