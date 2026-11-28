@@ -94,6 +94,23 @@ vec4 nebula(vec2 p) {
     return vec4(col, max(alpha, star * (0.6 + u.audio.z * 0.4)));
 }
 
+vec4 ripples(vec2 p) {
+    vec3 light = vec3(0);
+    float density = 0.0;
+    for (int i = 0; i < 3; ++i) {
+        float k = float(i);
+        vec2 center = vec2(cos(k * tau / 3.0 + u.phase), sin(k * tau / 3.0 + u.phase)) * vec2(0.34, 0.18);
+        float d = length(p - center);
+        float wave = 0.5 + 0.5 * sin(d * 42.0 - u.phase * 5.0 + k * 1.7 - u.audio.y * 1.2);
+        float crest = pow(wave, 14.0);
+        float glow = pow(wave, 3.0);
+        float w = (crest * 0.42 + glow * 0.16) * exp(-d * 1.7) * (1.0 + u.audio.x * 0.55);
+        light += palette(k * 0.5) * w;
+        density += w;
+    }
+    return vec4(light / max(density, 0.001), min(density, 0.82));
+}
+
 void main() {
     vec2 uv = qt_TexCoord0;
     vec2 p = (uv - 0.5) * vec2(u.aspect, 1.0);
@@ -101,6 +118,7 @@ void main() {
     if (u.style == 0) effect = aurora(uv, p);
     else if (u.style == 1) effect = liquid(p);
     else if (u.style == 2) effect = nebula(p);
+    else if (u.style == 3) effect = ripples(p);
     else effect = vec4(0);
     float vignette = 1.0 - smoothstep(0.45, 1.0, length((uv - 0.5) * 1.6)) * 0.32;
     float alpha = clamp(effect.a * u.intensity * vignette, 0.0, 1.0);
