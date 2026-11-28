@@ -141,6 +141,20 @@ vec4 flow(vec2 p) {
     return vec4(palette(seed), glow + line * (0.13 + dash * (0.56 + u.audio.z * 0.22)));
 }
 
+vec4 prism(vec2 p) {
+    vec2 q = p * 3.3;
+    float slope = 0.52 + 0.12 * sin(u.phase);
+    float x = q.x + q.y * slope;
+    float y = q.y - q.x * 0.26;
+    float fold = abs(fract(x + 0.12 * sin(y * 1.7 + u.phase)) - 0.5);
+    float plane = floor(x);
+    float hue = fract(plane * 0.236 + 0.12 * sin(u.phase));
+    float edge = exp(-fold * 48.0);
+    float reflection = pow(0.5 + 0.5 * cos(y * 2.5 + u.phase + hue * tau), 10.0);
+    vec3 col = mix(palette(hue), vec3(1), edge * (0.18 + u.audio.z * 0.18));
+    return vec4(col, 0.12 + edge * (0.52 + u.audio.y * 0.14) + reflection * 0.22);
+}
+
 void main() {
     vec2 uv = qt_TexCoord0;
     vec2 p = (uv - 0.5) * vec2(u.aspect, 1.0);
@@ -151,6 +165,7 @@ void main() {
     else if (u.style == 3) effect = ripples(p);
     else if (u.style == 4) effect = geometry(p);
     else if (u.style == 5) effect = flow(p);
+    else if (u.style == 6) effect = prism(p);
     else effect = vec4(0);
     float vignette = 1.0 - smoothstep(0.45, 1.0, length((uv - 0.5) * 1.6)) * 0.32;
     float alpha = clamp(effect.a * u.intensity * vignette, 0.0, 1.0);
