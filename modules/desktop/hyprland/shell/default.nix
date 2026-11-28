@@ -15,6 +15,61 @@ let
           "crop"
         ];
       };
+      screenEffectMode.values = [
+        "off"
+        "crt"
+        "hologram"
+        "glitch"
+        "film"
+        "monochrome"
+      ];
+      screenEffectTuning = {
+        intensity = {
+          min = 0.0;
+          max = 1.0;
+        };
+        shape = {
+          min = 0.0;
+          max = 1.0;
+        };
+        color = {
+          min = 0.0;
+          max = 1.0;
+        };
+        texture = {
+          min = 0.0;
+          max = 1.0;
+        };
+        lines = {
+          min = 0.0;
+          max = 1.0;
+        };
+        speed = {
+          min = 0.25;
+          max = 2.5;
+        };
+        artifacts = {
+          min = 0.0;
+          max = 1.0;
+        };
+      };
+      atmosphereMode.values = [
+        "aurora"
+        "liquid"
+        "nebula"
+        "ripples"
+        "geometry"
+        "flow"
+        "prism"
+      ];
+      atmosphereOpacity = {
+        min = 0.15;
+        max = 1.0;
+      };
+      atmosphereSpeed = {
+        min = 0.25;
+        max = 2.0;
+      };
       musicReactiveSensitivity = {
         min = 0.4;
         max = 3.0;
@@ -112,6 +167,7 @@ let
       mediaVisualizerMode.values = [
         "bars"
         "curve"
+        "radial"
       ];
       wallpaperVisualizerMode = constraints.appearance.mediaVisualizerMode;
       islandVisualizerMode = constraints.appearance.mediaVisualizerMode;
@@ -626,6 +682,63 @@ in
           default = true;
           description = "Enable the audio spectrum visualizer over the wallpaper.";
         };
+        atmosphereTuning = lib.mkOption {
+          type = lib.types.submodule {
+            options = lib.genAttrs constraints.appearance.atmosphereMode.values (
+              mode:
+              lib.mkOption {
+                type = lib.types.submodule {
+                  options = {
+                    opacity = lib.mkOption {
+                      type = lib.types.numbers.between constraints.appearance.atmosphereOpacity.min constraints.appearance.atmosphereOpacity.max;
+                      default = 0.65;
+                      description = "Opacity for the ${mode} procedural wallpaper.";
+                    };
+                    speed = lib.mkOption {
+                      type = lib.types.numbers.between constraints.appearance.atmosphereSpeed.min constraints.appearance.atmosphereSpeed.max;
+                      default = 1.0;
+                      description = "Animation speed for the ${mode} procedural wallpaper.";
+                    };
+                  };
+                };
+                default = { };
+                description = "Opacity and motion for the ${mode} procedural wallpaper.";
+              }
+            );
+          };
+          default = { };
+          description = "Per-atmosphere visual tuning with Nix defaults and runtime overrides.";
+        };
+        atmosphereEnabled = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Show a procedural atmosphere over the current wallpaper.";
+        };
+        atmosphereMode = lib.mkOption {
+          type = lib.types.enum constraints.appearance.atmosphereMode.values;
+          default = "aurora";
+          description = "Procedural wallpaper atmosphere style.";
+        };
+        atmosphereAudioEnabled = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Modulate the wallpaper atmosphere with shared audio analysis.";
+        };
+        atmosphereBackdrop = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Use the theme background instead of the underlying wallpaper for the procedural atmosphere.";
+        };
+        atmosphereOpacity = lib.mkOption {
+          type = lib.types.numbers.between constraints.appearance.atmosphereOpacity.min constraints.appearance.atmosphereOpacity.max;
+          default = 0.65;
+          description = "Opacity of the procedural wallpaper atmosphere.";
+        };
+        atmosphereSpeed = lib.mkOption {
+          type = lib.types.numbers.between constraints.appearance.atmosphereSpeed.min constraints.appearance.atmosphereSpeed.max;
+          default = 1.0;
+          description = "Speed of procedural wallpaper motion.";
+        };
         wallpaperResizeMode = lib.mkOption {
           type = lib.types.enum constraints.appearance.wallpaperResizeMode.values;
           default = "crop";
@@ -736,6 +849,51 @@ in
           type = lib.types.numbers.between constraints.appearance.glassOpacity.min constraints.appearance.glassOpacity.max;
           default = 0.70;
           description = "Opacity of translucent shell surfaces, from 0.2 to 1.0 inclusive.";
+        };
+        screenEffectMode = lib.mkOption {
+          type = lib.types.enum constraints.appearance.screenEffectMode.values;
+          default = "off";
+          description = "Selected screen-wide post-processing effect; off disables compositing passes.";
+        };
+        screenEffectTuning = lib.mkOption {
+          type = lib.types.submodule {
+            options =
+              lib.genAttrs
+                [
+                  "crt"
+                  "hologram"
+                  "glitch"
+                  "film"
+                  "monochrome"
+                ]
+                (
+                  mode:
+                  lib.mkOption {
+                    type = lib.types.submodule {
+                      options = lib.mapAttrs (
+                        parameter: bounds:
+                        lib.mkOption {
+                          type = lib.types.numbers.between bounds.min bounds.max;
+                          default =
+                            if parameter == "intensity" then
+                              0.6
+                            else if parameter == "speed" then
+                              1.0
+                            else if parameter == "artifacts" then
+                              0.2
+                            else
+                              0.5;
+                          description = "Tuning parameter for the ${mode} screen effect.";
+                        }
+                      ) constraints.appearance.screenEffectTuning;
+                    };
+                    default = { };
+                    description = "Independent ${mode} screen effect parameters.";
+                  }
+                );
+          };
+          default = { };
+          description = "Per-effect fullscreen post-processing tuning.";
         };
         vhsEnabled = lib.mkOption {
           type = lib.types.bool;
@@ -1365,15 +1523,32 @@ in
           pkgs.coreutils
           pkgs.gnused
           pkgs.jq
+          pkgs.util-linux
           osConfig.programs.hyprland.package
         ];
         text = ''
           export DESKTOP_VHS_DEFAULTS=${lib.escapeShellArg (builtins.toJSON scopeConfig.appearance)}
           export DESKTOP_VHS_CONSTRAINTS=${lib.escapeShellArg (builtins.toJSON constraints.appearance)}
           export VHS_SHADER_SOURCE=${lib.escapeShellArg "${./shaders/vhs.frag}"}
+          export SCREEN_EFFECT_DEFAULTS=${lib.escapeShellArg (builtins.toJSON scopeConfig.appearance.screenEffectTuning)}
+          export SCREEN_EFFECT_CONSTRAINTS=${lib.escapeShellArg (builtins.toJSON constraints.appearance.screenEffectTuning)}
+          export SCREEN_CRT_SOURCE=${lib.escapeShellArg "${./shaders/crt.frag}"}
+          export SCREEN_HOLOGRAM_SOURCE=${lib.escapeShellArg "${./shaders/hologram.frag}"}
+          export SCREEN_GLITCH_SOURCE=${lib.escapeShellArg "${./shaders/glitch.frag}"}
+          export SCREEN_FILM_SOURCE=${lib.escapeShellArg "${./shaders/film.frag}"}
+          export SCREEN_MONOCHROME_SOURCE=${lib.escapeShellArg "${./shaders/monochrome.frag}"}
           ${builtins.readFile ./scripts/vhs.sh}
         '';
       };
+
+      atmosphereShader =
+        pkgs.runCommand "desktop-shell-atmosphere.qsb"
+          {
+            nativeBuildInputs = [ pkgs.qt6.qtshadertools ];
+          }
+          ''
+            qsb --glsl "100 es,120,150,300 es" -o "$out" ${./shaders/atmosphere.frag}
+          '';
 
       runtimeConfig = json.generate "desktop-shell-runtime.json" {
         constraints = constraints // {
@@ -1453,6 +1628,7 @@ in
         shellBindings = import ./keybindings.nix;
 
         tools = {
+          atmosphereShader = "${atmosphereShader}";
           pwMetadata = lib.getExe' pkgs.pipewire "pw-metadata";
           pwDump = lib.getExe' pkgs.pipewire "pw-dump";
           wpctl = lib.getExe' pkgs.wireplumber "wpctl";
@@ -1760,6 +1936,7 @@ in
       services.awww.enable = true;
 
       home.packages = [
+        vhsControl
         launcher
         paletteSearch
         developmentLauncher

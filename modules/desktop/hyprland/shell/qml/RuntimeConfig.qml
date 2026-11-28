@@ -11,6 +11,7 @@ QtObject {
     readonly property var themeAdapter: parseTheme(themeFile.text(), configData.fallbackTheme)
     readonly property var configData: parseConfig(configFile.text())
 
+    readonly property string atmosphereShader: root.configData.tools.atmosphereShader
     readonly property string terminal: root.configData.defaults.terminal
     readonly property string editor: root.configData.defaults.editor
     readonly property string wallpaper: root.themeAdapter.wallpaper
