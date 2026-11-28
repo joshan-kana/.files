@@ -111,6 +111,23 @@ vec4 ripples(vec2 p) {
     return vec4(light / max(density, 0.001), min(density, 0.82));
 }
 
+vec4 geometry(vec2 p) {
+    vec2 q = p * 9.0;
+    q += vec2(sin(q.y * 0.38 + u.phase), sin(q.x * 0.34 - u.phase)) * (0.3 + u.audio.x * 0.25);
+    // Axial hexagonal tiling with a shared staggered lattice.
+    vec2 lattice = vec2(1.0, 1.7320508);
+    vec2 a = mod(q, lattice) - lattice * 0.5;
+    vec2 b = mod(q + lattice * 0.5, lattice) - lattice * 0.5;
+    vec2 local = dot(a, a) < dot(b, b) ? a : b;
+    vec2 cell = q - local;
+    float d = max(abs(local.x), dot(abs(local), vec2(0.5, 0.8660254)));
+    float edge = smoothstep(0.445, 0.485, d);
+    float seed = hash(floor(cell * 2.0 + 0.01));
+    float breath = 0.5 + 0.5 * sin(u.phase * 2.0 + seed * tau);
+    float inset = 1.0 - smoothstep(0.20 + u.audio.y * 0.075, 0.24 + u.audio.y * 0.075, d);
+    return vec4(palette(seed), edge * (0.24 + u.audio.z * 0.22) + inset * (0.12 + breath * 0.20));
+}
+
 void main() {
     vec2 uv = qt_TexCoord0;
     vec2 p = (uv - 0.5) * vec2(u.aspect, 1.0);
@@ -119,6 +136,7 @@ void main() {
     else if (u.style == 1) effect = liquid(p);
     else if (u.style == 2) effect = nebula(p);
     else if (u.style == 3) effect = ripples(p);
+    else if (u.style == 4) effect = geometry(p);
     else effect = vec4(0);
     float vignette = 1.0 - smoothstep(0.45, 1.0, length((uv - 0.5) * 1.6)) * 0.32;
     float alpha = clamp(effect.a * u.intensity * vignette, 0.0, 1.0);
