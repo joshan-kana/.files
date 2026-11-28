@@ -72,7 +72,9 @@ lib.recursiveUpdate (import ../../profiles/media.nix { inherit lib moduleRegistr
   };
 
   desktopApps = editScope moduleRegistry.desktopApps {
-    moonlight.package = pkgs.moonlight-qt-rpi;
+    moonlight = { lib, ... }: {
+      nixpkgs.overlays = lib.mkAfter [ (_: prev: { moonlight-qt = prev.moonlight-qt-rpi; }) ];
+    };
     kodi = {
       package = pkgs.kodi-gbm-rpi;
       home = _: {

@@ -256,10 +256,9 @@ in
       networking.firewall.allowedTCPPorts = [ 47990 ];
     };
 
-  moonlight = { scopeConfig, ... }: {
-    scopeOptions.package = lib.mkPackageOption pkgs "moonlight-qt" { };
+  moonlight = _: {
     home = _: {
-      home.packages = [ scopeConfig.package ];
+      home.packages = [ pkgs.moonlight-qt ];
     };
   };
 
