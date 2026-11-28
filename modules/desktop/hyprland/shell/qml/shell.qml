@@ -17,6 +17,7 @@ ShellRoot {
     readonly property MediaState mediaRef: qmlMedia
     readonly property SpectrumState spectrumRef: qmlSpectrum
     readonly property MusicReactiveState reactiveRef: reactive
+    readonly property MusicReactiveState atmosphereReactiveRef: atmosphereReactive
     readonly property SystemState systemRef: qmlSystem
     readonly property ResourceState resourcesRef: resources
     readonly property PowerProfileState powerProfileRef: qmlPowerProfile
@@ -175,6 +176,7 @@ ShellRoot {
             media: root.mediaRef
             spectrum: root.spectrumRef
             reactive: root.reactiveRef
+            wallpaperReactive: root.atmosphereReactiveRef
             notificationState: root.notificationsRef
             brightness: root.brightnessRef
             keyboard: qmlKeyboard
@@ -330,18 +332,29 @@ ShellRoot {
         attackMultiplier: qmlAppearance.spectrumAttack
         releaseMultiplier: qmlAppearance.spectrumRelease
         // No DSP client unless a visible spectrum consumer needs live audio.
-        active: visualizerSubscribers > 0 || root.wallpaperSpectrumEnabled || root.musicReactiveSurfaceVisible || reactive.effectSubscribers > 0
+        active: visualizerSubscribers > 0 || root.wallpaperSpectrumEnabled || root.musicReactiveSurfaceVisible || atmosphereReactive.effectSubscribers > 0
     }
 
     MusicReactiveState {
         id: reactive
         spectrum: root.spectrumRef
-        enabled: root.musicReactiveSurfaceVisible || effectSubscribers > 0
+        enabled: root.musicReactiveSurfaceVisible
         sensitivity: qmlAppearance.musicReactiveSensitivity
         attackMultiplier: qmlAppearance.musicReactiveAttack
         releaseMultiplier: qmlAppearance.musicReactiveRelease
         smoothing: qmlAppearance.musicReactiveSmoothing
         frequencyEmphasis: qmlAppearance.musicReactiveEmphasis
+    }
+
+    MusicReactiveState {
+        id: atmosphereReactive
+        spectrum: root.spectrumRef
+        enabled: effectSubscribers > 0
+        sensitivity: qmlAppearance.atmosphereReactive.sensitivity
+        attackMultiplier: qmlAppearance.atmosphereReactive.attack
+        releaseMultiplier: qmlAppearance.atmosphereReactive.release
+        smoothing: qmlAppearance.atmosphereReactive.smoothing
+        frequencyEmphasis: qmlAppearance.atmosphereReactive.emphasis
     }
 
     WallpaperSpectrum {
@@ -351,7 +364,7 @@ ShellRoot {
         enabled: root.wallpaperSpectrumEnabled
         motion: qmlMotion
         appearance: qmlAppearance
-        reactive: root.reactiveRef
+        reactive: root.atmosphereReactiveRef
         locked: qmlNotifications.locked
     }
 

@@ -116,7 +116,7 @@ test("only visible animated audio-synchronised effects subscribe, idempotently",
   assert.match(wallpaper, /width: 0[\s\S]*height: 0/);
   assert.match(
     read("qml/shell.qml"),
-    /active: visualizerSubscribers > 0[^\n]+reactive.effectSubscribers > 0/,
+    /active: visualizerSubscribers > 0[^\n]+atmosphereReactive.effectSubscribers > 0/,
   );
 });
 
@@ -580,4 +580,31 @@ test("tuning an inactive fullscreen effect never enables that effect or reapplie
   assert.equal(applications, 0);
   set(ctx, "crt", "intensity", 0.5);
   assert.equal(applications, 1);
+});
+
+test("wallpaper audio response shares spectrum input but not shell response settings", () => {
+  const qml = read("qml/shell.qml");
+  const source = read("qml/AppearancePreferences.qml");
+  const controls = read("qml/SystemContent.qml");
+  assert.match(qml, /id: atmosphereReactive/);
+  assert.match(qml, /spectrum: root.spectrumRef/);
+  assert.match(qml, /reactive: root.atmosphereReactiveRef/);
+  assert.match(
+    qml,
+    /sensitivity: qmlAppearance.atmosphereReactive.sensitivity/,
+  );
+  assert.match(
+    qml,
+    /root.musicReactiveSurfaceVisible \|\| atmosphereReactive.effectSubscribers > 0/,
+  );
+  assert.match(
+    controls,
+    /required property MusicReactiveState wallpaperReactive/,
+  );
+  assert.match(controls, /reactive: root.wallpaperReactive/);
+  assert.match(
+    source,
+    /readonly property var atmosphereReactive: Object.assign/,
+  );
+  assert.match(source, /function setAtmosphereReactiveParameter/);
 });

@@ -18,6 +18,7 @@ FocusScope {
     required property MediaState media
     required property SpectrumState spectrum
     required property MusicReactiveState reactive
+    required property MusicReactiveState wallpaperReactive
     required property NotificationState notificationState
     required property BrightnessState brightness
     required property KeyboardState keyboard
@@ -2028,7 +2029,7 @@ FocusScope {
             sourceComponent: Component {
                 WallpaperPanel {
                     appearance: root.appearance
-                    reactive: root.reactive
+                    reactive: root.wallpaperReactive
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion

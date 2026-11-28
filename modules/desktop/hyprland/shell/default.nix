@@ -724,6 +724,34 @@ in
           default = true;
           description = "Modulate the wallpaper atmosphere with shared audio analysis.";
         };
+        atmosphereReactive = lib.mkOption {
+          type = lib.types.submodule {
+            options = {
+              sensitivity = lib.mkOption {
+                type = lib.types.numbers.between constraints.appearance.musicReactiveSensitivity.min constraints.appearance.musicReactiveSensitivity.max;
+                default = 1.0;
+              };
+              attack = lib.mkOption {
+                type = lib.types.numbers.between constraints.appearance.musicReactiveAttack.min constraints.appearance.musicReactiveAttack.max;
+                default = 1.0;
+              };
+              release = lib.mkOption {
+                type = lib.types.numbers.between constraints.appearance.musicReactiveRelease.min constraints.appearance.musicReactiveRelease.max;
+                default = 1.0;
+              };
+              smoothing = lib.mkOption {
+                type = lib.types.numbers.between constraints.appearance.musicReactiveSmoothing.min constraints.appearance.musicReactiveSmoothing.max;
+                default = 0.0;
+              };
+              emphasis = lib.mkOption {
+                type = lib.types.enum constraints.appearance.musicReactiveEmphasis.values;
+                default = "balanced";
+              };
+            };
+          };
+          default = { };
+          description = "Wallpaper audio-response settings, independent of reactive shell tint.";
+        };
         atmosphereBackdrop = lib.mkOption {
           type = lib.types.bool;
           default = false;

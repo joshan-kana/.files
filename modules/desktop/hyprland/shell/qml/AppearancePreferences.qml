@@ -34,6 +34,26 @@ QtObject {
 
     readonly property real atmosphereOpacity: atmosphereStyle(atmosphereMode).opacity
     readonly property real atmosphereSpeed: atmosphereStyle(atmosphereMode).speed
+    readonly property var atmosphereReactive: Object.assign({}, runtime.appearanceDefaults.atmosphereReactive, effective("atmosphereReactive"))
+    function setAtmosphereReactiveParameter(name: string, value: var): void {
+        const constraints = {
+            sensitivity: "musicReactiveSensitivity",
+            attack: "musicReactiveAttack",
+            release: "musicReactiveRelease",
+            smoothing: "musicReactiveSmoothing",
+            emphasis: "musicReactiveEmphasis"
+        };
+        const option = constraints[name];
+        if (!option)
+            return;
+        const rule = runtime.constraints.appearance[option];
+        if (rule.values ? !rule.values.includes(value) : !Number.isFinite(value) || value < rule.min || value > rule.max)
+            return;
+        storeOverride("atmosphereReactive", Object.assign({}, atmosphereReactive, {
+            [name]: value
+        }));
+    }
+
     readonly property bool atmosphereAudioEnabled: effective("atmosphereAudioEnabled")
     readonly property bool atmosphereBackdrop: effective("atmosphereBackdrop")
 
