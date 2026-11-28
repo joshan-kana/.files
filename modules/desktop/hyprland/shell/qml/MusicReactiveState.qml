@@ -6,6 +6,7 @@ QtObject {
 
     required property SpectrumState spectrum
     property bool enabled: false
+    property int effectSubscribers: 0
     // Runtime preferences are supplied by the shell's single appearance owner.
     // No extra PipeWire listener, FFT graph or polling timer is created.
     property real sensitivity: 1.0
