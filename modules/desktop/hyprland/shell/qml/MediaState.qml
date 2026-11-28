@@ -32,8 +32,12 @@ QtObject {
         const source = available && player.metadata ? String(player.metadata["xesam:url"] || "") : "";
         if (!source.startsWith("file:///"))
             return "";
-        const filePath = decodeURIComponent(source.slice(7).split(/[?#]/)[0]);
-        return /\.[^/.]+$/.test(filePath) ? filePath.replace(/\.[^/.]+$/, ".lrc") : "";
+        try {
+            const filePath = decodeURIComponent(source.slice(7).split(/[?#]/)[0]);
+            return /\.[^/.]+$/.test(filePath) ? filePath.replace(/\.[^/.]+$/, ".lrc") : "";
+        } catch (_) {
+            return "";
+        }
     }
 
     readonly property real position: available && player.positionSupported ? player.position : 0

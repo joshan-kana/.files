@@ -410,11 +410,20 @@ test("runtime bounds follow the supplied configuration instead of fixed literals
 test("preference validity and inheritance follow changing declared constraints", () => {
   const source = read("qml/PreferenceStore.qml");
   const body = (signature) => source.split(signature)[1].split("\n    }")[0];
+  const validValue = new Function(
+    "return function validValue(value, baseline, rule) {" +
+      body(
+        "function validValue(value: var, baseline: var, rule: var): bool {",
+      ) +
+      "\n}",
+  )();
   const valid = new Function(
     "key",
     "value",
     "defaults",
     "constraints",
+    "objectConstraints",
+    "validValue",
     body("function valid(key: string, value: var): bool {"),
   );
   const has = new Function(
@@ -439,7 +448,7 @@ test("preference validity and inheritance follow changing declared constraints",
   const overrides = { opacity: 0.4, seek: 120, size: 5.5, enabled: true };
   const accepts = (key) =>
     has(key, overrides, (name, value) =>
-      valid(name, value, defaults, constraints),
+      valid(name, value, defaults, constraints, {}, validValue),
     );
   const value = (key) => effective(key, accepts, overrides, defaults);
   assert.equal(value("opacity"), 0.4);
@@ -458,6 +467,50 @@ test("preference validity and inheritance follow changing declared constraints",
   assert.equal(value("opacity"), 0.4);
   delete overrides.opacity;
   assert.equal(value("opacity"), 0.8);
-  assert.equal(valid("size", Infinity, defaults, constraints), false);
-  assert.equal(valid("enabled", "true", defaults, constraints), false);
+  assert.equal(
+    valid("size", Infinity, defaults, constraints, {}, validValue),
+    false,
+  );
+  assert.equal(
+    valid("enabled", "true", defaults, constraints, {}, validValue),
+    false,
+  );
+
+  const nestedDefaults = {
+    atmosphereReactive: { sensitivity: 1, emphasis: "balanced" },
+    screenEffectTuning: { crt: { intensity: 0.6, speed: 1 } },
+  };
+  const nestedRules = {
+    atmosphereReactive: {
+      sensitivity: { min: 0.4, max: 3 },
+      emphasis: { values: ["balanced", "bass"] },
+    },
+    screenEffectTuning: {
+      crt: { intensity: { min: 0, max: 1 }, speed: { min: 0.25, max: 2.5 } },
+    },
+  };
+  const acceptsNested = (key, override) =>
+    valid(key, override, nestedDefaults, {}, nestedRules, validValue);
+  assert.equal(acceptsNested("atmosphereReactive", { sensitivity: 2 }), true);
+  assert.equal(
+    acceptsNested("atmosphereReactive", { sensitivity: 200 }),
+    false,
+  );
+  assert.equal(
+    acceptsNested("atmosphereReactive", { emphasis: "invalid" }),
+    false,
+  );
+  assert.equal(acceptsNested("atmosphereReactive", { unknown: 1 }), false);
+  assert.equal(
+    acceptsNested("screenEffectTuning", { crt: { intensity: Infinity } }),
+    false,
+  );
+  assert.equal(
+    acceptsNested("screenEffectTuning", { crt: { speed: 1.4 } }),
+    true,
+  );
+  assert.equal(
+    acceptsNested("screenEffectTuning", { crt: { speed: -1 } }),
+    false,
+  );
 });

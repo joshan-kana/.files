@@ -965,9 +965,9 @@ Item {
             if (encodingSelector.expanded) {
                 if (event.key === picker.runtime.shellKeyCode("capture", "Escape")) {
                     encodingSelector.cancel();
-                } else if (picker.runtime.shellNavigates("capture", "up", event.key)) {
+                } else if (picker.runtime.shellNavigates("capture", "up", event.key, "all", event.modifiers, true)) {
                     encodingSelector.moveHighlight(-1);
-                } else if (picker.runtime.shellNavigates("capture", "down", event.key)) {
+                } else if (picker.runtime.shellNavigates("capture", "down", event.key, "all", event.modifiers, true)) {
                     encodingSelector.moveHighlight(1);
                 } else if (event.key === picker.runtime.shellKeyCode("capture", "Return") || event.key === picker.runtime.shellKeyCode("capture", "Enter")) {
                     if (!event.isAutoRepeat)
@@ -1005,13 +1005,13 @@ Item {
                 picker.startY = 0;
                 picker.endX = picker.width;
                 picker.endY = picker.height;
-            } else if (picker.runtime.shellNavigates("capture", "left", event.key)) {
+            } else if (picker.runtime.shellNavigates("capture", "left", event.key, "all", event.modifiers, true)) {
                 picker.moveSelection(-step, 0, resize);
-            } else if (picker.runtime.shellNavigates("capture", "right", event.key)) {
+            } else if (picker.runtime.shellNavigates("capture", "right", event.key, "all", event.modifiers, true)) {
                 picker.moveSelection(step, 0, resize);
-            } else if (picker.runtime.shellNavigates("capture", "up", event.key)) {
+            } else if (picker.runtime.shellNavigates("capture", "up", event.key, "all", event.modifiers, true)) {
                 picker.moveSelection(0, -step, resize);
-            } else if (picker.runtime.shellNavigates("capture", "down", event.key)) {
+            } else if (picker.runtime.shellNavigates("capture", "down", event.key, "all", event.modifiers, true)) {
                 picker.moveSelection(0, step, resize);
             } else {
                 return;

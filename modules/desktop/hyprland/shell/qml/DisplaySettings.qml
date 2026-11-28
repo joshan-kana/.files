@@ -204,9 +204,9 @@ Column {
         if (autoRepeat && key === runtime.shellKeyCode("controls", "Escape"))
             return true;
         if (openSelector) {
-            if (runtime.shellNavigates("controls", "up", key))
+            if (runtime.shellNavigates("controls", "up", key, "all", modifiers))
                 openSelector.moveHighlight(-1);
-            else if (runtime.shellNavigates("controls", "down", key))
+            else if (runtime.shellNavigates("controls", "down", key, "all", modifiers))
                 openSelector.moveHighlight(1);
             else if (runtime.shellMatchesHint("DisplaySettings.apply", key, modifiers) || (key === runtime.shellKeyCode("controls", "Enter") && modifiers === Qt.NoModifier)) {
                 if (!autoRepeat)

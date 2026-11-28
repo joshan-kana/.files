@@ -627,19 +627,19 @@ Item {
                 selectParameter(selectedIndex + (key === runtime.shellKeyCode("controls", "Backtab") || runtime.shellModifier("controls", "Shift", modifiers) ? -1 : 1));
                 return true;
             }
-            if (runtime.shellNavigates("controls", "up", key)) {
+            if (runtime.shellNavigates("controls", "up", key, "all", modifiers)) {
                 selectParameter(selectedIndex - 1);
                 return true;
             }
-            if (runtime.shellNavigates("controls", "down", key)) {
+            if (runtime.shellNavigates("controls", "down", key, "all", modifiers)) {
                 selectParameter(selectedIndex + 1);
                 return true;
             }
-            if (runtime.shellNavigates("controls", "left", key) || runtime.shellNavigates("controls", "right", key)) {
+            if (runtime.shellNavigates("controls", "left", key, "all", modifiers) || runtime.shellNavigates("controls", "right", key, "all", modifiers)) {
                 const entry = parameters[selectedIndex];
                 if (entry) {
                     parameterAdjustmentRequested(selectedIndex);
-                    setValue(entry.key, steppedParameter(entry, currentValue(entry.key), runtime.shellNavigates("controls", "left", key) ? -1 : 1));
+                    setValue(entry.key, steppedParameter(entry, currentValue(entry.key), runtime.shellNavigates("controls", "left", key, "all", modifiers) ? -1 : 1));
                 }
                 return true;
             }

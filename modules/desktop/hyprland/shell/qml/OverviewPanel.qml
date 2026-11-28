@@ -661,8 +661,8 @@ Item {
                     overview.executeMove(overview.destinationWorkspace);
                 else
                     overview.activateSelection();
-            } else if (overview.runtime.shellNumberIndex("overview", event.key, 9) >= 0) {
-                const workspace = overview.runtime.shellNumberIndex("overview", event.key, 9) + 1;
+            } else if (overview.runtime.shellNumberIndex("overview", event.key, 9, event.modifiers) >= 0) {
+                const workspace = overview.runtime.shellNumberIndex("overview", event.key, 9, event.modifiers) + 1;
                 if (overview.moveMode)
                     overview.destinationWorkspace = workspace;
                 else
@@ -674,22 +674,22 @@ Item {
                     overview.focusWorkspace(10);
             } else if (overview.runtime.shellMatchesHint("OverviewPanel.all", event.key, event.modifiers) && !overview.moveMode) {
                 overview.browseAllWorkspaces();
-            } else if (overview.runtime.shellNavigates("overview", "left", event.key)) {
+            } else if (overview.runtime.shellNavigates("overview", "left", event.key, "all", event.modifiers)) {
                 if (overview.moveMode)
                     overview.destinationWorkspace = Math.max(1, overview.destinationWorkspace - 1);
                 else
                     overview.chooseIndex(Math.max(0, overview.selectedIndex - 1));
-            } else if (overview.runtime.shellNavigates("overview", "right", event.key)) {
+            } else if (overview.runtime.shellNavigates("overview", "right", event.key, "all", event.modifiers)) {
                 if (overview.moveMode)
                     overview.destinationWorkspace = Math.min(10, overview.destinationWorkspace + 1);
                 else
                     overview.chooseIndex(Math.max(0, Math.min(overview.windows.length - 1, overview.selectedIndex + 1)));
-            } else if (overview.runtime.shellNavigates("overview", "down", event.key)) {
+            } else if (overview.runtime.shellNavigates("overview", "down", event.key, "all", event.modifiers)) {
                 if (overview.moveMode)
                     overview.destinationWorkspace = Math.min(10, overview.destinationWorkspace + 3);
                 else
                     overview.chooseIndex(Math.max(0, Math.min(overview.windows.length - 1, overview.selectedIndex + windowsGrid.columns)));
-            } else if (overview.runtime.shellNavigates("overview", "up", event.key)) {
+            } else if (overview.runtime.shellNavigates("overview", "up", event.key, "all", event.modifiers)) {
                 if (overview.moveMode)
                     overview.destinationWorkspace = Math.max(1, overview.destinationWorkspace - 3);
                 else

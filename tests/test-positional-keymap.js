@@ -309,7 +309,7 @@ test("Bluetooth scanning hints never advertise paging's plain D key", () => {
   assert.doesNotMatch(bluetooth, /NO DEVICES \/\/ PRESS SHIFT\+D TO SCAN/);
   assert.match(
     controls,
-    /root\.runtime\.shellMatchesHint\("BluetoothPanel\.scan", event\.key, event\.modifiers\)\)\s*\{\s*bluetoothPanel\.invoke\("toggleDiscovery"\)/,
+    /root\.runtime\.shellMatchesHint\("BluetoothPanel\.scan", event\.key, event\.modifiers\)\)\s*\{\s*if \(!event\.isAutoRepeat\)\s*bluetoothPanel\.invoke\("toggleDiscovery"\)/,
   );
   assert.match(
     controls,

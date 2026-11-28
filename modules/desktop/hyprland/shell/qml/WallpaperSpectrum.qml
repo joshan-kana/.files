@@ -21,6 +21,9 @@ Variants {
 
     // ScreenRouter refreshes fullscreen IPC state on compositor events.
     readonly property var eligibleScreens: !locked && (appearance.atmosphereEnabled || enabled) ? Quickshell.screens.filter(screen => !(Hyprland.monitorFor(screen)?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false)) : []
+    // The silent wallpaper needs audio to discover the first beat, but not
+    // while every output is locked or unavailable behind exclusive fullscreen.
+    readonly property bool demandEligible: enabled && eligibleScreens.length > 0
     model: eligibleScreens
 
     delegate: Scope {

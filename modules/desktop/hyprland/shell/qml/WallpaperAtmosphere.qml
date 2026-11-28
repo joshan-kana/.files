@@ -102,16 +102,16 @@ Column {
             }
             return true;
         }
-        if (runtime.shellNavigates("controls", "up", key) || runtime.shellNavigates("controls", "down", key)) {
-            const direction = runtime.shellNavigates("controls", "up", key) ? -1 : 1;
+        if (runtime.shellNavigates("controls", "up", key, "all", modifiers) || runtime.shellNavigates("controls", "down", key, "all", modifiers)) {
+            const direction = runtime.shellNavigates("controls", "up", key, "all", modifiers) ? -1 : 1;
             if (audioDetailsOpen)
                 selectedAudioParameter = (selectedAudioParameter + direction + audioParameters.length) % audioParameters.length;
             else
                 selectedParameter = (selectedParameter + direction + 2) % 2;
             return true;
         }
-        if (runtime.shellNavigates("controls", "left", key) || runtime.shellNavigates("controls", "right", key)) {
-            const direction = runtime.shellNavigates("controls", "left", key) ? -1 : 1;
+        if (runtime.shellNavigates("controls", "left", key, "all", modifiers) || runtime.shellNavigates("controls", "right", key, "all", modifiers)) {
+            const direction = runtime.shellNavigates("controls", "left", key, "all", modifiers) ? -1 : 1;
             if (audioDetailsOpen) {
                 const parameter = audioParameters[selectedAudioParameter];
                 const limits = runtime.constraints.appearance[parameter.constraint];

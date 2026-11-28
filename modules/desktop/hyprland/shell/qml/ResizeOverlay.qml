@@ -166,13 +166,13 @@ PanelWindow {
             if (event.key === overlay.runtime.shellKeyCode("resize", "Escape") || event.key === overlay.runtime.shellKeyCode("resize", "Return") || overlay.runtime.shellMatchesHint("ResizeOverlay.doneAlternate", event.key, event.modifiers)) {
                 if (!event.isAutoRepeat)
                     overlay.open = false;
-            } else if (overlay.runtime.shellNavigates("resize", "left", event.key)) {
+            } else if (overlay.runtime.shellNavigates("resize", "left", event.key, "all", event.modifiers, true)) {
                 overlay.resizeWindow(-size, 0);
-            } else if (overlay.runtime.shellNavigates("resize", "down", event.key)) {
+            } else if (overlay.runtime.shellNavigates("resize", "down", event.key, "all", event.modifiers, true)) {
                 overlay.resizeWindow(0, size);
-            } else if (overlay.runtime.shellNavigates("resize", "up", event.key)) {
+            } else if (overlay.runtime.shellNavigates("resize", "up", event.key, "all", event.modifiers, true)) {
                 overlay.resizeWindow(0, -size);
-            } else if (overlay.runtime.shellNavigates("resize", "right", event.key)) {
+            } else if (overlay.runtime.shellNavigates("resize", "right", event.key, "all", event.modifiers, true)) {
                 overlay.resizeWindow(size, 0);
             } else if (overlay.runtime.shellMatchesHint("ResizeOverlay.balance", event.key, event.modifiers)) {
                 overlay.balance();

@@ -7,7 +7,7 @@ function assigned(registry, scope, slot) {
 
 function codeFor(value, qt) {
   const spec = value.toUpperCase();
-  if (spec.length === 1 && /[A-Z0-9]/.test(spec)) return spec.charCodeAt(0);
+  if (spec.length === 1 && /^[A-Z0-9]$/.test(spec)) return spec.charCodeAt(0);
   const names = {
     ESC: qt.Key_Escape,
     ENTER: qt.Key_Return,
@@ -39,7 +39,10 @@ function codeFor(value, qt) {
     ",": qt.Key_Comma,
     ".": qt.Key_Period,
   };
-  return names[spec] ?? -1;
+  return (
+    names[spec] ??
+    (spec.length === 1 && /^[\x21-\x7e]$/.test(spec) ? spec.charCodeAt(0) : -1)
+  );
 }
 
 function keyCode(registry, scope, slot, qt) {
@@ -48,7 +51,19 @@ function keyCode(registry, scope, slot, qt) {
 
 // Direction slots are declared once in Hyprland keybindings.nix. Text input can opt
 // into arrow-only handling so letters remain available for typing.
-function navigates(registry, scope, direction, key, qt, mode = "all") {
+function navigates(
+  registry,
+  scope,
+  direction,
+  key,
+  qt,
+  mode = "all",
+  modifiers = 0,
+  allowShift = false,
+) {
+  const ignored = qt.ControlModifier | qt.AltModifier | qt.MetaModifier;
+  if (modifiers & ignored || (modifiers & qt.ShiftModifier && !allowShift))
+    return false;
   const slots = registry?.navigation?.[direction] ?? [];
   const selected =
     mode === "arrows"
@@ -173,12 +188,16 @@ function resolvedActionChord(registry, action) {
   const key = parts.pop();
   if (
     !key ||
-    !(key in keySlots || /^[A-Z0-9]$/.test(key)) ||
+    !(key in keySlots || (key.length === 1 && /^[\x21-\x7e]$/.test(key))) ||
     parts.some((part) => !["SHIFT", "ALT", "CTRL", "SUPER"].includes(part))
   )
     return "";
   return [...parts, key]
-    .map((part) => assigned(registry, entry.scope, keySlots[part] ?? part))
+    .map(
+      (part) =>
+        assigned(registry, entry.scope, keySlots[part] ?? part) ||
+        (part.length === 1 ? part : ""),
+    )
     .join("+");
 }
 
@@ -335,6 +354,37 @@ function matchesChord(value, key, modifiers, qt) {
     if (key === resolved.key && !(resolved.modifiers & qt.ShiftModifier))
       return (actual & ~qt.ShiftModifier) === resolved.modifiers;
   }
+  // Qt can report a shifted key as its glyph or its physical base.
+  const shiftedGlyph = {
+    1: "!",
+    2: "@",
+    3: "#",
+    4: "$",
+    5: "%",
+    6: "^",
+    7: "&",
+    8: "*",
+    9: "(",
+    0: ")",
+    "-": "_",
+    "=": "+",
+    "[": "{",
+    "]": "}",
+    "\\": "|",
+    ";": ":",
+    "'": '"',
+    ",": "<",
+    ".": ">",
+    "/": "?",
+    "\x60": "~",
+  }[resolved.symbol];
+  if (
+    shiftedGlyph &&
+    resolved.modifiers & qt.ShiftModifier &&
+    actual === resolved.modifiers &&
+    key === codeFor(shiftedGlyph, qt)
+  )
+    return true;
   return key === resolved.key && actual === resolved.modifiers;
 }
 
@@ -348,9 +398,17 @@ function matchesHint(registry, action, key, modifiers, qt) {
 }
 
 // Numbered actions can be rearranged without requiring contiguous Qt keycodes.
-function numberIndex(registry, scope, key, count, qt) {
+function numberIndex(registry, scope, key, count, qt, modifiers = 0) {
   for (let index = 0; index < count; ++index)
-    if (key === keyCode(registry, scope, String(index + 1), qt)) return index;
+    if (
+      matchesChord(
+        assigned(registry, scope, String(index + 1)),
+        key,
+        modifiers,
+        qt,
+      )
+    )
+      return index;
   return -1;
 }
 

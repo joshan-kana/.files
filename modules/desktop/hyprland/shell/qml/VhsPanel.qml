@@ -158,19 +158,19 @@ Item {
             selectParameter((selectedIndex + parameters.length + (backward ? -1 : 1)) % parameters.length);
             return true;
         }
-        if (runtime.shellNavigates("controls", "up", key)) {
+        if (runtime.shellNavigates("controls", "up", key, "all", modifiers)) {
             selectParameter(selectedIndex - 1);
             return true;
         }
-        if (runtime.shellNavigates("controls", "down", key)) {
+        if (runtime.shellNavigates("controls", "down", key, "all", modifiers)) {
             selectParameter(selectedIndex + 1);
             return true;
         }
-        if (runtime.shellNavigates("controls", "left", key)) {
+        if (runtime.shellNavigates("controls", "left", key, "all", modifiers)) {
             adjustSelected(-1);
             return true;
         }
-        if (runtime.shellNavigates("controls", "right", key)) {
+        if (runtime.shellNavigates("controls", "right", key, "all", modifiers)) {
             adjustSelected(1);
             return true;
         }

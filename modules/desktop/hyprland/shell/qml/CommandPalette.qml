@@ -509,6 +509,7 @@ Item {
 
     Shortcut {
         sequence: palette.runtime.shellSequence("CommandPalette.help")
+        autoRepeat: false
         context: Qt.ApplicationShortcut
         enabled: palette.open && !search.activeFocus
         onActivated: palette.helpOpen = !palette.helpOpen
@@ -516,24 +517,28 @@ Item {
 
     Shortcut {
         sequence: palette.runtime.shellSequence("CommandPalette.unified")
+        autoRepeat: false
         context: Qt.ApplicationShortcut
         enabled: palette.open
         onActivated: palette.chooseScope("unified")
     }
     Shortcut {
         sequence: palette.runtime.shellSequence("CommandPalette.apps")
+        autoRepeat: false
         context: Qt.ApplicationShortcut
         enabled: palette.open
         onActivated: palette.chooseScope("apps")
     }
     Shortcut {
         sequence: palette.runtime.shellSequence("CommandPalette.actions")
+        autoRepeat: false
         context: Qt.ApplicationShortcut
         enabled: palette.open
         onActivated: palette.chooseScope("actions")
     }
     Shortcut {
         sequence: palette.runtime.shellSequence("CommandPalette.emoji")
+        autoRepeat: false
         context: Qt.ApplicationShortcut
         enabled: palette.open
         onActivated: palette.chooseScope("emoji")
@@ -1508,10 +1513,10 @@ Item {
                             if (!event.isAutoRepeat)
                                 palette.dismissOrReset();
                             event.accepted = true;
-                        } else if (palette.runtime.shellNavigates("palette", "down", event.key, "arrows")) {
+                        } else if (palette.runtime.shellNavigates("palette", "down", event.key, "arrows", event.modifiers)) {
                             results.currentIndex = Math.min(displayedModel.values.length - 1, results.currentIndex + 1);
                             event.accepted = true;
-                        } else if (palette.runtime.shellNavigates("palette", "up", event.key, "arrows")) {
+                        } else if (palette.runtime.shellNavigates("palette", "up", event.key, "arrows", event.modifiers)) {
                             results.currentIndex = Math.max(0, results.currentIndex - 1);
                             event.accepted = true;
                         } else if (event.key === palette.runtime.shellKeyCode("palette", "Return") || event.key === palette.runtime.shellKeyCode("palette", "Enter")) {
@@ -1563,9 +1568,9 @@ Item {
                     } else if (event.key === palette.runtime.shellKeyCode("palette", "Escape")) {
                         if (!event.isAutoRepeat)
                             palette.dismissOrReset();
-                    } else if (palette.runtime.shellNavigates("palette", "down", event.key)) {
+                    } else if (palette.runtime.shellNavigates("palette", "down", event.key, "all", event.modifiers)) {
                         results.currentIndex = Math.min(displayedModel.values.length - 1, results.currentIndex + 1);
-                    } else if (palette.runtime.shellNavigates("palette", "up", event.key)) {
+                    } else if (palette.runtime.shellNavigates("palette", "up", event.key, "all", event.modifiers)) {
                         results.currentIndex = Math.max(0, results.currentIndex - 1);
                     } else if (event.key === palette.runtime.shellKeyCode("palette", "U") || event.key === palette.runtime.shellKeyCode("palette", "PageUp") || event.key === palette.runtime.shellKeyCode("palette", "D") || event.key === palette.runtime.shellKeyCode("palette", "PageDown")) {
                         const rows = Math.max(1, Math.floor(results.height / (57 + results.spacing) / 2));

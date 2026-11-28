@@ -359,9 +359,9 @@ FocusScope {
             if (key === runtime.shellKeyCode("mixer", "Escape") || runtime.shellMatchesHint("AudioMixerContent.effectsPresets", key, modifiers)) {
                 if (!autoRepeat)
                     presetOpen = false;
-            } else if (runtime.shellNavigates("mixer", "down", key)) {
+            } else if (runtime.shellNavigates("mixer", "down", key, "all", modifiers)) {
                 presetIndex = (presetIndex + 1) % effectsState.presets.length;
-            } else if (runtime.shellNavigates("mixer", "up", key)) {
+            } else if (runtime.shellNavigates("mixer", "up", key, "all", modifiers)) {
                 presetIndex = (presetIndex + effectsState.presets.length - 1) % effectsState.presets.length;
             } else if (key === runtime.shellKeyCode("mixer", "Return") || key === runtime.shellKeyCode("mixer", "Enter")) {
                 if (!autoRepeat)
@@ -379,9 +379,9 @@ FocusScope {
         if (routeOpen) {
             if (key === runtime.shellKeyCode("mixer", "Escape") || runtime.shellMatchesHint("AudioDeviceControl.chooser", key, modifiers)) {
                 routeOpen = false;
-            } else if (runtime.shellNavigates("mixer", "down", key)) {
+            } else if (runtime.shellNavigates("mixer", "down", key, "all", modifiers)) {
                 routeIndex = (routeIndex + 1) % routeDevices.length;
-            } else if (runtime.shellNavigates("mixer", "up", key)) {
+            } else if (runtime.shellNavigates("mixer", "up", key, "all", modifiers)) {
                 routeIndex = (routeIndex + routeDevices.length - 1) % routeDevices.length;
             } else if (key === runtime.shellKeyCode("mixer", "Return") || key === runtime.shellKeyCode("mixer", "Enter")) {
                 if (!autoRepeat)
@@ -408,9 +408,9 @@ FocusScope {
         if (picker) {
             if (key === mixer.runtime.shellKeyCode("mixer", "Escape") || key === mixer.runtime.shellKeyCode("mixer", "Backspace") || key === mixer.runtime.shellKeyCode("mixer", "D")) {
                 picker.chooserOpen = false;
-            } else if (mixer.runtime.shellNavigates("mixer", "down", key)) {
+            } else if (mixer.runtime.shellNavigates("mixer", "down", key, "all", modifiers)) {
                 picker.moveDeviceSelection(1);
-            } else if (mixer.runtime.shellNavigates("mixer", "up", key)) {
+            } else if (mixer.runtime.shellNavigates("mixer", "up", key, "all", modifiers)) {
                 picker.moveDeviceSelection(-1);
             } else if (key === mixer.runtime.shellKeyCode("mixer", "Return") || key === mixer.runtime.shellKeyCode("mixer", "Enter")) {
                 if (!autoRepeat)
@@ -437,15 +437,15 @@ FocusScope {
         }
         if (key === mixer.runtime.shellKeyCode("mixer", "Escape") && !compact)
             closeRequested();
-        else if (mixer.runtime.shellNavigates("mixer", "up", key) || mixer.runtime.shellNavigates("mixer", "down", key) || (!compact && (key === mixer.runtime.shellKeyCode("mixer", "Tab") || key === mixer.runtime.shellKeyCode("mixer", "Backtab")))) {
-            const backwards = mixer.runtime.shellNavigates("mixer", "up", key) || key === mixer.runtime.shellKeyCode("mixer", "Backtab") || (key === mixer.runtime.shellKeyCode("mixer", "Tab") && (mixer.runtime.shellModifier("mixer", "Shift", modifiers)));
+        else if (mixer.runtime.shellNavigates("mixer", "up", key, "all", modifiers) || mixer.runtime.shellNavigates("mixer", "down", key, "all", modifiers) || (!compact && (key === mixer.runtime.shellKeyCode("mixer", "Tab") || key === mixer.runtime.shellKeyCode("mixer", "Backtab")))) {
+            const backwards = mixer.runtime.shellNavigates("mixer", "up", key, "all", modifiers) || key === mixer.runtime.shellKeyCode("mixer", "Backtab") || (key === mixer.runtime.shellKeyCode("mixer", "Tab") && (mixer.runtime.shellModifier("mixer", "Shift", modifiers)));
             moveAudioSelection(backwards ? -1 : 1);
         } else if (!compact && (key === mixer.runtime.shellKeyCode("mixer", "U") || key === mixer.runtime.shellKeyCode("mixer", "PageUp") || key === mixer.runtime.shellKeyCode("mixer", "D") || key === mixer.runtime.shellKeyCode("mixer", "PageDown"))) {
             const rows = Math.max(1, Math.floor(list.height / (compact ? 72 : 106)));
             selectIndex(Math.max(0, Math.min(targets.length - 1, selectedIndex + ((key === mixer.runtime.shellKeyCode("mixer", "D") || key === mixer.runtime.shellKeyCode("mixer", "PageDown")) ? rows : -rows))));
-        } else if (mixer.runtime.shellNavigates("mixer", "left", key)) {
+        } else if (mixer.runtime.shellNavigates("mixer", "left", key, "all", modifiers)) {
             adjustSelected(-system.volumeStep);
-        } else if (mixer.runtime.shellNavigates("mixer", "right", key)) {
+        } else if (mixer.runtime.shellNavigates("mixer", "right", key, "all", modifiers)) {
             adjustSelected(system.volumeStep);
         } else if (mixer.runtime.shellMatchesHint(selectedTarget?.kind === "stream" ? "AudioStreamControl.mute" : "AudioDeviceControl.mute", key, modifiers) || (!compact && (key === mixer.runtime.shellKeyCode("mixer", "Return") || key === mixer.runtime.shellKeyCode("mixer", "Enter")))) {
             if (!autoRepeat)

@@ -11,6 +11,8 @@ layout(std140, binding = 0) uniform buf {
     vec4 toneA;
     vec4 toneB;
     vec4 toneC;
+    vec4 toneD;
+    vec4 toneE;
     vec4 audio; // sustained energy, transient pulse, treble
     int style;
 } u;
@@ -36,8 +38,14 @@ float cloud(vec2 p) {
 }
 
 vec3 palette(float t) {
-    return mix(mix(u.toneA.rgb, u.toneB.rgb, smoothstep(0.0, 0.5, t)),
-               u.toneC.rgb, smoothstep(0.5, 1.0, t));
+    float p = clamp(t, 0.0, 1.0) * 4.0;
+    if (p < 1.0)
+        return mix(u.toneA.rgb, u.toneB.rgb, p);
+    if (p < 2.0)
+        return mix(u.toneB.rgb, u.toneC.rgb, p - 1.0);
+    if (p < 3.0)
+        return mix(u.toneC.rgb, u.toneD.rgb, p - 2.0);
+    return mix(u.toneD.rgb, u.toneE.rgb, p - 3.0);
 }
 
 // Overlapping curved curtains with a narrow luminous crest and a broad,

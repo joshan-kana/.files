@@ -159,9 +159,9 @@ FocusScope {
             if (calendar.calendarPickerOpen) {
                 if (event.key === calendar.runtime.shellKeyCode("calendar", "Escape") || calendar.runtime.shellMatchesHint("CalendarContent.calendars", event.key, event.modifiers)) {
                     calendar.navigateBack();
-                } else if (calendar.runtime.shellNavigates("calendar", "down", event.key)) {
+                } else if (calendar.runtime.shellNavigates("calendar", "down", event.key, "all", event.modifiers)) {
                     calendar.calendarPickerIndex = Math.min(qmlAgenda.calendars.length - 1, calendar.calendarPickerIndex + 1);
-                } else if (calendar.runtime.shellNavigates("calendar", "up", event.key)) {
+                } else if (calendar.runtime.shellNavigates("calendar", "up", event.key, "all", event.modifiers)) {
                     calendar.calendarPickerIndex = Math.max(0, calendar.calendarPickerIndex - 1);
                 } else if (event.key === calendar.runtime.shellKeyCode("calendar", "Return") || event.key === calendar.runtime.shellKeyCode("calendar", "Enter") || event.key === calendar.runtime.shellKeyCode("calendar", "Space")) {
                     calendar.toggleCalendarAt(calendar.calendarPickerIndex);
@@ -180,16 +180,16 @@ FocusScope {
             } else if (event.key === calendar.runtime.shellKeyCode("calendar", "Escape")) {
                 calendar.navigateBack();
                 event.accepted = true;
-            } else if (calendar.runtime.shellNavigates("calendar", "up", event.key) || event.key === calendar.runtime.shellKeyCode("calendar", "PageUp")) {
+            } else if (calendar.runtime.shellNavigates("calendar", "up", event.key, "all", event.modifiers) || event.key === calendar.runtime.shellKeyCode("calendar", "PageUp")) {
                 calendar.browseMonths(-1);
                 event.accepted = true;
-            } else if (calendar.runtime.shellNavigates("calendar", "down", event.key) || event.key === calendar.runtime.shellKeyCode("calendar", "PageDown")) {
+            } else if (calendar.runtime.shellNavigates("calendar", "down", event.key, "all", event.modifiers) || event.key === calendar.runtime.shellKeyCode("calendar", "PageDown")) {
                 calendar.browseMonths(1);
                 event.accepted = true;
-            } else if (calendar.runtime.shellNavigates("calendar", "left", event.key)) {
+            } else if (calendar.runtime.shellNavigates("calendar", "left", event.key, "all", event.modifiers)) {
                 calendar.browseDays(-1);
                 event.accepted = true;
-            } else if (calendar.runtime.shellNavigates("calendar", "right", event.key)) {
+            } else if (calendar.runtime.shellNavigates("calendar", "right", event.key, "all", event.modifiers)) {
                 calendar.browseDays(1);
                 event.accepted = true;
             } else if (calendar.runtime.shellMatchesHint("CalendarContent.scrollUp", event.key, event.modifiers) || calendar.runtime.shellMatchesHint("CalendarContent.scrollDown", event.key, event.modifiers)) {

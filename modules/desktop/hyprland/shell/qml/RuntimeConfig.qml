@@ -132,8 +132,8 @@ QtObject {
         return ShellKeybindings.keyCode(shellBindings, scope, slot, Qt);
     }
 
-    function shellNavigates(scope: string, direction: string, key: int, mode = "all"): bool {
-        return ShellKeybindings.navigates(shellBindings, scope, direction, key, Qt, mode);
+    function shellNavigates(scope: string, direction: string, key: int, mode = "all", modifiers = Qt.NoModifier, allowShift = false): bool {
+        return ShellKeybindings.navigates(shellBindings, scope, direction, key, Qt, mode, modifiers, allowShift);
     }
 
     function shellModifier(scope: string, slot: string, modifiers: int): bool {
@@ -160,8 +160,8 @@ QtObject {
         return ShellKeybindings.widgetChoiceHint(shellBindings, index);
     }
 
-    function shellNumberIndex(scope: string, key: int, count: int): int {
-        return ShellKeybindings.numberIndex(shellBindings, scope, key, count, Qt);
+    function shellNumberIndex(scope: string, key: int, count: int, modifiers = Qt.NoModifier): int {
+        return ShellKeybindings.numberIndex(shellBindings, scope, key, count, Qt, modifiers);
     }
 
     function shellNumberHint(scope: string, index: int): string {

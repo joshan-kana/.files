@@ -356,7 +356,7 @@ Item {
             break;
         case "WallpaperPolicy.mode":
             {
-                const modes = ["off", "interval", "dayNight"];
+                const modes = runtime.constraints.wallpaperRotation.mode.values;
                 (wallpaperModeChoices.itemAt((modes.indexOf(policy.mode) + 1) % modes.length) as ShellChoice)?.trigger();
                 break;
             }

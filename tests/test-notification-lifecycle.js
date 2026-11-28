@@ -120,7 +120,7 @@ test("history shortcut is handled before ordinary H navigation", () => {
     'center.runtime.shellMatchesHint("NotificationContent.history", event.key, event.modifiers)',
   );
   const nav = content.indexOf(
-    'center.runtime.shellNavigates("activity", "left", event.key)',
+    'center.runtime.shellNavigates("activity", "left", event.key',
   );
   assert.ok(history > 0 && nav > history);
 });

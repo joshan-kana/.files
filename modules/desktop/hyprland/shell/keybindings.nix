@@ -20,6 +20,10 @@
     Backtab = "SHIFT+TAB";
     BracketLeft = "[";
     BracketRight = "]";
+    Backquote = "`";
+    Backslash = "\\";
+    Semicolon = ";";
+    Apostrophe = "'";
     C = "C";
     Comma = ",";
     Control = "CTRL";
@@ -116,7 +120,7 @@
     "SystemContent.glassDetails" = "SHIFT+O";
     "SystemContent.nightLightDetails" = "SHIFT+T";
     "SystemContent.spectrumDetails" = "Y";
-    "SystemContent.musicReactiveDetails" = "U";
+    "SystemContent.musicReactiveDetails" = "SHIFT+;";
     "SystemContent.barDetails" = "SHIFT+J";
     "SystemContent.frameDetails" = "SHIFT+K";
     "SystemContent.motionDetails" = "SHIFT+X";
@@ -504,7 +508,7 @@
             ];
           };
           "SystemContent.motion" = "SHIFT+E";
-          "SystemContent.musicReactive" = "SHIFT+U";
+          "SystemContent.musicReactive" = ";";
           "SystemContent.network" = "F";
           "SystemContent.powerProfile" = "V";
           "SystemContent.reset" = "SHIFT+C";

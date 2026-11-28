@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import "ClockFormatting.js" as ClockFormatting
 import "DesktopIcons.js" as DesktopIcons
-import "ScreenEffects.js" as ScreenEffects
 import Quickshell
 
 FocusScope {
@@ -1522,89 +1521,59 @@ FocusScope {
                             onDetailsRequested: root.openVhs()
                         }
 
-                        QuickSettingChip {
+                        ScreenEffectTile {
+                            mode: "crt"
                             width: visualTiles.cellWidth(this)
                             height: Math.max(root.dashboardTileHeight, implicitHeight)
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
-                            icon: ScreenEffects.descriptor("crt").glyph
-                            actionId: "SystemContent.crtToggle"
-                            detailActionId: "SystemContent.crtDetails"
-                            title: "CRT"
-                            detailName: "CRT effect settings"
-                            active: root.appearance.screenEffectEnabled("crt")
-                            activeColor: root.theme.roleColor("reactive")
-                            onActivated: root.appearance.setScreenEffect("crt")
-                            onDetailsRequested: root.openSetting("screen.crt")
+                            appearance: root.appearance
+                            onDetailsRequested: root.openSetting("screen." + mode)
                         }
 
-                        QuickSettingChip {
+                        ScreenEffectTile {
+                            mode: "hologram"
                             width: visualTiles.cellWidth(this)
                             height: Math.max(root.dashboardTileHeight, implicitHeight)
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
-                            icon: ScreenEffects.descriptor("hologram").glyph
-                            actionId: "SystemContent.hologramToggle"
-                            detailActionId: "SystemContent.hologramDetails"
-                            title: "Holographic"
-                            detailName: "Holographic effect settings"
-                            active: root.appearance.screenEffectEnabled("hologram")
-                            activeColor: root.theme.roleColor("reactive")
-                            onActivated: root.appearance.setScreenEffect("hologram")
-                            onDetailsRequested: root.openSetting("screen.hologram")
+                            appearance: root.appearance
+                            onDetailsRequested: root.openSetting("screen." + mode)
                         }
 
-                        QuickSettingChip {
+                        ScreenEffectTile {
+                            mode: "glitch"
                             width: visualTiles.cellWidth(this)
                             height: Math.max(root.dashboardTileHeight, implicitHeight)
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
-                            icon: ScreenEffects.descriptor("glitch").glyph
-                            actionId: "SystemContent.glitchToggle"
-                            detailActionId: "SystemContent.glitchDetails"
-                            title: "Digital glitch"
-                            detailName: "Digital glitch effect settings"
-                            active: root.appearance.screenEffectEnabled("glitch")
-                            activeColor: root.theme.roleColor("reactive")
-                            onActivated: root.appearance.setScreenEffect("glitch")
-                            onDetailsRequested: root.openSetting("screen.glitch")
+                            appearance: root.appearance
+                            onDetailsRequested: root.openSetting("screen." + mode)
                         }
 
-                        QuickSettingChip {
+                        ScreenEffectTile {
+                            mode: "film"
                             width: visualTiles.cellWidth(this)
                             height: Math.max(root.dashboardTileHeight, implicitHeight)
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
-                            icon: ScreenEffects.descriptor("film").glyph
-                            actionId: "SystemContent.filmToggle"
-                            detailActionId: "SystemContent.filmDetails"
-                            title: "Film"
-                            detailName: "Film effect settings"
-                            active: root.appearance.screenEffectEnabled("film")
-                            activeColor: root.theme.roleColor("reactive")
-                            onActivated: root.appearance.setScreenEffect("film")
-                            onDetailsRequested: root.openSetting("screen.film")
+                            appearance: root.appearance
+                            onDetailsRequested: root.openSetting("screen." + mode)
                         }
 
-                        QuickSettingChip {
+                        ScreenEffectTile {
+                            mode: "monochrome"
                             width: visualTiles.cellWidth(this)
                             height: Math.max(root.dashboardTileHeight, implicitHeight)
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
-                            icon: ScreenEffects.descriptor("monochrome").glyph
-                            actionId: "SystemContent.monochromeToggle"
-                            detailActionId: "SystemContent.monochromeDetails"
-                            title: "Monochrome"
-                            detailName: "Monochrome effect settings"
-                            active: root.appearance.screenEffectEnabled("monochrome")
-                            activeColor: root.theme.roleColor("reactive")
-                            onActivated: root.appearance.setScreenEffect("monochrome")
-                            onDetailsRequested: root.openSetting("screen.monochrome")
+                            appearance: root.appearance
+                            onDetailsRequested: root.openSetting("screen." + mode)
                         }
 
                         QuickSettingChip {
@@ -2182,14 +2151,16 @@ FocusScope {
 
                 if (root.helpOpen) {
                     if (helpKey || event.key === root.runtime.shellKeyCode("controls", "Backspace")) {
-                        if ((event.key === root.runtime.shellKeyCode("controls", "Backspace")) && sessionPanel.open && sessionPanel.armedAction.length > 0)
-                            sessionPanel.invoke("cancelConfirmation");
-                        root.helpOpen = false;
+                        if (!event.isAutoRepeat) {
+                            if (event.key === root.runtime.shellKeyCode("controls", "Backspace") && sessionPanel.open && sessionPanel.armedAction.length > 0)
+                                sessionPanel.invoke("cancelConfirmation");
+                            root.helpOpen = false;
+                        }
                         event.accepted = true;
-                    } else if (root.runtime.shellNavigates("controls", "down", event.key)) {
+                    } else if (root.runtime.shellNavigates("controls", "down", event.key, "all", event.modifiers)) {
                         root.helpScrollRequested(1);
                         event.accepted = true;
-                    } else if (root.runtime.shellNavigates("controls", "up", event.key)) {
+                    } else if (root.runtime.shellNavigates("controls", "up", event.key, "all", event.modifiers)) {
                         root.helpScrollRequested(-1);
                         event.accepted = true;
                     } else if (event.key === root.runtime.shellKeyCode("controls", "D") || event.key === root.runtime.shellKeyCode("controls", "PageDown")) {
@@ -2203,7 +2174,8 @@ FocusScope {
                 }
 
                 if (helpKey) {
-                    root.helpOpen = true;
+                    if (!event.isAutoRepeat)
+                        root.helpOpen = true;
                     event.accepted = true;
                     return;
                 }
@@ -2268,16 +2240,16 @@ FocusScope {
                     } else if (event.key === root.runtime.shellKeyCode("controls", "Slash")) {
                         wallpaperPanel.invoke("enterSearch");
                         event.accepted = true;
-                    } else if (root.runtime.shellNavigates("controls", "left", event.key)) {
+                    } else if (root.runtime.shellNavigates("controls", "left", event.key, "all", event.modifiers)) {
                         wallpaperPanel.invoke("moveSelection", -1);
                         event.accepted = true;
-                    } else if (root.runtime.shellNavigates("controls", "right", event.key)) {
+                    } else if (root.runtime.shellNavigates("controls", "right", event.key, "all", event.modifiers)) {
                         wallpaperPanel.invoke("moveSelection", 1);
                         event.accepted = true;
-                    } else if (root.runtime.shellNavigates("controls", "up", event.key)) {
+                    } else if (root.runtime.shellNavigates("controls", "up", event.key, "all", event.modifiers)) {
                         wallpaperPanel.invoke("moveGrid", 0, -1);
                         event.accepted = true;
-                    } else if (root.runtime.shellNavigates("controls", "down", event.key)) {
+                    } else if (root.runtime.shellNavigates("controls", "down", event.key, "all", event.modifiers)) {
                         wallpaperPanel.invoke("moveGrid", 0, 1);
                         event.accepted = true;
                     } else if (event.key === root.runtime.shellKeyCode("controls", "U") || event.key === root.runtime.shellKeyCode("controls", "PageUp") || event.key === root.runtime.shellKeyCode("controls", "D") || event.key === root.runtime.shellKeyCode("controls", "PageDown")) {
@@ -2306,9 +2278,9 @@ FocusScope {
                             recordingsPanel.invoke("selectAllWords");
                         } else if (root.runtime.shellMatchesHint("RecordingLibrary.ocrCopy", event.key, event.modifiers) || root.runtime.shellMatchesHint("RecordingLibrary.copy", event.key, event.modifiers)) {
                             recordingsPanel.invoke("copyHighlightedText");
-                        } else if (!control && (root.runtime.shellNavigates("controls", "left", event.key))) {
+                        } else if (!control && (root.runtime.shellNavigates("controls", "left", event.key, "all", event.modifiers))) {
                             recordingsPanel.invoke("moveWordSelection", -1, shifted);
-                        } else if (!control && (root.runtime.shellNavigates("controls", "right", event.key))) {
+                        } else if (!control && (root.runtime.shellNavigates("controls", "right", event.key, "all", event.modifiers))) {
                             recordingsPanel.invoke("moveWordSelection", 1, shifted);
                         } else {
                             return;
@@ -2321,9 +2293,9 @@ FocusScope {
                             recordingsPanel.invoke("cancelDelete");
                         else
                             root.backFromDetail();
-                    } else if (root.runtime.shellNavigates("controls", "down", event.key)) {
+                    } else if (root.runtime.shellNavigates("controls", "down", event.key, "all", event.modifiers)) {
                         recordingsPanel.invoke("moveSelection", 1);
-                    } else if (root.runtime.shellNavigates("controls", "up", event.key)) {
+                    } else if (root.runtime.shellNavigates("controls", "up", event.key, "all", event.modifiers)) {
                         recordingsPanel.invoke("moveSelection", -1);
                     } else if (root.runtime.shellMatchesHint("RecordingLibrary.pageUp", event.key, event.modifiers) || event.key === root.runtime.shellKeyCode("controls", "PageUp")) {
                         recordingsPanel.invoke("moveSelection", -4);
@@ -2333,11 +2305,14 @@ FocusScope {
                         if (!event.isAutoRepeat)
                             recordingsPanel.invoke("requestDelete");
                     } else if (root.runtime.shellMatchesHint("RecordingLibrary.edit", event.key, event.modifiers)) {
-                        recordingsPanel.invoke("editSelected");
+                        if (!event.isAutoRepeat)
+                            recordingsPanel.invoke("editSelected");
                     } else if (root.runtime.shellMatchesHint("RecordingLibrary.copy", event.key, event.modifiers)) {
-                        recordingsPanel.invoke("copySelected");
+                        if (!event.isAutoRepeat)
+                            recordingsPanel.invoke("copySelected");
                     } else if (root.runtime.shellMatchesHint("RecordingLibrary.ocr", event.key, event.modifiers)) {
-                        recordingsPanel.invoke("showText");
+                        if (!event.isAutoRepeat)
+                            recordingsPanel.invoke("showText");
                     } else if (event.key === root.runtime.shellKeyCode("controls", "Return") || event.key === root.runtime.shellKeyCode("controls", "Enter")) {
                         if (!event.isAutoRepeat)
                             recordingsPanel.invoke("activateSelected");
@@ -2388,32 +2363,38 @@ FocusScope {
                     if (event.key === root.runtime.shellKeyCode("controls", "Backspace")) {
                         root.navigateBack();
                         event.accepted = true;
-                    } else if ((root.runtime.shellNavigates("controls", "up", event.key))) {
+                    } else if ((root.runtime.shellNavigates("controls", "up", event.key, "all", event.modifiers))) {
                         bluetoothPanel.invoke("moveSelection", -1);
                         event.accepted = true;
-                    } else if ((root.runtime.shellNavigates("controls", "down", event.key))) {
+                    } else if ((root.runtime.shellNavigates("controls", "down", event.key, "all", event.modifiers))) {
                         bluetoothPanel.invoke("moveSelection", 1);
                         event.accepted = true;
                     } else if (event.key === root.runtime.shellKeyCode("controls", "U") || event.key === root.runtime.shellKeyCode("controls", "PageUp") || event.key === root.runtime.shellKeyCode("controls", "PageDown") || (event.key === root.runtime.shellKeyCode("controls", "D") && !(root.runtime.shellModifier("controls", "Shift", event.modifiers)))) {
                         bluetoothPanel.invoke("moveHalfPage", (event.key === root.runtime.shellKeyCode("controls", "U") || event.key === root.runtime.shellKeyCode("controls", "PageUp")) ? -1 : 1);
                         event.accepted = true;
                     } else if (event.key === root.runtime.shellKeyCode("controls", "Return") || event.key === root.runtime.shellKeyCode("controls", "Enter")) {
-                        bluetoothPanel.invoke("activateSelected");
+                        if (!event.isAutoRepeat)
+                            bluetoothPanel.invoke("activateSelected");
                         event.accepted = true;
                     } else if (root.runtime.shellMatchesHint("BluetoothPanel.radio", event.key, event.modifiers)) {
-                        bluetoothPanel.invoke("toggleBluetooth");
+                        if (!event.isAutoRepeat)
+                            bluetoothPanel.invoke("toggleBluetooth");
                         event.accepted = true;
                     } else if (root.runtime.shellMatchesHint("BluetoothPanel.scan", event.key, event.modifiers)) {
-                        bluetoothPanel.invoke("toggleDiscovery");
+                        if (!event.isAutoRepeat)
+                            bluetoothPanel.invoke("toggleDiscovery");
                         event.accepted = true;
                     } else if (root.runtime.shellMatchesHint("BluetoothPanel.pair", event.key, event.modifiers)) {
-                        bluetoothPanel.invoke("pairSelected");
+                        if (!event.isAutoRepeat)
+                            bluetoothPanel.invoke("pairSelected");
                         event.accepted = true;
                     } else if (root.runtime.shellMatchesHint("BluetoothPanel.trust", event.key, event.modifiers)) {
-                        bluetoothPanel.invoke("toggleTrust");
+                        if (!event.isAutoRepeat)
+                            bluetoothPanel.invoke("toggleTrust");
                         event.accepted = true;
                     } else if (root.runtime.shellMatchesHint("BluetoothPanel.forget", event.key, event.modifiers)) {
-                        bluetoothPanel.invoke("forgetSelected");
+                        if (!event.isAutoRepeat)
+                            bluetoothPanel.invoke("forgetSelected");
                         event.accepted = true;
                     }
 
@@ -2429,16 +2410,16 @@ FocusScope {
                         else
                             root.backFromDetail();
                         event.accepted = true;
-                    } else if (root.runtime.shellNavigates("controls", "up", event.key)) {
+                    } else if (root.runtime.shellNavigates("controls", "up", event.key, "all", event.modifiers)) {
                         sessionPanel.invoke("moveGrid", 0, -1);
                         event.accepted = true;
-                    } else if (root.runtime.shellNavigates("controls", "down", event.key)) {
+                    } else if (root.runtime.shellNavigates("controls", "down", event.key, "all", event.modifiers)) {
                         sessionPanel.invoke("moveGrid", 0, 1);
                         event.accepted = true;
-                    } else if (root.runtime.shellNavigates("controls", "left", event.key)) {
+                    } else if (root.runtime.shellNavigates("controls", "left", event.key, "all", event.modifiers)) {
                         sessionPanel.invoke("moveGrid", -1, 0);
                         event.accepted = true;
-                    } else if (root.runtime.shellNavigates("controls", "right", event.key)) {
+                    } else if (root.runtime.shellNavigates("controls", "right", event.key, "all", event.modifiers)) {
                         sessionPanel.invoke("moveGrid", 1, 0);
                         event.accepted = true;
                     } else if (event.key === root.runtime.shellKeyCode("controls", "Return") || event.key === root.runtime.shellKeyCode("controls", "Enter")) {
@@ -2459,16 +2440,16 @@ FocusScope {
                     } else if (event.key === root.runtime.shellKeyCode("controls", "Backspace")) {
                         root.backFromDetail();
                         event.accepted = true;
-                    } else if ((root.runtime.shellNavigates("controls", "up", event.key))) {
+                    } else if ((root.runtime.shellNavigates("controls", "up", event.key, "all", event.modifiers))) {
                         themePanel.invoke("moveGrid", 0, -1);
                         event.accepted = true;
-                    } else if ((root.runtime.shellNavigates("controls", "down", event.key))) {
+                    } else if ((root.runtime.shellNavigates("controls", "down", event.key, "all", event.modifiers))) {
                         themePanel.invoke("moveGrid", 0, 1);
                         event.accepted = true;
-                    } else if (root.runtime.shellNavigates("controls", "left", event.key)) {
+                    } else if (root.runtime.shellNavigates("controls", "left", event.key, "all", event.modifiers)) {
                         themePanel.invoke("moveGrid", -1, 0);
                         event.accepted = true;
-                    } else if (root.runtime.shellNavigates("controls", "right", event.key)) {
+                    } else if (root.runtime.shellNavigates("controls", "right", event.key, "all", event.modifiers)) {
                         themePanel.invoke("moveGrid", 1, 0);
                         event.accepted = true;
                     } else if (event.key === root.runtime.shellKeyCode("controls", "U") || event.key === root.runtime.shellKeyCode("controls", "PageUp") || event.key === root.runtime.shellKeyCode("controls", "PageDown") || (event.key === root.runtime.shellKeyCode("controls", "D") && !(root.runtime.shellModifier("controls", "Shift", event.modifiers)))) {
@@ -2494,13 +2475,13 @@ FocusScope {
                         if (root.runtime.shellMatchesHint("NetworkPanel.saveProfile", event.key, event.modifiers)) {
                             if (!event.isAutoRepeat)
                                 networkPanel.invoke("saveProfile");
-                        } else if (root.runtime.shellNavigates("controls", "up", event.key)) {
+                        } else if (root.runtime.shellNavigates("controls", "up", event.key, "all", event.modifiers)) {
                             networkPanel.invoke("moveSelection", -1);
-                        } else if (root.runtime.shellNavigates("controls", "down", event.key)) {
+                        } else if (root.runtime.shellNavigates("controls", "down", event.key, "all", event.modifiers)) {
                             networkPanel.invoke("moveSelection", 1);
-                        } else if (root.runtime.shellNavigates("controls", "left", event.key)) {
+                        } else if (root.runtime.shellNavigates("controls", "left", event.key, "all", event.modifiers)) {
                             networkPanel.invoke("adjustProfileField", -1);
-                        } else if (root.runtime.shellNavigates("controls", "right", event.key)) {
+                        } else if (root.runtime.shellNavigates("controls", "right", event.key, "all", event.modifiers)) {
                             networkPanel.invoke("adjustProfileField", 1);
                         } else if ((event.key === root.runtime.shellKeyCode("controls", "Return") || event.key === root.runtime.shellKeyCode("controls", "Enter"))) {
                             if (!event.isAutoRepeat)
@@ -2529,10 +2510,10 @@ FocusScope {
                     if (event.key === root.runtime.shellKeyCode("controls", "Backspace")) {
                         root.navigateBack();
                         event.accepted = true;
-                    } else if ((root.runtime.shellNavigates("controls", "up", event.key))) {
+                    } else if ((root.runtime.shellNavigates("controls", "up", event.key, "all", event.modifiers))) {
                         networkPanel.invoke("moveSelection", -1);
                         event.accepted = true;
-                    } else if ((root.runtime.shellNavigates("controls", "down", event.key))) {
+                    } else if ((root.runtime.shellNavigates("controls", "down", event.key, "all", event.modifiers))) {
                         networkPanel.invoke("moveSelection", 1);
                         event.accepted = true;
                     } else if (event.key === root.runtime.shellKeyCode("controls", "U") || event.key === root.runtime.shellKeyCode("controls", "PageUp") || event.key === root.runtime.shellKeyCode("controls", "PageDown") || (event.key === root.runtime.shellKeyCode("controls", "D") && !(root.runtime.shellModifier("controls", "Shift", event.modifiers)))) {
@@ -2549,17 +2530,20 @@ FocusScope {
                             networkPanel.invoke("triggerRefresh");
                         event.accepted = true;
                     } else if (root.runtime.shellMatchesHint("NetworkPanel.saved", event.key, event.modifiers) && !networkPanel.detailView) {
-                        networkPanel.invoke("toggleSavedView");
+                        if (!event.isAutoRepeat)
+                            networkPanel.invoke("toggleSavedView");
                         event.accepted = true;
                     } else if (root.runtime.shellMatchesHint("NetworkPanel.refresh", event.key, event.modifiers) && networkPanel.savedView && !networkPanel.detailView) {
                         if (!event.isAutoRepeat)
                             networkPanel.invoke("triggerRefresh");
                         event.accepted = true;
                     } else if (root.runtime.shellMatchesHint("NetworkPanel.toggleWifi", event.key, event.modifiers) && !networkPanel.savedView) {
-                        networkPanel.invoke("toggleWifi");
+                        if (!event.isAutoRepeat)
+                            networkPanel.invoke("toggleWifi");
                         event.accepted = true;
                     } else if (root.runtime.shellMatchesHint("NetworkPanel.advanced", event.key, event.modifiers)) {
-                        Quickshell.execDetached([root.runtime.networkConnectionEditor]);
+                        if (!event.isAutoRepeat)
+                            Quickshell.execDetached([root.runtime.networkConnectionEditor]);
                         event.accepted = true;
                     }
 
@@ -2567,7 +2551,7 @@ FocusScope {
                 }
 
                 if (trayMenu.open) {
-                    if (event.key === root.runtime.shellKeyCode("controls", "Backspace") || (root.runtime.shellNavigates("controls", "left", event.key))) {
+                    if (event.key === root.runtime.shellKeyCode("controls", "Backspace") || (root.runtime.shellNavigates("controls", "left", event.key, "all", event.modifiers))) {
                         if ((event.key === root.runtime.shellKeyCode("controls", "Backspace")) && trayMenu.panel && trayMenu.panel.stack.length <= 1) {
                             // A tray menu opened inside Controls has no hub
                             // navigation history. Dismiss it locally instead
@@ -2580,17 +2564,18 @@ FocusScope {
                             trayMenu.invoke("goBack");
                         }
                         event.accepted = true;
-                    } else if ((root.runtime.shellNavigates("controls", "up", event.key))) {
+                    } else if ((root.runtime.shellNavigates("controls", "up", event.key, "all", event.modifiers))) {
                         trayMenu.invoke("moveSelection", -1);
                         event.accepted = true;
-                    } else if ((root.runtime.shellNavigates("controls", "down", event.key))) {
+                    } else if ((root.runtime.shellNavigates("controls", "down", event.key, "all", event.modifiers))) {
                         trayMenu.invoke("moveSelection", 1);
                         event.accepted = true;
                     } else if (event.key === root.runtime.shellKeyCode("controls", "U") || event.key === root.runtime.shellKeyCode("controls", "PageUp") || event.key === root.runtime.shellKeyCode("controls", "PageDown") || (event.key === root.runtime.shellKeyCode("controls", "D") && !(root.runtime.shellModifier("controls", "Shift", event.modifiers)))) {
                         trayMenu.invoke("moveHalfPage", (event.key === root.runtime.shellKeyCode("controls", "U") || event.key === root.runtime.shellKeyCode("controls", "PageUp")) ? -1 : 1);
                         event.accepted = true;
-                    } else if (event.key === root.runtime.shellKeyCode("controls", "Return") || event.key === root.runtime.shellKeyCode("controls", "Enter") || (root.runtime.shellNavigates("controls", "right", event.key))) {
-                        trayMenu.invoke("activateSelected");
+                    } else if (event.key === root.runtime.shellKeyCode("controls", "Return") || event.key === root.runtime.shellKeyCode("controls", "Enter") || (root.runtime.shellNavigates("controls", "right", event.key, "all", event.modifiers))) {
+                        if (!event.isAutoRepeat)
+                            trayMenu.invoke("activateSelected");
                         event.accepted = true;
                     }
 
@@ -2620,13 +2605,13 @@ FocusScope {
                 if (root.selectedSlider.length > 0) {
                     if (event.key === root.runtime.shellKeyCode("controls", "Backspace")) {
                         root.selectedSlider = "";
-                    } else if (!shifted && (root.runtime.shellNavigates("controls", "up", event.key))) {
+                    } else if (!shifted && (root.runtime.shellNavigates("controls", "up", event.key, "all", event.modifiers))) {
                         root.cycleSlider(-1);
-                    } else if (!shifted && (root.runtime.shellNavigates("controls", "down", event.key))) {
+                    } else if (!shifted && (root.runtime.shellNavigates("controls", "down", event.key, "all", event.modifiers))) {
                         root.cycleSlider(1);
-                    } else if (!shifted && (root.runtime.shellNavigates("controls", "left", event.key))) {
+                    } else if (!shifted && (root.runtime.shellNavigates("controls", "left", event.key, "all", event.modifiers))) {
                         root.adjustSlider(-1);
-                    } else if (!shifted && (root.runtime.shellNavigates("controls", "right", event.key))) {
+                    } else if (!shifted && (root.runtime.shellNavigates("controls", "right", event.key, "all", event.modifiers))) {
                         root.adjustSlider(1);
                     } else if (event.key === root.runtime.shellKeyCode("controls", "Return") || event.key === root.runtime.shellKeyCode("controls", "Enter")) {
                         root.activateSlider();
@@ -2635,7 +2620,7 @@ FocusScope {
                         // semantics; only editing keys belong to the slider.
                         root.selectedSlider = "";
                     }
-                    if (event.key === root.runtime.shellKeyCode("controls", "Backspace") || (!shifted && (root.runtime.shellNavigates("controls", "left", event.key) || root.runtime.shellNavigates("controls", "right", event.key) || root.runtime.shellNavigates("controls", "up", event.key) || root.runtime.shellNavigates("controls", "down", event.key))) || event.key === root.runtime.shellKeyCode("controls", "Return") || event.key === root.runtime.shellKeyCode("controls", "Enter")) {
+                    if (event.key === root.runtime.shellKeyCode("controls", "Backspace") || (!shifted && (root.runtime.shellNavigates("controls", "left", event.key, "all", event.modifiers) || root.runtime.shellNavigates("controls", "right", event.key, "all", event.modifiers) || root.runtime.shellNavigates("controls", "up", event.key, "all", event.modifiers) || root.runtime.shellNavigates("controls", "down", event.key, "all", event.modifiers))) || event.key === root.runtime.shellKeyCode("controls", "Return") || event.key === root.runtime.shellKeyCode("controls", "Enter")) {
                         event.accepted = true;
                         return;
                     }
@@ -2654,13 +2639,13 @@ FocusScope {
                     mediaCard.triggerTransport("back", event.isAutoRepeat);
                 } else if (root.runtime.shellMatchesHint("MediaTransport.forwardCompact", event.key, event.modifiers)) {
                     mediaCard.triggerTransport("forward", event.isAutoRepeat);
-                } else if (event.modifiers === Qt.NoModifier && (root.runtime.shellNavigates("controls", "left", event.key))) {
+                } else if (event.modifiers === Qt.NoModifier && (root.runtime.shellNavigates("controls", "left", event.key, "all", event.modifiers))) {
                     root.adjustSelectedAudio(-root.system.volumeStep);
-                } else if (event.modifiers === Qt.NoModifier && (root.runtime.shellNavigates("controls", "right", event.key))) {
+                } else if (event.modifiers === Qt.NoModifier && (root.runtime.shellNavigates("controls", "right", event.key, "all", event.modifiers))) {
                     root.adjustSelectedAudio(root.system.volumeStep);
-                } else if (event.modifiers === Qt.NoModifier && (root.runtime.shellNavigates("controls", "up", event.key))) {
+                } else if (event.modifiers === Qt.NoModifier && (root.runtime.shellNavigates("controls", "up", event.key, "all", event.modifiers))) {
                     root.moveAudioSelection(-1);
-                } else if (event.modifiers === Qt.NoModifier && (root.runtime.shellNavigates("controls", "down", event.key))) {
+                } else if (event.modifiers === Qt.NoModifier && (root.runtime.shellNavigates("controls", "down", event.key, "all", event.modifiers))) {
                     root.moveAudioSelection(1);
                 } else if (root.runtime.shellMatchesHint("MediaTransport.playCompact", event.key, event.modifiers)) {
                     mediaCard.triggerTransport("play", event.isAutoRepeat);

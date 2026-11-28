@@ -113,7 +113,7 @@ PanelWindow {
     // Hub scrolling is a fallback only for views without their own paging
     // owner. Calendar, Activity and collection details consume paging locally.
     readonly property bool hostPageShortcutsEnabled: expansionState.hasCurrent && !helpVisible && (expansionState.currentName === "weather" || expansionState.currentName === "media" || (expansionState.currentName === "system" && (!detailVisible || !!systemContent?.detailUsesHostPaging)))
-    readonly property bool detailVisible: !!systemContent && (systemContent.settingsOpen || systemContent.vhsOpen || systemContent.trayMenuOpen || systemContent.networkOpen || systemContent.bluetoothOpen || systemContent.themeOpen || systemContent.wallpaperOpen || systemContent.sessionOpen || systemContent.resourcesOpen || systemContent.recordingsOpen || systemContent.statusOpen || systemContent.mixerOpen)
+    readonly property bool detailVisible: !!systemContent && systemContent.detailsVisible
     readonly property string helpCaption: systemContent ? systemContent.helpTitle : mediaContent ? "Now Playing controls" : expansionState.currentName === "activity" ? "Activity controls" : expansionState.currentName === "weather" ? "Weather controls" : "Home controls"
     readonly property var otherHelpKeys: expansionState.currentName === "activity" ? [
         {
@@ -498,6 +498,7 @@ PanelWindow {
     // Give Home, Weather and Activity the same key and contextual overlay.
     Shortcut {
         sequence: host.runtime.shellSequence("ShellExpansionHost.helpOpen")
+        autoRepeat: false
         context: Qt.ApplicationShortcut
         enabled: host.expansionState.hasCurrent && !host.systemContent && !host.mediaContent && !(host.activityContent && host.activityContent.replyEditing)
         onActivated: host.toggleHelp()
@@ -505,6 +506,7 @@ PanelWindow {
 
     Shortcut {
         sequence: host.runtime.shellSequence("ShellExpansionHost.helpClose")
+        autoRepeat: false
         context: Qt.ApplicationShortcut
         enabled: host.otherHelpOpen && !host.systemContent && !host.mediaContent
         onActivated: host.otherHelpOpen = false
@@ -594,6 +596,7 @@ PanelWindow {
     // Nested details remain navigable unless an editor or confirmation owns input.
     Shortcut {
         sequence: host.runtime.shortcutHint("hubPrevious")
+        autoRepeat: false
         context: Qt.ApplicationShortcut
         enabled: host.tabShortcutsEnabled && host.runtime.shortcutHint("hubPrevious").length > 0
         onActivated: host.cycleTab(-1)
@@ -601,6 +604,7 @@ PanelWindow {
 
     Shortcut {
         sequence: host.runtime.shortcutHint("hubNext")
+        autoRepeat: false
         context: Qt.ApplicationShortcut
         enabled: host.tabShortcutsEnabled && host.runtime.shortcutHint("hubNext").length > 0
         onActivated: host.cycleTab(1)
@@ -608,6 +612,7 @@ PanelWindow {
 
     Shortcut {
         sequence: host.runtime.shellSequence("ShellExpansionHost.stopRecording")
+        autoRepeat: false
         context: Qt.ApplicationShortcut
         enabled: host.expansionState.hasCurrent && host.recordingState.capturing
         onActivated: host.recordingStopRequested()
@@ -715,6 +720,7 @@ PanelWindow {
         }
     }
 
+    property int closeRetryCount: 0
     function finishCloseIfSettled(): void {
         if (expansionState.hasCurrent || !closing)
             return;
@@ -723,9 +729,11 @@ PanelWindow {
         const widthGoal = Math.min(viewportWidth, closeWidth);
         const heightGoal = Math.min(viewportHeight, closeHeight);
         if (Math.abs(shellSurface.width - widthGoal) > 0.75 || Math.abs(shellSurface.height - heightGoal) > 0.75) {
-            closeTimer.interval = 16;
-            closeTimer.restart();
-            return;
+            if (++closeRetryCount <= Math.max(4, Math.ceil(motion.morph / 16))) {
+                closeTimer.interval = 16;
+                closeTimer.restart();
+                return;
+            }
         }
         closing = false;
         expansionState.finishClose();
@@ -754,6 +762,7 @@ PanelWindow {
             if (host.expansionState.hasCurrent) {
                 const reversingClose = host.closing;
                 closeTimer.stop();
+                host.closeRetryCount = 0;
                 host.closing = false;
                 host.themeTerminalActive = false;
                 // Reversals expand directly from the geometry on screen;
@@ -770,6 +779,7 @@ PanelWindow {
                 host.closeWidth = Math.max(1, host.compactWidth);
                 host.closeHeight = Math.max(1, host.compactHeight);
                 host.closing = true;
+                host.closeRetryCount = 0;
                 host.contentExpanded = false;
                 closeTimer.interval = host.motion.morph;
                 closeTimer.restart();

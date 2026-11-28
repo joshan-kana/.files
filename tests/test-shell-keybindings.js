@@ -41,7 +41,7 @@ Object.assign(Qt, {
 });
 const f = vm.runInNewContext(
   fs.readFileSync(path.join(qmlDir, "ShellKeybindings.js"), "utf8") +
-    "\n({assigned,keyCode,navigates,navigationHint,modifier,hint,sequence,matchesHint,numberIndex,numberHint,widgetChoiceIndex,widgetChoiceHint})",
+    "\n({assigned,keyCode,navigates,navigationHint,modifier,hint,sequence,matchesHint,matchesChord,numberIndex,numberHint,widgetChoiceIndex,widgetChoiceHint})",
 );
 const files = fs.readdirSync(qmlDir).filter((name) => name.endsWith(".qml"));
 
@@ -300,6 +300,7 @@ test("semantic action bindings change their handler and hint without changing a 
   for (const match of controls.matchAll(
     /(?:detailActionId|actionId): "([^"]+)"/g,
   )) {
+    if (match[1] === "SystemContent.") continue;
     assert.ok(hints[match[1]] || actionAssignments[match[1]], match[1]);
   }
   const frame = {
@@ -368,20 +369,19 @@ test("compact detail open actions follow remapped keys in labels and dispatch", 
   }
 });
 
-test("reactive details have independent plain-letter assignments", () => {
-  for (const [name, key] of [
-    ["musicReactiveDetails", "U"],
-    ["spectrumDetails", "Y"],
+test("reactive and spectrum details keep distinct positional chords", () => {
+  for (const [action, chord, key, modifiers] of [
+    ["SystemContent.musicReactiveDetails", "SHIFT+;", 59, Qt.ShiftModifier],
+    ["SystemContent.spectrumDetails", "Y", 89, 0],
   ]) {
-    const id = "SystemContent." + name;
-    assert.equal(f.hint(registry, id), key);
-    assert.equal(f.matchesHint(registry, id, key.charCodeAt(0), 0, Qt), true);
+    assert.equal(f.hint(registry, action), chord);
+    assert.equal(f.matchesHint(registry, action, key, modifiers, Qt), true);
     assert.equal(
-      f.matchesHint(registry, id, key.charCodeAt(0), Qt.ShiftModifier, Qt),
+      f.matchesHint(registry, action, key, modifiers ^ Qt.ShiftModifier, Qt),
       false,
     );
     assert.equal(
-      f.matchesHint(registry, id, key.charCodeAt(0), Qt.AltModifier, Qt),
+      f.matchesHint(registry, action, key, modifiers | Qt.AltModifier, Qt),
       false,
     );
   }
@@ -453,7 +453,12 @@ test("dashboard direct bindings use unique letters or explicitly assigned effect
       )
     )
       assert.match(key, /^[0-9]$/, action);
-    else assert.match(key, /^(?:SHIFT\+)?[A-Z]$/, action);
+    else
+      assert.match(
+        key,
+        /^(?:SHIFT\+)?(?:[A-Z0-9]|[;\x27,./[\]\\\x60\-=])$/,
+        action,
+      );
     assert.ok(!seen.has(key), action + " collides with " + seen.get(key));
     seen.set(key, action);
   }
@@ -634,6 +639,81 @@ test("single chord resolution handles shifted symbols and Qt Backtab without int
   assert.equal(f.matchesHint(remapped, action, Qt.Key_Slash, shift, Qt), false);
 });
 
+test("US printable keys and shifted glyph events use exact physical modifiers", () => {
+  for (const [binding, base, shifted] of [
+    ["SHIFT+1", 49, 33],
+    ["SHIFT+;", 59, 58],
+    ["SHIFT+'", 39, 34],
+    ["SHIFT+[", Qt.Key_BracketLeft, 123],
+    ["SHIFT+/", Qt.Key_Slash, Qt.Key_Question],
+  ]) {
+    assert.equal(
+      f.matchesChord(binding, base, Qt.ShiftModifier, Qt),
+      true,
+      binding + " base",
+    );
+    assert.equal(
+      f.matchesChord(binding, shifted, Qt.ShiftModifier, Qt),
+      true,
+      binding + " glyph",
+    );
+    assert.equal(
+      f.matchesChord(binding, base, 0, Qt),
+      false,
+      binding + " unshifted",
+    );
+    assert.equal(
+      f.matchesChord(binding, base, Qt.ShiftModifier | Qt.AltModifier, Qt),
+      false,
+      binding + " extra modifier",
+    );
+  }
+  assert.equal(f.numberIndex(registry, "overview", 49, 9, Qt, 0), 0);
+  assert.equal(
+    f.numberIndex(registry, "overview", 49, 9, Qt, Qt.ShiftModifier),
+    -1,
+  );
+  assert.equal(
+    f.navigates(registry, "controls", "left", 72, Qt, "all", Qt.ShiftModifier),
+    false,
+  );
+  assert.equal(
+    f.navigates(
+      registry,
+      "controls",
+      "left",
+      72,
+      Qt,
+      "all",
+      Qt.ControlModifier,
+    ),
+    false,
+  );
+  assert.equal(
+    f.navigates(
+      registry,
+      "resize",
+      "left",
+      72,
+      Qt,
+      "all",
+      Qt.ShiftModifier,
+      true,
+    ),
+    true,
+  );
+  assert.equal(
+    f.matchesHint(
+      registry,
+      "SystemContent.musicReactiveDetails",
+      58,
+      Qt.ShiftModifier,
+      Qt,
+    ),
+    true,
+  );
+});
+
 test("action-based help follows remaps without becoming an executable shortcut", () => {
   const legend =
     "SystemContent.legend.spectrum_reactive_windows_glass_bar_frame_motion";
@@ -782,10 +862,10 @@ test("five individual screen effects have collision-free numeric toggle and deta
     .split("id: mediaMatrix")[0];
   const chords = new Map();
   for (const [, action] of visual.matchAll(
-    /(?:actionId|detailActionId): "([^"]+)"/g,
+    /(?:actionId|detailActionId): "(SystemContent\.[A-Za-z0-9]+)"/g,
   )) {
     const chord = f.hint(registry, action);
-    assert.match(chord, /^(?:(?:SHIFT\+)?[A-Z]|[0-9])$/, action);
+    assert.match(chord, /^(?:SHIFT\+)?[A-Z0-9;]$/, action);
     assert.equal(
       chords.has(chord),
       false,
@@ -800,20 +880,37 @@ test("five individual screen effects have collision-free numeric toggle and deta
     ["film", "7", "8"],
     ["monochrome", "9", "0"],
   ];
+  const effects = vm.runInNewContext(
+    fs.readFileSync(path.join(qmlDir, "ScreenEffects.js"), "utf8") +
+      "\n({modes})",
+  );
+  assert.deepEqual(
+    Array.from(effects.modes),
+    bindings.map(([mode]) => mode),
+  );
+  const effectTile = fs.readFileSync(
+    path.join(qmlDir, "ScreenEffectTile.qml"),
+    "utf8",
+  );
+  assert.match(effectTile, /actionId: "SystemContent\." \+ mode \+ "Toggle"/);
+  assert.match(
+    effectTile,
+    /detailActionId: "SystemContent\." \+ mode \+ "Details"/,
+  );
   for (const [mode, toggle, details] of bindings) {
     assert.equal(f.hint(registry, "SystemContent." + mode + "Toggle"), toggle);
     assert.equal(
       f.hint(registry, "SystemContent." + mode + "Details"),
       details,
     );
-    assert.ok(visual.includes('actionId: "SystemContent.' + mode + 'Toggle"'));
-    assert.ok(
-      visual.includes('detailActionId: "SystemContent.' + mode + 'Details"'),
+    assert.ok(visual.includes('mode: "' + mode + '"'), mode);
+    assert.match(
+      visual,
+      /onDetailsRequested: root\.openSetting\("screen\." \+ mode\)/,
     );
-    assert.ok(
-      visual.includes(
-        'onDetailsRequested: root.openSetting("screen.' + mode + '")',
-      ),
+    assert.match(
+      effectTile,
+      /onActivated: appearance\.setScreenEffect\(mode\)/,
     );
     assert.equal(
       f.matchesHint(

@@ -64,9 +64,9 @@ Item {
     function handleKey(key: int, modifiers: int, autoRepeat: bool): bool {
         const selector = diskSelector.expanded ? diskSelector : intervalSelector.expanded ? intervalSelector : historySelector.expanded ? historySelector : null;
         if (selector) {
-            if (runtime.shellNavigates("controls", "up", key))
+            if (runtime.shellNavigates("controls", "up", key, "all", modifiers))
                 selector.moveHighlight(-1);
-            else if (runtime.shellNavigates("controls", "down", key))
+            else if (runtime.shellNavigates("controls", "down", key, "all", modifiers))
                 selector.moveHighlight(1);
             else if (key === runtime.shellKeyCode("controls", "Return") || key === runtime.shellKeyCode("controls", "Enter")) {
                 if (!autoRepeat)

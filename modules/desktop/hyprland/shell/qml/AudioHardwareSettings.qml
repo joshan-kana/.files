@@ -188,9 +188,9 @@ Column {
             return true;
         }
         if (openSelector) {
-            if (runtime.shellNavigates("mixer", "up", key))
+            if (runtime.shellNavigates("mixer", "up", key, "all", modifiers))
                 openSelector.moveHighlight(-1);
-            else if (runtime.shellNavigates("mixer", "down", key))
+            else if (runtime.shellNavigates("mixer", "down", key, "all", modifiers))
                 openSelector.moveHighlight(1);
             else if (runtime.shellMatchesHint("AudioHardwareSettings.apply", key, modifiers) || (key === runtime.shellKeyCode("mixer", "Enter") && modifiers === Qt.NoModifier)) {
                 if (!autoRepeat)
@@ -201,15 +201,15 @@ Column {
         if (runtime.shellMatchesHint("AudioHardwareSettings.refresh", key, modifiers)) {
             if (!autoRepeat)
                 refreshAction.trigger();
-        } else if (runtime.shellNavigates("mixer", "left", key)) {
+        } else if (runtime.shellNavigates("mixer", "left", key, "all", modifiers)) {
             if (!autoRepeat)
                 moveDevice(-1);
-        } else if (runtime.shellNavigates("mixer", "right", key)) {
+        } else if (runtime.shellNavigates("mixer", "right", key, "all", modifiers)) {
             if (!autoRepeat)
                 moveDevice(1);
-        } else if (runtime.shellNavigates("mixer", "up", key)) {
+        } else if (runtime.shellNavigates("mixer", "up", key, "all", modifiers)) {
             moveSelection(-1);
-        } else if (runtime.shellNavigates("mixer", "down", key)) {
+        } else if (runtime.shellNavigates("mixer", "down", key, "all", modifiers)) {
             moveSelection(1);
         } else if (key === runtime.shellKeyCode("mixer", "Return") || key === runtime.shellKeyCode("mixer", "Enter")) {
             if (!autoRepeat)

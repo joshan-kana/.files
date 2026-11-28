@@ -151,7 +151,7 @@ test("status is a Controls detail with shared data and nested Escape", () => {
     ),
     /onCloseRequested: root\.backFromDetail\(\)/,
   );
-  assert.match(host, /systemContent\.statusOpen/);
+  assert.match(host, /systemContent\.detailsVisible/);
   assert.match(shell, /keyboard: qmlKeyboard[\s\S]*?recording: qmlRecording/);
   assert.deepEqual(shellHints["SystemContent.statusInspection"], {
     scope: "controls",

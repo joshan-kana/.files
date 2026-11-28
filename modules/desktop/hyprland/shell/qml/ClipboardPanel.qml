@@ -492,13 +492,13 @@ Item {
                                 else
                                     panel.hide();
                                 event.accepted = true;
-                            } else if (panel.runtime.shellNavigates("clipboard", "down", event.key, "arrows")) {
+                            } else if (panel.runtime.shellNavigates("clipboard", "down", event.key, "arrows", event.modifiers)) {
                                 if (panel.actionMode)
                                     panel.actionIndex = Math.min(panel.visibleEntries.length - 1, panel.actionIndex + 1);
                                 else
                                     panel.selectedIndex = Math.min(panel.filteredEntries.length - 1, panel.selectedIndex + 1);
                                 event.accepted = true;
-                            } else if (panel.runtime.shellNavigates("clipboard", "up", event.key, "arrows")) {
+                            } else if (panel.runtime.shellNavigates("clipboard", "up", event.key, "arrows", event.modifiers)) {
                                 if (panel.actionMode)
                                     panel.actionIndex = Math.max(0, panel.actionIndex - 1);
                                 else
@@ -592,12 +592,12 @@ Item {
                             panel.toggleActions();
                         else
                             panel.hide();
-                    } else if (panel.runtime.shellNavigates("clipboard", "down", event.key)) {
+                    } else if (panel.runtime.shellNavigates("clipboard", "down", event.key, "all", event.modifiers)) {
                         if (panel.actionMode)
                             panel.actionIndex = Math.min(panel.visibleEntries.length - 1, panel.actionIndex + 1);
                         else
                             panel.selectedIndex = Math.min(panel.filteredEntries.length - 1, panel.selectedIndex + 1);
-                    } else if (panel.runtime.shellNavigates("clipboard", "up", event.key)) {
+                    } else if (panel.runtime.shellNavigates("clipboard", "up", event.key, "all", event.modifiers)) {
                         if (panel.actionMode)
                             panel.actionIndex = Math.max(0, panel.actionIndex - 1);
                         else

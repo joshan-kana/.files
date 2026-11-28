@@ -9,6 +9,7 @@ QtObject {
     required property string category
     required property var defaults
     property var constraints: ({})
+    property var objectConstraints: ({})
     property string location: "file://" + (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/desktop-shell/preferences.ini"
     property Settings backend: Settings {
         id: persisted
@@ -32,19 +33,21 @@ QtObject {
         return Object.prototype.hasOwnProperty.call(overrides, key) && valid(key, overrides[key]);
     }
 
+    function validValue(value: var, baseline: var, rule: var): bool {
+        if (value === null || typeof value !== typeof baseline)
+            return false;
+        if (typeof value === "object") {
+            if (!value || !baseline || Array.isArray(value) || Array.isArray(baseline))
+                return false;
+            return Object.keys(value).every(name => Object.prototype.hasOwnProperty.call(baseline, name) && validValue(value[name], baseline[name], rule?.[name]));
+        }
+        if (typeof value === "number" && (!Number.isFinite(value) || rule?.integer && !Number.isInteger(value) || rule?.min !== undefined && value < rule.min || rule?.max !== undefined && value > rule.max))
+            return false;
+        return !rule?.values || rule.values.includes(value);
+    }
+
     function valid(key: string, value: var): bool {
-        if (!Object.prototype.hasOwnProperty.call(defaults, key) || value === null || typeof value !== typeof defaults[key])
-            return false;
-        if (typeof value === "number" && !Number.isFinite(value) || typeof value === "object" && Array.isArray(value))
-            return false;
-        const rule = constraints[key];
-        if (!rule)
-            return true;
-        if (rule.values && !rule.values.includes(value))
-            return false;
-        if (typeof value === "number" && (rule.integer && !Number.isInteger(value) || rule.min !== undefined && value < rule.min || rule.max !== undefined && value > rule.max))
-            return false;
-        return true;
+        return Object.prototype.hasOwnProperty.call(defaults, key) && validValue(value, defaults[key], objectConstraints[key] || constraints[key]);
     }
 
     function value(key: string): var {

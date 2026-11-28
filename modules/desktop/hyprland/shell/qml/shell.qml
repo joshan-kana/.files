@@ -332,7 +332,7 @@ ShellRoot {
         attackMultiplier: qmlAppearance.spectrumAttack
         releaseMultiplier: qmlAppearance.spectrumRelease
         // No DSP client unless a visible spectrum consumer needs live audio.
-        active: visualizerSubscribers > 0 || root.wallpaperSpectrumEnabled || root.musicReactiveSurfaceVisible || atmosphereReactive.effectSubscribers > 0
+        active: visualizerSubscribers > 0 || wallpaperVisuals.demandEligible || root.musicReactiveSurfaceVisible || atmosphereReactive.effectSubscribers > 0
     }
 
     MusicReactiveState {
@@ -358,6 +358,7 @@ ShellRoot {
     }
 
     WallpaperSpectrum {
+        id: wallpaperVisuals
         runtime: root.runtimeRef
         spectrum: root.spectrumRef
         theme: root.themeRef

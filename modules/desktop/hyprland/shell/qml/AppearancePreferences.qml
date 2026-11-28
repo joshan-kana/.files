@@ -14,6 +14,29 @@ QtObject {
         category: "Appearance"
         defaults: appearance.runtime.appearanceDefaults
         constraints: appearance.runtime.constraints.appearance
+        objectConstraints: {
+            const bounds = appearance.runtime.constraints.appearance;
+            return {
+                atmosphereTuning: bounds.atmosphereMode.values.reduce((result, mode) => {
+                    result[mode] = {
+                        opacity: bounds.atmosphereOpacity,
+                        speed: bounds.atmosphereSpeed
+                    };
+                    return result;
+                }, {}),
+                atmosphereReactive: {
+                    sensitivity: bounds.musicReactiveSensitivity,
+                    attack: bounds.musicReactiveAttack,
+                    release: bounds.musicReactiveRelease,
+                    smoothing: bounds.musicReactiveSmoothing,
+                    emphasis: bounds.musicReactiveEmphasis
+                },
+                screenEffectTuning: Object.keys(appearance.runtime.appearanceDefaults.screenEffectTuning).reduce((result, mode) => {
+                    result[mode] = bounds.screenEffectTuning;
+                    return result;
+                }, {})
+            };
+        }
     }
 
     readonly property bool atmosphereEnabled: effective("atmosphereEnabled")
@@ -159,28 +182,7 @@ QtObject {
     readonly property real spectrumRelease: effective("spectrumRelease")
     readonly property real spectrumDensity: effective("spectrumDensity")
     readonly property real spectrumOpacity: effective("spectrumOpacity")
-    readonly property var spectrumSurfaces: [
-        {
-            key: "wallpaperVisualizerMode",
-            enabledKey: "wallpaperSpectrumEnabled",
-            title: "Wallpaper"
-        },
-        {
-            key: "islandVisualizerMode",
-            enabledKey: "islandVisualizerEnabled",
-            title: "Media island"
-        },
-        {
-            key: "controlsVisualizerMode",
-            enabledKey: "controlsVisualizerEnabled",
-            title: "Controls media"
-        },
-        {
-            key: "mediaVisualizerMode",
-            enabledKey: "mediaVisualizerEnabled",
-            title: "Now Playing"
-        }
-    ]
+    readonly property var spectrumSurfaces: runtime.constraints.appearance.spectrumSurfaces
     readonly property var spectrumParameters: [
         {
             key: "spectrumSensitivity",

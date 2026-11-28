@@ -740,9 +740,9 @@ FocusScope {
                 if (center.appSettingsOpen) {
                     if (event.key === center.runtime.shellKeyCode("activity", "Escape") || event.key === center.runtime.shellKeyCode("activity", "Backspace")) {
                         center.appSettingsOpen = false;
-                    } else if (center.runtime.shellNavigates("activity", "down", event.key)) {
+                    } else if (center.runtime.shellNavigates("activity", "down", event.key, "all", event.modifiers)) {
                         appSettings.move(1);
-                    } else if (center.runtime.shellNavigates("activity", "up", event.key)) {
+                    } else if (center.runtime.shellNavigates("activity", "up", event.key, "all", event.modifiers)) {
                         appSettings.move(-1);
                     } else if (!event.isAutoRepeat && center.runtime.shellMatchesHint("NotificationCard.defaults", event.key, event.modifiers)) {
                         appSettings.reset();
@@ -794,18 +794,18 @@ FocusScope {
                 } else if (event.key === center.runtime.shellKeyCode("activity", "Escape")) {
                     center.navigateBack();
                     event.accepted = true;
-                } else if (center.runtime.shellNavigates("activity", "up", event.key)) {
+                } else if (center.runtime.shellNavigates("activity", "up", event.key, "all", event.modifiers)) {
                     center.navigate(-1);
                     event.accepted = true;
-                } else if (center.runtime.shellNavigates("activity", "down", event.key)) {
+                } else if (center.runtime.shellNavigates("activity", "down", event.key, "all", event.modifiers)) {
                     center.navigate(1);
                     event.accepted = true;
                 } else if (center.runtime.shellMatchesHint("NotificationContent.history", event.key, event.modifiers)) {
                     if (!event.isAutoRepeat)
                         historyAction.trigger();
                     event.accepted = true;
-                } else if (center.runtime.shellNavigates("activity", "left", event.key) || center.runtime.shellNavigates("activity", "right", event.key)) {
-                    center.selectGroup((center.runtime.shellNavigates("activity", "left", event.key)) ? -1 : 1);
+                } else if (center.runtime.shellNavigates("activity", "left", event.key, "all", event.modifiers) || center.runtime.shellNavigates("activity", "right", event.key, "all", event.modifiers)) {
+                    center.selectGroup((center.runtime.shellNavigates("activity", "left", event.key, "all", event.modifiers)) ? -1 : 1);
                     event.accepted = true;
                 } else if (center.runtime.shellMatchesHint("NotificationContent.presentation", event.key, event.modifiers)) {
                     if (!event.isAutoRepeat)

@@ -69,9 +69,9 @@ Column {
         } else if (runtime.shellMatchesHint("ScenePanel.remove", key, modifiers)) {
             if (!autoRepeat)
                 removeAction.trigger();
-        } else if (runtime.shellNavigates("controls", "up", key)) {
+        } else if (runtime.shellNavigates("controls", "up", key, "all", modifiers)) {
             selectedIndex = Math.max(0, selectedIndex - 1);
-        } else if (runtime.shellNavigates("controls", "down", key)) {
+        } else if (runtime.shellNavigates("controls", "down", key, "all", modifiers)) {
             selectedIndex = Math.max(0, Math.min(scenes.profiles.length - 1, selectedIndex + 1));
         } else if (runtime.shellMatchesHint("ScenePanel.apply", key, modifiers) || key === runtime.shellKeyCode("controls", "Enter")) {
             if (!autoRepeat)

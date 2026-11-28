@@ -73,10 +73,11 @@ QtObject {
         return profile === "power-saver" ? positive : profile === "performance" ? warning : roleColor("power");
     }
 
-    // Base16 red at the bass end blends through primary blue to cyan treble.
-    // One ramp serves every shared bar, curve, and wallpaper visualiser.
+    // Decorative audio colours come from the active Stylix accent palette,
+    // leaving semantic error and warning colours to their own controls.
     function spectrumColor(position: real): color {
-        const stops = [critical, accent, accentTertiary];
+        const palette = runtime.themeAdapter.theme;
+        const stops = [palette.accentWarm, palette.accentNature, accentTertiary, accent, palette.accentSecondary, palette.accentUtility];
         const scaled = Math.max(0, Math.min(1, position)) * (stops.length - 1);
         const index = Math.min(stops.length - 2, Math.floor(scaled));
         return blend(stops[index], stops[index + 1], scaled - index);
@@ -90,7 +91,7 @@ QtObject {
     property real musicReactiveEnergy: 0
     property real musicReactiveBeat: 0
     property real musicReactiveIntensity: runtime.appearanceDefaults.musicReactiveIntensity
-    // Share the spectrum's red/blue/cyan ramp with the shell, without
+    // Share the theme-derived audio ramp with the shell, without
     // creating per-frame colour arrays or a second audio signal pipeline.
     // Music changes tint strength; the palette stays anchored to bass/treble.
     readonly property real musicReactiveWash: musicReactiveEnabled ? Math.min(0.60, 0.42 * musicReactiveIntensity, (musicReactiveEnergy * 0.58 + musicReactiveBeat * 0.14) * musicReactiveIntensity) : 0

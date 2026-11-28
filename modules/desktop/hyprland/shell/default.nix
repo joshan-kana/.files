@@ -164,6 +164,28 @@ let
         min = 0.25;
         max = 2.5;
       };
+      spectrumSurfaces = [
+        {
+          key = "wallpaperVisualizerMode";
+          enabledKey = "wallpaperSpectrumEnabled";
+          title = "Wallpaper";
+        }
+        {
+          key = "islandVisualizerMode";
+          enabledKey = "islandVisualizerEnabled";
+          title = "Media island";
+        }
+        {
+          key = "controlsVisualizerMode";
+          enabledKey = "controlsVisualizerEnabled";
+          title = "Controls media";
+        }
+        {
+          key = "mediaVisualizerMode";
+          enabledKey = "mediaVisualizerEnabled";
+          title = "Now Playing";
+        }
+      ];
       mediaVisualizerMode.values = [
         "bars"
         "curve"

@@ -2,6 +2,7 @@ const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const vm = require("node:vm");
 const root = path.join(__dirname, "../modules/desktop/hyprland/shell");
 const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 const appearance = read("qml/AppearancePreferences.qml");
@@ -149,20 +150,22 @@ test("wallpaper owns all seven atmospheres while fullscreen effects stay in Visu
       new RegExp('openSetting\\("atmosphere\\.' + mode + '"'),
     );
   }
-  for (const mode of ["crt", "hologram", "glitch", "film", "monochrome"]) {
-    assert.ok(
-      visual.includes(
-        'onDetailsRequested: root.openSetting("screen.' + mode + '")',
-      ),
-      mode,
-    );
-    assert.ok(
-      visual.includes(
-        'onActivated: root.appearance.setScreenEffect("' + mode + '")',
-      ),
-      mode,
-    );
-  }
+  const screenModes = vm.runInNewContext(
+    read("qml/ScreenEffects.js") + "\n({modes})",
+  ).modes;
+  assert.deepEqual(Array.from(screenModes), [
+    "crt",
+    "hologram",
+    "glitch",
+    "film",
+    "monochrome",
+  ]);
+  for (const mode of screenModes)
+    assert.ok(visual.includes('mode: "' + mode + '"'), mode);
+  assert.match(
+    read("qml/ScreenEffectTile.qml"),
+    /appearance\.setScreenEffect\(mode\)/,
+  );
   assert.match(nix, /qsb --glsl/);
   assert.match(shader, /effect.rgb, 0.0, 1.0\) \* alpha, alpha/);
   assert.match(wallpaper, /property string view: "gallery"/);
@@ -202,19 +205,18 @@ test("all five fullscreen tiles expose real unique numeric toggle and detail sho
         '"SystemContent.' + mode + 'Details" = "' + details + '"',
       ),
     );
-    assert.ok(visual.includes('actionId: "SystemContent.' + mode + 'Toggle"'));
-    assert.ok(
-      visual.includes('detailActionId: "SystemContent.' + mode + 'Details"'),
+    assert.ok(visual.includes('mode: "' + mode + '"'), mode);
+    assert.match(
+      read("qml/ScreenEffectTile.qml"),
+      /actionId: "SystemContent\." \+ mode \+ "Toggle"/,
     );
-    assert.ok(
-      visual.includes(
-        'onDetailsRequested: root.openSetting("screen.' + mode + '")',
-      ),
+    assert.match(
+      read("qml/ScreenEffectTile.qml"),
+      /detailActionId: "SystemContent\." \+ mode \+ "Details"/,
     );
-    assert.ok(
-      visual.includes(
-        'onActivated: root.appearance.setScreenEffect("' + mode + '")',
-      ),
+    assert.match(
+      visual,
+      /onDetailsRequested: root\.openSetting\("screen\." \+ mode\)/,
     );
   }
   assert.doesNotMatch(visual, /focusActions: true/);

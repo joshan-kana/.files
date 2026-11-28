@@ -661,10 +661,10 @@ FocusScope {
             if (helpKey || event.key === content.runtime.shellKeyCode("media", "Escape") || event.key === content.runtime.shellKeyCode("media", "Backspace")) {
                 content.helpOpen = false;
                 event.accepted = true;
-            } else if (content.runtime.shellNavigates("media", "down", event.key)) {
+            } else if (content.runtime.shellNavigates("media", "down", event.key, "all", event.modifiers)) {
                 content.helpScrollRequested(1);
                 event.accepted = true;
-            } else if (content.runtime.shellNavigates("media", "up", event.key)) {
+            } else if (content.runtime.shellNavigates("media", "up", event.key, "all", event.modifiers)) {
                 content.helpScrollRequested(-1);
                 event.accepted = true;
             } else if (event.key === content.runtime.shellKeyCode("media", "D") || event.key === content.runtime.shellKeyCode("media", "PageDown")) {
