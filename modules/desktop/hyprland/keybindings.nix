@@ -778,6 +778,17 @@ in
           description = "Pick colour to clipboard";
         }
         {
+          key = "Escape";
+          mods = [
+            "main"
+            "shift"
+          ];
+          id = "screen-effects.emergencyOff";
+          action = exec "desktop-shell-vhs off";
+          section = "SYSTEM";
+          description = "Emergency disable screen-wide effects";
+        }
+        {
           key = "M";
           mods = [
             "main"
