@@ -111,6 +111,36 @@ function withCompositor(fn, options = {}) {
       HYPRLAND_INSTANCE_SIGNATURE: "test-session",
       VHS_CALLS: path.join(tmp, "calls"),
       VHS_SHADER_SOURCE: shader,
+      ...Object.fromEntries(
+        ["crt", "hologram", "glitch", "film", "monochrome"].map((name) => [
+          "SCREEN_" + name.toUpperCase() + "_SOURCE",
+          path.join(shell, "shaders/" + name + ".frag"),
+        ]),
+      ),
+      SCREEN_EFFECT_DEFAULTS: JSON.stringify(
+        Object.fromEntries(
+          ["crt", "hologram", "glitch", "film", "monochrome"].map((name) => [
+            name,
+            {
+              intensity: 0.6,
+              shape: 0.5,
+              color: 0.5,
+              texture: 0.5,
+              lines: 0.5,
+              speed: 1,
+              artifacts: 0.2,
+            },
+          ]),
+        ),
+      ),
+      SCREEN_EFFECT_CONSTRAINTS: JSON.stringify({
+        ...Object.fromEntries(
+          ["intensity", "shape", "color", "texture", "lines", "artifacts"].map(
+            (key) => [key, { min: 0, max: 1 }],
+          ),
+        ),
+        speed: { min: 0.25, max: 2.5 },
+      }),
       DESKTOP_VHS_DEFAULTS: JSON.stringify({
         vhsIntensity: 0.45,
         vhsTracking: 1,
@@ -424,5 +454,108 @@ test("VHS never discards its recovery state after a rejected or unverified resto
     delete env.MOCK_IGNORE;
     assert.equal(run("off").status, 0);
     assert.equal(fs.existsSync(state), false);
+  });
+});
+
+test("independent screen shader families preserve the original compositor state", () => {
+  withCompositor(({ tmp, run }) => {
+    const state = path.join(tmp, "desktop-shell", "vhs-state-test-session");
+    assert.equal(run("on", "45").status, 0);
+    const initial = read(state);
+    assert.equal(initial, "2\ntrue\n\n");
+    const modes = ["crt", "hologram", "glitch", "film", "monochrome"];
+    for (const mode of modes) {
+      const result = run(mode, "70", "40", "35", "60", "50", "100", "20");
+      assert.equal(result.status, 0, mode + ": " + result.stderr);
+      assert.equal(
+        read(state),
+        initial,
+        "switch " + mode + " must not save a derived shader as original",
+      );
+      const shaderPath = path.join(
+        tmp,
+        "desktop-shell",
+        mode + ".frag",
+        "070-040-035-060-050-100-020.frag",
+      );
+      assert.ok(fs.existsSync(shaderPath), mode);
+      const source = read(shaderPath);
+      assert.match(source, /const float FX_INTENSITY = 0\.70;/);
+      assert.match(source, /const float FX_SHAPE = 0\.40;/);
+    }
+    const invocations = read(path.join(tmp, "calls")).trim().split("\n");
+    assert.match(invocations.at(-1), /damage_tracking = 2, vfr = true/);
+    assert.equal(run("off").status, 0);
+    assert.equal(fs.existsSync(state), false);
+    assert.match(
+      read(path.join(tmp, "calls")).trim().split("\n").at(-1),
+      /screen_shader = ""/,
+    );
+  });
+});
+
+test("screen effects do not steal VHS preset values or bypass compositor bounds", () => {
+  withCompositor(({ tmp, run }) => {
+    assert.equal(
+      run("crt", "102", "50", "50", "50", "50", "100", "50").status,
+      2,
+    );
+    assert.equal(
+      run("hologram", "50", "50", "50", "50", "50", "300", "50").status,
+      2,
+    );
+    assert.equal(run("vhs", "45").status, 2);
+    assert.equal(
+      run("crt", "70", "50", "50", "50", "50", "100", "50").status,
+      0,
+    );
+    assert.equal(run("on", "30").status, 0);
+    assert.match(
+      read(path.join(tmp, "calls")),
+      /screen_shader = ".*vhs\.frag\/030-/,
+    );
+    assert.equal(run("off").status, 0);
+    for (const mode of ["crt", "hologram", "glitch", "film", "monochrome"]) {
+      const source = read(path.join(shell, "shaders", mode + ".frag"));
+      assert.match(source, /uniform sampler2D tex;/);
+      for (const name of [
+        "INTENSITY",
+        "SHAPE",
+        "COLOR",
+        "TEXTURE",
+        "LINES",
+        "SPEED",
+        "ARTIFACTS",
+      ])
+        assert.match(source, new RegExp("const float FX_" + name + " = "));
+    }
+  });
+});
+
+test("zero intensity restores an active effect without reentering the held lock", () => {
+  withCompositor(({ tmp, run }) => {
+    const state = path.join(tmp, "desktop-shell", "vhs-state-test-session");
+    assert.equal(run("crt", "70").status, 0);
+    assert.ok(fs.existsSync(state));
+    const zero = run("crt", "0");
+    assert.equal(zero.status, 0, zero.stderr);
+    assert.equal(fs.existsSync(state), false);
+    const calls = read(path.join(tmp, "calls")).trim().split("\n");
+    assert.equal(calls.length, 2);
+    assert.match(calls[1], /screen_shader = ""/);
+    assert.doesNotMatch(read(command), /exec bash "\$0" off/);
+  });
+});
+
+test("missing effect recovery state never erases a foreign shader in the runtime directory", () => {
+  withCompositor(({ tmp, run, env }) => {
+    env.MOCK_SHADER = path.join(
+      tmp,
+      "desktop-shell",
+      "another-app",
+      "custom.frag",
+    );
+    assert.equal(run("off").status, 0);
+    assert.equal(fs.existsSync(path.join(tmp, "calls")), false);
   });
 });

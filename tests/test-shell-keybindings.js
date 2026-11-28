@@ -387,7 +387,7 @@ test("reactive details have independent plain-letter assignments", () => {
   }
 });
 
-test("dashboard direct widget bindings are collision-free unmodified or shifted letters", () => {
+test("dashboard direct bindings use unique letters or explicitly assigned effect digits", () => {
   const actions = [
     "bar",
     "frame",
@@ -424,6 +424,10 @@ test("dashboard direct widget bindings are collision-free unmodified or shifted 
     "themes",
     "wallpaper",
     "windowTransparency",
+    ...["crt", "hologram", "glitch", "film", "monochrome"].flatMap((mode) => [
+      mode + "Toggle",
+      mode + "Details",
+    ]),
   ]
     .map((name) => "SystemContent." + name)
     .concat([
@@ -443,7 +447,13 @@ test("dashboard direct widget bindings are collision-free unmodified or shifted 
   );
   for (const action of actions) {
     const key = f.hint(registry, action);
-    assert.match(key, /^(?:SHIFT\+)?[A-Z]$/, action);
+    if (
+      /SystemContent\.(?:crt|hologram|glitch|film|monochrome)(?:Toggle|Details)$/.test(
+        action,
+      )
+    )
+      assert.match(key, /^[0-9]$/, action);
+    else assert.match(key, /^(?:SHIFT\+)?[A-Z]$/, action);
     assert.ok(!seen.has(key), action + " collides with " + seen.get(key));
     seen.set(key, action);
   }
@@ -760,4 +770,72 @@ test("OCR text actions and paging cannot collide with capture/delete shortcuts",
   );
   assert.equal(f.hint(registry, "RecordingLibrary.page"), "U / SHIFT+D");
   assert.equal(f.hint(registry, "CalendarContent.events"), "U / D");
+});
+
+test("five individual screen effects have collision-free numeric toggle and detail actions", () => {
+  const controls = fs.readFileSync(
+    path.join(qmlDir, "SystemContent.qml"),
+    "utf8",
+  );
+  const visual = controls
+    .split("id: visualTiles")[1]
+    .split("id: mediaMatrix")[0];
+  const chords = new Map();
+  for (const [, action] of visual.matchAll(
+    /(?:actionId|detailActionId): "([^"]+)"/g,
+  )) {
+    const chord = f.hint(registry, action);
+    assert.match(chord, /^(?:(?:SHIFT\+)?[A-Z]|[0-9])$/, action);
+    assert.equal(
+      chords.has(chord),
+      false,
+      action + " collides with " + chords.get(chord),
+    );
+    chords.set(chord, action);
+  }
+  const bindings = [
+    ["crt", "1", "2"],
+    ["hologram", "3", "4"],
+    ["glitch", "5", "6"],
+    ["film", "7", "8"],
+    ["monochrome", "9", "0"],
+  ];
+  for (const [mode, toggle, details] of bindings) {
+    assert.equal(f.hint(registry, "SystemContent." + mode + "Toggle"), toggle);
+    assert.equal(
+      f.hint(registry, "SystemContent." + mode + "Details"),
+      details,
+    );
+    assert.ok(visual.includes('actionId: "SystemContent.' + mode + 'Toggle"'));
+    assert.ok(
+      visual.includes('detailActionId: "SystemContent.' + mode + 'Details"'),
+    );
+    assert.ok(
+      visual.includes(
+        'onDetailsRequested: root.openSetting("screen.' + mode + '")',
+      ),
+    );
+    assert.equal(
+      f.matchesHint(
+        registry,
+        "SystemContent." + mode + "Toggle",
+        toggle.charCodeAt(0),
+        0,
+        Qt,
+      ),
+      true,
+    );
+    assert.equal(
+      f.matchesHint(
+        registry,
+        "SystemContent." + mode + "Details",
+        details.charCodeAt(0),
+        0,
+        Qt,
+      ),
+      true,
+    );
+  }
+  assert.doesNotMatch(visual, /focusActions:/);
+  assert.doesNotMatch(source, /effectsBrowse|ALT\+V/);
 });

@@ -95,6 +95,17 @@
     "SystemContent.shellGlass" = "SHIFT+R";
     "SystemContent.vhsTune" = "SHIFT+P";
     "SystemContent.vhsToggle" = "SHIFT+Z";
+    "SystemContent.crtToggle" = "1";
+    "SystemContent.crtDetails" = "2";
+    "SystemContent.hologramToggle" = "3";
+    "SystemContent.hologramDetails" = "4";
+    "SystemContent.glitchToggle" = "5";
+    "SystemContent.glitchDetails" = "6";
+    "SystemContent.filmToggle" = "7";
+    "SystemContent.filmDetails" = "8";
+    "SystemContent.monochromeToggle" = "9";
+    "SystemContent.monochromeDetails" = "0";
+
     "SystemContent.networkDetails" = "SHIFT+F";
     "SystemContent.bluetoothDetails" = "SHIFT+G";
     "SystemContent.brightnessFocus" = "SHIFT+B";

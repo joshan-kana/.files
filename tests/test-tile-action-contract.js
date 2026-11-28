@@ -36,7 +36,11 @@ test("every common Controls tile keeps its primary corner when focused", () => {
   ]) {
     const src = qml(name);
     assert.match(src, /TileKeyHint \{[\s\S]*?primary: true/);
-    assert.ok(src.includes("shortcut: " + action), name);
+    assert.ok(
+      src.includes("shortcut: " + action) ||
+        (name === "QuickSettingChip" && src.includes(": chip.shortcut")),
+      name,
+    );
     if (["QuickSettingChip", "ConnectivityTile"].includes(name)) {
       assert.doesNotMatch(src, /TileCornerAction \{/);
       assert.match(
@@ -169,7 +173,7 @@ test("dashboard destination-only tiles advertise a right-corner detail action wi
   const tiles = [
     ...controls.matchAll(/QuickSettingChip \{([\s\S]*?)\n {24}\}/g),
   ].map((match) => match[1]);
-  assert.equal(tiles.length, 18);
+  assert.equal(tiles.length, 23);
   for (const name of [
     "resources",
     "captures",

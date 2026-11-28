@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import "ClockFormatting.js" as ClockFormatting
 import "DesktopIcons.js" as DesktopIcons
+import "ScreenEffects.js" as ScreenEffects
 import Quickshell
 
 FocusScope {
@@ -239,7 +240,16 @@ FocusScope {
                     })).concat(settingsPanel.panel.spectrumModeActions.map(mode => ({
                         key: root.runtime.shellHint(mode.action),
                         action: "Set visualiser to " + mode.title
-                    }))) : [])].filter(entry => entry.visible !== false) : vhsPanel.open ? [
+                    }))) : []), ...(settingsPanel.panel?.screenTuning ? [
+                {
+                    key: root.runtime.shellHint("SettingsDetail.toggle"),
+                    action: "Enable or disable " + settingsPanel.panel.titleText
+                },
+                {
+                    key: root.runtime.shellHint("SettingsDetail.adjust"),
+                    action: "Adjust screen effect parameter"
+                }
+            ] : [])].filter(entry => entry.visible !== false) : vhsPanel.open ? [
         {
             key: root.runtime.shellHint("VhsPanel.select"),
             action: "Select VHS parameter"
@@ -537,6 +547,10 @@ FocusScope {
                         }
                     ] : [
                         {
+                            key: root.runtime.shellHint("SystemContent.tabSelect"),
+                            action: root.selectedSlider.length > 0 ? "Cycle the selected adjustment" : "Focus controls (Shift+Tab reverses)"
+                        },
+                        {
                             key: root.selectedSlider.length > 0 ? root.runtime.shellHint("SystemContent.legend.slider_selection") : root.runtime.shellHint("SystemContent.legend.audio_selection"),
                             action: root.selectedSlider.length > 0 ? "Select the next available adjustment" : "Select output or microphone"
                         },
@@ -724,7 +738,7 @@ FocusScope {
         if (requestedView.length > 0 && requestedView === presentedDetail)
             return;
 
-        if (["windows", "glass", "nightLight", "alerts", "stay", "power", "reactive", "spectrum", "bar", "frame", "motion", "displays", "scenes"].includes(requestedView))
+        if (["windows", "glass", "nightLight", "alerts", "stay", "power", "reactive", "spectrum", "bar", "frame", "motion", "displays", "scenes"].includes(requestedView) || requestedView.startsWith("screen."))
             openSetting(requestedView);
         else if (requestedView === "vhs")
             openVhs();
@@ -826,7 +840,7 @@ FocusScope {
     onRequestedViewChanged: requestedViewTimer.restart()
 
     function openSetting(name: string): void {
-        if (!["windows", "glass", "nightLight", "alerts", "stay", "power", "reactive", "spectrum", "bar", "frame", "motion", "displays", "scenes"].includes(name))
+        if (!["windows", "glass", "nightLight", "alerts", "stay", "power", "reactive", "spectrum", "bar", "frame", "motion", "displays", "scenes"].includes(name) && !(name.startsWith("screen.") && runtime.constraints.appearance.screenEffectMode.values.includes(name.slice(7))))
             return;
         helpOpen = false;
         closeDetails();
@@ -1512,6 +1526,91 @@ FocusScope {
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
+                            icon: ScreenEffects.descriptor("crt").glyph
+                            actionId: "SystemContent.crtToggle"
+                            detailActionId: "SystemContent.crtDetails"
+                            title: "CRT"
+                            detailName: "CRT effect settings"
+                            active: root.appearance.activeScreenEffect === "crt"
+                            activeColor: root.theme.roleColor("reactive")
+                            onActivated: root.appearance.setScreenEffect("crt")
+                            onDetailsRequested: root.openSetting("screen.crt")
+                        }
+
+                        QuickSettingChip {
+                            width: visualTiles.cellWidth(this)
+                            height: Math.max(root.dashboardTileHeight, implicitHeight)
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: ScreenEffects.descriptor("hologram").glyph
+                            actionId: "SystemContent.hologramToggle"
+                            detailActionId: "SystemContent.hologramDetails"
+                            title: "Holographic"
+                            detailName: "Holographic effect settings"
+                            active: root.appearance.activeScreenEffect === "hologram"
+                            activeColor: root.theme.roleColor("reactive")
+                            onActivated: root.appearance.setScreenEffect("hologram")
+                            onDetailsRequested: root.openSetting("screen.hologram")
+                        }
+
+                        QuickSettingChip {
+                            width: visualTiles.cellWidth(this)
+                            height: Math.max(root.dashboardTileHeight, implicitHeight)
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: ScreenEffects.descriptor("glitch").glyph
+                            actionId: "SystemContent.glitchToggle"
+                            detailActionId: "SystemContent.glitchDetails"
+                            title: "Digital glitch"
+                            detailName: "Digital glitch effect settings"
+                            active: root.appearance.activeScreenEffect === "glitch"
+                            activeColor: root.theme.roleColor("reactive")
+                            onActivated: root.appearance.setScreenEffect("glitch")
+                            onDetailsRequested: root.openSetting("screen.glitch")
+                        }
+
+                        QuickSettingChip {
+                            width: visualTiles.cellWidth(this)
+                            height: Math.max(root.dashboardTileHeight, implicitHeight)
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: ScreenEffects.descriptor("film").glyph
+                            actionId: "SystemContent.filmToggle"
+                            detailActionId: "SystemContent.filmDetails"
+                            title: "Film"
+                            detailName: "Film effect settings"
+                            active: root.appearance.activeScreenEffect === "film"
+                            activeColor: root.theme.roleColor("reactive")
+                            onActivated: root.appearance.setScreenEffect("film")
+                            onDetailsRequested: root.openSetting("screen.film")
+                        }
+
+                        QuickSettingChip {
+                            width: visualTiles.cellWidth(this)
+                            height: Math.max(root.dashboardTileHeight, implicitHeight)
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: ScreenEffects.descriptor("monochrome").glyph
+                            actionId: "SystemContent.monochromeToggle"
+                            detailActionId: "SystemContent.monochromeDetails"
+                            title: "Monochrome"
+                            detailName: "Monochrome effect settings"
+                            active: root.appearance.activeScreenEffect === "monochrome"
+                            activeColor: root.theme.roleColor("reactive")
+                            onActivated: root.appearance.setScreenEffect("monochrome")
+                            onDetailsRequested: root.openSetting("screen.monochrome")
+                        }
+
+                        QuickSettingChip {
+                            width: visualTiles.cellWidth(this)
+                            height: Math.max(root.dashboardTileHeight, implicitHeight)
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
                             icon: DesktopIcons.glyphFor("bar")
                             title: root.barVisible ? "Bar visible" : "Bar hidden"
                             actionId: "SystemContent.bar"
@@ -2045,11 +2144,11 @@ FocusScope {
             anchors.fill: parent
             focus: root.engaged
 
-            // Both Tab directions share one owner. Capture Backtab before Qt
-            // can interpret Shift+Tab as ordinary focus traversal; a held key
-            // repeats through the same path as an individual press.
+            // Parameter editing owns Tab while selected. Otherwise leave
+            // native Tab and Shift+Tab focus traversal to Qt for unbound
+            // dashboard tile actions.
             Keys.onShortcutOverride: event => {
-                if ((root.sliderNavigationEnabled || root.mixerOpen || vhsPanel.open || settingsPanel.open) && (event.key === root.runtime.shellKeyCode("controls", "Tab") || event.key === root.runtime.shellKeyCode("controls", "Backtab")))
+                if (((root.sliderNavigationEnabled && root.selectedSlider.length > 0) || root.mixerOpen || vhsPanel.open || settingsPanel.open) && (event.key === root.runtime.shellKeyCode("controls", "Tab") || event.key === root.runtime.shellKeyCode("controls", "Backtab")))
                     event.accepted = true;
             }
 
@@ -2511,7 +2610,7 @@ FocusScope {
                     event.accepted = true;
                     return;
                 }
-                if (root.sliderNavigationEnabled && (event.key === root.runtime.shellKeyCode("controls", "Tab") || event.key === root.runtime.shellKeyCode("controls", "Backtab"))) {
+                if (root.sliderNavigationEnabled && root.selectedSlider.length > 0 && (event.key === root.runtime.shellKeyCode("controls", "Tab") || event.key === root.runtime.shellKeyCode("controls", "Backtab"))) {
                     root.cycleSlider(event.key === root.runtime.shellKeyCode("controls", "Backtab") || shifted ? -1 : 1);
                     event.accepted = true;
                     return;
