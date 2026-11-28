@@ -235,3 +235,99 @@ test("emergency shortcut uses suspension, not a regular off toggle", () => {
   assert.match(fs.readFileSync(script, "utf8"), /flock -x 9/);
   assert.match(prefs, /screenEffectsSuspended/);
 });
+
+test("VHS preserves independent tracking, grain, scanline and dropout controls", () => {
+  const shader = fs.readFileSync(path.join(root, "shaders/vhs.frag"), "utf8");
+  for (const key of ["TRACKING", "CHROMA", "NOISE", "SCANLINES", "SPEED"])
+    assert.match(shader, new RegExp("const float VHS_" + key + " = 1\\.00;"));
+  assert.match(shader, /const float VHS_DROPOUTS = 0\.00;/);
+  assert.match(shader, /tapeTime \* 24\.0/);
+  assert.match(shader, /tearCenter = mod\(tapeTime/);
+  assert.match(
+    shader,
+    /trackingFlash = .*max\(0\.0, tearDirection\) \* VHS_TRACKING/,
+  );
+  assert.match(shader, /colour \*= 1\.0 - dropout \* strength \* VHS_DROPOUTS/);
+  assert.doesNotMatch(shader, /dropout \* strength \* VHS_NOISE/);
+  assert.doesNotMatch(shader, /pointer_position/);
+});
+
+test("VHS keyboard and pointer editors retain their independent hit targets", () => {
+  const controls = fs.readFileSync(
+    path.join(root, "qml/SystemContent.qml"),
+    "utf8",
+  );
+  const panel = fs.readFileSync(path.join(root, "qml/VhsPanel.qml"), "utf8");
+  const tile = fs.readFileSync(
+    path.join(root, "qml/QuickSettingChip.qml"),
+    "utf8",
+  );
+  const keymap = fs.readFileSync(path.join(root, "keybindings.nix"), "utf8");
+  assert.match(controls, /onActivated: root\.appearance\.toggleVhs\(\)/);
+  assert.match(controls, /onDetailsRequested: root\.openVhs\(\)/);
+  assert.match(controls, /detailActionId: "SystemContent\.vhsTune"/);
+  assert.match(
+    controls,
+    /vhsPanel\.invoke\("handleKey", event\.key, event\.modifiers, event\.isAutoRepeat\)/,
+  );
+  assert.match(
+    tile,
+    /TileQuickAction \{[\s\S]*?onActivated: chip\.activated\(\)/,
+  );
+  assert.match(panel, /onValueRequested: next => panel\.setParameter/);
+  assert.match(panel, /shellMatchesHint\("VhsPanel\.toggle", key, modifiers\)/);
+  assert.match(keymap, /"SystemContent\.vhsTune" = "SHIFT\+P"/);
+  assert.match(keymap, /"VhsPanel\.adjust" = "NAV_HORIZONTAL"/);
+  assert.match(prefs, /function setVhsParameter\(key: string, value: real\)/);
+  assert.doesNotMatch(prefs, /storeOverride\("vhsEnabled", true\)/);
+});
+
+test("VHS tuning survives composition with other effects without parameter leakage", () => {
+  compositor(({ run, state }) => {
+    const data = payload(["vhs", "crt"], {
+      vhs: { vhsIntensity: 0.85, vhsNoise: 0.6, vhsDropouts: 0 },
+      crt: { intensity: 0.3, speed: 1.4 },
+    });
+    assert.equal(run("apply", data).status, 0);
+    const content = fs.readFileSync(state()[2], "utf8");
+    assert.match(content, /const float VHS_VHS_INTENSITY = 0\.85;/);
+    assert.match(content, /const float VHS_VHS_NOISE = 0\.60;/);
+    assert.match(content, /const float VHS_VHS_DROPOUTS = 0\.00;/);
+    assert.match(content, /const float CRT_FX_INTENSITY = 0\.30;/);
+    assert.match(content, /const float CRT_FX_SPEED = 1\.40;/);
+    assert.match(content, /stage_crt\(v_texcoord, colour\)/);
+    assert.match(content, /stage_vhs\(v_texcoord, colour\)/);
+    assert.equal(run("apply", payload(["vhs"], data.tuning)).status, 0);
+    assert.doesNotMatch(
+      fs.readFileSync(state()[2], "utf8"),
+      /stage_crt\(v_texcoord, colour\)/,
+    );
+    assert.equal(run("off").status, 0);
+  });
+});
+
+test("unowned external shaders are not removed without a recovery record", () => {
+  compositor(({ dir, run, state }) => {
+    assert.equal(run("off").status, 0);
+    assert.deepEqual(state(), ["2", "true", "/external.frag"]);
+    assert.ok(
+      !fs.existsSync(path.join(dir, "desktop-shell/vhs-state-test-session")),
+    );
+  });
+});
+
+test("a corrupted recovery record cannot silently destroy the previous shader", () => {
+  compositor(({ dir, run, state }) => {
+    assert.equal(run("apply", payload(["crt"])).status, 0);
+    const previous = state();
+    const recovery = path.join(dir, "desktop-shell/vhs-state-test-session");
+    fs.writeFileSync(recovery, "invalid\n");
+    assert.notEqual(run("off").status, 0);
+    assert.ok(fs.existsSync(recovery));
+    assert.deepEqual(state(), previous);
+    fs.writeFileSync(recovery, "2\ntrue\n/external.frag\n");
+    assert.equal(run("off").status, 0);
+    assert.deepEqual(state(), ["2", "true", "/external.frag"]);
+    assert.ok(!fs.existsSync(recovery));
+  });
+});
