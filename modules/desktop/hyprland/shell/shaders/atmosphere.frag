@@ -42,11 +42,34 @@ vec3 palette(float t) {
 
 // Overlapping curved curtains with a narrow luminous crest and a broad,
 // translucent bloom. Audio controls their height, not global flashing.
+vec4 aurora(vec2 uv, vec2 p) {
+    vec3 light = vec3(0);
+    float density = 0.0;
+    for (int i = 0; i < 3; ++i) {
+        float k = float(i);
+        float x = p.x * 3.1 + k * 0.73;
+        float crest = 0.33 + k * 0.15
+            + (0.10 + u.audio.x * 0.045) * sin(x + u.phase + k)
+            + 0.055 * sin(x * 2.13 - u.phase * 2.0 + k * 2.0)
+            + u.audio.y * 0.032 * sin(x * 3.0 + k);
+        float d = uv.y - crest;
+        float curtain = exp(-abs(d) * (d > 0.0 ? 10.5 : 20.0));
+        float edge = exp(-abs(d) * 75.0);
+        float folds = 0.65 + 0.35 * sin(x * 4.0 + sin(x * 1.8 + u.phase) * 2.5);
+        float weight = curtain * folds * (0.36 + 0.12 * u.audio.x)
+                     + edge * (0.15 + u.audio.z * 0.12);
+        light += palette(k * 0.5) * weight;
+        density += weight;
+    }
+    return vec4(light / max(density, 0.001), min(density, 0.88));
+}
+
 void main() {
     vec2 uv = qt_TexCoord0;
     vec2 p = (uv - 0.5) * vec2(u.aspect, 1.0);
     vec4 effect;
-    effect = vec4(0);
+    if (u.style == 0) effect = aurora(uv, p);
+    else effect = vec4(0);
     float vignette = 1.0 - smoothstep(0.45, 1.0, length((uv - 0.5) * 1.6)) * 0.32;
     float alpha = clamp(effect.a * u.intensity * vignette, 0.0, 1.0);
     fragColor = vec4(clamp(effect.rgb, 0.0, 1.0) * alpha, alpha) * u.qt_Opacity;
