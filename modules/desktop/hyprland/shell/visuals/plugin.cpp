@@ -25,6 +25,7 @@ class SpectrumItem : public QQuickItem {
   Q_OBJECT
   QML_NAMED_ELEMENT(SpectrumItem)
   Q_PROPERTY(bool curve READ curve WRITE setCurve NOTIFY curveChanged)
+  Q_PROPERTY(bool radial READ radial WRITE setRadial NOTIFY radialChanged)
   Q_PROPERTY(QVariantList targetBands READ targetBands WRITE setTargetBands
                  NOTIFY targetBandsChanged)
   Q_PROPERTY(QVariantList edges READ edges WRITE setEdges NOTIFY edgesChanged)
@@ -62,6 +63,14 @@ public:
       return;
     curve_ = value;
     emit curveChanged();
+    update();
+  }
+  bool radial() const { return radial_; }
+  void setRadial(bool value) {
+    if (radial_ == value)
+      return;
+    radial_ = value;
+    emit radialChanged();
     update();
   }
   QVariantList targetBands() const { return targetBands_; }
@@ -143,6 +152,7 @@ public:
   }
 signals:
   void curveChanged();
+  void radialChanged();
   void targetBandsChanged();
   void sensitivityChanged();
   void attackMultiplierChanged();
@@ -228,6 +238,10 @@ protected:
       levels_[i] =
           std::pow(std::clamp(peak * float(sensitivity_), 0.0f, 1.0f), 0.88f);
     }
+    if (radial_) {
+      renderRadial(node, count);
+      return node;
+    }
     if (curve_) {
       renderCurve(node, count);
       return node;
@@ -287,7 +301,64 @@ protected:
   }
 
 private:
-  // Both presentations use the same interpolated levels and bin boundaries.
+  // Mirrored low-to-high half-circles avoid a discontinuity between the
+  // lowest and highest bins. The angular directions and vertex storage
+  // are reused as levels change.
+  void renderRadial(QSGGeometryNode *node, int count) {
+    constexpr int verticesPerBand = 18;
+    auto *geometry = node->geometry();
+    const int vertexCount = 2 * count * verticesPerBand;
+    if (geometry->vertexCount() != vertexCount)
+      geometry->allocate(vertexCount);
+    auto *vertices = geometry->vertexDataAsColoredPoint2D();
+    const float cx = width() * 0.5f, cy = height() * 0.5f;
+    const float radius = std::min(cx, cy) * 0.94f;
+    const float inner = radius * 0.43f;
+    const float step = 3.14159265358979323846f / count;
+    if (radialDirections_.size() != size_t(2 * count)) {
+      radialDirections_.resize(2 * count);
+      for (int side = 0; side < 2; ++side)
+        for (int i = 0; i < count; ++i) {
+          const float angle =
+              -1.57079632679489661923f + (side ? -1 : 1) * (i + 0.5f) * step;
+          radialDirections_[side * count + i] = {std::cos(angle),
+                                                 std::sin(angle)};
+        }
+    }
+    int pos = 0;
+    for (int side = 0; side < 2; ++side)
+      for (int i = 0; i < count; ++i) {
+        const auto &dir = radialDirections_[side * count + i];
+        const float level = levels_[i];
+        const float outer = inner + (radius - inner) * level;
+        const float halfWidth = std::clamp(inner * step * 0.30f, 0.45f, 3.0f);
+        const QColor color = level > 0.003f ? barColors_[i].value<QColor>()
+                                            : QColor(Qt::transparent);
+        auto add = [&](float rad, float tangent, float alpha) {
+          QColor c(color);
+          c.setAlphaF(c.alphaF() * alpha);
+          const QRgb rgba = qPremultiply(c.rgba());
+          vertices[pos++].set(cx + dir[0] * rad - dir[1] * tangent,
+                              cy + dir[1] * rad + dir[0] * tangent, qRed(rgba),
+                              qGreen(rgba), qBlue(rgba), qAlpha(rgba));
+        };
+        auto strip = [&](float a, float b, float alphaA, float alphaB) {
+          add(inner, a, alphaA);
+          add(outer, a, alphaA);
+          add(inner, b, alphaB);
+          add(inner, b, alphaB);
+          add(outer, a, alphaA);
+          add(outer, b, alphaB);
+        };
+        const float feather = std::min(0.65f, halfWidth * 0.4f);
+        strip(-halfWidth - feather, -halfWidth, 0, 1);
+        strip(-halfWidth, halfWidth, 1, 1);
+        strip(halfWidth, halfWidth + feather, 1, 0);
+      }
+    node->markDirty(QSGNode::DirtyGeometry);
+  }
+
+  // Linear presentations use the same interpolated levels and bin boundaries.
   // Tessellate a quadratic outline into a fixed vertex buffer; the translucent
   // fill and coloured ribbon retain the former curve's visual language.
   void renderCurve(QSGGeometryNode *node, int count) {
@@ -368,8 +439,10 @@ private:
 
   QVariantList targetBands_, edges_, barColors_;
   std::vector<float> current_, levels_;
+  std::vector<std::array<float, 2>> radialDirections_;
   double lowHz_ = 20.0, highHz_ = 20000.0;
-  bool decaying_ = false, curve_ = false, resetPending_ = false;
+  bool decaying_ = false, curve_ = false, radial_ = false,
+       resetPending_ = false;
   double sensitivity_ = 1.0, attackMultiplier_ = 1.0, releaseMultiplier_ = 1.0;
   QElapsedTimer frameClock_;
   QMetaObject::Connection frameConnection_;

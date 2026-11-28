@@ -45,6 +45,16 @@ test("native curves reuse fixed geometry and avoid QML SVG path churn", () => {
     ),
     "utf8",
   );
-  assert.equal([...wrapper.matchAll(/SpectrumRenderer \{/g)].length, 2);
+  assert.equal([...wrapper.matchAll(/SpectrumRenderer \{/g)].length, 3);
   assert.match(wrapper, /curve: true/);
+});
+
+test("radial spectrum reuses vertices and directions while levels change", () => {
+  assert.match(src, /const int vertexCount = 2 \* count \* verticesPerBand;/);
+  assert.match(
+    src,
+    /if \(radialDirections_\.size\(\) != size_t\(2 \* count\)\)/,
+  );
+  assert.match(src, /radialDirections_\[side \* count \+ i\]/);
+  assert.match(src, /if \(radial_\) \{\s*renderRadial\(node, count\)/);
 });
