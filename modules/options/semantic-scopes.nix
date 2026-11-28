@@ -166,9 +166,31 @@ let
       };
     in
     lib.recursiveUpdate (lib.recursiveUpdate (lib.recursiveUpdate host.options (nixdOptionsForTree resolved)) editOptions) scopeEditOptions;
+  # Static editor providers expose a fleet-wide schema. Keep each native option
+  # declaration intact when the same path occurs on multiple hosts.
+  mergeOptionTrees = lib.foldl' (lib.recursiveUpdateUntil (
+    _: left: right:
+    lib.isOption left || lib.isOption right
+  )) { };
+
+  nixdFleetOptions =
+    configurations: hosts:
+    mergeOptionTrees (
+      map (nixdHostOptions configurations) (builtins.attrValues hosts) ++ [ (nixdOptions hosts) ]
+    );
+
+  nixdFleetHomeOptions =
+    configurations:
+    mergeOptionTrees (
+      map (host: host.options.home-manager.users.type.getSubOptions [ ]) (
+        builtins.attrValues configurations
+      )
+    );
 in
 {
   inherit
+    nixdFleetOptions
+    nixdFleetHomeOptions
     nixdHostOptions
     nixdOptions
     resolvedScopeControlNames

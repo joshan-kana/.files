@@ -2,13 +2,20 @@ local vim = assert(_G.vim)
 local M = {}
 
 function M.setup(root)
-	local contexts = {}
-	for name, kind in vim.fs.dir(root .. "/hosts") do
-		if kind == "directory" and vim.uv.fs_stat(root .. "/hosts/" .. name .. "/default.nix") then
-			table.insert(contexts, name)
-		end
+	local flake = "builtins.getFlake " .. vim.json.encode(root)
+	local result = vim.system({
+		"nix",
+		"eval",
+		"--impure",
+		"--json",
+		"--expr",
+		"let f = " .. flake .. "; in builtins.attrNames (f.nixosConfigurations // f.darwinConfigurations)",
+	}, { cwd = root, text = true }):wait()
+	local ok, contexts = pcall(vim.json.decode, result.stdout or "")
+	if result.code ~= 0 or not ok or type(contexts) ~= "table" or #contexts == 0 then
+		vim.notify("Unable to discover flake configurations", vim.log.levels.WARN)
+		return
 	end
-	table.sort(contexts)
 
 	local available = {}
 	for _, host in ipairs(contexts) do
@@ -75,7 +82,6 @@ function M.setup(root)
 		end
 	end
 
-	local flake = "builtins.getFlake " .. vim.json.encode(root)
 	local function options_for(host)
 		local prelude = "let f = "
 			.. flake

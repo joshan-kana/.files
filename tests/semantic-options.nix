@@ -88,6 +88,9 @@ let
       builtins.attrNames rootChildren
     )
     && builtins.all (name: builtins.hasAttr name hostOptions) (builtins.attrNames host.options);
+  fleetOptions = semanticScopeOptions.nixdFleetOptions configurations configurations;
+  fleetScopes = visibleOptions (fleetOptions.dotfiles.scopes.type.getSubOptions [ ]);
+  fleetHomeOptions = semanticScopeOptions.nixdFleetHomeOptions configurations;
   privateHost = {
     options = { };
     config.dotfiles.resolvedScopes.root = {
@@ -104,6 +107,16 @@ let
   privateHostOptions = semanticScopeOptions.nixdHostOptions { } privateHost;
 in
 assert hosts != [ ];
+assert sameNames (builtins.attrNames rootChildren) (builtins.attrNames fleetScopes);
+assert builtins.all (
+  host: builtins.all (name: builtins.hasAttr name fleetOptions) (builtins.attrNames host.options)
+) hosts;
+assert builtins.all (
+  host:
+  builtins.all (name: builtins.hasAttr name fleetHomeOptions) (
+    builtins.attrNames (host.options.home-manager.users.type.getSubOptions [ ])
+  )
+) hosts;
 assert privateHostOptions.app.token.type.name == "str";
 assert builtins.hasAttr "root" privateHostOptions.scopeEdits;
 assert builtins.hasAttr "app" privateHostOptions.scopeEdits.root;
