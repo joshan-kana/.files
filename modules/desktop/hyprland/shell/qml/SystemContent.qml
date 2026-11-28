@@ -773,10 +773,11 @@ FocusScope {
                     trayMenu.openFor(item);
             }
         } else if (requestedView === "controls" || requestedView.length === 0) {
-            const leavingDetail = detailsVisible;
             closeDetails();
-            if (leavingDetail)
-                keyboardFocus.forceActiveFocus();
+            // A detail may have already hidden itself before navigation
+            // returns here. Restore keyboard focus regardless, or the
+            // visible dashboard can stop responding to its keyhints.
+            keyboardFocus.forceActiveFocus();
         }
     }
 

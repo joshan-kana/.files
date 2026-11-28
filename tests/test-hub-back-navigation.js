@@ -307,3 +307,15 @@ test("palette consumes repeated Escape in both search and results focus", () => 
     2,
   );
 });
+
+test("returning from a detail restores dashboard focus even after the panel hides", () => {
+  const system = qml("SystemContent.qml");
+  assert.match(
+    system,
+    /else if \(requestedView === "controls" \|\| requestedView.length === 0\) \{\s*closeDetails\(\);[\s\S]*?keyboardFocus.forceActiveFocus\(\);/,
+  );
+  assert.doesNotMatch(
+    system,
+    /if \(leavingDetail\)\s*keyboardFocus.forceActiveFocus\(\)/,
+  );
+});

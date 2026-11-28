@@ -211,11 +211,11 @@ test("wallpaper detail height follows its content, without an empty band before 
   const wallpaper = source("WallpaperPanel.qml");
   assert.match(
     wallpaper,
-    /implicitHeight: policyView \? policyLayout\.implicitHeight : galleryLayout\.implicitHeight/,
+    /implicitHeight: policyView \? policyLayout\.implicitHeight : view === "atmosphere" \? atmosphereLayout\.implicitHeight : galleryLayout\.implicitHeight/,
   );
   assert.match(
     wallpaper,
-    /Column \{\s*id: galleryLayout\s*visible: !panel.policyView\s*anchors\.fill: parent/,
+    /Column \{\s*id: galleryLayout\s*visible: panel\.view === "gallery"\s*anchors\.fill: parent/,
   );
   assert.match(wallpaper, /id: statusBanner/);
   assert.match(wallpaper, /KeyHintStrip \{/);
