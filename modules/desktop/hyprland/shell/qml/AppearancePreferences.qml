@@ -355,6 +355,114 @@ QtObject {
     readonly property var vhsPresetNames: presetNames(vhsPresets, vhsParameterKeys)
     readonly property string vhsPreset: selectedPreset(vhsPresets, vhsParameterKeys)
     readonly property bool vhsEnabled: effective("vhsEnabled")
+    readonly property string screenEffectMode: effective("screenEffectMode")
+    readonly property string activeScreenEffect: vhsEnabled ? "vhs" : screenEffectMode
+    readonly property var screenEffectTuning: effective("screenEffectTuning")
+
+    function screenEffectValues(mode: string): var {
+        return Object.assign({}, runtime.appearanceDefaults.screenEffectTuning?.[mode] || {}, screenEffectTuning?.[mode] || {});
+    }
+
+    function setScreenEffect(mode: string): void {
+        if (mode !== "vhs" && !runtime.constraints.appearance.screenEffectMode.values.includes(mode))
+            return;
+        const next = activeScreenEffect === mode ? "off" : mode;
+        const values = {
+            vhsEnabled: next === "vhs",
+            screenEffectMode: next === "vhs" ? "off" : next
+        };
+        if (Object.prototype.hasOwnProperty.call(sceneValues, "vhsEnabled") || Object.prototype.hasOwnProperty.call(sceneValues, "screenEffectMode"))
+            sceneValues = Object.assign({}, sceneValues, values);
+        else
+            saved.setMany(values);
+        vhsApply.stop();
+        applyVhs();
+    }
+
+    function setScreenEffectValue(mode: string, key: string, value: real): void {
+        if (!runtime.constraints.appearance.screenEffectMode.values.includes(mode) || mode === "off")
+            return;
+        const bounds = runtime.constraints.appearance.screenEffectTuning[key];
+        if (!bounds || !Number.isFinite(value) || value < bounds.min || value > bounds.max)
+            return;
+        const explicit = hasOverride("screenEffectTuning") ? screenEffectTuning : {};
+        const tuning = Object.assign({}, explicit, {
+            [mode]: Object.assign({}, explicit[mode] || {}, {
+                [key]: Math.round(value * 100) / 100
+            })
+        });
+        storeOverride("screenEffectTuning", tuning);
+        if (activeScreenEffect === mode)
+            vhsApply.restart();
+    }
+
+    function resetScreenEffectParameter(mode: string, key: string): void {
+        if (!runtime.appearanceDefaults.screenEffectTuning?.[mode] || !(key in runtime.appearanceDefaults.screenEffectTuning[mode]))
+            return;
+        const explicit = hasOverride("screenEffectTuning") ? screenEffectTuning : {};
+        const tuning = Object.assign({}, explicit);
+        const selected = Object.assign({}, explicit[mode] || {});
+        delete selected[key];
+        if (Object.keys(selected).length > 0)
+            tuning[mode] = selected;
+        else
+            delete tuning[mode];
+        if (Object.keys(tuning).length > 0)
+            storeOverride("screenEffectTuning", tuning);
+        else
+            clearOverride("screenEffectTuning");
+        if (activeScreenEffect === mode)
+            vhsApply.restart();
+    }
+
+    function resetScreenEffect(mode: string): void {
+        if (!runtime.appearanceDefaults.screenEffectTuning?.[mode])
+            return;
+        const explicit = hasOverride("screenEffectTuning") ? screenEffectTuning : {};
+        const tuning = Object.assign({}, explicit);
+        delete tuning[mode];
+        if (Object.keys(tuning).length > 0)
+            storeOverride("screenEffectTuning", tuning);
+        else
+            clearOverride("screenEffectTuning");
+        if (activeScreenEffect === mode)
+            vhsApply.restart();
+    }
+
+    function screenEffectPreset(mode: string): string {
+        const values = screenEffectValues(mode);
+        const defaults = runtime.appearanceDefaults.screenEffectTuning?.[mode];
+        if (!defaults)
+            return "Custom";
+        if (Math.abs(values.intensity - defaults.intensity) < 0.005 && Object.keys(defaults).every(key => Math.abs(values[key] - defaults[key]) < 0.005))
+            return "Default";
+        if (Object.keys(defaults).every(key => key === "intensity" || Math.abs(values[key] - defaults[key]) < 0.005)) {
+            if (Math.abs(values.intensity - 0.25) < 0.005)
+                return "Subtle";
+            if (Math.abs(values.intensity - 0.9) < 0.005)
+                return "Intense";
+        }
+        return "Custom";
+    }
+
+    function applyScreenEffectPreset(mode: string, preset: string): void {
+        const defaults = runtime.appearanceDefaults.screenEffectTuning?.[mode];
+        if (!defaults || !["Subtle", "Default", "Intense"].includes(preset))
+            return;
+        if (preset === "Default") {
+            resetScreenEffect(mode);
+            return;
+        }
+        const explicit = hasOverride("screenEffectTuning") ? screenEffectTuning : {};
+        const tuning = Object.assign({}, explicit, {
+            [mode]: {
+                intensity: preset === "Subtle" ? 0.25 : 0.9
+            }
+        });
+        storeOverride("screenEffectTuning", tuning);
+        if (activeScreenEffect === mode)
+            vhsApply.restart();
+    }
     readonly property real vhsIntensity: effective("vhsIntensity")
     readonly property real vhsTracking: effective("vhsTracking")
     readonly property real vhsChroma: effective("vhsChroma")
@@ -719,7 +827,12 @@ QtObject {
     }
 
     function vhsCommand(): var {
-        return [runtime.vhsControl, vhsEnabled ? "on" : "off", String(Math.round(vhsIntensity * 100)), String(Math.round(vhsTracking * 100)), String(Math.round(vhsChroma * 100)), String(Math.round(vhsNoise * 100)), String(Math.round(vhsScanlines * 100)), String(Math.round(vhsSpeed * 100)), String(Math.round(vhsDropouts * 100))];
+        const mode = activeScreenEffect;
+        if (mode !== "off" && mode !== "vhs") {
+            const values = screenEffectValues(mode);
+            return [runtime.vhsControl, mode, ...["intensity", "shape", "color", "texture", "lines", "speed", "artifacts"].map(key => String(Math.round(values[key] * 100)))];
+        }
+        return [runtime.vhsControl, mode === "vhs" ? "on" : "off", String(Math.round(vhsIntensity * 100)), String(Math.round(vhsTracking * 100)), String(Math.round(vhsChroma * 100)), String(Math.round(vhsNoise * 100)), String(Math.round(vhsScanlines * 100)), String(Math.round(vhsSpeed * 100)), String(Math.round(vhsDropouts * 100))];
     }
 
     function applyVhs(): void {
@@ -754,10 +867,7 @@ QtObject {
     }
 
     function toggleVhs(): void {
-        storeOverride("vhsEnabled", !vhsEnabled);
-
-        vhsApply.stop();
-        applyVhs();
+        setScreenEffect("vhs");
     }
 
     function setVhsParameter(key: string, value: real): void {
@@ -768,6 +878,7 @@ QtObject {
             return;
         storeOverride(key, next);
         storeOverride("vhsEnabled", true);
+        storeOverride("screenEffectMode", "off");
 
         vhsApply.restart();
     }
@@ -778,6 +889,7 @@ QtObject {
             return;
         storeOverride("vhsIntensity", next);
         storeOverride("vhsEnabled", true);
+        storeOverride("screenEffectMode", "off");
 
         // Reload after the slider settles to avoid shader recompilation every pointer event.
         vhsApply.restart();
