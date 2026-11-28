@@ -544,6 +544,7 @@
           "WallpaperPanel.atmosphere" = "A";
           "WallpaperAtmosphere.toggle" = "T";
           "WallpaperAtmosphere.audio" = "B";
+          "WallpaperAtmosphere.audioDetails" = "A";
           "WallpaperAtmosphere.backdrop" = "G";
           "WallpaperAtmosphere.reset" = "R";
           "WallpaperAtmosphere.resetParameter" = "SHIFT+R";

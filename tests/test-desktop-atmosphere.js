@@ -377,7 +377,7 @@ test("Wallpaper mode selection preserves the enabled state and parameter resets 
   assert.match(panel, /shortcut: panel.runtime.shellChoiceHint\(index\)/);
   assert.match(
     panel,
-    /runtime.shellChoiceIndex\(key, modifiers, modes.length\)/,
+    /runtime.shellChoiceIndex\(key, modifiers, audioDetailsOpen \? 4 : modes.length\)/,
   );
   assert.match(read("qml/SystemContent.qml"), /Back to wallpaper gallery/);
 });
@@ -386,8 +386,11 @@ test("wallpaper Atmospheres follows the shared detail-header and controls conven
   const panel = read("qml/WallpaperAtmosphere.qml");
   const beforeStyleChoices = panel.split("id: modeFlow")[0];
   const hero = beforeStyleChoices.split("DetailHero {")[1].split("\n    }")[0];
-  assert.match(hero, /title: "Atmospheres"/);
-  assert.match(hero, /detail: .*panel\.style\.backdrop/);
+  assert.match(
+    hero,
+    /title: panel.audioDetailsOpen \? "Audio response" : "Atmospheres"/,
+  );
+  assert.match(hero, /detail: panel.audioDetailsOpen.*panel\.style\.backdrop/);
   assert.match(
     hero,
     /actions: \[[\s\S]*?ShellAction \{[\s\S]*?id: masterAction/,
@@ -398,7 +401,7 @@ test("wallpaper Atmospheres follows the shared detail-header and controls conven
   );
   assert.match(
     hero,
-    /id: masterAction[\s\S]*?active: panel\.appearance\.atmosphereEnabled/,
+    /id: masterAction[\s\S]*?active: panel\.audioDetailsOpen \? panel\.appearance\.atmosphereAudioEnabled : panel\.appearance\.atmosphereEnabled/,
   );
   assert.match(hero, /id: resetButton/);
   assert.match(beforeStyleChoices, /text: "Styles"/);
@@ -582,12 +585,11 @@ test("tuning an inactive fullscreen effect never enables that effect or reapplie
   assert.equal(applications, 1);
 });
 
-test("wallpaper audio response shares spectrum input but not shell response settings", () => {
+test("wallpaper audio response has a separate envelope and independent controls", () => {
   const qml = read("qml/shell.qml");
+  const panel = read("qml/WallpaperAtmosphere.qml");
   const source = read("qml/AppearancePreferences.qml");
-  const controls = read("qml/SystemContent.qml");
   assert.match(qml, /id: atmosphereReactive/);
-  assert.match(qml, /spectrum: root.spectrumRef/);
   assert.match(qml, /reactive: root.atmosphereReactiveRef/);
   assert.match(
     qml,
@@ -597,14 +599,9 @@ test("wallpaper audio response shares spectrum input but not shell response sett
     qml,
     /root.musicReactiveSurfaceVisible \|\| atmosphereReactive.effectSubscribers > 0/,
   );
-  assert.match(
-    controls,
-    /required property MusicReactiveState wallpaperReactive/,
-  );
-  assert.match(controls, /reactive: root.wallpaperReactive/);
-  assert.match(
-    source,
-    /readonly property var atmosphereReactive: Object.assign/,
-  );
-  assert.match(source, /function setAtmosphereReactiveParameter/);
+  assert.match(panel, /audioDetailsOpen/);
+  assert.match(panel, /setAtmosphereReactiveParameter/);
+  assert.match(panel, /audioDetailsButton/);
+  assert.match(source, /atmosphereReactive: Object.assign/);
+  assert.doesNotMatch(source, /migrateScreenEffects|migrateEffectOverrides/);
 });

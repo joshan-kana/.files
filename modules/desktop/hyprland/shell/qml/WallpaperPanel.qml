@@ -101,6 +101,11 @@ Item {
         return ClockFormatting.minutesLabel(minutes);
     }
     function showGallery(): void {
+        if (view === "atmosphere" && atmosphereLayout.audioDetailsOpen) {
+            atmosphereLayout.audioDetailsOpen = false;
+            keyboardRequested();
+            return;
+        }
         view = "gallery";
         keyboardRequested();
     }
