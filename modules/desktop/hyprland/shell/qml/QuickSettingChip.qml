@@ -62,8 +62,8 @@ Item {
         cornerRadius: chip.active ? chip.theme.radiusLarge : chip.theme.radiusMedium
         luminous: chip.active
         luminousColor: chip.activeColor
-        outlined: chip.active
-        borderColor: chip.active ? chip.activeColor : "transparent"
+        outlined: chip.active || press.activeFocus
+        borderColor: press.activeFocus ? chip.theme.focusColor : chip.active ? chip.activeColor : "transparent"
         hovered: press.pointerHovered || press.manualHover
         fillColor: chip.active ? chip.theme.blend(chip.theme.controlBase, chip.activeColor, chip.theme.dark ? 0.12 : 0.08) : chip.theme.expressiveSurfaceStrong
 
