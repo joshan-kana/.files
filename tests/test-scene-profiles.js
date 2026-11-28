@@ -18,8 +18,12 @@ function profile(name = "Focus") {
         key,
         key === "atmosphereMode"
           ? "aurora"
-          : key === "screenEffectMode"
-            ? "off"
+          : key === "screenEffectsEnabled"
+            ? Object.fromEntries(
+                ["vhs", "crt", "hologram", "glitch", "film", "monochrome"].map(
+                  (k) => [k, false],
+                ),
+              )
             : false,
       ]),
     ),
@@ -84,7 +88,7 @@ test("old scenes do not override visualisers they never captured", () => {
     "atmosphereAudioEnabled",
     "atmosphereBackdrop",
     "atmosphereMode",
-    "screenEffectMode",
+    "screenEffectsEnabled",
     "islandVisualizerEnabled",
     "controlsVisualizerEnabled",
     "mediaVisualizerEnabled",
@@ -94,11 +98,11 @@ test("old scenes do not override visualisers they never captured", () => {
   assert.equal("mediaVisualizerEnabled" in f.appearanceValues(old), false);
   assert.equal("atmosphereEnabled" in f.appearanceValues(old), false);
   assert.equal("atmosphereMode" in f.appearanceValues(old), false);
-  assert.equal("screenEffectMode" in f.appearanceValues(old), false);
+  assert.equal("screenEffectsEnabled" in f.appearanceValues(old), false);
   const next = profile();
   assert.equal(f.appearanceValues(next).mediaVisualizerEnabled, false);
   assert.equal(f.appearanceValues(next).atmosphereMode, "aurora");
-  assert.equal(f.appearanceValues(next).screenEffectMode, "off");
+  assert.equal(f.appearanceValues(next).screenEffectsEnabled.crt, false);
   next.appearance.mediaVisualizerEnabled = "off";
   assert.equal(f.validProfile(next), false);
 });

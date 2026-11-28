@@ -178,7 +178,7 @@ Column {
                 compact: true
                 enabled: !panel.naming
                 title: modelData.name
-                subtitle: [modelData.appearance.wallpaperSpectrumEnabled ? "Wallpaper spectrum" : "", modelData.appearance.musicReactiveEnabled ? "Reactive" : "", modelData.appearance.shellGlassEnabled ? "Glass" : "", modelData.appearance.vhsEnabled ? "VHS" : modelData.appearance.screenEffectMode && modelData.appearance.screenEffectMode !== "off" ? modelData.appearance.screenEffectMode : "", modelData.animations ? "Motion" : "Reduced motion", modelData.silent ? "Silent" : "", modelData.presentation ? "Presentation" : ""].filter(Boolean).join(" · ")
+                subtitle: [modelData.appearance.wallpaperSpectrumEnabled ? "Wallpaper spectrum" : "", modelData.appearance.musicReactiveEnabled ? "Reactive" : "", modelData.appearance.shellGlassEnabled ? "Glass" : "", Object.entries(modelData.appearance.screenEffectsEnabled || {}).filter(([_, enabled]) => enabled).map(([name]) => name.toUpperCase()).join(" + "), modelData.animations ? "Motion" : "Reduced motion", modelData.silent ? "Silent" : "", modelData.presentation ? "Presentation" : ""].filter(Boolean).join(" · ")
                 icon: active ? DesktopIcons.actionGlyph("confirm") : DesktopIcons.glyphFor("scenes")
                 active: panel.scenes.activeName === modelData.name
                 highlighted: index === panel.selectedIndex

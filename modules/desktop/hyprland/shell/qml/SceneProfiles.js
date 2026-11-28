@@ -5,7 +5,6 @@ const appearanceKeys = [
   "musicReactiveEnabled",
   "windowTransparencyEnabled",
   "shellGlassEnabled",
-  "vhsEnabled",
   "frameVisible",
   "blurEnabled",
 ];
@@ -19,8 +18,13 @@ const optionalAppearanceKeys = [
   "mediaVisualizerEnabled",
 ];
 const requiredAppearanceKeys = [...appearanceKeys];
-const optionalModeKeys = ["atmosphereMode", "screenEffectMode"];
-appearanceKeys.push(...optionalAppearanceKeys, ...optionalModeKeys);
+const optionalModeKeys = ["atmosphereMode"];
+const effectKeys = ["vhs", "crt", "hologram", "glitch", "film", "monochrome"];
+appearanceKeys.push(
+  ...optionalAppearanceKeys,
+  ...optionalModeKeys,
+  "screenEffectsEnabled",
+);
 
 function validProfile(profile) {
   return !!(
@@ -43,6 +47,15 @@ function validProfile(profile) {
         !(key in profile.appearance) ||
         typeof profile.appearance[key] === "string",
     ) &&
+    (profile.appearance.screenEffectsEnabled === undefined ||
+      (profile.appearance.screenEffectsEnabled !== null &&
+        effectKeys.every(
+          (key) =>
+            typeof profile.appearance.screenEffectsEnabled[key] === "boolean",
+        ) &&
+        Object.keys(profile.appearance.screenEffectsEnabled).every((key) =>
+          effectKeys.includes(key),
+        ))) &&
     typeof profile.animations === "boolean" &&
     typeof profile.silent === "boolean" &&
     typeof profile.presentation === "boolean"
@@ -69,5 +82,7 @@ function appearanceValues(profile) {
   for (const key of optionalModeKeys)
     if (typeof profile.appearance[key] === "string")
       values[key] = profile.appearance[key];
+  if (profile.appearance.screenEffectsEnabled)
+    values.screenEffectsEnabled = profile.appearance.screenEffectsEnabled;
   return values;
 }

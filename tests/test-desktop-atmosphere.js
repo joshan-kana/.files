@@ -244,10 +244,7 @@ test("screen detail routing is guarded and wallpaper atmosphere uses its own vie
     .split("function openSetting(name: string): void {")[1]
     .split("helpOpen = false;")[0];
   assert.match(guard, /name.startsWith\("screen\."\)/);
-  assert.match(
-    guard,
-    /constraints.appearance.screenEffectMode.values.includes/,
-  );
+  assert.match(guard, /appearance.screenEffectKinds.includes/);
   assert.doesNotMatch(guard, /name.startsWith\("atmosphere\."\)/);
   assert.match(controls, /wallpaperPanel.invoke\("showGallery"\)/);
   assert.match(controls, /reactive: root.reactive/);
@@ -279,14 +276,15 @@ test("effect tuning persists sparse per-mode overrides instead of copying every 
           atmosphereMode: { values: modes },
           atmosphereOpacity: { min: 0.15, max: 1 },
           atmosphereSpeed: { min: 0.25, max: 2 },
-          screenEffectMode: { values: ["off", "crt", "hologram"] },
+          screenEffectsEnabled: { keys: ["vhs", "crt", "hologram"] },
           screenEffectTuning: { intensity: { min: 0, max: 1 } },
         },
       },
     },
     atmosphereTuning: defaults.atmosphereTuning,
     screenEffectTuning: defaults.screenEffectTuning,
-    activeScreenEffect: "crt",
+    screenEffectKinds: ["vhs", "crt", "hologram"],
+    screenEffectEnabled: (mode) => mode === "crt",
     hasOverride: (key) => Object.hasOwn(writes, key),
     storeOverride: (key, value) => {
       writes[key] = value;
@@ -559,13 +557,14 @@ test("tuning an inactive fullscreen effect never enables that effect or reapplie
     runtime: {
       constraints: {
         appearance: {
-          screenEffectMode: { values: ["off", "crt", "hologram"] },
+          screenEffectsEnabled: { keys: ["vhs", "crt", "hologram"] },
           screenEffectTuning: { intensity: { min: 0, max: 1 } },
         },
       },
     },
     screenEffectTuning: {},
-    activeScreenEffect: "crt",
+    screenEffectKinds: ["vhs", "crt", "hologram"],
+    screenEffectEnabled: (mode) => mode === "crt",
     hasOverride: () => false,
     storeOverride: () => {},
     vhsApply: { restart: () => applications++ },

@@ -784,7 +784,7 @@ in
             "shift"
           ];
           id = "screen-effects.emergencyOff";
-          action = exec "desktop-shell-vhs off";
+          action = exec "desktop-shell-vhs emergency-off";
           section = "SYSTEM";
           description = "Emergency disable screen-wide effects";
         }

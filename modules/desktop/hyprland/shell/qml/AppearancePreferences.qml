@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
+import Quickshell.Io
 
 // One persistent owner for user-selected visual modes. These are preferences,
 // not session activity; the running view reads them rather than holding copies.
@@ -354,9 +355,20 @@ QtObject {
         })
     readonly property var vhsPresetNames: presetNames(vhsPresets, vhsParameterKeys)
     readonly property string vhsPreset: selectedPreset(vhsPresets, vhsParameterKeys)
-    readonly property bool vhsEnabled: effective("vhsEnabled")
-    readonly property string screenEffectMode: effective("screenEffectMode")
-    readonly property string activeScreenEffect: vhsEnabled ? "vhs" : screenEffectMode
+    property FileView effectSuspension: FileView {
+        path: Quickshell.env("XDG_RUNTIME_DIR") + "/desktop-shell/screen-effects-paused-" + Quickshell.env("HYPRLAND_INSTANCE_SIGNATURE")
+        watchChanges: true
+        blockLoading: true
+        printErrors: false
+        onFileChanged: reload()
+    }
+    readonly property bool screenEffectsSuspended: effectSuspension.text().trim() === "suspended"
+    readonly property var screenEffectsEnabled: Object.assign({}, runtime.appearanceDefaults.screenEffectsEnabled, effective("screenEffectsEnabled"))
+    readonly property var screenEffectKinds: runtime.constraints.appearance.screenEffectsEnabled.keys
+    readonly property bool vhsEnabled: screenEffectEnabled("vhs")
+    function screenEffectEnabled(mode: string): bool {
+        return screenEffectKinds.includes(mode) && screenEffectsEnabled[mode] === true && !screenEffectsSuspended;
+    }
     readonly property var screenEffectTuning: effective("screenEffectTuning")
 
     function screenEffectValues(mode: string): var {
@@ -364,23 +376,18 @@ QtObject {
     }
 
     function setScreenEffect(mode: string): void {
-        if (mode !== "vhs" && !runtime.constraints.appearance.screenEffectMode.values.includes(mode))
+        if (!screenEffectKinds.includes(mode))
             return;
-        const next = activeScreenEffect === mode ? "off" : mode;
-        const values = {
-            vhsEnabled: next === "vhs",
-            screenEffectMode: next === "vhs" ? "off" : next
-        };
-        if (Object.prototype.hasOwnProperty.call(sceneValues, "vhsEnabled") || Object.prototype.hasOwnProperty.call(sceneValues, "screenEffectMode"))
-            sceneValues = Object.assign({}, sceneValues, values);
-        else
-            saved.setMany(values);
+        const enabled = Object.assign({}, screenEffectsEnabled, {
+            [mode]: screenEffectsSuspended ? true : !screenEffectsEnabled[mode]
+        });
+        storeOverride("screenEffectsEnabled", enabled);
         vhsApply.stop();
-        applyVhs();
+        applyVhs(true);
     }
 
     function setScreenEffectValue(mode: string, key: string, value: real): void {
-        if (!runtime.constraints.appearance.screenEffectMode.values.includes(mode) || mode === "off")
+        if (!screenEffectKinds.includes(mode) || mode === "vhs")
             return;
         const bounds = runtime.constraints.appearance.screenEffectTuning[key];
         if (!bounds || !Number.isFinite(value) || value < bounds.min || value > bounds.max)
@@ -392,7 +399,7 @@ QtObject {
             })
         });
         storeOverride("screenEffectTuning", tuning);
-        if (activeScreenEffect === mode)
+        if (screenEffectEnabled(mode))
             vhsApply.restart();
     }
 
@@ -411,7 +418,7 @@ QtObject {
             storeOverride("screenEffectTuning", tuning);
         else
             clearOverride("screenEffectTuning");
-        if (activeScreenEffect === mode)
+        if (screenEffectEnabled(mode))
             vhsApply.restart();
     }
 
@@ -425,7 +432,7 @@ QtObject {
             storeOverride("screenEffectTuning", tuning);
         else
             clearOverride("screenEffectTuning");
-        if (activeScreenEffect === mode)
+        if (screenEffectEnabled(mode))
             vhsApply.restart();
     }
 
@@ -460,7 +467,7 @@ QtObject {
             }
         });
         storeOverride("screenEffectTuning", tuning);
-        if (activeScreenEffect === mode)
+        if (screenEffectEnabled(mode))
             vhsApply.restart();
     }
     readonly property real vhsIntensity: effective("vhsIntensity")
@@ -494,13 +501,13 @@ QtObject {
     }
 
     function setSceneValues(values: var): void {
-        const before = [activeScreenEffect, windowTransparencyEnabled, shellGlassEnabled, blurEnabled];
+        const before = [JSON.stringify(screenEffectsEnabled), windowTransparencyEnabled, shellGlassEnabled, blurEnabled];
         const next = {};
         for (const key of Object.keys(values))
             if (saved.valid(key, values[key]))
                 next[key] = values[key];
         sceneValues = next;
-        if (before[0] !== activeScreenEffect)
+        if (before[0] !== JSON.stringify(screenEffectsEnabled))
             applyVhs();
         if (before[1] !== windowTransparencyEnabled)
             applyWindowTransparency();
@@ -830,18 +837,24 @@ QtObject {
         onTriggered: appearance.applyVhs()
     }
 
-    function vhsCommand(): var {
-        const mode = activeScreenEffect;
-        if (mode !== "off" && mode !== "vhs") {
-            const values = screenEffectValues(mode);
-            return [runtime.vhsControl, mode, ...["intensity", "shape", "color", "texture", "lines", "speed", "artifacts"].map(key => String(Math.round(values[key] * 100)))];
-        }
-        return [runtime.vhsControl, mode === "vhs" ? "on" : "off", String(Math.round(vhsIntensity * 100)), String(Math.round(vhsTracking * 100)), String(Math.round(vhsChroma * 100)), String(Math.round(vhsNoise * 100)), String(Math.round(vhsScanlines * 100)), String(Math.round(vhsSpeed * 100)), String(Math.round(vhsDropouts * 100))];
+    function vhsCommand(resume = false): var {
+        const tuning = {};
+        for (const mode of screenEffectKinds)
+            if (mode !== "vhs")
+                tuning[mode] = screenEffectValues(mode);
+        tuning.vhs = {};
+        for (const key of vhsParameterKeys)
+            tuning.vhs[key] = effective(key);
+        return [runtime.vhsControl, "apply", JSON.stringify({
+                enabled: screenEffectsEnabled,
+                tuning: tuning,
+                resume: resume
+            })];
     }
 
-    function applyVhs(): void {
+    function applyVhs(resume = false): void {
         if (runtime.vhsControl.length > 0)
-            Quickshell.execDetached(vhsCommand());
+            Quickshell.execDetached(vhsCommand(resume));
     }
 
     // A preset changes only VHS parameters; it does not toggle the effect
@@ -859,7 +872,6 @@ QtObject {
     }
 
     function resetVhs(): void {
-        clearOverride("vhsEnabled");
         applyVhsPreset("Default");
     }
 
@@ -878,22 +890,18 @@ QtObject {
         if (!["vhsTracking", "vhsChroma", "vhsNoise", "vhsScanlines", "vhsSpeed", "vhsDropouts"].includes(key))
             return;
         const next = Math.round(runtime.bounded("appearance", key, value) * 100) / 100;
-        if (next === effective(key) && vhsEnabled)
+        if (next === effective(key))
             return;
         storeOverride(key, next);
-        storeOverride("vhsEnabled", true);
-        storeOverride("screenEffectMode", "off");
 
         vhsApply.restart();
     }
 
     function setVhsIntensity(value: real): void {
         const next = Math.round(runtime.bounded("appearance", "vhsIntensity", value) * 100) / 100;
-        if (next === vhsIntensity && vhsEnabled)
+        if (next === vhsIntensity)
             return;
         storeOverride("vhsIntensity", next);
-        storeOverride("vhsEnabled", true);
-        storeOverride("screenEffectMode", "off");
 
         // Reload after the slider settles to avoid shader recompilation every pointer event.
         vhsApply.restart();

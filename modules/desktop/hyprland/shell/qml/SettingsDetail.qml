@@ -119,7 +119,7 @@ Item {
         })[kind] || "Settings"
     readonly property bool masterState: {
         if (screenTuning)
-            return appearance.activeScreenEffect === screenKind;
+            return appearance.screenEffectEnabled(screenKind);
         switch (kind) {
         case "windows":
             return appearance.windowTransparencyEnabled;

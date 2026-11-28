@@ -8,7 +8,14 @@ TestCase {
     function test_appearanceValues() {
         const appearance = {};
         for (const key of Profiles.appearanceKeys)
-            appearance[key] = key === "atmosphereMode" ? "aurora" : key === "screenEffectMode" ? "off" : false;
+            appearance[key] = key === "atmosphereMode" ? "aurora" : key === "screenEffectsEnabled" ? ({
+                    vhs: false,
+                    crt: false,
+                    hologram: false,
+                    glitch: false,
+                    film: false,
+                    monochrome: false
+                }) : false;
         appearance.wallpaperSpectrumEnabled = true;
         const profile = {
             name: "Focus",

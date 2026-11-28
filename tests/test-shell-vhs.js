@@ -4,558 +4,234 @@ const { spawnSync } = require("node:child_process");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
-
-const root = path.join(__dirname, "..");
-const shell = path.join(root, "modules/desktop/hyprland/shell");
-const shader = path.join(shell, "shaders/vhs.frag");
-const command = path.join(
-  root,
-  "modules/desktop/hyprland/shell/scripts/vhs.sh",
+const root = path.resolve(__dirname, "../modules/desktop/hyprland/shell");
+const script = path.join(root, "scripts/vhs.sh");
+const prefs = fs.readFileSync(
+  path.join(root, "qml/AppearancePreferences.qml"),
+  "utf8",
 );
-const read = (file) => fs.readFileSync(file, "utf8");
-
-test("animated VHS scales tracking distortion and grain with intensity", () => {
-  const source = read(shader);
-  assert.match(source, /uniform sampler2D tex;/);
-  assert.match(source, /uniform vec2 screenSize;/);
-  assert.match(source, /uniform float time;/);
-  assert.match(source, /tapeTime \* 24\.0/);
-  assert.match(source, /tearCenter = mod\(tapeTime/);
-  assert.match(source, /18\.0 \* severe/);
-  assert.match(source, /145\.0 \* severe/);
-  assert.match(source, /0\.62 \* severe/);
-  for (const parameter of ["TRACKING", "CHROMA", "NOISE", "SCANLINES", "SPEED"])
-    assert.match(
-      source,
-      new RegExp("const float VHS_" + parameter + " = 1\\.00;"),
-    );
-  assert.match(source, /VHS_TRACKING/);
-  assert.match(source, /VHS_CHROMA/);
-  assert.match(source, /VHS_NOISE/);
-  assert.match(source, /VHS_SCANLINES/);
-  assert.match(source, /VHS_SPEED/);
-  assert.match(source, /const float VHS_DROPOUTS = 0\.00;/);
-  assert.match(source, /colour \*= 1\.0 - dropout \* strength \* VHS_DROPOUTS/);
-  assert.match(
-    source,
-    /trackingFlash = .*max\(0\.0, tearDirection\) \* VHS_TRACKING/,
+const defaultsNix = fs.readFileSync(path.join(root, "default.nix"), "utf8");
+const names = ["crt", "hologram", "glitch", "film", "monochrome", "vhs"];
+const keys = [
+  "intensity",
+  "shape",
+  "color",
+  "texture",
+  "lines",
+  "speed",
+  "artifacts",
+];
+const vkeys = [
+  "vhsIntensity",
+  "vhsTracking",
+  "vhsChroma",
+  "vhsNoise",
+  "vhsScanlines",
+  "vhsSpeed",
+  "vhsDropouts",
+];
+const defaultValues = (list) =>
+  Object.fromEntries(
+    list.map((key) => [key, key.toLowerCase().endsWith("speed") ? 1 : 0.5]),
   );
-  assert.doesNotMatch(source, /dropout \* strength \* VHS_NOISE/);
-  assert.doesNotMatch(source, /pointer_position/);
-  assert.match(read(command), /damage_tracking = 0, vfr = false/);
+const bounds = (list) =>
+  Object.fromEntries(
+    list.map((key) => [
+      key,
+      {
+        min: key.toLowerCase().endsWith("speed") ? 0.25 : 0,
+        max: key.toLowerCase().endsWith("speed") ? 2.5 : 1,
+      },
+    ]),
+  );
+const payload = (active, tuning = {}) => ({
+  enabled: Object.fromEntries(
+    names.map((name) => [name, active.includes(name)]),
+  ),
+  tuning,
 });
 
-test("VHS persists through appearance preferences and defaults to off", () => {
-  const module = read(path.join(shell, "default.nix"));
-  const preferences = read(path.join(shell, "qml/AppearancePreferences.qml"));
-  const ui = read(path.join(shell, "qml/SystemContent.qml"));
-  assert.match(
-    module,
-    /vhsEnabled = lib\.mkOption \{\s*type = lib\.types\.bool;\s*default = false;/,
-  );
-  assert.match(preferences, /function toggleVhs\(\)/);
-  assert.match(preferences, /function setVhsIntensity\(value: real\)/);
-  assert.match(preferences, /onVhsControlChanged/);
-  assert.match(preferences, /appearance\.applyVhs\(\)/);
-  assert.match(
-    ui,
-    /title: "VHS " \+ Math\.round\(root\.appearance\.vhsIntensity \* 100\)/,
-  );
-  assert.match(ui, /onActivated: root\.appearance\.toggleVhs\(\)/);
-  assert.match(ui, /onDetailsRequested: root\.openVhs\(\)/);
-  assert.doesNotMatch(ui, /OpacitySetting \{/);
-});
-
-function withCompositor(fn, options = {}) {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "desktop-vhs-"));
+function compositor(fn) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "screen-compositor-"));
   try {
-    const bin = path.join(tmp, "bin");
+    const bin = path.join(dir, "bin");
     fs.mkdirSync(bin);
+    fs.writeFileSync(
+      path.join(bin, "glslangValidator"),
+      '#!/bin/sh\n[ "${MOCK_BAD_SHADER:-0}" = 0 ]\n',
+      { mode: 0o755 },
+    );
     fs.writeFileSync(
       path.join(bin, "hyprctl"),
       [
         "#!/bin/sh",
         'if [ "$1" = getoption ]; then',
-        '  [ "${MOCK_FAIL_QUERY:-0}" = 0 ] || exit 1',
-        '  if [ -f "$XDG_RUNTIME_DIR/mock-compositor" ]; then',
-        "    MOCK_DAMAGE=$(sed -n '1p' \"$XDG_RUNTIME_DIR/mock-compositor\")",
-        "    MOCK_VFR=$(sed -n '2p' \"$XDG_RUNTIME_DIR/mock-compositor\")",
-        "    MOCK_SHADER=$(sed -n '3p' \"$XDG_RUNTIME_DIR/mock-compositor\")",
-        "  fi",
+        '  damage=$(sed -n "1p" "$XDG_RUNTIME_DIR/mock"); vfr=$(sed -n "2p" "$XDG_RUNTIME_DIR/mock"); shader=$(sed -n "3p" "$XDG_RUNTIME_DIR/mock")',
         '  case "$2" in',
-        '    debug:damage_tracking) printf "int: %s\\nset: true\\n" "$MOCK_DAMAGE" ;;',
-        '    debug:vfr) printf "bool: %s\\nset: true\\n" "$MOCK_VFR" ;;',
-        '    decoration:screen_shader) printf "str: %s\\nset: true\\n" "$MOCK_SHADER" ;;',
+        '    debug:damage_tracking) printf "int: %s\\n" "$damage" ;;',
+        '    debug:vfr) printf "bool: %s\\n" "$vfr" ;;',
+        '    decoration:screen_shader) printf "str: %s\\n" "$shader" ;;',
         "    *) exit 1 ;;",
         "  esac",
         'elif [ "$1" = eval ]; then',
-        '  printf "%s\\n" "$2" >> "$VHS_CALLS"',
-        "  if [ \"${MOCK_REJECT:-0}\" != 0 ]; then printf 'error\\n'; exit 0; fi",
-        '  if [ "${MOCK_IGNORE:-0}" = 0 ]; then',
-        "    damage=$(printf '%s' \"$2\" | sed -n 's/.*damage_tracking = \\([0-9]\\).*/\\1/p')",
-        "    vfr=$(printf '%s' \"$2\" | sed -En 's/.*vfr = (true|false).*/\\1/p')",
-        '    shader=$(printf \'%s\' "$2" | sed -n \'s/.*screen_shader = "\\([^"]*\\)".*/\\1/p\')',
-        '    printf \'%s\\n%s\\n%s\\n\' "${damage:-$MOCK_DAMAGE}" "${vfr:-$MOCK_VFR}" "$shader" > "$XDG_RUNTIME_DIR/mock-compositor"',
-        "  fi",
-        "  printf 'ok\\n'",
-        "else",
-        "  exit 1",
-        "fi",
+        '  [ "${MOCK_REJECT_CONFIG:-0}" = 0 ] || { echo error; exit 0; }',
+        '  damage=$(printf "%s" "$2" | sed -n "s/.*damage_tracking = \\([0-9]\\).*/\\1/p")',
+        '  vfr=$(printf "%s" "$2" | sed -En "s/.*vfr = (true|false).*/\\1/p")',
+        '  shader=$(printf "%s" "$2" | sed -n \'s/.*screen_shader = "\\([^"]*\\)".*/\\1/p\')',
+        '  [ -n "$damage" ] || damage=$(sed -n "1p" "$XDG_RUNTIME_DIR/mock")',
+        '  [ -n "$vfr" ] || vfr=$(sed -n "2p" "$XDG_RUNTIME_DIR/mock")',
+        '  printf "%s\\n%s\\n%s\\n" "$damage" "$vfr" "$shader" > "$XDG_RUNTIME_DIR/mock"',
+        "  echo ok",
+        "else exit 1; fi",
       ].join("\n") + "\n",
       { mode: 0o755 },
     );
+    fs.writeFileSync(path.join(dir, "mock"), "2\ntrue\n/external.frag\n");
     const env = {
       ...process.env,
       PATH: bin + ":" + process.env.PATH,
-      XDG_RUNTIME_DIR: tmp,
+      XDG_RUNTIME_DIR: dir,
       HYPRLAND_INSTANCE_SIGNATURE: "test-session",
-      VHS_CALLS: path.join(tmp, "calls"),
-      VHS_SHADER_SOURCE: shader,
-      ...Object.fromEntries(
-        ["crt", "hologram", "glitch", "film", "monochrome"].map((name) => [
-          "SCREEN_" + name.toUpperCase() + "_SOURCE",
-          path.join(shell, "shaders/" + name + ".frag"),
-        ]),
+      SCREEN_COMPOSITOR_GENERATOR: path.join(
+        root,
+        "scripts/compose-screen-effects.py",
       ),
+      DESKTOP_VHS_DEFAULTS: JSON.stringify(defaultValues(vkeys)),
+      DESKTOP_VHS_CONSTRAINTS: JSON.stringify(bounds(vkeys)),
       SCREEN_EFFECT_DEFAULTS: JSON.stringify(
         Object.fromEntries(
-          ["crt", "hologram", "glitch", "film", "monochrome"].map((name) => [
-            name,
-            {
-              intensity: 0.6,
-              shape: 0.5,
-              color: 0.5,
-              texture: 0.5,
-              lines: 0.5,
-              speed: 1,
-              artifacts: 0.2,
-            },
-          ]),
+          names.filter((k) => k !== "vhs").map((k) => [k, defaultValues(keys)]),
         ),
       ),
-      SCREEN_EFFECT_CONSTRAINTS: JSON.stringify({
-        ...Object.fromEntries(
-          ["intensity", "shape", "color", "texture", "lines", "artifacts"].map(
-            (key) => [key, { min: 0, max: 1 }],
-          ),
-        ),
-        speed: { min: 0.25, max: 2.5 },
-      }),
-      DESKTOP_VHS_DEFAULTS: JSON.stringify({
-        vhsIntensity: 0.45,
-        vhsTracking: 1,
-        vhsChroma: 1,
-        vhsNoise: 1,
-        vhsScanlines: 1,
-        vhsSpeed: 1,
-        vhsDropouts: 0,
-        ...options.defaults,
-      }),
-      DESKTOP_VHS_CONSTRAINTS: JSON.stringify({
-        ...Object.fromEntries(
-          [
-            "vhsIntensity",
-            "vhsTracking",
-            "vhsChroma",
-            "vhsNoise",
-            "vhsScanlines",
-            "vhsDropouts",
-          ].map((key) => [key, { min: 0, max: 1 }]),
-        ),
-        vhsSpeed: { min: 0.25, max: 2.5 },
-        ...options.constraints,
-      }),
-      MOCK_DAMAGE: options.damage ?? "2",
-      MOCK_VFR: options.vfr ?? "true",
-      MOCK_SHADER: options.shader ?? "",
+      SCREEN_EFFECT_CONSTRAINTS: JSON.stringify(bounds(keys)),
+      ...Object.fromEntries(
+        names.map((k) => [
+          "SCREEN_" + k.toUpperCase() + "_SOURCE",
+          path.join(root, "shaders/" + k + ".frag"),
+        ]),
+      ),
     };
-    const run = (...args) =>
-      spawnSync("bash", [command, ...args], { env, encoding: "utf8" });
-    fn({ tmp, env, run });
+    const run = (command, value, extra = {}) =>
+      spawnSync(
+        "bash",
+        [
+          script,
+          command,
+          ...(value === undefined ? [] : [JSON.stringify(value)]),
+        ],
+        { env: { ...env, ...extra }, encoding: "utf8" },
+      );
+    const state = () =>
+      fs.readFileSync(path.join(dir, "mock"), "utf8").trimEnd().split("\n");
+    fn({ dir, run, state });
   } finally {
-    fs.rmSync(tmp, { recursive: true, force: true });
+    fs.rmSync(dir, { recursive: true, force: true });
   }
 }
 
-test("VHS validates intensity and caches only requested shader variants", () => {
-  withCompositor(({ tmp, run }) => {
-    for (const bad of ["-1", "101", "3.2", "oops"]) {
-      assert.equal(run("on", bad).status, 2, bad + " should be rejected");
-    }
-    assert.equal(run("on", "0").status, 0);
-    assert.equal(
-      fs.existsSync(path.join(tmp, "desktop-shell", "vhs-state-test-session")),
-      false,
-    );
-    assert.equal(run("on", "45").status, 0);
-    assert.equal(run("on", "45").status, 0);
-    assert.equal(run("on", "100").status, 0);
-    assert.equal(run("off").status, 0);
-    const generated = path.join(tmp, "desktop-shell", path.basename(shader));
-    assert.deepEqual(fs.readdirSync(generated).sort(), [
-      "045-100-100-100-100-100-000.frag",
-      "100-100-100-100-100-100-000.frag",
-    ]);
-    assert.match(
-      read(path.join(generated, "045-100-100-100-100-100-000.frag")),
-      /VHS_INTENSITY = 0\.45;/,
-    );
-    assert.match(
-      read(path.join(generated, "100-100-100-100-100-100-000.frag")),
-      /VHS_INTENSITY = 1\.00;/,
-    );
-    assert.match(
-      read(path.join(tmp, "calls")),
-      /damage_tracking = 0, vfr = false/,
-    );
-  });
+test("independent effect settings no longer have a single mode enum", () => {
+  assert.match(defaultsNix, /screenEffectsEnabled = lib\.mkOption/);
+  assert.doesNotMatch(defaultsNix, /screenEffectMode = lib\.mkOption/);
+  assert.match(prefs, /storeOverride\("screenEffectsEnabled", enabled\)/);
+  assert.doesNotMatch(prefs, /storeOverride\("vhsEnabled"/);
+  assert.doesNotMatch(prefs, /storeOverride\("screenEffectMode"/);
+  assert.match(prefs, /function resetVhs\(\): void \{\s*applyVhsPreset/);
 });
 
-test("VHS restores original damage tracking, VFR and prior screen shader", () => {
-  withCompositor(
-    ({ tmp, run }) => {
-      const state = path.join(tmp, "desktop-shell", "vhs-state-test-session");
-      assert.equal(run("on", "70").status, 0);
-      assert.equal(read(state), "1\nfalse\n/custom/original.frag\n");
-      assert.equal(run("on", "90").status, 0);
-      assert.equal(read(state), "1\nfalse\n/custom/original.frag\n");
-      assert.equal(run("off").status, 0);
-      assert.equal(fs.existsSync(state), false);
-      const calls = read(path.join(tmp, "calls")).trim().split("\n");
-      assert.equal(calls.length, 3);
-      assert.match(calls[0], /damage_tracking = 0, vfr = false/);
+test("composes multiple independent effects and restores original compositor settings", () => {
+  compositor(({ dir, run, state }) => {
+    assert.equal(run("apply", payload(["crt", "film", "vhs"])).status, 0);
+    const shader = state()[2];
+    assert.match(shader, /screen-compositions-test-session/);
+    const code = fs.readFileSync(shader, "utf8");
+    for (const name of ["crt", "film", "vhs"])
       assert.match(
-        calls[0],
-        /screen_shader = ".*070-100-100-100-100-100-000\.frag"/,
+        code,
+        new RegExp("stage_" + name + "\\(v_texcoord, colour\\)"),
       );
-      assert.match(
-        calls[1],
-        /screen_shader = ".*090-100-100-100-100-100-000\.frag"/,
-      );
-      assert.match(calls[2], /damage_tracking = 1, vfr = false/);
-      assert.match(calls[2], /screen_shader = "\/custom\/original\.frag"/);
-    },
-    { damage: "1", vfr: "false", shader: "/custom/original.frag" },
-  );
-});
-
-test("disabled VHS leaves unrelated shaders untouched and clears legacy VHS", () => {
-  withCompositor(
-    ({ tmp, run }) => {
-      assert.equal(run("off").status, 0);
-      assert.equal(fs.existsSync(path.join(tmp, "calls")), false);
-    },
-    { shader: "/custom/other.frag" },
-  );
-  withCompositor(({ tmp, run, env }) => {
-    const legacy = path.join(
-      env.XDG_RUNTIME_DIR,
-      "desktop-shell",
-      "vhs.frag",
-      "045.frag",
-    );
-    env.MOCK_SHADER = legacy;
+    assert.doesNotMatch(code, /stage_hologram\(v_texcoord, colour\)/);
+    assert.deepEqual(state().slice(0, 2), ["0", "false"]);
+    assert.equal(run("apply", payload(["film", "monochrome"])).status, 0);
+    assert.notEqual(state()[2], shader);
     assert.equal(run("off").status, 0);
-    assert.match(read(path.join(tmp, "calls")), /screen_shader = ""/);
-  });
-});
-
-test("independent VHS parameters compile their own variants and validate bounds", () => {
-  withCompositor(({ tmp, run }) => {
-    for (const invalid of [
-      ["80", "-1"],
-      ["80", "101"],
-      ["80", "80", "bad"],
-      ["80", "80", "80", "80", "80", "24"],
-      ["80", "80", "80", "80", "80", "251"],
-      ["80", "80", "80", "80", "80", "100", "-1"],
-      ["80", "80", "80", "80", "80", "100", "101"],
-    ]) {
-      assert.equal(run("on", ...invalid).status, 2);
-    }
-    assert.equal(run("on", "80", "0", "50", "75", "25", "150").status, 0);
-    const generated = path.join(
-      tmp,
-      "desktop-shell",
-      path.basename(shader),
-      "080-000-050-075-025-150-000.frag",
-    );
-    const source = read(generated);
-    for (const [key, value] of Object.entries({
-      INTENSITY: "0.80",
-      TRACKING: "0.00",
-      CHROMA: "0.50",
-      NOISE: "0.75",
-      SCANLINES: "0.25",
-      SPEED: "1.50",
-      DROPOUTS: "0.00",
-    })) {
-      assert.ok(
-        source.includes("const float VHS_" + key + " = " + value + ";"),
-        key,
-      );
-    }
-    assert.equal(run("off").status, 0);
-  });
-});
-
-test("VHS tuning exposes correct keyboard focus, pointer and navigation paths", () => {
-  const controls = read(path.join(shell, "qml/SystemContent.qml"));
-  const tile = read(path.join(shell, "qml/QuickSettingChip.qml"));
-  const panel = read(path.join(shell, "qml/VhsPanel.qml"));
-  const keymap = read(path.join(shell, "keybindings.nix"));
-  const preferences = read(path.join(shell, "qml/AppearancePreferences.qml"));
-  const defaults = read(path.join(shell, "default.nix"));
-  const runtime = read(path.join(shell, "qml/RuntimeConfig.qml"));
-
-  for (const key of [
-    "vhsTracking",
-    "vhsChroma",
-    "vhsNoise",
-    "vhsScanlines",
-    "vhsSpeed",
-    "vhsDropouts",
-  ]) {
-    assert.match(defaults, new RegExp(key + " = lib\\.mkOption"));
-    assert.doesNotMatch(runtime, new RegExp("property real " + key));
-    assert.match(preferences, new RegExp("property real " + key));
-    assert.ok(panel.includes('key: "' + key + '"'));
-  }
-  assert.match(controls, /detailActionId: "SystemContent\.vhsTune"/);
-  assert.match(controls, /onDetailsRequested: root\.openVhs\(\)/);
-  assert.match(controls, /function openVhs\(\)/);
-  assert.match(controls, /requestedView === "vhs"/);
-  assert.match(
-    controls,
-    /vhsPanel\.invoke\("handleKey", event\.key, event\.modifiers, event\.isAutoRepeat\)/,
-  );
-  assert.match(controls, /detailActionId: "SystemContent\.vhsTune"/);
-  assert.match(controls, /vhsPanel\.open \? vhsPanel : statusOpen/);
-  assert.match(
-    controls,
-    /implicitHeight: currentDetail \? currentDetail.implicitHeight/,
-  );
-  assert.match(
-    controls,
-    /function closeDetails\(\)[\s\S]*?vhsPanel\.closeView\(\)/,
-  );
-  assert.match(
-    tile,
-    /TileQuickAction \{[\s\S]*?onActivated: chip\.activated\(\)/,
-  );
-  assert.match(
-    tile,
-    /StateLayer \{[\s\S]*?onActivated: chip\.detailShortcut\.length > 0 \? chip\.detailsRequested\(\)/,
-  );
-  assert.match(panel, /onSelectedRequested: panel\.selectParameter\(index\)/);
-  assert.match(panel, /onValueRequested: next => panel\.setParameter/);
-  assert.match(
-    read(path.join(shell, "qml/ParameterCard.qml")),
-    /Accessible\.role: Accessible\.Slider/,
-  );
-  assert.match(panel, /shellNavigates\("controls", "up", key\)/);
-  assert.match(panel, /shellNavigates\("controls", "right", key\)/);
-  assert.match(panel, /shellKeyCode\("controls", "Backtab"\)/);
-  assert.match(panel, /shellMatchesHint\("VhsPanel\.toggle", key, modifiers\)/);
-  assert.match(keymap, /"SystemContent\.vhsTune" = "SHIFT\+P"/);
-  assert.match(keymap, /"VhsPanel\.toggle" = "T"/);
-  assert.match(keymap, /"VhsPanel\.adjust" = "NAV_HORIZONTAL"/);
-  assert.match(keymap, /"VhsPanel\.select"/);
-  assert.match(
-    preferences,
-    /function setVhsParameter\(key: string, value: real\)/,
-  );
-  assert.match(preferences, /storeOverride\("vhsEnabled", true\)/);
-  assert.match(preferences, /vhsApply\.restart\(\)/);
-  assert.match(
-    defaults,
-    /vhsDropouts = lib\.mkOption \{\s*type = lib\.types\.numbers\.between constraints\.appearance\.vhsDropouts\.min constraints\.appearance\.vhsDropouts\.max;\s*default = 0\.0;/,
-  );
-  assert.match(
-    panel,
-    /title: "Dropouts",\s*description: "Irregular dark horizontal tape streaks"/,
-  );
-});
-
-test("high tape noise cannot produce black dropout bands when scanlines and dropouts are zero", () => {
-  withCompositor(({ tmp, run }) => {
-    assert.equal(run("on", "100", "0", "0", "100", "0", "100", "0").status, 0);
-    const quietLines = read(
-      path.join(
-        tmp,
-        "desktop-shell",
-        path.basename(shader),
-        "100-000-000-100-000-100-000.frag",
-      ),
-    );
-    assert.match(quietLines, /const float VHS_NOISE = 1\.00;/);
-    assert.match(quietLines, /const float VHS_SCANLINES = 0\.00;/);
-    assert.match(quietLines, /const float VHS_DROPOUTS = 0\.00;/);
-    assert.match(
-      quietLines,
-      /colour \*= 1\.0 - dropout \* strength \* VHS_DROPOUTS/,
-    );
-    assert.match(
-      quietLines,
-      /trackingFlash = .*max\(0\.0, tearDirection\) \* VHS_TRACKING/,
-    );
-    assert.equal(run("on", "100", "0", "0", "0", "0", "100", "100").status, 0);
-    const enabledLines = read(
-      path.join(
-        tmp,
-        "desktop-shell",
-        path.basename(shader),
-        "100-000-000-000-000-100-100.frag",
-      ),
-    );
-    assert.match(enabledLines, /const float VHS_NOISE = 0\.00;/);
-    assert.match(enabledLines, /const float VHS_DROPOUTS = 1\.00;/);
-    assert.equal(run("off").status, 0);
-  });
-});
-
-test("VHS backend inherits modified Nix defaults and bounds", () => {
-  withCompositor(
-    ({ tmp, run }) => {
-      assert.equal(run("on", "80").status, 0);
-      assert.equal(run("on", "80", "70").status, 2);
-      assert.equal(run("on", "80", "60").status, 0);
-      assert.equal(run("on", "80", "60", "100", "100", "100", "175").status, 2);
-      const generated = path.join(tmp, "desktop-shell", path.basename(shader));
-      assert.deepEqual(fs.readdirSync(generated).sort(), [
-        "080-040-100-100-100-075-000.frag",
-        "080-060-100-100-100-075-000.frag",
-      ]);
-    },
-    {
-      defaults: { vhsTracking: 0.4, vhsSpeed: 0.75 },
-      constraints: {
-        vhsTracking: { min: 0, max: 0.6 },
-        vhsSpeed: { min: 0.5, max: 1.5 },
-      },
-    },
-  );
-});
-
-test("VHS never discards its recovery state after a rejected or unverified restore", () => {
-  withCompositor(({ tmp, env, run }) => {
-    const state = path.join(tmp, "desktop-shell", "vhs-state-test-session");
-    env.MOCK_FAIL_QUERY = "1";
-    assert.equal(run("off").status, 1);
-    delete env.MOCK_FAIL_QUERY;
-    assert.equal(run("on", "70").status, 0);
-    env.MOCK_REJECT = "1";
-    assert.notEqual(run("off").status, 0);
-    assert.ok(fs.existsSync(state));
-    delete env.MOCK_REJECT;
-    env.MOCK_IGNORE = "1";
-    assert.notEqual(run("off").status, 0);
-    assert.ok(fs.existsSync(state));
-    delete env.MOCK_IGNORE;
-    assert.equal(run("off").status, 0);
-    assert.equal(fs.existsSync(state), false);
-  });
-});
-
-test("independent screen shader families preserve the original compositor state", () => {
-  withCompositor(({ tmp, run }) => {
-    const state = path.join(tmp, "desktop-shell", "vhs-state-test-session");
-    assert.equal(run("on", "45").status, 0);
-    const initial = read(state);
-    assert.equal(initial, "2\ntrue\n\n");
-    const modes = ["crt", "hologram", "glitch", "film", "monochrome"];
-    for (const mode of modes) {
-      const result = run(mode, "70", "40", "35", "60", "50", "100", "20");
-      assert.equal(result.status, 0, mode + ": " + result.stderr);
-      assert.equal(
-        read(state),
-        initial,
-        "switch " + mode + " must not save a derived shader as original",
-      );
-      const shaderPath = path.join(
-        tmp,
-        "desktop-shell",
-        mode + ".frag",
-        "070-040-035-060-050-100-020.frag",
-      );
-      assert.ok(fs.existsSync(shaderPath), mode);
-      const source = read(shaderPath);
-      assert.match(source, /const float FX_INTENSITY = 0\.70;/);
-      assert.match(source, /const float FX_SHAPE = 0\.40;/);
-    }
-    const invocations = read(path.join(tmp, "calls")).trim().split("\n");
-    assert.match(invocations.at(-1), /damage_tracking = 2, vfr = true/);
-    assert.equal(run("off").status, 0);
-    assert.equal(fs.existsSync(state), false);
-    assert.match(
-      read(path.join(tmp, "calls")).trim().split("\n").at(-1),
-      /screen_shader = ""/,
+    assert.deepEqual(state(), ["2", "true", "/external.frag"]);
+    assert.ok(
+      !fs.existsSync(path.join(dir, "desktop-shell/vhs-state-test-session")),
     );
   });
 });
 
-test("screen effects do not steal VHS preset values or bypass compositor bounds", () => {
-  withCompositor(({ tmp, run }) => {
+test("static effects and zero-intensity effects preserve redraw policy", () => {
+  compositor(({ run, state }) => {
+    assert.equal(run("apply", payload(["monochrome"])).status, 0);
+    assert.deepEqual(state().slice(0, 2), ["2", "true"]);
     assert.equal(
-      run("crt", "102", "50", "50", "50", "50", "100", "50").status,
-      2,
-    );
-    assert.equal(
-      run("hologram", "50", "50", "50", "50", "50", "300", "50").status,
-      2,
-    );
-    assert.equal(run("vhs", "45").status, 2);
-    assert.equal(
-      run("crt", "70", "50", "50", "50", "50", "100", "50").status,
+      run("apply", payload(["crt"], { crt: { intensity: 0 } })).status,
       0,
     );
-    assert.equal(run("on", "30").status, 0);
-    assert.match(
-      read(path.join(tmp, "calls")),
-      /screen_shader = ".*vhs\.frag\/030-/,
+    assert.deepEqual(state(), ["2", "true", "/external.frag"]);
+    assert.equal(
+      run("apply", payload(["film", "crt"], { crt: { intensity: 0 } })).status,
+      0,
     );
-    assert.equal(run("off").status, 0);
-    for (const mode of ["crt", "hologram", "glitch", "film", "monochrome"]) {
-      const source = read(path.join(shell, "shaders", mode + ".frag"));
-      assert.match(source, /uniform sampler2D tex;/);
-      for (const name of [
-        "INTENSITY",
-        "SHAPE",
-        "COLOR",
-        "TEXTURE",
-        "LINES",
-        "SPEED",
-        "ARTIFACTS",
-      ])
-        assert.match(source, new RegExp("const float FX_" + name + " = "));
-    }
+    assert.doesNotMatch(
+      fs.readFileSync(state()[2], "utf8"),
+      /stage_crt\(v_texcoord, colour\)/,
+    );
   });
 });
 
-test("zero intensity restores an active effect without reentering the held lock", () => {
-  withCompositor(({ tmp, run }) => {
-    const state = path.join(tmp, "desktop-shell", "vhs-state-test-session");
-    assert.equal(run("crt", "70").status, 0);
-    assert.ok(fs.existsSync(state));
-    const zero = run("crt", "0");
-    assert.equal(zero.status, 0, zero.stderr);
-    assert.equal(fs.existsSync(state), false);
-    const calls = read(path.join(tmp, "calls")).trim().split("\n");
-    assert.equal(calls.length, 2);
-    assert.match(calls[1], /screen_shader = ""/);
-    assert.doesNotMatch(read(command), /exec bash "\$0" off/);
+test("emergency shutdown suspends automatic reapplication until explicit resume", () => {
+  compositor(({ dir, run, state }) => {
+    assert.equal(run("apply", payload(["crt", "film"])).status, 0);
+    assert.equal(run("emergency-off").status, 0);
+    assert.deepEqual(state(), ["2", "true", "/external.frag"]);
+    const marker = path.join(
+      dir,
+      "desktop-shell/screen-effects-paused-test-session",
+    );
+    assert.ok(fs.existsSync(marker));
+    assert.equal(run("apply", payload(["vhs"])).status, 0);
+    assert.deepEqual(state(), ["2", "true", "/external.frag"]);
+    assert.equal(
+      run("apply", { ...payload(["vhs", "film"]), resume: true }).status,
+      0,
+    );
+    assert.ok(!fs.existsSync(marker));
+    assert.match(state()[2], /screen-compositions-test-session/);
   });
 });
 
-test("missing effect recovery state never erases a foreign shader in the runtime directory", () => {
-  withCompositor(({ tmp, run, env }) => {
-    env.MOCK_SHADER = path.join(
-      tmp,
-      "desktop-shell",
-      "another-app",
-      "custom.frag",
+test("failed compilation, invalid payload and rejected compositor writes preserve state", () => {
+  compositor(({ run, state }) => {
+    assert.equal(
+      run("apply", payload(["crt"], { crt: { intensity: 5 } })).status,
+      2,
     );
-    assert.equal(run("off").status, 0);
-    assert.equal(fs.existsSync(path.join(tmp, "calls")), false);
+    assert.equal(
+      run("apply", { enabled: { crt: true }, tuning: {} }).status,
+      2,
+    );
+    assert.deepEqual(state(), ["2", "true", "/external.frag"]);
+    assert.equal(
+      run("apply", payload(["crt"]), { MOCK_BAD_SHADER: "1" }).status,
+      1,
+    );
+    assert.deepEqual(state(), ["2", "true", "/external.frag"]);
+    assert.equal(
+      run("apply", payload(["crt"]), { MOCK_REJECT_CONFIG: "1" }).status,
+      1,
+    );
+    assert.deepEqual(state(), ["2", "true", "/external.frag"]);
   });
+});
+
+test("emergency shortcut uses suspension, not a regular off toggle", () => {
+  const shortcuts = fs.readFileSync(
+    path.join(root, "../keybindings.nix"),
+    "utf8",
+  );
+  assert.match(shortcuts, /desktop-shell-vhs emergency-off/);
+  assert.match(fs.readFileSync(script, "utf8"), /flock -x 9/);
+  assert.match(prefs, /screenEffectsSuspended/);
 });

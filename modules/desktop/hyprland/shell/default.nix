@@ -15,8 +15,8 @@ let
           "crop"
         ];
       };
-      screenEffectMode.values = [
-        "off"
+      screenEffectsEnabled.keys = [
+        "vhs"
         "crt"
         "hologram"
         "glitch"
@@ -850,10 +850,19 @@ in
           default = 0.70;
           description = "Opacity of translucent shell surfaces, from 0.2 to 1.0 inclusive.";
         };
-        screenEffectMode = lib.mkOption {
-          type = lib.types.enum constraints.appearance.screenEffectMode.values;
-          default = "off";
-          description = "Selected screen-wide post-processing effect; off disables compositing passes.";
+        screenEffectsEnabled = lib.mkOption {
+          type = lib.types.submodule {
+            options = lib.genAttrs constraints.appearance.screenEffectsEnabled.keys (
+              effect:
+              lib.mkOption {
+                type = lib.types.bool;
+                default = false;
+                description = "Enable the ${effect} fullscreen effect.";
+              }
+            );
+          };
+          default = { };
+          description = "Independently enabled fullscreen effects.";
         };
         screenEffectTuning = lib.mkOption {
           type = lib.types.submodule {
@@ -894,11 +903,6 @@ in
           };
           default = { };
           description = "Per-effect fullscreen post-processing tuning.";
-        };
-        vhsEnabled = lib.mkOption {
-          type = lib.types.bool;
-          default = false;
-          description = "Apply the VHS tape screen effect.";
         };
         vhsIntensity = lib.mkOption {
           type = lib.types.numbers.between constraints.appearance.vhsIntensity.min constraints.appearance.vhsIntensity.max;
@@ -1523,13 +1527,16 @@ in
           pkgs.coreutils
           pkgs.gnused
           pkgs.jq
+          pkgs.python3
+          pkgs.glslang
           pkgs.util-linux
           osConfig.programs.hyprland.package
         ];
         text = ''
           export DESKTOP_VHS_DEFAULTS=${lib.escapeShellArg (builtins.toJSON scopeConfig.appearance)}
           export DESKTOP_VHS_CONSTRAINTS=${lib.escapeShellArg (builtins.toJSON constraints.appearance)}
-          export VHS_SHADER_SOURCE=${lib.escapeShellArg "${./shaders/vhs.frag}"}
+          export SCREEN_COMPOSITOR_GENERATOR=${lib.escapeShellArg "${./scripts/compose-screen-effects.py}"}
+          export SCREEN_VHS_SOURCE=${lib.escapeShellArg "${./shaders/vhs.frag}"}
           export SCREEN_EFFECT_DEFAULTS=${lib.escapeShellArg (builtins.toJSON scopeConfig.appearance.screenEffectTuning)}
           export SCREEN_EFFECT_CONSTRAINTS=${lib.escapeShellArg (builtins.toJSON constraints.appearance.screenEffectTuning)}
           export SCREEN_CRT_SOURCE=${lib.escapeShellArg "${./shaders/crt.frag}"}

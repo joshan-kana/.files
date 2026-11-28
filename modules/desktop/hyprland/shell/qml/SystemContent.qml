@@ -841,7 +841,7 @@ FocusScope {
     onRequestedViewChanged: requestedViewTimer.restart()
 
     function openSetting(name: string): void {
-        if (!["windows", "glass", "nightLight", "alerts", "stay", "power", "reactive", "spectrum", "bar", "frame", "motion", "displays", "scenes"].includes(name) && !(name.startsWith("screen.") && runtime.constraints.appearance.screenEffectMode.values.includes(name.slice(7))))
+        if (!["windows", "glass", "nightLight", "alerts", "stay", "power", "reactive", "spectrum", "bar", "frame", "motion", "displays", "scenes"].includes(name) && !(name.startsWith("screen.") && root.appearance.screenEffectKinds.includes(name.slice(7))))
             return;
         helpOpen = false;
         closeDetails();
@@ -1532,7 +1532,7 @@ FocusScope {
                             detailActionId: "SystemContent.crtDetails"
                             title: "CRT"
                             detailName: "CRT effect settings"
-                            active: root.appearance.activeScreenEffect === "crt"
+                            active: root.appearance.screenEffectEnabled("crt")
                             activeColor: root.theme.roleColor("reactive")
                             onActivated: root.appearance.setScreenEffect("crt")
                             onDetailsRequested: root.openSetting("screen.crt")
@@ -1549,7 +1549,7 @@ FocusScope {
                             detailActionId: "SystemContent.hologramDetails"
                             title: "Holographic"
                             detailName: "Holographic effect settings"
-                            active: root.appearance.activeScreenEffect === "hologram"
+                            active: root.appearance.screenEffectEnabled("hologram")
                             activeColor: root.theme.roleColor("reactive")
                             onActivated: root.appearance.setScreenEffect("hologram")
                             onDetailsRequested: root.openSetting("screen.hologram")
@@ -1566,7 +1566,7 @@ FocusScope {
                             detailActionId: "SystemContent.glitchDetails"
                             title: "Digital glitch"
                             detailName: "Digital glitch effect settings"
-                            active: root.appearance.activeScreenEffect === "glitch"
+                            active: root.appearance.screenEffectEnabled("glitch")
                             activeColor: root.theme.roleColor("reactive")
                             onActivated: root.appearance.setScreenEffect("glitch")
                             onDetailsRequested: root.openSetting("screen.glitch")
@@ -1583,7 +1583,7 @@ FocusScope {
                             detailActionId: "SystemContent.filmDetails"
                             title: "Film"
                             detailName: "Film effect settings"
-                            active: root.appearance.activeScreenEffect === "film"
+                            active: root.appearance.screenEffectEnabled("film")
                             activeColor: root.theme.roleColor("reactive")
                             onActivated: root.appearance.setScreenEffect("film")
                             onDetailsRequested: root.openSetting("screen.film")
@@ -1600,7 +1600,7 @@ FocusScope {
                             detailActionId: "SystemContent.monochromeDetails"
                             title: "Monochrome"
                             detailName: "Monochrome effect settings"
-                            active: root.appearance.activeScreenEffect === "monochrome"
+                            active: root.appearance.screenEffectEnabled("monochrome")
                             activeColor: root.theme.roleColor("reactive")
                             onActivated: root.appearance.setScreenEffect("monochrome")
                             onDetailsRequested: root.openSetting("screen.monochrome")
