@@ -11,6 +11,7 @@ Item {
 
     property int barCount: 48
     property bool curve: false
+    property bool radial: false
     // Hidden, prewarmed hub pages retain their models but do no visualizer
     // calculations. Enabled is inherited from the owning inactive Loader.
     readonly property bool rendering: enabled && visible && opacity > 0 && width > 0 && height > 0 && spectrum.hasEnergy
@@ -41,6 +42,7 @@ Item {
         anchors.fill: root
         visible: root.rendering
         curve: root.curve
+        radial: root.radial
         targetBands: root.rendering ? root.spectrum.targetBands : []
         edges: root.bandEdges
         barColors: root.barColors

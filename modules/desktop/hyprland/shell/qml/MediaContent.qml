@@ -553,7 +553,7 @@ FocusScope {
                     compact: true
                     horizontalCompact: true
                     icon: DesktopIcons.spectrumGlyph(content.visualizerMode)
-                    title: content.visualizerMode === "off" ? "Off" : content.visualizerMode === "bars" ? "Bars" : "Curve"
+                    title: content.visualizerMode.charAt(0).toUpperCase() + content.visualizerMode.slice(1)
                     shortcut: content.runtime.shellHint("MediaContent.visualizer")
                     active: true
                     onActivated: content.toggleVisualizer()

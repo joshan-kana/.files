@@ -7,6 +7,7 @@ Column {
     required property Theme theme
     required property Motion motion
     required property AppearancePreferences appearance
+    required property MusicReactiveState reactive
     readonly property var modeActions: [
         {
             value: "off",
@@ -22,6 +23,11 @@ Column {
             value: "curve",
             title: "Curve",
             action: "SpectrumDetail.curve"
+        },
+        {
+            value: "radial",
+            title: "Radial",
+            action: "SpectrumDetail.radial"
         }
     ]
     property int previewIndex: 0
@@ -104,7 +110,7 @@ Column {
                         delegate: ShellChoice {
                             required property int index
                             required property var modelData
-                            width: (row.width - detail.theme.spacing1 * 2) / 3
+                            width: (row.width - detail.theme.spacing1 * (modeRepeater.count - 1)) / modeRepeater.count
                             height: implicitHeight
                             runtime: detail.runtime
                             theme: detail.theme

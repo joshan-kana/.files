@@ -339,7 +339,10 @@ test("spectrum mode changes remain local and legacy wallpaper tuning migrates on
   const runtime = {
     constraints: {
       appearance: Object.fromEntries(
-        surfaces.map(({ key }) => [key, { values: ["bars", "curve"] }]),
+        surfaces.map(({ key }) => [
+          key,
+          { values: ["bars", "curve", "radial"] },
+        ]),
       ),
     },
   };
@@ -353,11 +356,14 @@ test("spectrum mode changes remain local and legacy wallpaper tuning migrates on
     "mode",
     body("setSpectrumPresentation"),
   );
-  const combinations = ["off", "bars", "curve"];
-  for (let n = 0; n < 81; n++) {
+  const combinations = ["off", "bars", "curve", "radial"];
+  for (let n = 0; n < combinations.length ** surfaces.length; n++) {
     const state = {};
     surfaces.forEach(({ key, enabledKey }, i) => {
-      const mode = combinations[Math.floor(n / 3 ** i) % 3];
+      const mode =
+        combinations[
+          Math.floor(n / combinations.length ** i) % combinations.length
+        ];
       state[key] = mode === "off" ? "curve" : mode;
       state[enabledKey] = mode !== "off";
     });

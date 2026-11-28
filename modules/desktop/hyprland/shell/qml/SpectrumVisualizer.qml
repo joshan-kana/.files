@@ -64,4 +64,22 @@ Item {
             }
         }
     }
+
+    SpectrumRenderer {
+        anchors.fill: parent
+        spectrum: root.spectrum
+        theme: root.theme
+        frequencyScale: root.spectrum.frequencyScale
+        barCount: Math.min(root.density, Math.max(8, Math.round(Math.min(width, height) / 3)))
+        radial: true
+        visible: root.engaged && (root.mode === "radial" || opacity > 0.01)
+        opacity: root.mode === "radial" ? Math.min(1, root.baseOpacity * root.spectrum.appearance.spectrumOpacity) : 0
+        Behavior on opacity {
+            NumberAnimation {
+                duration: root.motion.fast
+                easing.type: root.motion.enterType
+                easing.bezierCurve: root.motion.enterCurve
+            }
+        }
+    }
 }
