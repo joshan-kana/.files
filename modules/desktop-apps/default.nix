@@ -275,15 +275,12 @@ in
       };
     };
 
-  kdeConnect =
+  kdeconnect =
     _:
     lib.optionalAttrs isLinux {
-      programs.kdeconnect = {
-        enable = true;
-        package = null;
-      };
+      programs.kdeconnect.package = null;
       home = _: {
-        services.kdeconnect.enable = true;
+        services.kdeconnect = { };
       };
     };
 
@@ -295,7 +292,6 @@ in
     lib.optionalAttrs isLinux {
       home = _: {
         services.librespot = {
-          enable = true;
           settings = {
             name = config.networking.hostName;
             backend = "pulseaudio";

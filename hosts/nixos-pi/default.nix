@@ -36,30 +36,6 @@ lib.recursiveUpdate (import ../../profiles/media.nix { inherit lib moduleRegistr
     };
   };
 
-  cli = editScope moduleRegistry.cli {
-    mpv = _: {
-      home = { lib, pkgs, ... }: {
-        programs.mpv = {
-          enable = true;
-          package = pkgs.mpv-rpi;
-          # Keep the validated hardware player free of extra scripts.
-          scripts = lib.mkForce [ ];
-          config = {
-            target-colorspace-hint = lib.mkForce "no";
-            input-commands-append = lib.mkForce [ ];
-            vo = "dmabuf-wayland,gpu";
-            hwdec = "drm,v4l2m2m";
-            hwdec-threads = 2;
-            hwdec-extra-frames = 0;
-            vd-queue-enable = false;
-          };
-          # The SDR DMA-BUF output does not support the shared HDR profiles.
-          profiles = lib.mkForce { };
-        };
-      };
-    };
-  };
-
   networking = editScope moduleRegistry.networking {
     ssh = { config, ... }: {
       users.users.${config.dotfiles.users.primary.name}.openssh.authorizedKeys.keys = [
@@ -81,7 +57,24 @@ lib.recursiveUpdate (import ../../profiles/media.nix { inherit lib moduleRegistr
   };
 
   desktop = editScope moduleRegistry.desktop {
-    mediaSession.nativeKodi = pkgs.kodi-gbm-rpi;
+    mediaSession = {
+      nativeKodi = pkgs.kodi-gbm-rpi;
+      home = { lib, pkgs, ... }: {
+        programs.mpv = {
+          # The Pi-specific decoder must preserve the shared MPV profiles and bindings.
+          package = pkgs.mpv-rpi.override { scripts = [ pkgs.mpvScripts.mpris ]; };
+          scripts = lib.mkForce [ ];
+          config = {
+            target-colorspace-hint = lib.mkForce "no";
+            vo = "dmabuf-wayland,gpu";
+            hwdec = "drm,v4l2m2m";
+            hwdec-threads = 2;
+            hwdec-extra-frames = 0;
+            vd-queue-enable = false;
+          };
+        };
+      };
+    };
   };
 
   desktopApps =

@@ -19,7 +19,7 @@ lib.recursiveUpdate (import ./minimal.nix { inherit lib moduleRegistry; }) {
         children.enable = false;
         chromium.enable = true;
         jellyfin.enable = true;
-        kdeConnect.enable = true;
+        kdeconnect.enable = true;
         kodi.enable = true;
         librespot.enable = true;
         moonlight.enable = true;

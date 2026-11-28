@@ -19,7 +19,7 @@
       mediaSession.enable = false;
     };
     desktopApps = {
-      kdeConnect.enable = false;
+      kdeconnect.enable = false;
       kodi.enable = false;
       librespot.enable = false;
     };
