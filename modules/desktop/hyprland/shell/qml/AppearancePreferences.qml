@@ -494,9 +494,13 @@ QtObject {
     }
 
     function setSceneValues(values: var): void {
-        const before = [vhsEnabled, windowTransparencyEnabled, shellGlassEnabled, blurEnabled];
-        sceneValues = values;
-        if (before[0] !== vhsEnabled)
+        const before = [activeScreenEffect, windowTransparencyEnabled, shellGlassEnabled, blurEnabled];
+        const next = {};
+        for (const key of Object.keys(values))
+            if (saved.valid(key, values[key]))
+                next[key] = values[key];
+        sceneValues = next;
+        if (before[0] !== activeScreenEffect)
             applyVhs();
         if (before[1] !== windowTransparencyEnabled)
             applyWindowTransparency();

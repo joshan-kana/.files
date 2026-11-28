@@ -13,7 +13,16 @@ const f = vm.runInNewContext(
 function profile(name = "Focus") {
   return {
     name,
-    appearance: Object.fromEntries(f.appearanceKeys.map((key) => [key, false])),
+    appearance: Object.fromEntries(
+      f.appearanceKeys.map((key) => [
+        key,
+        key === "atmosphereMode"
+          ? "aurora"
+          : key === "screenEffectMode"
+            ? "off"
+            : false,
+      ]),
+    ),
     animations: false,
     silent: true,
     presentation: false,
@@ -71,6 +80,11 @@ test("scene application does not persist ordinary preferences; stopping clears o
 test("old scenes do not override visualisers they never captured", () => {
   const old = profile();
   for (const name of [
+    "atmosphereEnabled",
+    "atmosphereAudioEnabled",
+    "atmosphereBackdrop",
+    "atmosphereMode",
+    "screenEffectMode",
     "islandVisualizerEnabled",
     "controlsVisualizerEnabled",
     "mediaVisualizerEnabled",
@@ -78,8 +92,13 @@ test("old scenes do not override visualisers they never captured", () => {
     delete old.appearance[name];
   assert.ok(f.validProfile(old));
   assert.equal("mediaVisualizerEnabled" in f.appearanceValues(old), false);
+  assert.equal("atmosphereEnabled" in f.appearanceValues(old), false);
+  assert.equal("atmosphereMode" in f.appearanceValues(old), false);
+  assert.equal("screenEffectMode" in f.appearanceValues(old), false);
   const next = profile();
   assert.equal(f.appearanceValues(next).mediaVisualizerEnabled, false);
+  assert.equal(f.appearanceValues(next).atmosphereMode, "aurora");
+  assert.equal(f.appearanceValues(next).screenEffectMode, "off");
   next.appearance.mediaVisualizerEnabled = "off";
   assert.equal(f.validProfile(next), false);
 });

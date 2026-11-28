@@ -1,4 +1,4 @@
-// Scenes contain only user-selected shell switches. Schedules, hardware,
+// Scenes contain user-selected shell modes and switches. Schedules, hardware,
 // application state and other persistent preferences remain with their owners.
 const appearanceKeys = [
   "wallpaperSpectrumEnabled",
@@ -10,13 +10,17 @@ const appearanceKeys = [
   "blurEnabled",
 ];
 
-const spectrumKeys = [
+const optionalAppearanceKeys = [
+  "atmosphereEnabled",
+  "atmosphereAudioEnabled",
+  "atmosphereBackdrop",
   "islandVisualizerEnabled",
   "controlsVisualizerEnabled",
   "mediaVisualizerEnabled",
 ];
 const requiredAppearanceKeys = [...appearanceKeys];
-appearanceKeys.push(...spectrumKeys);
+const optionalModeKeys = ["atmosphereMode", "screenEffectMode"];
+appearanceKeys.push(...optionalAppearanceKeys, ...optionalModeKeys);
 
 function validProfile(profile) {
   return !!(
@@ -29,10 +33,15 @@ function validProfile(profile) {
     requiredAppearanceKeys.every(
       (key) => typeof profile.appearance[key] === "boolean",
     ) &&
-    spectrumKeys.every(
+    optionalAppearanceKeys.every(
       (key) =>
         !(key in profile.appearance) ||
         typeof profile.appearance[key] === "boolean",
+    ) &&
+    optionalModeKeys.every(
+      (key) =>
+        !(key in profile.appearance) ||
+        typeof profile.appearance[key] === "string",
     ) &&
     typeof profile.animations === "boolean" &&
     typeof profile.silent === "boolean" &&
@@ -54,8 +63,11 @@ function cleanProfiles(items) {
 
 function appearanceValues(profile) {
   const values = {};
-  for (const key of appearanceKeys)
+  for (const key of [...requiredAppearanceKeys, ...optionalAppearanceKeys])
     if (typeof profile.appearance[key] === "boolean")
+      values[key] = profile.appearance[key];
+  for (const key of optionalModeKeys)
+    if (typeof profile.appearance[key] === "string")
       values[key] = profile.appearance[key];
   return values;
 }

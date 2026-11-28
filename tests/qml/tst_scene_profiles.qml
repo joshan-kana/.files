@@ -8,7 +8,7 @@ TestCase {
     function test_appearanceValues() {
         const appearance = {};
         for (const key of Profiles.appearanceKeys)
-            appearance[key] = false;
+            appearance[key] = key === "atmosphereMode" ? "aurora" : key === "screenEffectMode" ? "off" : false;
         appearance.wallpaperSpectrumEnabled = true;
         const profile = {
             name: "Focus",
@@ -21,6 +21,7 @@ TestCase {
         const values = Profiles.appearanceValues(profile);
         compare(values.wallpaperSpectrumEnabled, true);
         compare(values.musicReactiveEnabled, false);
+        compare(values.atmosphereMode, "aurora");
         compare(Profiles.cleanProfiles([profile, profile]).length, 1);
     }
 }
