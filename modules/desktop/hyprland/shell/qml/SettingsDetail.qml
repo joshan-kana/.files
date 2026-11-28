@@ -20,6 +20,7 @@ Item {
     required property PowerProfileState powerProfile
     required property SystemState system
     required property SpectrumState spectrum
+    required property MusicReactiveState reactive
     required property bool musicReactiveEnabled
     required property bool barVisible
     required property bool frameVisible
@@ -875,6 +876,7 @@ Item {
                 theme: panel.theme
                 motion: panel.motion
                 appearance: panel.appearance
+                reactive: panel.reactive
             }
             ShellText {
                 visible: panel.reactiveTuning

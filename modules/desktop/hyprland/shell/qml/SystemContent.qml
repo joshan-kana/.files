@@ -1956,6 +1956,7 @@ FocusScope {
                     powerProfile: root.powerProfile
                     system: root.system
                     spectrum: root.spectrum
+                    reactive: root.reactive
                     musicReactiveEnabled: root.musicReactiveEnabled
                     barVisible: root.barVisible
                     frameVisible: root.frameVisible
