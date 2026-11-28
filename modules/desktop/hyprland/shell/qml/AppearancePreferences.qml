@@ -443,6 +443,43 @@ QtObject {
         return next;
     }
 
+    // Older releases stored presentation switches on each style. Preserve the
+    // selected style's values once; only opacity and speed remain per-style.
+    function migrateAtmosphereOverrides(values: var): var {
+        const tuning = values.atmosphereTuning;
+        if (!tuning || typeof tuning !== "object")
+            return values;
+        const next = Object.assign({}, values);
+        const selected = tuning[next.atmosphereMode || runtime.appearanceDefaults.atmosphereMode] || {};
+        const updated = {};
+        let changed = false;
+        for (const [mode, style] of Object.entries(tuning)) {
+            if (!style || typeof style !== "object") {
+                updated[mode] = style;
+                continue;
+            }
+            const clean = Object.assign({}, style);
+            for (const key of ["audio", "backdrop"])
+                if (key in clean) {
+                    delete clean[key];
+                    changed = true;
+                }
+            if (Object.keys(clean).length > 0)
+                updated[mode] = clean;
+        }
+        if (!changed)
+            return values;
+        if (!Object.prototype.hasOwnProperty.call(next, "atmosphereAudioEnabled") && typeof selected.audio === "boolean")
+            next.atmosphereAudioEnabled = selected.audio;
+        if (!Object.prototype.hasOwnProperty.call(next, "atmosphereBackdrop") && typeof selected.backdrop === "boolean")
+            next.atmosphereBackdrop = selected.backdrop;
+        if (Object.keys(updated).length > 0)
+            next.atmosphereTuning = updated;
+        else
+            delete next.atmosphereTuning;
+        return next;
+    }
+
     Component.onCompleted: {
         if (saved.uninitialized) {
             const old = {};
@@ -462,10 +499,14 @@ QtObject {
                 else if (key === "wallpaperSpectrumBars" || key === "wallpaperSpectrumOpacity")
                     old[key] = saved.legacy(key, 0);
             }
-            saved.initialize(migrateSpectrumOverrides(old));
+            saved.initialize(migrateAtmosphereOverrides(migrateSpectrumOverrides(old)));
         } else if (["wallpaperSpectrumBars", "wallpaperSpectrumOpacity", "previewVisualizerMode"].some(key => Object.prototype.hasOwnProperty.call(saved.overrides, key))) {
             saved.write(migrateSpectrumOverrides(saved.overrides));
         }
+        const atmosphereBefore = saved.overrides;
+        const migratedAtmosphere = migrateAtmosphereOverrides(atmosphereBefore);
+        if (migratedAtmosphere !== atmosphereBefore)
+            saved.write(migratedAtmosphere);
         applyVhs();
         applyWindowTransparency();
         applyShellGlass();
