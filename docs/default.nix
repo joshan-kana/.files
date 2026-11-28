@@ -520,7 +520,6 @@ let
       export SYSTEM=${lib.escapeShellArg host.pkgs.stdenv.hostPlatform.system}
       export PROFILE=${lib.escapeShellArg config.dotfiles.profile.name}
       export DOTFILES_REPO=${lib.escapeShellArg config.dotfiles.paths.repoPath}
-      export DOTFILES_REMOTE=${lib.escapeShellArg config.dotfiles.paths.repoUrl}
       export PRIMARY_USER=${lib.escapeShellArg primaryUser.name}
       export PRIMARY_HOME=${lib.escapeShellArg "${primaryUser.homeRoot}/${primaryUser.name}"}
       ${lib.optionalString
@@ -836,7 +835,6 @@ let
       export SYSTEM=${lib.escapeShellArg host.pkgs.stdenv.hostPlatform.system}
       export PROFILE=${lib.escapeShellArg config.dotfiles.profile.name}
       export DOTFILES_REPO=${lib.escapeShellArg config.dotfiles.paths.repoPath}
-      export DOTFILES_REMOTE=${lib.escapeShellArg config.dotfiles.paths.repoUrl}
       export PRIMARY_USER=${lib.escapeShellArg primary.name}
       export PRIMARY_HOME=${lib.escapeShellArg "${primary.homeRoot}/${primary.name}"}
       export USER_SECRETS_DIR=${lib.escapeShellArg config.dotfiles.secretsDir}

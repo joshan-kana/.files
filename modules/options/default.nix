@@ -156,12 +156,6 @@ in
     };
 
     paths = {
-      repoUrl = mkOption {
-        type = types.str;
-        default = "git@github.com:joshan-kana/.files.git";
-        description = "Canonical Git repository URL for the configuration.";
-      };
-
       repoName = mkOption {
         type = types.str;
         default = ".files";

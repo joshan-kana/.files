@@ -224,7 +224,7 @@ As the primary user, clone the configuration if it is not already present:
 
 ```sh
 if [ ! -d "$DOTFILES_REPO/.git" ]; then
-  git clone --recurse-submodules "$DOTFILES_REMOTE" "$DOTFILES_REPO" || exit 1
+  git clone --recurse-submodules git@github.com:joshan-kana/.files.git "$DOTFILES_REPO" || exit 1
 fi
 cd "$DOTFILES_REPO"
 git fetch

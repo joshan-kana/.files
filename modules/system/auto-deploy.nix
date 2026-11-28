@@ -24,7 +24,7 @@ in
     remotes = [
       {
         name = "origin";
-        url = config.dotfiles.paths.repoUrl;
+        url = "git@github.com:joshan-kana/.files.git";
 
         auth = {
           username = "git";
