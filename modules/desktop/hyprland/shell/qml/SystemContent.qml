@@ -16,6 +16,7 @@ FocusScope {
     required property SystemState system
     required property MediaState media
     required property SpectrumState spectrum
+    required property MusicReactiveState reactive
     required property NotificationState notificationState
     required property BrightnessState brightness
     required property KeyboardState keyboard
@@ -145,9 +146,9 @@ FocusScope {
     readonly property bool vhsOpen: vhsPanel.open
     // List/gallery views own their own paging. Static editors share the hub
     // viewport when their measured content exceeds the monitor budget.
-    readonly property bool detailUsesHostPaging: settingsOpen || vhsOpen || statusOpen || sessionOpen || resourcesOpen || mixerOpen || (wallpaperOpen && !!wallpaperPanel.panel?.policyView)
+    readonly property bool detailUsesHostPaging: settingsOpen || vhsOpen || statusOpen || sessionOpen || resourcesOpen || mixerOpen || (wallpaperOpen && wallpaperPanel.panel?.view !== "gallery")
     readonly property bool recordingsOpen: recordingsPanel.open
-    readonly property string helpTitle: settingsPanel.open ? "Settings" : statusOpen ? "System status" : recordingsPanel.open ? "Captures" : wallpaperPanel.open ? "Wallpaper gallery" : mixerOpen ? "Audio mixer" : resourcesPanel.open ? "Resource monitor" : (bluetoothPanel.open ? "Bluetooth controls" : (networkPanel.open ? "Network controls" : (themePanel.open ? "Theme controls" : (sessionPanel.open ? "Session controls" : (trayMenu.open ? "Tray menu controls" : "System controls")))))
+    readonly property string helpTitle: settingsPanel.open ? "Settings" : statusOpen ? "System status" : recordingsPanel.open ? "Captures" : wallpaperPanel.open ? wallpaperPanel.panel?.view === "atmosphere" ? "Wallpaper atmospheres" : wallpaperPanel.panel?.policyView ? "Wallpaper schedule" : "Wallpaper gallery" : mixerOpen ? "Audio mixer" : resourcesPanel.open ? "Resource monitor" : (bluetoothPanel.open ? "Bluetooth controls" : (networkPanel.open ? "Network controls" : (themePanel.open ? "Theme controls" : (sessionPanel.open ? "Session controls" : (trayMenu.open ? "Tray menu controls" : "System controls")))))
     readonly property var helpBindings: settingsPanel.open ? [
         {
             key: root.runtime.shellHint("SettingsDetail.toggle"),
@@ -297,38 +298,66 @@ FocusScope {
             key: root.runtime.shellHint("SystemContent.legend.cancel_deletion_back_to_controls"),
             action: "Cancel deletion / back to Controls"
         }
-    ] : wallpaperPanel.open ? [
-        {
-            key: root.runtime.shellHint("SystemContent.legend.choose_thumbnail"),
-            action: "Choose thumbnail"
-        },
-        {
-            key: root.runtime.shellHint("SystemContent.legend.page_selection"),
-            action: "Page selection"
-        },
-        {
-            key: root.runtime.shellHint("SystemContent.legend.search_wallpapers"),
-            action: "Search wallpapers"
-        },
-        {
-            key: root.runtime.shellHint("SystemContent.legend.apply_to_selected_output"),
-            action: "Apply to selected output"
-        },
-        {
-            key: root.runtime.shellHint("SystemContent.legend.choose_monitor_all_outputs"),
-            action: "Choose monitor / all outputs"
-        },
-        {
-            key: root.runtime.shellHint("SystemContent.legend.fit_fill_reset"),
-            action: "Fit/fill / reset"
-        },
-        ...(wallpaperPanel.panel?.policyView ? wallpaperPanel.panel.scheduleActions : wallpaperPanel.panel?.galleryPolicyActions || []).map(entry => ({
+    ] : wallpaperPanel.open ? [...(wallpaperPanel.panel?.view === "gallery" ? [
+                {
+                    key: root.runtime.shellHint("SystemContent.legend.choose_thumbnail"),
+                    action: "Choose thumbnail"
+                },
+                {
+                    key: root.runtime.shellHint("SystemContent.legend.page_selection"),
+                    action: "Page selection"
+                },
+                {
+                    key: root.runtime.shellHint("SystemContent.legend.search_wallpapers"),
+                    action: "Search wallpapers"
+                },
+                {
+                    key: root.runtime.shellHint("SystemContent.legend.apply_to_selected_output"),
+                    action: "Apply to selected output"
+                },
+                {
+                    key: root.runtime.shellHint("SystemContent.legend.choose_monitor_all_outputs"),
+                    action: "Choose monitor / all outputs"
+                },
+                {
+                    key: root.runtime.shellHint("SystemContent.legend.fit_fill_reset"),
+                    action: "Fit/fill / reset"
+                }
+            ] : []), ...(wallpaperPanel.panel?.view === "atmosphere" ? [
+                {
+                    action: "WallpaperAtmosphere.toggle",
+                    title: "Enable or disable atmosphere"
+                },
+                {
+                    action: "WallpaperAtmosphere.audio",
+                    title: "Toggle audio response"
+                },
+                {
+                    action: "WallpaperAtmosphere.backdrop",
+                    title: "Switch backdrop"
+                },
+                {
+                    action: "WallpaperAtmosphere.reset",
+                    title: "Restore mode defaults"
+                },
+                {
+                    action: "WallpaperAtmosphere.select",
+                    title: "Select parameter"
+                },
+                {
+                    action: "WallpaperAtmosphere.adjust",
+                    title: "Adjust parameter"
+                }
+            ] : wallpaperPanel.panel?.policyView ? wallpaperPanel.panel.scheduleActions : wallpaperPanel.panel?.galleryPolicyActions || []).map(entry => ({
                     key: root.runtime.shellHint(entry.action),
                     action: entry.title
-                })),
+                })), ...(wallpaperPanel.panel?.view === "atmosphere" ? root.runtime.constraints.appearance.atmosphereMode.values.map((mode, index) => ({
+                        key: root.runtime.shellChoiceHint(index),
+                        action: "Preview " + (mode === "flow" ? "Flow field" : mode)
+                    })) : []),
         {
             key: root.runtime.shellHint("SystemContent.legend.esc_13"),
-            action: root.returnToControls ? "Back to Controls" : "Close"
+            action: wallpaperPanel.panel?.view !== "gallery" ? "Back to wallpaper gallery" : root.returnToControls ? "Back to Controls" : "Close"
         }
     ] : mixerOpen && mixerView.panel?.hardwareOpen ? [
         {
@@ -626,8 +655,8 @@ FocusScope {
             themePanel.invoke("leaveSearch");
         } else if (wallpaperPanel.open && wallpaperPanel.panel && wallpaperPanel.panel.searching) {
             wallpaperPanel.invoke("leaveSearch");
-        } else if (wallpaperPanel.open && wallpaperPanel.panel && wallpaperPanel.panel.policyView) {
-            wallpaperPanel.invoke("togglePolicyView");
+        } else if (wallpaperPanel.open && wallpaperPanel.panel && wallpaperPanel.panel.view !== "gallery") {
+            wallpaperPanel.invoke("showGallery");
         } else if (settingsPanel.open && settingsPanel.panel && settingsPanel.panel.cancelNested()) {
             return;
         } else if (resourcesPanel.open && resourcesPanel.panel && resourcesPanel.panel.cancelNested()) {
@@ -1899,6 +1928,7 @@ FocusScope {
             sourceComponent: Component {
                 WallpaperPanel {
                     appearance: root.appearance
+                    reactive: root.reactive
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -2131,7 +2161,7 @@ FocusScope {
                     } else if (event.key === root.runtime.shellKeyCode("controls", "Backspace")) {
                         root.navigateBack();
                         event.accepted = true;
-                    } else if (wallpaperPanel.panel && wallpaperPanel.panel.policyView) {
+                    } else if (wallpaperPanel.panel && wallpaperPanel.panel.view !== "gallery") {
                         event.accepted = true;
                     } else if (event.key === root.runtime.shellKeyCode("controls", "Slash")) {
                         wallpaperPanel.invoke("enterSearch");

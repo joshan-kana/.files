@@ -296,6 +296,7 @@
           "SpectrumDetail.off" = "Q";
           "SpectrumDetail.bars" = "W";
           "SpectrumDetail.curve" = "E";
+          "SpectrumDetail.radial" = "V";
           "SettingsDetail.inhibitorsRefresh" = "F";
           "SettingsDetail.blur" = "B";
           "SettingsDetail.reset" = "R";
@@ -529,6 +530,14 @@
           "WallpaperPanel.favorites" = "B";
           "WallpaperPanel.collection" = "C";
           "WallpaperPanel.rotation" = "S";
+          "WallpaperPanel.atmosphere" = "A";
+          "WallpaperAtmosphere.toggle" = "T";
+          "WallpaperAtmosphere.audio" = "B";
+          "WallpaperAtmosphere.backdrop" = "G";
+          "WallpaperAtmosphere.reset" = "R";
+          "WallpaperAtmosphere.resetParameter" = "SHIFT+R";
+          "WallpaperAtmosphere.adjust" = "NAV_HORIZONTAL";
+          "WallpaperAtmosphere.select" = "NAV_VERTICAL";
           "WallpaperPolicy.mode" = "M";
           "WallpaperPolicy.target" = "G";
           "WallpaperPolicy.period" = "P";

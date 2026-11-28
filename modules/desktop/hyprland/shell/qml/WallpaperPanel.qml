@@ -12,6 +12,7 @@ Item {
     required property Theme theme
     required property Motion motion
     required property AppearancePreferences appearance
+    required property MusicReactiveState reactive
 
     property bool open: false
     property var entries: []
@@ -20,7 +21,8 @@ Item {
     property string collectionFilter: ""
     readonly property string libraryRoot: Quickshell.env("HOME") + "/wallpapers/"
     readonly property var collections: ["", ...new Set(entries.map(path => path.startsWith(libraryRoot) ? path.slice(libraryRoot.length, path.lastIndexOf("/")) : "").filter(value => value.length > 0))].sort()
-    property bool policyView: false
+    property string view: "gallery"
+    readonly property bool policyView: view === "schedule"
     property var policy: runtime.configData.wallpaperRotation
     property bool policyKnown: false
     property string policyError: ""
@@ -98,14 +100,26 @@ Item {
     function timeLabel(minutes: int): string {
         return ClockFormatting.minutesLabel(minutes);
     }
+    function showGallery(): void {
+        view = "gallery";
+        keyboardRequested();
+    }
     function togglePolicyView(): void {
         if (policyView) {
-            policyView = false;
-        } else {
-            scheduleCandidate = selectedPath();
-            policyView = true;
-            refreshPolicy();
+            showGallery();
+            return;
         }
+        scheduleCandidate = selectedPath();
+        view = "schedule";
+        refreshPolicy();
+        keyboardRequested();
+    }
+    function toggleAtmosphereView(): void {
+        if (view === "atmosphere") {
+            showGallery();
+            return;
+        }
+        view = "atmosphere";
         keyboardRequested();
     }
     readonly property var galleryPolicyActions: [
@@ -147,6 +161,13 @@ Item {
             active: policy.mode !== "off",
             title: "Schedule · " + (policy.mode === "dayNight" ? "Day/night" : policy.mode === "interval" ? "Interval" : "Off"),
             enabled: !!runtime.wallpaperPolicy
+        },
+        {
+            action: "WallpaperPanel.atmosphere",
+            glyph: DesktopIcons.effectGlyph(appearance.atmosphereMode),
+            title: "Atmospheres",
+            active: view === "atmosphere",
+            enabled: true
         },
         {
             action: "WallpaperPanel.default",
@@ -244,6 +265,10 @@ Item {
     function invokePolicyAction(action: string): void {
         if (action === "WallpaperPanel.rotation") {
             togglePolicyView();
+            return;
+        }
+        if (action === "WallpaperPanel.atmosphere") {
+            toggleAtmosphereView();
             return;
         }
         if (!policyView) {
@@ -351,6 +376,8 @@ Item {
     }
 
     function handlePolicyKey(key: int, modifiers: int, autoRepeat: bool): bool {
+        if (view === "atmosphere")
+            return atmosphereLayout.handleKey(key, modifiers, autoRepeat);
         const actions = policyView ? scheduleActions : galleryPolicyActions;
         for (const entry of actions) {
             if (runtime.shellMatchesHint(entry.action, key, modifiers)) {
@@ -410,7 +437,7 @@ Item {
             refreshCurrent();
     }
     readonly property bool busy: applyProcess.running || resetProcess.running || transitionPending
-    readonly property bool searching: searchField.activeFocus
+    readonly property bool searching: panel.view === "gallery" && searchField.activeFocus
 
     signal keyboardRequested
 
@@ -418,14 +445,14 @@ Item {
     implicitWidth: 1120
     // Derive the detail height from its content so shared navigation retains
     // the same clearance as other details when the gallery layout changes.
-    implicitHeight: policyView ? policyLayout.implicitHeight : galleryLayout.implicitHeight
+    implicitHeight: policyView ? policyLayout.implicitHeight : view === "atmosphere" ? atmosphereLayout.implicitHeight : galleryLayout.implicitHeight
 
     onOpenChanged: {
         if (open) {
             refresh();
             refreshPolicy();
         } else {
-            policyView = false;
+            view = "gallery";
             searchField.text = "";
             statusText = "";
         }
@@ -606,7 +633,7 @@ Item {
 
     Column {
         id: galleryLayout
-        visible: !panel.policyView
+        visible: panel.view === "gallery"
         anchors.fill: parent
         spacing: panel.theme.spacing3
 
@@ -758,7 +785,7 @@ Item {
                         id: motionPreviewDebounce
                         interval: 220
                         onTriggered: {
-                            if (entry.animatedFile && entry.previewActive && panel.open && !panel.policyView && panel.runtime.wallpaperLibrary.length > 0 && !entry.motionPosterProcess.running && entry.motionPosterPath.length === 0)
+                            if (entry.animatedFile && entry.previewActive && panel.open && panel.view === "gallery" && panel.runtime.wallpaperLibrary.length > 0 && !entry.motionPosterProcess.running && entry.motionPosterPath.length === 0)
                                 entry.motionPosterProcess.exec([panel.runtime.wallpaperLibrary, "thumbnail-animated", entry.modelData]);
                         }
                     }
@@ -838,9 +865,9 @@ Item {
                                 right: parent.right
                                 bottom: filenameBar.top
                             }
-                            source: entry.previewActive && panel.open && !panel.policyView && entry.motionPosterPath.length > 0 ? "file://" + entry.motionPosterPath : ""
+                            source: entry.previewActive && panel.open && panel.view === "gallery" && entry.motionPosterPath.length > 0 ? "file://" + entry.motionPosterPath : ""
                             fillMode: Image.PreserveAspectCrop
-                            playing: entry.previewActive && panel.open && !panel.policyView
+                            playing: entry.previewActive && panel.open && panel.view === "gallery"
                             visible: status === AnimatedImage.Ready && playing
                         }
 
@@ -1020,6 +1047,18 @@ Item {
                 }
             ]
         }
+    }
+
+    WallpaperAtmosphere {
+        id: atmosphereLayout
+        visible: panel.view === "atmosphere"
+        open: panel.open && panel.view === "atmosphere"
+        width: panel.width
+        runtime: panel.runtime
+        theme: panel.theme
+        motion: panel.motion
+        reactive: panel.reactive
+        appearance: panel.appearance
     }
 
     Column {

@@ -16,6 +16,7 @@ ShellRoot {
     readonly property Motion motionRef: qmlMotion
     readonly property MediaState mediaRef: qmlMedia
     readonly property SpectrumState spectrumRef: qmlSpectrum
+    readonly property MusicReactiveState reactiveRef: reactive
     readonly property SystemState systemRef: qmlSystem
     readonly property ResourceState resourcesRef: resources
     readonly property PowerProfileState powerProfileRef: qmlPowerProfile
@@ -173,6 +174,7 @@ ShellRoot {
             system: root.systemRef
             media: root.mediaRef
             spectrum: root.spectrumRef
+            reactive: root.reactiveRef
             notificationState: root.notificationsRef
             brightness: root.brightnessRef
             keyboard: qmlKeyboard
@@ -328,13 +330,13 @@ ShellRoot {
         attackMultiplier: qmlAppearance.spectrumAttack
         releaseMultiplier: qmlAppearance.spectrumRelease
         // No DSP client unless a visible spectrum consumer needs live audio.
-        active: visualizerSubscribers > 0 || root.wallpaperSpectrumEnabled || root.musicReactiveSurfaceVisible
+        active: visualizerSubscribers > 0 || root.wallpaperSpectrumEnabled || root.musicReactiveSurfaceVisible || reactive.effectSubscribers > 0
     }
 
     MusicReactiveState {
         id: reactive
         spectrum: root.spectrumRef
-        enabled: root.musicReactiveSurfaceVisible
+        enabled: root.musicReactiveSurfaceVisible || effectSubscribers > 0
         sensitivity: qmlAppearance.musicReactiveSensitivity
         attackMultiplier: qmlAppearance.musicReactiveAttack
         releaseMultiplier: qmlAppearance.musicReactiveRelease
@@ -343,11 +345,14 @@ ShellRoot {
     }
 
     WallpaperSpectrum {
-        id: wallpaperSpectrum
+        runtime: root.runtimeRef
         spectrum: root.spectrumRef
         theme: root.themeRef
         enabled: root.wallpaperSpectrumEnabled
         motion: qmlMotion
+        appearance: qmlAppearance
+        reactive: root.reactiveRef
+        locked: qmlNotifications.locked
     }
 
     DesktopFrame {
