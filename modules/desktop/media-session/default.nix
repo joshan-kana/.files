@@ -29,7 +29,7 @@ let
         unset DISPLAY WAYLAND_DISPLAY
         export XDG_SESSION_TYPE=tty
         export XDG_CURRENT_DESKTOP=Kodi
-        ${lib.getExe pkgs.kodi-gbm-rpi} --windowing=gbm --standalone
+        ${lib.getExe pkgs.kodi} --windowing=gbm --standalone
         continue
       fi
       exit "$status"
@@ -38,8 +38,6 @@ let
 in
 {
   hardware.graphics.enable = true;
-  # Keep the shared MPV scripts/profiles and select the Pi video build locally.
-  nixpkgs.overlays = [ (_: prev: { mpv = prev.mpv-rpi; }) ];
   # Native Kodi opens evdev directly, so grant access only to the active local seat.
   services.udev.packages = [
     (pkgs.writeTextDir "lib/udev/rules.d/70-media-input.rules" ''
@@ -109,16 +107,6 @@ in
       '';
     in
     {
-      # Keep the standard MPV profiles and MPRIS integration; only tune Pi decoding.
-      programs.mpv.config = {
-        target-colorspace-hint = lib.mkForce "no";
-        vo = "dmabuf-wayland,gpu";
-        hwdec = "drm,v4l2m2m";
-        hwdec-threads = 2;
-        hwdec-extra-frames = 0;
-        vd-queue-enable = false;
-      };
-
       xdg.configFile."flex-launcher/config.ini".text = launcherConfig;
       wayland.windowManager.labwc.enable = true;
 

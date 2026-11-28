@@ -13,5 +13,15 @@
     desktopApps
     backups
     ;
-  dotfiles.scopes.desktop.gnome.enable = false;
+  dotfiles.scopes = {
+    desktop = {
+      gnome.enable = false;
+      mediaSession.enable = false;
+    };
+    desktopApps = {
+      kdeconnect.enable = false;
+      kodi.enable = false;
+      librespot.enable = false;
+    };
+  };
 }

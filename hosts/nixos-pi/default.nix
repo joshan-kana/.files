@@ -3,7 +3,6 @@
   extendScope,
   lib,
   moduleRegistry,
-  pkgs,
   ...
 }:
 
@@ -50,88 +49,72 @@ lib.recursiveUpdate (import ../../profiles/media.nix { inherit lib moduleRegistr
     };
   };
 
-  desktop = extendScope moduleRegistry.desktop {
-    mediaSession =
-      {
-        config,
-        lib,
-        pkgs,
-        ...
-      }:
-      (import ./media-session.nix) { inherit config lib pkgs; };
+  cli = editScope moduleRegistry.cli {
+    mpv = { lib, ... }: {
+      nixpkgs.overlays = lib.mkAfter [ (_: prev: { mpv = prev.mpv-rpi; }) ];
+    };
   };
 
-  desktopApps =
-    extendScope
-      (editScope moduleRegistry.desktopApps {
-        moonlight = { lib, ... }: {
-          nixpkgs.overlays = lib.mkAfter [ (_: prev: { moonlight-qt = prev.moonlight-qt-rpi; }) ];
-        };
-        jellyfin = _: {
-          home = { config, lib, ... }: {
-            services.jellyfin-mpv-shim.settings = {
-              mpv_ext = true;
-              mpv_ext_path = lib.getExe config.programs.mpv.finalPackage;
-            };
-            systemd.user.services.jellyfin-mpv-shim.Install.WantedBy = lib.mkForce [
-              "graphical-session.target"
-            ];
-            # The running shim can write stale settings back during the upstream merge.
-            home.activation.stopJellyfinMpvShim =
-              lib.hm.dag.entryBetween [ "jellyfinMpvShimSettingsActivation" ] [ "writeBoundary" ]
-                ''
-                  jellyfinWasActive=false
-                  if env XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" ${config.systemd.user.systemctlPath} --user is-active --quiet jellyfin-mpv-shim.service; then
-                    jellyfinWasActive=true
-                    run env XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" ${config.systemd.user.systemctlPath} --user stop jellyfin-mpv-shim.service
-                  fi
-                '';
-            home.activation.restartJellyfinMpvShim = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
-              if [ "$jellyfinWasActive" = true ] && env XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" ${config.systemd.user.systemctlPath} --user is-active --quiet graphical-session.target; then
-                run env XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" ${config.systemd.user.systemctlPath} --user start jellyfin-mpv-shim.service
-              fi
-            '';
-          };
-        };
-      })
-      {
-        kdeconnect = _: {
-          programs.kdeconnect.package = null;
-          home = _: {
-            services.kdeconnect = { };
-          };
-        };
-        librespot = { config, ... }: {
-          home = _: {
-            services.librespot.settings = {
-              name = config.networking.hostName;
-              backend = "pulseaudio";
-              device-type = "speaker";
-              zeroconf-port = 24879;
-            };
-            systemd.user.services.librespot = {
-              Unit.PartOf = [ "graphical-session.target" ];
-              Install.WantedBy = lib.mkForce [ "graphical-session.target" ];
-            };
-          };
-          networking.firewall.allowedTCPPorts = [ 24879 ];
-        };
-        kodi = _: {
-          home = _: {
-            home.packages = [ pkgs.kodi-gbm-rpi ];
-            home.file.".kodi/userdata/advancedsettings.xml".text = ''
-              <advancedsettings>
-                <videoplayer>
-                  <useprimedecoder>true</useprimedecoder>
-                  <useprimedecoderforhw>true</useprimedecoderforhw>
-                  <useprimerenderer>0</useprimerenderer>
-                </videoplayer>
-                <videoscreen>
-                  <limitguisize>3</limitguisize>
-                </videoscreen>
-              </advancedsettings>
-            '';
-          };
+  desktop = editScope moduleRegistry.desktop {
+    mediaSession = _: {
+      home = _: {
+        programs.mpv.config = {
+          target-colorspace-hint = lib.mkForce "no";
+          vo = "dmabuf-wayland,gpu";
+          hwdec = "drm,v4l2m2m";
+          hwdec-threads = 2;
+          hwdec-extra-frames = 0;
+          vd-queue-enable = false;
         };
       };
+    };
+  };
+
+  desktopApps = editScope moduleRegistry.desktopApps {
+    moonlight = { lib, ... }: {
+      nixpkgs.overlays = lib.mkAfter [ (_: prev: { moonlight-qt = prev.moonlight-qt-rpi; }) ];
+    };
+    kodi = { lib, ... }: {
+      nixpkgs.overlays = lib.mkAfter [ (_: prev: { kodi = prev.kodi-gbm-rpi; }) ];
+      home = _: {
+        home.file.".kodi/userdata/advancedsettings.xml".text = ''
+          <advancedsettings>
+            <videoplayer>
+              <useprimedecoder>true</useprimedecoder>
+              <useprimedecoderforhw>true</useprimedecoderforhw>
+              <useprimerenderer>0</useprimerenderer>
+            </videoplayer>
+            <videoscreen>
+              <limitguisize>3</limitguisize>
+            </videoscreen>
+          </advancedsettings>
+        '';
+      };
+    };
+    jellyfin = _: {
+      home = { config, lib, ... }: {
+        services.jellyfin-mpv-shim.settings = {
+          mpv_ext = true;
+          mpv_ext_path = lib.getExe config.programs.mpv.finalPackage;
+        };
+        systemd.user.services.jellyfin-mpv-shim.Install.WantedBy = lib.mkForce [
+          "graphical-session.target"
+        ];
+        home.activation.stopJellyfinMpvShim =
+          lib.hm.dag.entryBetween [ "jellyfinMpvShimSettingsActivation" ] [ "writeBoundary" ]
+            ''
+              jellyfinWasActive=false
+              if env XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" ${config.systemd.user.systemctlPath} --user is-active --quiet jellyfin-mpv-shim.service; then
+                jellyfinWasActive=true
+                run env XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" ${config.systemd.user.systemctlPath} --user stop jellyfin-mpv-shim.service
+              fi
+            '';
+        home.activation.restartJellyfinMpvShim = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
+          if [ "$jellyfinWasActive" = true ] && env XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" ${config.systemd.user.systemctlPath} --user is-active --quiet graphical-session.target; then
+            run env XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" ${config.systemd.user.systemctlPath} --user start jellyfin-mpv-shim.service
+          fi
+        '';
+      };
+    };
+  };
 }
