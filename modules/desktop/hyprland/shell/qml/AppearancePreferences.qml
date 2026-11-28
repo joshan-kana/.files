@@ -15,6 +15,114 @@ QtObject {
         constraints: appearance.runtime.constraints.appearance
     }
 
+    readonly property bool atmosphereEnabled: effective("atmosphereEnabled")
+    readonly property string atmosphereMode: effective("atmosphereMode")
+    readonly property string atmospherePresentation: atmosphereEnabled ? atmosphereMode : "off"
+    readonly property var atmosphereTuning: effective("atmosphereTuning")
+
+    function atmosphereStyle(mode: string): var {
+        const baseline = runtime.appearanceDefaults.atmosphereTuning?.[mode] || {};
+        const savedStyle = hasOverride("atmosphereTuning") ? atmosphereTuning?.[mode] : null;
+        return {
+            opacity: typeof savedStyle?.opacity === "number" ? savedStyle.opacity : hasOverride("atmosphereOpacity") ? effective("atmosphereOpacity") : baseline.opacity,
+            speed: typeof savedStyle?.speed === "number" ? savedStyle.speed : hasOverride("atmosphereSpeed") ? effective("atmosphereSpeed") : baseline.speed,
+            audio: atmosphereAudioEnabled,
+            backdrop: atmosphereBackdrop
+        };
+    }
+
+    readonly property real atmosphereOpacity: atmosphereStyle(atmosphereMode).opacity
+    readonly property real atmosphereSpeed: atmosphereStyle(atmosphereMode).speed
+    readonly property bool atmosphereAudioEnabled: effective("atmosphereAudioEnabled")
+    readonly property bool atmosphereBackdrop: effective("atmosphereBackdrop")
+
+    function setAtmosphereParameter(mode: string, parameter: string, value: var): void {
+        if (!runtime.constraints.appearance.atmosphereMode.values.includes(mode))
+            return;
+        const limits = parameter === "opacity" ? runtime.constraints.appearance.atmosphereOpacity : parameter === "speed" ? runtime.constraints.appearance.atmosphereSpeed : null;
+        if (limits && (!Number.isFinite(value) || value < limits.min || value > limits.max))
+            return;
+        if (!limits)
+            return;
+        const explicit = hasOverride("atmosphereTuning") ? atmosphereTuning : {};
+        const updated = Object.assign({}, explicit, {
+            [mode]: Object.assign({}, explicit[mode] || {}, {
+                [parameter]: value
+            })
+        });
+        storeOverride("atmosphereTuning", updated);
+    }
+
+    function resetAtmosphere(mode: string): void {
+        if (!runtime.constraints.appearance.atmosphereMode.values.includes(mode))
+            return;
+        const explicit = hasOverride("atmosphereTuning") ? atmosphereTuning : {};
+        const updated = Object.assign({}, explicit);
+        delete updated[mode];
+        if (Object.keys(updated).length > 0)
+            storeOverride("atmosphereTuning", updated);
+        else
+            clearOverride("atmosphereTuning");
+    }
+
+    function setAtmospherePresentation(mode: string): void {
+        if (mode === "off") {
+            storeOverride("atmosphereEnabled", false);
+            return;
+        }
+        if (!runtime.constraints.appearance.atmosphereMode.values.includes(mode))
+            return;
+        if (Object.prototype.hasOwnProperty.call(sceneValues, "atmosphereEnabled")) {
+            sceneValues = Object.assign({}, sceneValues, {
+                atmosphereMode: mode,
+                atmosphereEnabled: true
+            });
+        } else {
+            saved.setMany({
+                atmosphereMode: mode,
+                atmosphereEnabled: true
+            });
+        }
+    }
+
+    function selectAtmosphere(mode: string): void {
+        if (!runtime.constraints.appearance.atmosphereMode.values.includes(mode))
+            return;
+        storeOverride("atmosphereMode", mode);
+    }
+
+    function resetAtmosphereParameter(mode: string, parameter: string): void {
+        if (!runtime.constraints.appearance.atmosphereMode.values.includes(mode))
+            return;
+        const explicit = hasOverride("atmosphereTuning") ? atmosphereTuning : {};
+        const selected = Object.assign({}, explicit[mode] || {});
+        delete selected[parameter];
+        const next = Object.assign({}, explicit);
+        if (Object.keys(selected).length > 0)
+            next[mode] = selected;
+        else
+            delete next[mode];
+        if (Object.keys(next).length > 0)
+            storeOverride("atmosphereTuning", next);
+        else
+            clearOverride("atmosphereTuning");
+    }
+
+    function toggleAtmosphere(mode: string): void {
+        if (atmosphereEnabled && atmosphereMode === mode)
+            setAtmospherePresentation("off");
+        else
+            setAtmospherePresentation(mode);
+    }
+
+    function toggleAtmosphereAudio(): void {
+        storeOverride("atmosphereAudioEnabled", !atmosphereAudioEnabled);
+    }
+
+    function toggleAtmosphereBackdrop(): void {
+        storeOverride("atmosphereBackdrop", !atmosphereBackdrop);
+    }
+
     readonly property bool wallpaperSpectrumEnabled: effective("wallpaperSpectrumEnabled")
     readonly property string wallpaperResizeMode: effective("wallpaperResizeMode")
     readonly property string wallpaperTargetOutput: effective("wallpaperTargetOutput")
