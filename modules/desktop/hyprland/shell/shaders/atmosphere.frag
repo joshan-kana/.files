@@ -76,12 +76,31 @@ vec4 liquid(vec2 p) {
     return vec4(col, broad + sheen * 0.18 + u.audio.x * 0.08);
 }
 
+vec4 nebula(vec2 p) {
+    vec2 drift = vec2(cos(u.phase), sin(u.phase)) * 0.26;
+    vec2 q = p * 3.7 + drift;
+    float n = cloud(q);
+    float m = cloud(q * 1.3 + vec2(n * 1.8, -n * 1.1));
+    float gas = smoothstep(0.20, 0.82, m);
+    vec2 grid = p * 118.0;
+    vec2 cell = floor(grid);
+    float seed = hash(cell);
+    vec2 offset = vec2(hash(cell + 5.0), hash(cell - 11.0)) * 0.52 + 0.24;
+    float star = (1.0 - smoothstep(0.025, 0.13, length(fract(grid) - offset)))
+        * step(0.975, seed) * (0.7 + 0.3 * sin(u.phase * 3.0 + seed * 80.0));
+    float alpha = gas * (0.65 + u.audio.x * 0.15);
+    vec3 col = mix(palette(clamp(n + m * 0.3, 0.0, 1.0)),
+                   mix(u.toneC.rgb, vec3(1.0), 0.55), star);
+    return vec4(col, max(alpha, star * (0.6 + u.audio.z * 0.4)));
+}
+
 void main() {
     vec2 uv = qt_TexCoord0;
     vec2 p = (uv - 0.5) * vec2(u.aspect, 1.0);
     vec4 effect;
     if (u.style == 0) effect = aurora(uv, p);
     else if (u.style == 1) effect = liquid(p);
+    else if (u.style == 2) effect = nebula(p);
     else effect = vec4(0);
     float vignette = 1.0 - smoothstep(0.45, 1.0, length((uv - 0.5) * 1.6)) * 0.32;
     float alpha = clamp(effect.a * u.intensity * vignette, 0.0, 1.0);
