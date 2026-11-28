@@ -215,11 +215,11 @@ test("other transient Wayland surfaces keep their backing geometry stable", () =
   const spectrum = qml("WallpaperSpectrum.qml");
   assert.match(
     spectrum,
-    /implicitWidth: Math\.max\(1, screen \? screen\.width \* 0\.88 : 1\)/,
+    /spectrumWidth: Math\.max\(1, screen \? screen\.width \* 0\.88 : 1\)/,
   );
   assert.match(
     spectrum,
-    /implicitHeight: Math\.max\(1, screen \? Math\.min\(screen\.height \* 0\.38, 560\) : 1\)/,
+    /spectrumHeight: Math\.max\(1, screen \? Math\.min\(screen\.height \* 0\.38, 560\) : 1\)/,
   );
   assert.match(
     qml("ModalSurfaceHost.qml"),
